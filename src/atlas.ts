@@ -122,6 +122,7 @@ class Pix {
   }
   finish(): void {
     this.outline();
+    this.outline();
   }
 }
 
@@ -154,51 +155,51 @@ function magBanner(p: Pix, x: number, y: number, w: number, h: number): void {
 function hiveBody(p: Pix, ox: number, oy: number, frame: number): void {
   const bob = frame & 1;
   const y = oy + bob;
-  p.hex(ox, y - 4, 11, PAL.hiveD);
-  p.hex(ox, y - 5, 9, PAL.hive);
-  p.hex(ox - 1, y - 7, 4, PAL.hiveH);
-  magBanner(p, ox - 5, y - 12, 6, 8);
-  p.line(ox - 2, y - 12, ox - 2, y - 18, PAL.ink);
-  p.line(ox + 2, y - 12, ox + 2, y - 18, PAL.ink);
-  p.circ(ox - 2, y - 18, 1, PAL.hiveH);
-  p.circ(ox + 2, y - 18, 1, PAL.hiveH);
-  p.fill(ox - 10, y + 2, 5, 4, PAL.hiveD);
-  p.fill(ox + 6, y + 2, 5, 4, PAL.hiveD);
-  p.fill(ox - 2, y + 6, 6, 3, PAL.hiveD);
+  p.hex(ox, y - 2, 13, PAL.hiveD);
+  p.hex(ox, y - 3, 11, PAL.hive);
+  p.hex(ox - 1, y - 6, 6, PAL.hiveH);
+  magBanner(p, ox - 6, y - 14, 8, 10);
+  p.fill(ox - 5, y - 13, 6, 2, PAL.bone);
+  p.line(ox - 3, y - 14, ox - 3, y - 20, PAL.ink);
+  p.line(ox + 3, y - 14, ox + 3, y - 20, PAL.ink);
+  p.circ(ox - 3, y - 20, 2, PAL.hiveH);
+  p.circ(ox + 3, y - 20, 2, PAL.hiveH);
+  p.fill(ox - 12, y + 1, 6, 5, PAL.hiveD);
+  p.fill(ox + 7, y + 1, 6, 5, PAL.hiveD);
+  p.fill(ox - 3, y + 7, 8, 4, PAL.hiveD);
 }
 
 /** Kryos Conclave — squat diamond, vertical spire, bright core. */
 function cryBody(p: Pix, ox: number, oy: number, frame: number): void {
   const bob = frame & 1;
   const y = oy + bob;
-  p.diam(ox, y, 12, PAL.cryD);
-  p.diam(ox, y - 1, 10, PAL.cry);
-  p.diam(ox, y - 3, 5, PAL.cryH);
-  magBanner(p, ox - 2, y - 2, 5, 5);
-  p.line(ox, y - 8, ox, y - 17, PAL.cryH);
-  p.set(ox, y - 17, PAL.white);
-  p.set(ox - 1, y - 16, PAL.cryH);
-  p.set(ox + 1, y - 16, PAL.cryH);
-  p.fill(ox - 11, y + 4, 6, 3, PAL.cryD);
-  p.fill(ox + 6, y + 4, 6, 3, PAL.cryD);
+  p.diam(ox, y, 13, PAL.cryD);
+  p.diam(ox, y - 1, 11, PAL.cry);
+  p.diam(ox, y - 3, 7, PAL.cryH);
+  magBanner(p, ox - 3, y - 3, 7, 7);
+  p.fill(ox - 2, y - 2, 5, 3, PAL.white);
+  p.line(ox, y - 9, ox, y - 19, PAL.cryH);
+  p.fill(ox - 1, y - 19, 3, 3, PAL.white);
+  p.fill(ox - 12, y + 3, 7, 4, PAL.cryD);
+  p.fill(ox + 6, y + 3, 7, 4, PAL.cryD);
 }
 
 /** Nihiline — asymmetric tendrils, spore sac, no right angles. */
 function voidBody(p: Pix, ox: number, oy: number, frame: number): void {
   const bob = frame & 1;
   const y = oy + bob;
-  p.fill(ox - 9, y - 2, 16, 14, PAL.voidD);
-  p.fill(ox - 7, y - 5, 12, 12, PAL.voidC);
-  p.fill(ox + 4, y - 8, 7, 10, PAL.voidD);
-  p.circ(ox + 7, y - 6, 4, PAL.voidH);
-  p.fill(ox - 12, y + 2, 5, 10, PAL.voidD);
-  p.fill(ox - 11, y + 4, 3, 6, PAL.voidC);
-  p.fill(ox + 2, y + 6, 8, 5, PAL.voidD);
-  magBanner(p, ox - 1, y - 3, 4, 4);
-  p.line(ox - 8, y - 8, ox - 13, y - 14, PAL.voidH);
-  p.line(ox + 5, y - 10, ox + 10, y - 15, PAL.voidH);
-  p.circ(ox - 13, y - 14, 2, PAL.voidH);
-  p.circ(ox + 10, y - 15, 2, PAL.voidH);
+  p.fill(ox - 10, y - 3, 18, 16, PAL.voidD);
+  p.fill(ox - 8, y - 6, 14, 14, PAL.voidC);
+  p.fill(ox + 5, y - 10, 8, 12, PAL.voidD);
+  p.circ(ox + 8, y - 7, 5, PAL.voidH);
+  p.fill(ox - 14, y + 1, 6, 12, PAL.voidD);
+  p.fill(ox - 13, y + 3, 4, 8, PAL.voidC);
+  p.fill(ox + 1, y + 7, 10, 6, PAL.voidD);
+  magBanner(p, ox - 2, y - 4, 6, 6);
+  p.line(ox - 9, y - 9, ox - 15, y - 16, PAL.voidH);
+  p.line(ox + 6, y - 11, ox + 12, y - 17, PAL.voidH);
+  p.circ(ox - 15, y - 16, 3, PAL.voidH);
+  p.circ(ox + 12, y - 17, 3, PAL.voidH);
 }
 
 function drawUnit(civ: 'vespari' | 'aurion' | 'voidmarked', role: string, frame: number): Pix {
@@ -211,32 +212,33 @@ function drawUnit(civ: 'vespari' | 'aurion' | 'voidmarked', role: string, frame:
   else voidBody(p, ox, oy, frame);
 
   if (role === 'worker') {
-    p.fill(ox + 5, oy - 8, 7, 9, PAL.ore);
-    p.fill(ox + 6, oy - 7, 5, 3, PAL.oreH);
-    p.line(ox - 8, oy - 2, ox - 12, oy + 4, PAL.bone);
-    p.set(ox - 12, oy + 4, PAL.oreH);
-    p.fill(ox - 3, oy + 7, 8, 3, PAL.hiveD);
+    p.fill(ox + 4, oy - 10, 9, 11, PAL.ore);
+    p.fill(ox + 5, oy - 9, 7, 4, PAL.oreH);
+    p.line(ox - 9, oy - 3, ox - 14, oy + 5, PAL.bone);
+    p.fill(ox - 14, oy + 3, 4, 4, PAL.oreH);
+    p.fill(ox - 4, oy + 8, 10, 4, PAL.hiveD);
   } else if (role === 'scout') {
-    p.fill(ox - 14, oy - 4, 6, 3, PAL.white);
-    p.fill(ox - 15, oy - 3, 2, 1, PAL.hiveH);
-    p.fill(ox + 9, oy - 4, 6, 3, PAL.white);
-    p.fill(ox + 14, oy - 3, 2, 1, PAL.hiveH);
-    p.fill(ox - 2, oy - 14, 5, 4, PAL.hiveH);
-    p.line(ox + 2, oy - 10, ox + 10, oy - 12, PAL.bone);
+    p.fill(ox - 15, oy - 5, 8, 4, PAL.white);
+    p.fill(ox - 16, oy - 4, 3, 2, PAL.hiveH);
+    p.fill(ox + 8, oy - 5, 8, 4, PAL.white);
+    p.fill(ox + 14, oy - 4, 3, 2, PAL.hiveH);
+    p.fill(ox - 3, oy - 16, 7, 5, PAL.hiveH);
+    p.line(ox + 3, oy - 12, ox + 12, oy - 14, PAL.bone);
+    p.set(ox + 12, oy - 14, PAL.white);
   } else if (role === 'fighter') {
-    p.line(ox + 4, oy - 6, ox + 14, oy - 12, PAL.bone);
-    p.line(ox + 5, oy - 5, ox + 15, oy - 11, PAL.white);
-    p.set(ox + 15, oy - 11, MAG);
-    magBanner(p, ox - 4, oy - 6, 4, 5);
-    p.fill(ox - 6, oy - 2, 4, 6, PAL.hiveD);
+    p.line(ox + 3, oy - 7, ox + 15, oy - 14, PAL.bone);
+    p.line(ox + 4, oy - 6, ox + 16, oy - 13, PAL.white);
+    magBanner(p, ox + 14, oy - 14, 3, 3);
+    magBanner(p, ox - 5, oy - 7, 5, 6);
+    p.fill(ox - 7, oy - 3, 5, 7, PAL.hiveD);
   } else if (role === 'siege') {
-    p.fill(ox - 12, oy + 2, 24, 7, PAL.rock);
-    p.fill(ox - 10, oy + 3, 20, 4, PAL.rockH);
-    p.fill(ox + 2, oy - 10, 14, 5, PAL.rock);
-    p.fill(ox + 12, oy - 11, 4, 3, PAL.ore);
-    p.line(ox + 14, oy - 10, ox + 14, oy - 6, PAL.ink);
-    p.circ(ox - 8, oy + 6, 3, PAL.rockH);
-    p.circ(ox + 8, oy + 6, 3, PAL.rockH);
+    p.fill(ox - 14, oy + 1, 28, 8, PAL.rock);
+    p.fill(ox - 12, oy + 2, 24, 5, PAL.rockH);
+    p.fill(ox + 1, oy - 12, 16, 6, PAL.rock);
+    p.fill(ox + 14, oy - 13, 5, 4, PAL.ore);
+    p.line(ox + 16, oy - 12, ox + 16, oy - 7, PAL.ink);
+    p.circ(ox - 10, oy + 7, 4, PAL.rockH);
+    p.circ(ox + 10, oy + 7, 4, PAL.rockH);
   } else if (role === 'ravager') {
     p.hex(ox, oy - 3, 10, PAL.hiveD);
     p.hex(ox, oy - 4, 8, PAL.blood);
