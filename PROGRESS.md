@@ -5,19 +5,17 @@
 
 ## Now
 
-**P81 procedural terrain** — P80 **PASS** (`6a10bdc`). Live **`0.7.0-proc`**.
+**P81 critic** — procedural terrain shipped **`0.7.1-proc`**. Live deployed.
 
-GPU particles locked. Next: GLSL ground (value weather, dune banding, elevation rims). Units still atlas (P82).
-
-**Next:** P81 builder, then critic.
+**Next:** fresh critic on banding/rims vs opening readability.
 
 ## Biggest gap
 
-**Ground is still a baked canvas atlas.** Procedural shader terrain, readable at RTS zoom.
+**P81 in critic.** Ground must read as weather/dunes, not bury the clash.
 
 ## Tracker
 
 | Wave | Status |
 |---|---|
 | 0–5 | **PASS** |
-| 6 procedural-first | P80 **PASS**; P81 terrain |
+| 6 procedural-first | P80 **PASS**; P81 shipped; critic |
