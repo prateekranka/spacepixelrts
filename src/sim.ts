@@ -290,15 +290,14 @@ export class World {
     this.clearBase(MAP - 11, MAP - 11);
   }
 
-  /** Dust pad + nebula wisps under the full opening camera frustum. */
+  /** Dust pad + rim rocks + gem nodes under the opening camera frustum. */
   private stampOpeningGround(): void {
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
     const icx = cx | 0;
     const icz = cz | 0;
-    const rng = mulberry32(this.seed ^ 0xab21);
-    for (let z = -9; z <= 9; z++) {
-      for (let x = -14; x <= 14; x++) {
+    for (let z = -10; z <= 9; z++) {
+      for (let x = -14; x <= 13; x++) {
         const xx = icx + x;
         const zz = icz + z;
         if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
@@ -306,19 +305,38 @@ export class World {
         this.block[xx + zz * MAP] = 0;
       }
     }
-    for (let i = 0; i < 48; i++) {
-      const xx = icx + ((rng() * 28) | 0) - 14;
-      const zz = icz + ((rng() * 18) | 0) - 9;
-      if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
-      const roll = rng();
-      const t = roll > 0.72 ? Tile.Gas : roll > 0.44 ? Tile.Solar : Tile.Dust;
-      this.tiles[xx + zz * MAP] = t;
-      this.block[xx + zz * MAP] = 0;
+    const fireZ0 = icz - 4;
+    const fireZ1 = icz + 4;
+    const rim = (xx: number, zz: number): void => {
+      if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) return;
+      if (zz >= fireZ0 && zz <= fireZ1) return;
+      this.tiles[xx + zz * MAP] = Tile.Rock;
+      this.block[xx + zz * MAP] = 1;
+    };
+    for (let x = -14; x <= 13; x++) {
+      rim(icx + x, icz - 10);
+      rim(icx + x, icz + 9);
     }
-    this.placeOpeningNode(Tile.Ore, icx - 11, icz);
-    this.placeOpeningNode(Tile.Gas, icx + 11, icz - 1);
-    this.placeOpeningNode(Tile.Solar, icx, icz - 9);
-    this.placeOpeningNode(Tile.Ore, icx + 1, icz + 9);
+    for (let z = -10; z <= 9; z++) {
+      rim(icx - 14, icz + z);
+      rim(icx + 13, icz + z);
+    }
+    for (const [dx, dz] of [
+      [-6, -5],
+      [6, -5],
+      [-6, 5],
+      [6, 5],
+      [-7, -5],
+      [7, -5],
+      [-7, 5],
+      [7, 5],
+    ]) {
+      rim(icx + dx, icz + dz);
+    }
+    this.placeOpeningNode(Tile.Ore, icx - 8, icz - 5);
+    this.placeOpeningNode(Tile.Gas, icx + 8, icz - 5);
+    this.placeOpeningNode(Tile.Solar, icx - 8, icz + 5);
+    this.placeOpeningNode(Tile.Ore, icx + 8, icz + 5);
   }
 
   /** One ground tile + gem entity — no multi-tile ore panel on the opening tableau. */
@@ -434,44 +452,47 @@ export class World {
     this.spawn(Kind.Scout, a, 0, 16, 14);
     this.spawn(Kind.Scout, b, 1, MAP - 16, MAP - 14);
 
-    // Opening clash — both wings on the camera depth plane (same X center), separated on Z.
+    // Opening clash — two 2×4 ranks on the same depth (X), split on Z; hold Attack in place.
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
-    const zHelion = cz - 1.8;
-    const zKryos = cz + 1.8;
-    const xOffsets = [-1.1, -0.55, 0, 0.55, 1.1, -0.85, 0, 0.85];
+    const colPitch = 1.55;
+    const rowPitch = 1.4;
+    const gap = 3.6;
+    const zHelion = cz - gap / 2;
+    const zKryos = cz + gap / 2;
     for (let i = 0; i < 8; i++) {
-      const jx = (i % 3) * 0.04 - 0.04;
-      const jz = ((i * 2) % 3) * 0.04 - 0.04;
-      const x = cx + xOffsets[i] + jx;
-      const f0 = this.spawn(Kind.Fighter, a, 0, x, zHelion + jz);
-      const f1 = this.spawn(Kind.Fighter, b, 1, x, zKryos - jz);
+      const col = i % 4;
+      const row = (i / 4) | 0;
+      const x = cx + (row - 0.5) * rowPitch;
+      const zOff = (col - 1.5) * colPitch;
+      const f0 = this.spawn(Kind.Fighter, a, 0, x, zHelion + zOff);
+      const f1 = this.spawn(Kind.Fighter, b, 1, x, zKryos + zOff);
       if (f0) {
-        f0.order = Ord.AttackMove;
-        f0.tx = cx;
-        f0.tz = zKryos;
-        f0.cooldown = -0.12 * (i % 6);
+        f0.order = Ord.Attack;
+        f0.tx = x;
+        f0.tz = zKryos + zOff;
+        f0.cooldown = -0.08 * (i % 5);
       }
       if (f1) {
-        f1.order = Ord.AttackMove;
-        f1.tx = cx;
-        f1.tz = zHelion;
-        f1.cooldown = -0.1 * ((i + 2) % 6);
+        f1.order = Ord.Attack;
+        f1.tx = x;
+        f1.tz = zHelion + zOff;
+        f1.cooldown = -0.08 * ((i + 2) % 5);
       }
     }
-    const rv = this.spawn(uniqueUnit(a), a, 0, cx - 1.6, zHelion);
+    const rv = this.spawn(uniqueUnit(a), a, 0, cx - 1.35, zHelion);
     if (rv) {
-      rv.order = Ord.AttackMove;
-      rv.tx = cx;
+      rv.order = Ord.Attack;
+      rv.tx = cx - 1.35;
       rv.tz = zKryos;
-      rv.cooldown = -0.2;
+      rv.cooldown = -0.15;
     }
-    const pr = this.spawn(uniqueUnit(b), b, 1, cx - 1.6, zKryos);
+    const pr = this.spawn(uniqueUnit(b), b, 1, cx - 1.35, zKryos);
     if (pr) {
-      pr.order = Ord.AttackMove;
-      pr.tx = cx;
+      pr.order = Ord.Attack;
+      pr.tx = cx - 1.35;
       pr.tz = zHelion;
-      pr.cooldown = -0.15;
+      pr.cooldown = -0.12;
     }
   }
 
@@ -494,6 +515,9 @@ export class World {
         e.tid = -1;
       }
 
+      const holdFire =
+        this.tick < 240 && this.openingClashEnt(e) && e.order === Ord.Attack;
+
       if (e.order === Ord.Attack || e.order === Ord.AttackMove || e.order === Ord.Idle) {
         if (!target) target = this.acquire(e, st.los + 1.5);
         if (target) {
@@ -509,9 +533,10 @@ export class World {
             !crossedCenter;
           if (d <= this.strikeRange(e, st, target)) {
             this.tryStrike(e, target, st);
-            if (!marchThrough) {
+            if (holdFire || !marchThrough) {
               e.vx = e.vz = 0;
               e.path = null;
+              if (holdFire) e.facing = target.x >= e.x ? 1 : -1;
               continue;
             }
           }
@@ -521,6 +546,12 @@ export class World {
             e.tz = target.z;
           }
         }
+      }
+
+      if (holdFire) {
+        e.vx = e.vz = 0;
+        e.path = null;
+        continue;
       }
 
       if (e.order === Ord.Gather || e.order === Ord.Return) this.thinkGather(e);
@@ -666,14 +697,14 @@ export class World {
       dmg *
       (isBuilding(t.kind) && e.kind === Kind.Siege ? 1.8 : 1) *
       (e.civ === 'aurion' ? 0.92 : 1) *
-      (this.tick < 150 && this.openingClashEnt(e) ? 0.42 : 1);
+      (this.tick < 240 && this.openingClashEnt(e) ? 0.25 : 1);
     if (st.melee) {
       t.hp -= applied * bonus;
       e.cooldown = e.kind === Kind.Ravager ? 0.72 : 0.85;
       if (e.kind === Kind.Ravager && t.hp <= 0) e.frenzy = Math.min(6, e.frenzy + 1);
     } else {
       this.spawnBolt(e, t, applied * bonus, e.kind === Kind.Prism ? 11 : e.kind === Kind.Siege ? 6.5 : 8.5);
-      const opening = this.tick < 150 && this.openingClashEnt(e);
+      const opening = this.tick < 240 && this.openingClashEnt(e);
       e.cooldown = opening
         ? e.kind === Kind.Prism
           ? 0.72
@@ -764,6 +795,7 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || !isUnit(e.kind)) continue;
+      if (this.tick < 240 && this.openingClashEnt(e) && e.order === Ord.Attack) continue;
       this.hash.query(e.x, e.z, 1.1, this.q);
       let sx = 0;
       let sz = 0;
@@ -945,11 +977,16 @@ export class World {
       const idx = tileAt(e.x, e.z);
       e.vis = this.visible[0][idx] === 1 && !(e.kind === Kind.Shade && e.stealth > 0.55);
     }
-    if (this.tick < 120) {
+    if (this.tick < 240) {
       for (let i = 0; i < MAX_ENTS; i++) {
         const e = this.ents[i];
         if (!e.alive) continue;
         if (this.openingClashEnt(e)) e.vis = true;
+        if (e.kind === Kind.Resource) {
+          const mdx = e.x - MAP * 0.5;
+          const mdz = e.z - MAP * 0.52;
+          if (mdx * mdx + mdz * mdz < 130) e.vis = true;
+        }
       }
     }
   }

@@ -213,8 +213,8 @@ export class GameRenderer {
         scaleX = cellsW * mul;
         scaleY = cellsH * mul;
       } else {
-        scaleX = cellsW * 2.15 * e.facing;
-        scaleY = cellsH * 2.25;
+        scaleX = cellsW * 1.08 * e.facing;
+        scaleY = cellsH * 1.14;
       }
       const lift = e.kind === Kind.Resource ? 0.38 : isBuilding(e.kind) ? 1.15 : 0.9;
       this.dummy.position.set(x, lift, z);

@@ -7,7 +7,7 @@ import { Input } from './input';
 import { Hud } from './hud';
 import { Sfx } from './audio';
 
-const VERSION = '0.2.0-wave1';
+const VERSION = '0.2.2-wave1';
 
 const host = document.getElementById('app');
 if (!host) throw new Error('Starhold boot: #app host missing');
@@ -24,7 +24,7 @@ const sfx = new Sfx();
 const input = new Input(host, world, view, sfx);
 input.pan.x = MAP * 0.5;
 input.pan.z = MAP * 0.52;
-input.halfH = 6.0;
+input.halfH = 5.8;
 
 const hud = new Hud(host);
 hud.bind(world, input, view);

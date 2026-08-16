@@ -101,7 +101,7 @@ export class Hud {
     (this.root.querySelector('#nrg') as HTMLElement).textContent = String(eco.energy | 0);
     (this.root.querySelector('#pop') as HTMLElement).textContent = `${eco.pop}/${eco.cap}`;
     (this.root.querySelector('#civname') as HTMLElement).textContent = CIV_NAME[world.civ[0]];
-    this.fpsEl.textContent = String(fps);
+    this.fpsEl.textContent = `${fps} FPS`;
     this.fpsEl.className = fps < 55 ? 'low' : '';
     this.drawMini(world, input);
     this.drawCard(world, input);
