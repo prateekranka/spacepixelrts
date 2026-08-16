@@ -12,7 +12,7 @@ For every piece:
 2. Spawn builder via the leak-safe wrapper (bounded timeout, process-group kill on exit):
 
 ```
-scripts/spawn-composer.sh tasks/<id>-brief.md tasks/<id>.md 600
+scripts/spawn-composer.sh tasks/<id>-brief.md tasks/<id>.log 600
 ```
 
 Never leave a Composer process running after the piece finishes. Do not spawn raw `cursor-agent` in a detached tmux session without the wrapper.
@@ -119,23 +119,24 @@ HUD/minimap/VFX already exist from Wave 1 chrome. Live Wave 3 starts with an int
 | P55 | Idle-worker HUD pulse | P54 | done | **PASS** `595346c` live 0.4.3-wave3 |
 | P56 | Multi-unit formation spread | P55 | done | **PASS** `67170eb` live 0.4.4-wave3 |
 | P57 | Combat hit SFX | P56 | done | **PASS** `a740c9d` live 0.4.5-wave3 |
-| P58 | Wave 3 feel critic vs AoE2:DE | P57 | critic | |
+| P58 | Wave 3 feel critic vs AoE2:DE | P57 | done | **PASS** `7cfb559` live 0.4.5-wave3 |
 
 Original P30–P35 chrome mostly shipped in the vertical slice; critic will say what still fails vs AoE2:DE.
 
-### Wave 4 — performance / hardening
+### Wave 4 — performance / hardening (live numbering)
 
-| ID | Piece | Status | Latest critic |
-|---|---|---|---|
-| P40 | 60fps under load: pools, culling, instance caps | queued | |
-| P41 | iPad landscape QA (touch targets, safe area) | queued | |
-| P42 | Bug sweep | queued | |
+Original plan IDs P40–P42 collide with live Wave 1/2 IDs. Live IDs win.
+
+| ID | Piece | Depends | Status | Latest critic |
+|---|---|---|---|---|
+| P59 | Wave 4 integrator: load / iPad / bugs, name the gap | P58 | building | |
+| P60+ | TBD from P59 gap (60fps load, iPad QA, or bug) | P59 | queued | |
 
 ### Wave 5 — coherence
 
 | ID | Piece | Status | Latest critic |
 |---|---|---|---|
-| P50 | Integrator plays full 1v1 vs AoE2:DE bar | queued | |
+| P70 | Integrator plays full 1v1 vs AoE2:DE bar | queued | |
 
 ---
 
@@ -147,4 +148,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P57 PASS.** **P58** Wave 3 feel critic in flight.
+**Wave 3 PASS (P58).** **P59** Wave 4 integrator in flight. P58 leftover: opening Attack-lock on clash right-click.

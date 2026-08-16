@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 3 P58 critic** — P57 **PASS** (`a740c9d`). Live **`0.4.5-wave3`**.
+**Wave 4 integrator (P59)** — Wave 3 feel **PASS** (P58, `7cfb559`). Live **`0.4.5-wave3`**.
 
-VFX chrome (P51–P53) and command-feel (P55 pulse, P56 formation, P57 hit SFX) all passed. Opening still P41.
+Opening still P41. Match arc still P49. Feel still P51–P57. P58 leftover (not a FAIL): opening Attack-lock on clash right-click until tick 240.
 
-**Next:** fresh Wave 3 feel critic vs AoE2:DE.
+**Next:** P59 names the single biggest Wave 4 gap (60 fps under load / iPad / bug sweep).
 
 ## Biggest gap
 
-**P54 command-feel items shipped.** Wave 3 critic (P58) next vs AoE2:DE.
+**Wave 3 locked.** Wave 4: 60 fps under load, iPad landscape, hardening. Integrator in flight.
 
 ## Tracker
 
@@ -22,4 +22,6 @@ VFX chrome (P51–P53) and command-feel (P55 pulse, P56 formation, P57 hit SFX) 
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P57 **PASS**; P58 Wave 3 critic |
+| 3 feel / VFX / command | **PASS** (P58 critic) |
+| 4 performance / iPad / bugs | P59 integrator |
+| 5 full 1v1 coherence | queued |
