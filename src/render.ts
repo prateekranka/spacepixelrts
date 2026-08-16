@@ -236,9 +236,9 @@ export class GameRenderer {
       const key =
         b.kind === Kind.Prism ? 'bolt-beam' : b.kind === Kind.Siege ? 'bolt-rock' : b.kind === Kind.Shade ? 'bolt-void' : 'bolt-sting';
       const uv = this.atlas.uv[key];
-      this.dummy.position.set(b.x, 0.7, b.z);
+      this.dummy.position.set(b.x, 0.85, b.z);
       this.dummy.quaternion.copy(this.lastCamQ);
-      this.dummy.scale.set(0.55, 0.55, 1);
+      this.dummy.scale.set(0.92, 0.92, 1);
       this.dummy.updateMatrix();
       this.mesh.setMatrixAt(drawn, this.dummy.matrix);
       this.shadows.setMatrixAt(drawn, this.dummy.matrix);
@@ -250,7 +250,7 @@ export class GameRenderer {
       teamArr[drawn * 3] = rgb[0];
       teamArr[drawn * 3 + 1] = rgb[1];
       teamArr[drawn * 3 + 2] = rgb[2];
-      flashArr[drawn] = 0.15;
+      flashArr[drawn] = 0.38;
       drawn++;
     }
 
@@ -308,11 +308,12 @@ export class GameRenderer {
   }
 
   private buildMap(world: World): void {
-    const s = 8;
+    const s = 32;
     const c = document.createElement('canvas');
     c.width = MAP * s;
     c.height = MAP * s;
     const ctx = c.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
     const keys = ['tile-void', 'tile-dust', 'tile-rock', 'tile-ore', 'tile-gas', 'tile-sol'];
     for (let z = 0; z < MAP; z++) {
       for (let x = 0; x < MAP; x++) {
@@ -320,7 +321,12 @@ export class GameRenderer {
         const uv = this.atlas.uv[keys[t] ?? 'tile-void'];
         const sx = uv.u0 * this.atlas.canvas.width;
         const sy = (1 - uv.v1) * this.atlas.canvas.height;
-        ctx.drawImage(this.atlas.canvas, sx, sy, CELL, CELL, x * s, z * s, s, s);
+        const isRes = t === Tile.Ore || t === Tile.Gas || t === Tile.Solar;
+        const bleed = isRes ? 10 : 0;
+        const dx = x * s - bleed;
+        const dz = z * s - bleed;
+        const ds = s + bleed * 2;
+        ctx.drawImage(this.atlas.canvas, sx, sy, CELL, CELL, dx, dz, ds, ds);
       }
     }
     const tex = new THREE.CanvasTexture(c);
@@ -365,15 +371,15 @@ export class GameRenderer {
         d[o + 2] = 0;
         d[o + 3] = 0;
       } else if (exp[i]) {
+        d[o] = 14;
+        d[o + 1] = 12;
+        d[o + 2] = 28;
+        d[o + 3] = 58;
+      } else {
         d[o] = 8;
         d[o + 1] = 6;
         d[o + 2] = 18;
-        d[o + 3] = 110;
-      } else {
-        d[o] = 4;
-        d[o + 1] = 3;
-        d[o + 2] = 10;
-        d[o + 3] = 245;
+        d[o + 3] = 175;
       }
     }
     this.fogTex.needsUpdate = true;
@@ -405,16 +411,16 @@ export class GameRenderer {
     for (const f of world.flags) {
       const p = this.project(f.x, 0.05, f.z);
       ctx.globalAlpha = Math.max(0, f.t);
-      ctx.strokeStyle = '#f0d460';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffe848';
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 10 + (1 - f.t) * 8, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 12 + (1 - f.t) * 10, 0, Math.PI * 2);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(p.x - 6, p.y);
-      ctx.lineTo(p.x + 6, p.y);
-      ctx.moveTo(p.x, p.y - 6);
-      ctx.lineTo(p.x, p.y + 6);
+      ctx.moveTo(p.x - 9, p.y);
+      ctx.lineTo(p.x + 9, p.y);
+      ctx.moveTo(p.x, p.y - 9);
+      ctx.lineTo(p.x, p.y + 9);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
@@ -427,17 +433,32 @@ export class GameRenderer {
       if (!show) continue;
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
-      const p = this.project(x, isBuilding(e.kind) ? 1.8 : 1.15, z);
-      const bw = isBuilding(e.kind) ? 34 : 22;
+      const p = this.project(x, isBuilding(e.kind) ? 2.4 : 1.65, z);
+      const bw = isBuilding(e.kind) ? 44 : 30;
+      const bh = 6;
       const ratio = Math.max(0, e.hp / e.maxHp);
-      ctx.fillStyle = 'rgba(8,6,14,0.85)';
-      ctx.fillRect(p.x - bw / 2, p.y - 16, bw, 4);
-      ctx.fillStyle = ratio > 0.55 ? '#5ad45a' : ratio > 0.3 ? '#e0c04a' : '#e84d4d';
-      ctx.fillRect(p.x - bw / 2, p.y - 16, bw * ratio, 4);
+      const barY = p.y - 20;
+      const isPlayer = e.team === 0;
       if (selected.has(e.id)) {
-        ctx.strokeStyle = '#f0d460';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(p.x - bw / 2 - 1, p.y - 17, bw + 2, 6);
+        const ringR = isBuilding(e.kind) ? 34 : 22;
+        ctx.strokeStyle = isPlayer ? '#48f048' : '#f04848';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y + 6, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.92)';
+      ctx.fillRect(p.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
+      if (isPlayer) {
+        ctx.fillStyle = ratio > 0.55 ? '#40e840' : ratio > 0.3 ? '#e8c838' : '#e83838';
+      } else {
+        ctx.fillStyle = ratio > 0.55 ? '#e83838' : ratio > 0.3 ? '#e87828' : '#a02020';
+      }
+      ctx.fillRect(p.x - bw / 2, barY, bw * ratio, bh);
+      if (selected.has(e.id)) {
+        ctx.strokeStyle = '#ffe848';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(p.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
       }
     }
   }
