@@ -1,12 +1,13 @@
 /** P11 / P33 / P40 — Three.js world renderer. */
 
 import * as THREE from 'three';
-import { Atlas, CELL, buildAtlas, roleOfKind } from './atlas';
+import { Atlas, CELL, buildAtlas } from './atlas';
 import { Kind, MAP, MAX_ENTS, Tile, DISSOLVE_DUR, type Ent } from './engine';
 import { TEAM_RGB, isBuilding } from './content';
 import type { World } from './sim';
 import { VfxRenderer } from './vfx';
 import { buildTerrainMesh } from './terrain';
+import { SDF_FRAG, SDF_VERT, civIndex, spriteSize } from './sprite-sdf';
 
 const VERT = /* glsl */ `
 attribute vec4 iUv;
@@ -23,7 +24,7 @@ void main() {
 }
 `;
 
-const FRAG = /* glsl */ `
+const PROP_FRAG = /* glsl */ `
 uniform sampler2D uAtlas;
 varying vec2 vUv;
 varying vec3 vTeam;
@@ -44,12 +45,16 @@ export class GameRenderer {
   readonly overlay: HTMLCanvasElement;
   readonly octx: CanvasRenderingContext2D;
   atlas!: Atlas;
-  private mesh!: THREE.InstancedMesh;
+  private sdfMesh!: THREE.InstancedMesh;
+  private propMesh!: THREE.InstancedMesh;
   private shadows!: THREE.InstancedMesh;
   private dummy = new THREE.Object3D();
+  private iMeta!: THREE.InstancedBufferAttribute;
+  private iSdfTeam!: THREE.InstancedBufferAttribute;
+  private iSdfFlash!: THREE.InstancedBufferAttribute;
   private iUv!: THREE.InstancedBufferAttribute;
-  private iTeam!: THREE.InstancedBufferAttribute;
-  private iFlash!: THREE.InstancedBufferAttribute;
+  private iPropTeam!: THREE.InstancedBufferAttribute;
+  private iPropFlash!: THREE.InstancedBufferAttribute;
   private fogTex!: THREE.DataTexture;
   private fogData = new Uint8Array(MAP * MAP * 4);
   private mapMesh!: THREE.Mesh;
@@ -101,27 +106,48 @@ export class GameRenderer {
     tex.flipY = true;
     tex.needsUpdate = true;
 
-    const geo = new THREE.PlaneGeometry(1, 1);
-    const uv = new Float32Array(MAX_ENTS * 4);
-    const team = new Float32Array(MAX_ENTS * 3);
-    const flash = new Float32Array(MAX_ENTS);
-    this.iUv = new THREE.InstancedBufferAttribute(uv, 4);
-    this.iTeam = new THREE.InstancedBufferAttribute(team, 3);
-    this.iFlash = new THREE.InstancedBufferAttribute(flash, 1);
-    geo.setAttribute('iUv', this.iUv);
-    geo.setAttribute('iTeam', this.iTeam);
-    geo.setAttribute('iFlash', this.iFlash);
+    const sdfGeo = new THREE.PlaneGeometry(1, 1);
+    const meta = new Float32Array(MAX_ENTS * 4);
+    const sdfTeam = new Float32Array(MAX_ENTS * 3);
+    const sdfFlash = new Float32Array(MAX_ENTS);
+    this.iMeta = new THREE.InstancedBufferAttribute(meta, 4);
+    this.iSdfTeam = new THREE.InstancedBufferAttribute(sdfTeam, 3);
+    this.iSdfFlash = new THREE.InstancedBufferAttribute(sdfFlash, 1);
+    sdfGeo.setAttribute('iMeta', this.iMeta);
+    sdfGeo.setAttribute('iTeam', this.iSdfTeam);
+    sdfGeo.setAttribute('iFlash', this.iSdfFlash);
 
-    const mat = new THREE.ShaderMaterial({
-      uniforms: { uAtlas: { value: tex } },
-      vertexShader: VERT,
-      fragmentShader: FRAG,
+    const sdfMat = new THREE.ShaderMaterial({
+      vertexShader: SDF_VERT,
+      fragmentShader: SDF_FRAG,
       transparent: true,
       depthWrite: false,
     });
-    this.mesh = new THREE.InstancedMesh(geo, mat, MAX_ENTS);
-    this.mesh.frustumCulled = false;
-    this.scene.add(this.mesh);
+    this.sdfMesh = new THREE.InstancedMesh(sdfGeo, sdfMat, MAX_ENTS);
+    this.sdfMesh.frustumCulled = false;
+    this.scene.add(this.sdfMesh);
+
+    const propGeo = new THREE.PlaneGeometry(1, 1);
+    const uv = new Float32Array(MAX_ENTS * 4);
+    const propTeam = new Float32Array(MAX_ENTS * 3);
+    const propFlash = new Float32Array(MAX_ENTS);
+    this.iUv = new THREE.InstancedBufferAttribute(uv, 4);
+    this.iPropTeam = new THREE.InstancedBufferAttribute(propTeam, 3);
+    this.iPropFlash = new THREE.InstancedBufferAttribute(propFlash, 1);
+    propGeo.setAttribute('iUv', this.iUv);
+    propGeo.setAttribute('iTeam', this.iPropTeam);
+    propGeo.setAttribute('iFlash', this.iPropFlash);
+
+    const propMat = new THREE.ShaderMaterial({
+      uniforms: { uAtlas: { value: tex } },
+      vertexShader: VERT,
+      fragmentShader: PROP_FRAG,
+      transparent: true,
+      depthWrite: false,
+    });
+    this.propMesh = new THREE.InstancedMesh(propGeo, propMat, MAX_ENTS);
+    this.propMesh.frustumCulled = false;
+    this.scene.add(this.propMesh);
 
     const sgeo = new THREE.CircleGeometry(0.5, 12);
     sgeo.rotateX(-Math.PI / 2);
@@ -197,10 +223,15 @@ export class GameRenderer {
     this.updateViewBounds(1);
     const vb = this.viewBounds;
     this.drawnEntIds.clear();
-    let drawn = 0;
+    let sdfDrawn = 0;
+    let propDrawn = 0;
+    let shadowDrawn = 0;
+    const metaArr = this.iMeta.array as Float32Array;
+    const sdfTeamArr = this.iSdfTeam.array as Float32Array;
+    const sdfFlashArr = this.iSdfFlash.array as Float32Array;
     const uvArr = this.iUv.array as Float32Array;
-    const teamArr = this.iTeam.array as Float32Array;
-    const flashArr = this.iFlash.array as Float32Array;
+    const propTeamArr = this.iPropTeam.array as Float32Array;
+    const propFlashArr = this.iPropFlash.array as Float32Array;
 
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = world.ents[i];
@@ -209,19 +240,25 @@ export class GameRenderer {
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
       if (x < vb.minX || x > vb.maxX || z < vb.minZ || z > vb.maxZ) continue;
-      const uv = this.uvFor(e);
-      if (!uv) continue;
 
-      const cellsW = uv.w / CELL;
-      const cellsH = uv.h / CELL;
-      let scaleX: number;
-      let scaleY: number;
-      if (isBuilding(e.kind)) {
-        const targetH = e.kind === Kind.Hall ? 2.4 : e.kind === Kind.House ? 1.75 : 1.85;
-        const mul = targetH / cellsH;
-        scaleX = cellsW * mul * e.facing;
-        scaleY = cellsH * mul;
-      } else if (e.kind === Kind.Resource) {
+      const rgb = TEAM_RGB[e.team] ?? TEAM_RGB[0];
+      const clash =
+        world.tick < 240 &&
+        (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism) &&
+        (() => {
+          const dx = e.x - MAP * 0.5;
+          const dz = e.z - MAP * 0.52;
+          return dx * dx + dz * dz < 110;
+        })();
+      const shootFlash =
+        e.cooldown > 0.26 && e.kind !== Kind.Resource ? (clash ? 0.42 : 0.55) : 0;
+      const flash = Math.max(e.hitFlash, shootFlash);
+
+      if (e.kind === Kind.Resource) {
+        const uv = this.propUvFor(e);
+        if (!uv) continue;
+        const cellsW = uv.w / CELL;
+        const cellsH = uv.h / CELL;
         const isProp = e.cargoType === Tile.PropWreck || e.cargoType === Tile.PropVent;
         const openCx = MAP * 0.5;
         const openCz = MAP * 0.52;
@@ -233,66 +270,86 @@ export class GameRenderer {
           Math.abs(Math.abs(e.z - openCz) - 2.85) < 0.35;
         const targetH = midGem ? 1.55 : isProp ? (midBoulder ? 1.25 : 1.2) : 1.45;
         const mul = targetH / cellsH;
-        scaleX = cellsW * mul;
-        scaleY = cellsH * mul;
+        const scaleX = cellsW * mul;
+        const scaleY = cellsH * mul;
+        this.dummy.position.set(x, 0.38, z);
+        this.dummy.quaternion.copy(this.lastCamQ);
+        this.dummy.scale.set(scaleX, scaleY, 1);
+        this.dummy.updateMatrix();
+        this.propMesh.setMatrixAt(propDrawn, this.dummy.matrix);
+        uvArr[propDrawn * 4] = uv.u0;
+        uvArr[propDrawn * 4 + 1] = uv.v0;
+        uvArr[propDrawn * 4 + 2] = uv.u1;
+        uvArr[propDrawn * 4 + 3] = uv.v1;
+        propTeamArr[propDrawn * 3] = rgb[0];
+        propTeamArr[propDrawn * 3 + 1] = rgb[1];
+        propTeamArr[propDrawn * 3 + 2] = rgb[2];
+        propFlashArr[propDrawn] = flash;
+        propDrawn++;
       } else {
-        const unitMul = e.kind === Kind.Worker ? 1.55 : 1.08;
-        scaleX = cellsW * unitMul * e.facing;
-        scaleY = cellsH * (e.kind === Kind.Worker ? 1.55 : 1.14);
+        const spr = spriteSize(e.kind);
+        const cellsW = e.kind === Kind.Hall ? 2 : 1;
+        const cellsH = e.kind === Kind.Hall ? 2 : 1;
+        let scaleX: number;
+        let scaleY: number;
+        if (isBuilding(e.kind)) {
+          const targetH = e.kind === Kind.Hall ? 2.4 : e.kind === Kind.House ? 1.75 : 1.85;
+          const mul = targetH / cellsH;
+          scaleX = cellsW * mul * e.facing;
+          scaleY = cellsH * mul;
+        } else {
+          const unitMul = e.kind === Kind.Worker ? 1.55 : 1.08;
+          scaleX = cellsW * unitMul * e.facing;
+          scaleY = cellsH * (e.kind === Kind.Worker ? 1.55 : 1.14);
+        }
+        const lift = isBuilding(e.kind) ? 1.15 : 0.9;
+        this.dummy.position.set(x, lift, z);
+        this.dummy.quaternion.copy(this.lastCamQ);
+        this.dummy.scale.set(scaleX, scaleY, 1);
+        this.dummy.updateMatrix();
+        this.sdfMesh.setMatrixAt(sdfDrawn, this.dummy.matrix);
+        metaArr[sdfDrawn * 4] = e.kind;
+        metaArr[sdfDrawn * 4 + 1] = civIndex(e.civ);
+        metaArr[sdfDrawn * 4 + 2] = this.frameFor(e);
+        metaArr[sdfDrawn * 4 + 3] = spr;
+        sdfTeamArr[sdfDrawn * 3] = rgb[0];
+        sdfTeamArr[sdfDrawn * 3 + 1] = rgb[1];
+        sdfTeamArr[sdfDrawn * 3 + 2] = rgb[2];
+        sdfFlashArr[sdfDrawn] = flash;
+        sdfDrawn++;
       }
-      const lift = e.kind === Kind.Resource ? 0.38 : isBuilding(e.kind) ? 1.15 : 0.9;
-      this.dummy.position.set(x, lift, z);
-      this.dummy.quaternion.copy(this.lastCamQ);
-      this.dummy.scale.set(scaleX, scaleY, 1);
-      this.dummy.updateMatrix();
-      this.mesh.setMatrixAt(drawn, this.dummy.matrix);
 
       if (e.kind === Kind.Resource) {
         this.dummy.position.set(x, 0.03, z);
         this.dummy.quaternion.identity();
         this.dummy.scale.set(e.radius * 1.1, 1, e.radius * 0.85);
         this.dummy.updateMatrix();
-        this.shadows.setMatrixAt(drawn, this.dummy.matrix);
+        this.shadows.setMatrixAt(shadowDrawn, this.dummy.matrix);
       } else {
         this.dummy.position.set(x, 0.03, z);
         this.dummy.quaternion.identity();
         this.dummy.scale.set(e.radius * 2.2, 1, e.radius * 1.6);
         this.dummy.updateMatrix();
-        this.shadows.setMatrixAt(drawn, this.dummy.matrix);
+        this.shadows.setMatrixAt(shadowDrawn, this.dummy.matrix);
       }
-
-      uvArr[drawn * 4] = uv.u0;
-      uvArr[drawn * 4 + 1] = uv.v0;
-      uvArr[drawn * 4 + 2] = uv.u1;
-      uvArr[drawn * 4 + 3] = uv.v1;
-      const rgb = TEAM_RGB[e.team] ?? TEAM_RGB[0];
-      teamArr[drawn * 3] = rgb[0];
-      teamArr[drawn * 3 + 1] = rgb[1];
-      teamArr[drawn * 3 + 2] = rgb[2];
-      const clash =
-        world.tick < 240 &&
-        (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism) &&
-        (() => {
-          const dx = e.x - MAP * 0.5;
-          const dz = e.z - MAP * 0.52;
-          return dx * dx + dz * dz < 110;
-        })();
-      const shootFlash =
-        e.cooldown > 0.26 && e.kind !== Kind.Resource ? (clash ? 0.42 : 0.55) : 0;
-      flashArr[drawn] = Math.max(e.hitFlash, shootFlash);
+      shadowDrawn++;
       this.drawnEntIds.add(e.id);
-      drawn++;
     }
 
-    this.lastDrawn = drawn;
+    this.lastDrawn = sdfDrawn + propDrawn;
     this.lastVfx = this.vfx.draw(world, this.lastCamQ, vb);
-    this.mesh.count = drawn;
-    this.shadows.count = drawn;
-    this.mesh.instanceMatrix.needsUpdate = true;
+    this.sdfMesh.count = sdfDrawn;
+    this.propMesh.count = propDrawn;
+    this.shadows.count = shadowDrawn;
+    this.sdfMesh.instanceMatrix.needsUpdate = true;
+    this.propMesh.instanceMatrix.needsUpdate = true;
     this.shadows.instanceMatrix.needsUpdate = true;
+    this.iMeta.needsUpdate = true;
+    this.iSdfTeam.needsUpdate = true;
+    this.iSdfFlash.needsUpdate = true;
     this.iUv.needsUpdate = true;
-    this.iTeam.needsUpdate = true;
-    this.iFlash.needsUpdate = true;
+    this.iPropTeam.needsUpdate = true;
+    this.iPropFlash.needsUpdate = true;
 
     this.updateFog(world);
     this.renderer.render(this.scene, this.camera);
@@ -343,28 +400,22 @@ export class GameRenderer {
     b.maxZ = cz + ez + margin;
   }
 
-  private uvFor(e: Ent) {
-    const civ = e.civ;
-    if (e.kind === Kind.Hall) return this.atlas.uv[`${civ}-hall`];
-    if (e.kind === Kind.House) return this.atlas.uv[`${civ}-house`];
-    if (e.kind === Kind.Barracks) return this.atlas.uv[`${civ}-barracks`];
-    if (e.kind === Kind.UniqueB) return this.atlas.uv[`${civ}-unique`];
-    if (e.kind === Kind.Resource) {
-      if (e.cargoType === Tile.PropWreck) return this.atlas.uv['prop-wreck'];
-      if (e.cargoType === Tile.PropVent) return this.atlas.uv['prop-vent'];
-      if (e.cargoType === Tile.Gas) return this.atlas.uv['gem-gas'];
-      if (e.cargoType === Tile.Solar) return this.atlas.uv['gem-sol'];
-      return this.atlas.uv['gem-ore'];
-    }
-    const role = roleOfKind(e.kind);
-    let f = 0;
+  private frameFor(e: Ent): number {
     if (e.hp <= 0) {
-      if (e.dissolveT > 0) f = e.dissolveT > DISSOLVE_DUR * 0.5 ? 5 : 6;
-      else f = 4;
-    } else if (e.order === 2 /* attack */) f = 3;
-    else if (Math.abs(e.vx) + Math.abs(e.vz) > 0.08) f = 1 + ((e.anim * 6) | 0) % 2;
-    else f = (e.anim * 2) & 1;
-    return this.atlas.uv[`${civ}-${role}-${f}`];
+      if (e.dissolveT > 0) return e.dissolveT > DISSOLVE_DUR * 0.5 ? 5 : 6;
+      return 4;
+    }
+    if (e.order === 2 /* attack */) return 3;
+    if (Math.abs(e.vx) + Math.abs(e.vz) > 0.08) return 1 + ((e.anim * 6) | 0) % 2;
+    return (e.anim * 2) & 1;
+  }
+
+  private propUvFor(e: Ent) {
+    if (e.cargoType === Tile.PropWreck) return this.atlas.uv['prop-wreck'];
+    if (e.cargoType === Tile.PropVent) return this.atlas.uv['prop-vent'];
+    if (e.cargoType === Tile.Gas) return this.atlas.uv['gem-gas'];
+    if (e.cargoType === Tile.Solar) return this.atlas.uv['gem-sol'];
+    return this.atlas.uv['gem-ore'];
   }
 
   private buildMap(world: World): void {
