@@ -5,9 +5,11 @@
 
 ## Now
 
-**Wave 3 P56 building** — P55 critic **PASS** (`595346c`). Live **`0.4.3-wave3`**. Idle-worker gold pulse works.
+**Wave 3 P56 critic** — formation shipped. Live **`0.4.4-wave3`**.
 
-**Next:** formation spread on multi-unit moves (P54 remaining §9 #2). Then combat SFX.
+Multi-unit Move/AttackMove hex offsets; pairwise distance > 0.5. Opening ranks unchanged.
+
+**Next:** fresh critic. Then combat SFX (last P54 command-feel item).
 
 ## Biggest gap
 
@@ -20,4 +22,4 @@
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P55 **PASS**; P56 formation in flight |
+| 3–5 polish / iPad / coherence | P56 live `0.4.4-wave3`; critic next |
