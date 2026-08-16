@@ -209,7 +209,7 @@ export class GameRenderer {
         scaleY = cellsH * mul;
       } else if (e.kind === Kind.Resource) {
         const isProp = e.cargoType === Tile.PropWreck || e.cargoType === Tile.PropVent;
-        const targetH = isProp ? 0.95 : 1.05;
+        const targetH = isProp ? 1.2 : 1.45;
         const mul = targetH / cellsH;
         scaleX = cellsW * mul;
         scaleY = cellsH * mul;

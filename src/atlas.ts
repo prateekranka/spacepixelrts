@@ -446,23 +446,26 @@ function diamondEdge(p: Pix, edge: Rgba, shade: Rgba): void {
 
 /** Tight ground gem — transparent padding, no magenta key. */
 function drawGem(kind: 'ore' | 'gas' | 'sol'): Pix {
-  const p = Pix.alloc(20, 20);
+  const p = Pix.alloc(24, 24);
   if (kind === 'ore') {
-    p.diam(10, 11, 7, PAL.ore);
-    p.diam(10, 10, 5, PAL.oreH);
-    p.set(7, 8, PAL.white);
-    p.set(12, 9, PAL.oreH);
-    p.set(10, 13, PAL.oreH);
+    p.diam(12, 13, 9, PAL.ore);
+    p.diam(12, 12, 6, PAL.oreH);
+    p.set(8, 9, PAL.white);
+    p.set(14, 10, PAL.oreH);
+    p.set(12, 16, PAL.oreH);
+    p.set(10, 12, PAL.white);
   } else if (kind === 'gas') {
-    p.diam(10, 10, 8, PAL.gas);
-    p.circ(8, 8, 3, PAL.gasH);
-    p.set(12, 11, PAL.gasH);
-    p.set(10, 6, PAL.white);
+    p.diam(12, 12, 10, PAL.gas);
+    p.circ(9, 9, 4, PAL.gasH);
+    p.circ(14, 11, 3, PAL.gasH);
+    p.set(12, 7, PAL.white);
+    p.set(10, 10, PAL.white);
   } else {
-    p.circ(10, 10, 7, PAL.sol);
-    p.circ(10, 10, 3, PAL.solH);
-    p.set(10, 5, PAL.white);
-    p.set(8, 8, PAL.solH);
+    p.circ(12, 12, 9, PAL.sol);
+    p.circ(12, 12, 4, PAL.solH);
+    p.set(12, 6, PAL.white);
+    p.set(9, 10, PAL.solH);
+    p.set(14, 10, PAL.white);
   }
   p.finish();
   return p;
@@ -587,14 +590,36 @@ function drawRockTile(): Pix {
 }
 
 function drawPropWreck(): Pix {
-  const p = Pix.alloc(20, 16);
-  p.fill(2, 10, 16, 5, [32, 28, 42, 255]);
-  p.fill(4, 4, 12, 10, [48, 42, 58, 255]);
-  p.fill(10, 2, 8, 12, [62, 56, 72, 255]);
-  p.line(10, 2, 16, 6, [88, 82, 98, 255]);
-  p.line(4, 8, 2, 14, PAL.ink);
-  p.set(5, 5, [96, 88, 104, 255]);
-  p.set(12, 4, [110, 102, 118, 255]);
+  const p = Pix.alloc(22, 20);
+  const pts: [number, number][] = [
+    [6, 17],
+    [4, 12],
+    [7, 7],
+    [11, 4],
+    [16, 5],
+    [19, 10],
+    [18, 16],
+    [13, 18],
+    [8, 17],
+  ];
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % pts.length];
+    p.line(x0, y0, x1, y1, PAL.ink);
+  }
+  for (let y = 5; y <= 17; y++) {
+    for (let x = 5; x <= 18; x++) {
+      if (x + y > 22 && x * 1.05 + y * 0.9 < 28) p.set(x, y, PAL.rock);
+    }
+  }
+  for (let y = 6; y <= 13; y++) {
+    for (let x = 8; x <= 15; x++) {
+      if (x + y < 20) p.set(x, y, PAL.rockH);
+    }
+  }
+  p.line(9, 7, 15, 6, PAL.rockH);
+  p.set(10, 7, PAL.rockH);
+  for (let x = 6; x <= 17; x++) p.set(x, 18, [58, 50, 72, 255]);
   p.finish();
   return p;
 }

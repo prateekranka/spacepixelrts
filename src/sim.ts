@@ -327,32 +327,30 @@ export class World {
     };
     const rockOffsets: [number, number][] = [
       [-1, -5],
-      [0, -6],
+      [0, -5],
       [1, -5],
-      [-1, -6],
-      [1, -6],
-      [-1, 5],
-      [0, 6],
-      [1, 5],
       [-1, 6],
+      [0, 6],
       [1, 6],
     ];
     for (const [dx, dz] of rockOffsets) placeRock(icx + dx, icz + dz);
     stampCampPad(icx, icz - 6);
     stampCampPad(icx, icz + 6);
-    // Gems beside camp workers — visible gap north of Helion wing (~cz-3.48).
-    this.placeOpeningNodeAt(Tile.Ore, cx + 1.1, cz - 5.35);
+    // Gems — ore among Helion workers, gas at +Z camp, solar east of north camp.
+    this.placeOpeningNodeAt(Tile.Ore, cx - 0.25, cz - 5.35);
     this.placeOpeningNodeAt(Tile.Gas, cx + 1.1, cz + 5.35);
-    this.placeOpeningNodeAt(Tile.Solar, cx + 1.0, cz - 6.2);
-    const propSlots: [number, number, Tile][] = [
-      [icx - 1, icz - 5, Tile.PropWreck],
-      [icx + 1, icz - 6, Tile.PropVent],
-      [icx + 1, icz + 5, Tile.PropVent],
-      [icx - 1, icz + 6, Tile.PropWreck],
+    this.placeOpeningNodeAt(Tile.Solar, cx + 1.1, cz - 5.35);
+    const rockBillboards: [number, number][] = [
+      [icx - 1, icz - 5],
+      [icx, icz - 5],
+      [icx + 1, icz - 5],
+      [icx - 1, icz + 6],
+      [icx, icz + 6],
+      [icx + 1, icz + 6],
     ];
-    for (const [px, pz, kind] of propSlots) {
+    for (const [px, pz] of rockBillboards) {
       if (inFireLane(pz)) continue;
-      this.placeProp(kind, px, pz);
+      this.placeProp(Tile.PropWreck, px, pz);
     }
   }
 
@@ -542,7 +540,7 @@ export class World {
     }
 
     // Forward camps — workers + gem parked beyond Helion wing with visible Z gap.
-    const oreX = cx + 1.1;
+    const oreX = cx - 0.25;
     const oreZ = cz - 5.35;
     const gasX = cx + 1.1;
     const gasZ = cz + 5.35;
