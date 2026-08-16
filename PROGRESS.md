@@ -5,15 +5,13 @@
 
 ## Now
 
-**Wave 3 P52 critic** — death dissolve shipped. Live **`0.4.1-wave3`**.
+**Wave 3 P53 building** — P52 critic **PASS** (`f087d5e`). Live **`0.4.1-wave3`**. Dissolve → stain → gone works; opening wrecks stay.
 
-2-tick dissolve then 1.5s stain; opening Kryos wrecks stay as set dressing.
-
-**Next:** fresh critic on live deaths. Then P53 HP bars / foot ellipses.
+**Next:** foot ellipses + HP bars only when selected/damaged/in-combat.
 
 ## Biggest gap
 
-**Death is pop-out / static wrecks** (P50). P52: 2-frame dissolve + 1.5s stain. Then HP/ellipses.
+**HP chrome / selection boxes** (P50). P53: foot ellipses; HP only selected/damaged/in-combat.
 
 ## Tracker
 
@@ -22,4 +20,4 @@
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P52 live `0.4.1-wave3`; critic next |
+| 3–5 polish / iPad / coherence | P52 **PASS**; P53 ellipses/HP |
