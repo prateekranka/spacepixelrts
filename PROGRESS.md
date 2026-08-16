@@ -1,27 +1,25 @@
-# Spacepixel RTS — live progress
+# Starhold — live status
 
-**Play:** https://space.contenthelper.in · https://spacepixelrts.pages.dev · [progress](/progress.html)
-**Bar:** Age of Empires II: Definitive Edition, judged blind on the running game.
-**Orchestrator:** Grok 4.6 Extra High. Specialists: Composer 2.5.
+**Play:** https://spacepixelrts.pages.dev  
+**Bar:** Age of Empires II: Definitive Edition, blind, on the running game.  
+**Orchestrator:** Grok 4.6 Extra High. Builders/critics: Composer 2.5.
 
 ## Now
 
-Wave 1 skirmish is **booted and visible**: `#app` hosts the Three.js world, Starhold chrome overlays it, probe reports ~52 entities at 60 fps. Opening clash is framed at zoom 8. Critics inspect the live URL, not this file.
+Wave 1 skirmish is **live at 60 fps** (52 entities, 5 draw calls, no console errors). HUD grammar is AoE2-like. **Fresh critic + P11 silhouette builder are spawning.**
 
-## Biggest gap (pre-critic, from the running screenshot)
+## Biggest gap
 
-Sprites and terrain still read as dark blobs at a glance. AoE2:DE wins on silhouette clarity. First live critic names the single gap.
+**Units and terrain read as dark blobs.** Live screenshot: avg luminance 29, 243 quantized hues, top colors all near-black purple. Helion fighters are tiny green circles; Kryos are tiny blue diamonds. AoE2:DE wins on silhouette at default zoom. That is the only gap this round.
 
 ## Tracker
 
 | Id | Piece | Status | Critic |
 |---|---|---|---|
-| P00 | scaffold / deploy / progress | shipped | live URL up |
-| P10 | simulation tick | shipped | pending live |
-| P11 | pixel atlas + Three.js | shipped, world visible | pending |
-| P12 | camera + command input | shipped, clash framed | pending |
-| P13 | pathfinding | shipped | pending |
-| P14 | map generation | shipped | pending |
-| P20–P23 | civ silhouettes | names retargeted to DESIGN.md | pending |
-| P24–P27 | economy / combat / fog / AI | first pass | pending |
-| P30–P35 | HUD / minimap / audio | first pass | pending |
+| P00 | docs + scaffold + deploy | done | live URL up |
+| P02 | critic harness (`npm run critic`) | done | metrics on pages.dev |
+| P10–P14 | sim / path / map / input | shipped | pending P15 critic |
+| P11b | silhouettes + closer zoom | building | — |
+| P15 | Wave 1 critic | critic | in flight |
+| P20–P35 | civs / eco / combat / HUD | first pass in tree | blocked on readability |
+| P40–P50 | perf / iPad / integrator | queued | |

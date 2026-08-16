@@ -62,8 +62,8 @@ Status: `queued | building | critic | iterate | done`
 | ID | Piece | Owner | Status | Verdict |
 |---|---|---|---|---|
 | P00 | Docs (ARCHITECTURE, DESIGN, ORCHESTRATION) | orchestrator | done | contract locked |
-| P01 | Scaffold + boot + first deploy | orchestrator | queued | |
-| P02 | Critic harness | orchestrator | queued | |
+| P01 | Scaffold + boot + first deploy | orchestrator | done | live 60fps skirmish |
+| P02 | Critic harness | orchestrator | done | `npm run critic` → Playwright + palette + probe |
 
 ### Wave 1 — core
 
@@ -71,12 +71,12 @@ Independently judgeable. P10 ∥ P11 after P01/P02. P12 after P11. P13/P14 after
 
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
-| P10 | Sim kernel: Ent SoA, commands, spawn/kill, step stub orders | P01 | queued | |
-| P11 | Pixel pipeline: atlas, InstancedMesh layers, iso camera snap, team-key shader | P01 | queued | |
-| P12 | Camera + touch/pointer + box select + hit test | P11 | queued | |
-| P13 | Pathfinding A* + steering + separation | P10 | queued | |
-| P14 | Map gen + tiles + resource nodes + two bases | P10 | queued | |
-| P15 | Wave 1 integrator: wire loop, opening tableau, move a squad | P10–P14 | queued | |
+| P10 | Sim kernel: Ent SoA, commands, spawn/kill, step stub orders | P01 | done | pending P15 |
+| P11 | Pixel pipeline: atlas, InstancedMesh layers, iso camera snap, team-key shader | P01 | iterate | blobs — P11b |
+| P12 | Camera + touch/pointer + box select + hit test | P11 | done | pending P15 |
+| P13 | Pathfinding A* + steering + separation | P10 | done | pending P15 |
+| P14 | Map gen + tiles + resource nodes + two bases | P10 | done | pending P15 |
+| P15 | Wave 1 integrator: wire loop, opening tableau, move a squad | P10–P14 | critic | in flight |
 
 Wave 1 wow bar: a critic watching the live canvas sees a pixel-crisp isometric battlefield, can select and move units, they path around rocks, 60 fps, palette coherent. Not full civs yet — but it must already look like a game, not a grid demo.
 
@@ -127,4 +127,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-*Boot not deployed yet — Wave 0 in progress.*
+Units and terrain read as dark blobs vs AoE2:DE (avg luma 29 on https://spacepixelrts.pages.dev). P11b is the fix.

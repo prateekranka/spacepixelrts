@@ -4,6 +4,8 @@
  */
 import { chromium } from 'playwright';
 import { PNG } from 'pngjs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const args = process.argv.slice(2);
 function argVal(flag, dflt) {
@@ -100,5 +102,13 @@ const palette = {
   nonBlackPixelShare: Math.round((nonBlack / n) * 10000) / 100,
 };
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+const result = { url: URL, fps, palette, consoleIssues, judgedAt: new Date().toISOString() };
+if (SHOT) {
+  mkdirSync(dirname(SHOT), { recursive: true });
+  await page.screenshot({ path: SHOT });
+  result.screenshot = SHOT;
+}
+mkdirSync('critic/out', { recursive: true });
+writeFileSync('critic/out/latest.json', JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));
+await browser.close();
