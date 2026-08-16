@@ -1,20 +1,29 @@
 /** Spacepixel boot — rAF loop, harness, landscape iPad. */
 
 import { DT, Kind, MAP, MAX_ENTS } from './engine';
+import type { Civ } from './engine';
 import { World } from './sim';
 import { GameRenderer } from './render';
 import { Input } from './input';
 import { Hud } from './hud';
 import { Sfx } from './audio';
+import { enemyCiv, parseBootCiv } from './content';
 
-const VERSION = '0.5.3-wave4';
+const VERSION = '0.6.0-wave5';
+const SEED = 0x5eed;
+const OPENING_PAN = { x: MAP * 0.5, z: MAP * 0.52, halfH: 5.8 };
 
 const host = document.getElementById('app');
 if (!host) throw new Error('Starhold boot: #app host missing');
 const world = new World();
 world.civ[0] = 'vespari';
 world.civ[1] = 'aurion';
-world.reset(0x5eed);
+const bootCiv = parseBootCiv(window.location.search);
+if (bootCiv) {
+  world.civ[0] = bootCiv;
+  world.civ[1] = enemyCiv(bootCiv);
+}
+world.reset(SEED);
 
 const view = new GameRenderer(host);
 view.init(world);
@@ -28,12 +37,25 @@ world.onHit = () => {
 };
 world.onMuzzle = () => sfx.muzzle();
 const input = new Input(host, world, view, sfx);
-input.pan.x = MAP * 0.5;
-input.pan.z = MAP * 0.52;
-input.halfH = 5.8;
+input.pan.x = OPENING_PAN.x;
+input.pan.z = OPENING_PAN.z;
+input.halfH = OPENING_PAN.halfH;
+
+function switchCiv(player: Civ): void {
+  world.civ[0] = player;
+  world.civ[1] = enemyCiv(player);
+  world.reset(SEED);
+  input.selected.clear();
+  input.groups = [[], [], [], []];
+  input.place = null;
+  input.pan.x = OPENING_PAN.x;
+  input.pan.z = OPENING_PAN.z;
+  input.halfH = OPENING_PAN.halfH;
+  hitSfx = 0;
+}
 
 const hud = new Hud(host);
-hud.bind(world, input, view);
+hud.bind(world, input, view, switchCiv);
 
 let acc = 0;
 let last = performance.now();
@@ -103,4 +125,4 @@ window.addEventListener('resize', () => {
   view.resize(host.clientWidth, host.clientHeight);
 });
 
-console.log(`Spacepixel ${VERSION} — wave 2 empire loop`);
+console.log(`Spacepixel ${VERSION} — wave 5 civ roster`);

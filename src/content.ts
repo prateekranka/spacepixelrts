@@ -8,6 +8,22 @@ export const CIV_NAME: Record<Civ, string> = {
   voidmarked: 'Nihiline',
 };
 
+export const ALL_CIVS: Civ[] = ['vespari', 'aurion', 'voidmarked'];
+
+/** Opponent for skirmish — always a different people. */
+export function enemyCiv(player: Civ): Civ {
+  if (player === 'vespari') return 'aurion';
+  if (player === 'aurion') return 'vespari';
+  return 'aurion';
+}
+
+export function parseBootCiv(search: string): Civ | null {
+  const q = new URLSearchParams(search);
+  const raw = q.get('civ') ?? q.get('p');
+  if (!raw) return null;
+  return ALL_CIVS.includes(raw as Civ) ? (raw as Civ) : null;
+}
+
 export const TEAM_RGB: [number, number, number][] = [
   [0.24, 0.78, 0.42],
   [0.92, 0.32, 0.28],

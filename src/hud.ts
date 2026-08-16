@@ -3,6 +3,7 @@
 import { Kind, MAP, Ord } from './engine';
 import type { Civ } from './engine';
 import {
+  ALL_CIVS,
   CIV_NAME,
   STATS,
   hallName,
@@ -34,7 +35,9 @@ export class Hud {
   private matchTitleEl: HTMLElement;
   private matchSubEl: HTMLElement;
   private idlewEl: HTMLButtonElement;
+  private civPickEl: HTMLElement;
   private cmdsSig = '';
+  private civSig = '';
 
   constructor(host: HTMLElement) {
     this.root = document.createElement('div');
@@ -70,6 +73,7 @@ export class Hud {
         </div>
         <div id="cmds"></div>
       </div>
+      <div id="civpick" aria-label="Choose civilization"></div>
       <p id="hint">Landscape command deck · two-finger pan · pinch zoom · box-select to rally the swarm</p>
       <div id="match-end" hidden>
         <div class="match-panel">
@@ -90,10 +94,24 @@ export class Hud {
     this.matchTitleEl = this.root.querySelector('#match-title')!;
     this.matchSubEl = this.root.querySelector('#match-sub')!;
     this.idlewEl = this.root.querySelector('#idlew')!;
+    this.civPickEl = this.root.querySelector('#civpick')!;
     this.injectCss();
+    this.renderCivPick(null);
   }
 
-  bind(world: World, input: Input, view: GameRenderer): void {
+  bind(
+    world: World,
+    input: Input,
+    view: GameRenderer,
+    onCivSwitch: (civ: Civ) => void,
+  ): void {
+    this.civPickEl.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('button[data-civ]') as HTMLButtonElement | null;
+      if (!btn || btn.disabled) return;
+      const civ = btn.dataset.civ as Civ;
+      if (civ === world.civ[0]) return;
+      onCivSwitch(civ);
+    });
     this.root.querySelector('#idlew')!.addEventListener('click', () => input.commandAt('idleworker'));
     this.minimap.addEventListener('pointerdown', (e) => {
       const r = this.minimap.getBoundingClientRect();
@@ -124,9 +142,29 @@ export class Hud {
       (e) => e.alive && e.team === 0 && e.kind === Kind.Worker && e.hp > 0 && e.order === Ord.Idle,
     );
     this.idlewEl.classList.toggle('pulse', idlePulse);
+    this.drawCivPick(world);
     this.drawMini(world, input);
     this.drawCard(world, input);
     this.drawMatchEnd(world);
+  }
+
+  private drawCivPick(world: World): void {
+    const player = world.civ[0];
+    const sig = `${player}|${world.civ[1]}`;
+    if (sig !== this.civSig) {
+      this.civSig = sig;
+      this.renderCivPick(player);
+    }
+  }
+
+  private renderCivPick(active: Civ | null): void {
+    this.civPickEl.innerHTML = ALL_CIVS
+      .map((civ) => {
+        const on = civ === active;
+        const cls = ['civ-tile', civ, on ? 'on' : ''].filter(Boolean).join(' ');
+        return `<button type="button" data-civ="${civ}" class="${cls}" aria-pressed="${on}"><strong>${CIV_NAME[civ]}</strong><small>${civShort(civ)}</small></button>`;
+      })
+      .join('');
   }
 
   private drawMatchEnd(world: World): void {
@@ -324,11 +362,17 @@ function civPlateBg(civ: Civ): string {
   return 'linear-gradient(145deg,#3a2818 0%,#1a0e08 100%)';
 }
 
+function civShort(civ: Civ): string {
+  if (civ === 'aurion') return 'Ice cathedral';
+  if (civ === 'voidmarked') return 'Void mycelium';
+  return 'Solar geometry';
+}
+
 const HUD_CSS = `
 #hud{position:fixed;inset:0;pointer-events:none;color:#f4efe4;font-family:"Trebuchet MS","Segoe UI",sans-serif;z-index:5}
 #game,#overlay{position:absolute;inset:0;width:100%;height:100%;display:block}
 #overlay{pointer-events:none;z-index:2}
-#topbar,#bottom,button{pointer-events:auto}
+#topbar,#bottom,#civpick,#civpick button{pointer-events:auto}
 #topbar{position:absolute;left:0;right:0;top:0;box-sizing:border-box;height:calc(56px + env(safe-area-inset-top,0px));min-height:56px;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);display:flex;align-items:stretch;background:linear-gradient(#1a1428ee,#120e1cf2);border-bottom:2px solid #c9a227;box-shadow:0 8px 24px #0008}
 #brand{display:flex;gap:10px;align-items:center;padding:0 14px;min-width:210px}
 #brand .sigil{color:#c9a227;font-size:22px}
@@ -369,6 +413,15 @@ const HUD_CSS = `
 #cmds button.verb:disabled{opacity:.38;cursor:not-allowed;filter:saturate(.55);border-color:#c9a22744}
 #cmds button.verb strong{font-size:13px;letter-spacing:.02em}
 #cmds small{opacity:.55;font-size:10px;letter-spacing:.04em}
+#civpick{position:absolute;left:calc(10px + env(safe-area-inset-left,0px));top:calc(68px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:6px;pointer-events:auto;z-index:6}
+#civpick .civ-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:132px;min-height:48px;padding:8px 12px;border:2px solid #c9a22766;border-radius:2px;background:#120e1cf0;color:#f4efe4;font:inherit;cursor:pointer;text-align:left;box-shadow:0 4px 16px #0006}
+#civpick .civ-tile strong{font-size:12px;letter-spacing:.06em;text-transform:uppercase;line-height:1.2}
+#civpick .civ-tile small{opacity:.6;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+#civpick .civ-tile.vespari{background:linear-gradient(135deg,#3a2818 0%,#1a0e08 100%)}
+#civpick .civ-tile.aurion{background:linear-gradient(135deg,#163844 0%,#061018 100%)}
+#civpick .civ-tile.voidmarked{background:linear-gradient(135deg,#2a0a28 0%,#1c3a22 100%)}
+#civpick .civ-tile.on{border-color:#f0d460;box-shadow:0 0 0 1px #000,0 0 18px #c9a22766,inset 0 0 0 2px #f0d46055}
+#civpick .civ-tile:not(.on):hover{border-color:#c9a227;filter:brightness(1.08)}
 #hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.45;pointer-events:none;white-space:nowrap}
 #match-end{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;z-index:8}
 #match-end .match-panel{padding:18px 28px 16px;border:3px solid #c9a227;background:linear-gradient(#1a1428f2,#120e1cf0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;min-width:280px}

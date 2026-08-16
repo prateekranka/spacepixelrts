@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 5 P68** — civ picker / Nihiline on canvas. P67 named the gap. Live **`0.5.3-wave4`**.
+**Wave 5 P68** — civ picker shipped. Live **`0.6.0-wave5`**.
 
 Default opening stays Helion vs Kryos (P41). `?civ=voidmarked` proves the third people.
 
-**Next:** P68 builder, then critic.
+**Next:** P68 critic.
 
 ## Biggest gap
 
-**Live 1v1 is hard-coded Helion vs Kryos** — Nihiline never appears (§9 #3).
+**§9 #3 playable** — three civs on canvas via picker / URL; critic pass pending.
 
 ## Tracker
 
@@ -24,4 +24,4 @@ Default opening stays Helion vs Kryos (P41). `?civ=voidmarked` proves the third 
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
 | 4 performance / iPad / bugs | **PASS** (P66 critic) |
-| 5 full 1v1 coherence | P67 done; P68 civ picker |
+| 5 full 1v1 coherence | P68 civ picker shipped; critic next |
