@@ -203,7 +203,7 @@ export class GameRenderer {
       let scaleX: number;
       let scaleY: number;
       if (isBuilding(e.kind)) {
-        const targetH = e.kind === Kind.Hall ? 2.4 : e.kind === Kind.House ? 1.42 : 1.85;
+        const targetH = e.kind === Kind.Hall ? 2.4 : e.kind === Kind.House ? 1.75 : 1.85;
         const mul = targetH / cellsH;
         scaleX = cellsW * mul * e.facing;
         scaleY = cellsH * mul;
@@ -214,8 +214,9 @@ export class GameRenderer {
         scaleX = cellsW * mul;
         scaleY = cellsH * mul;
       } else {
-        scaleX = cellsW * 1.08 * e.facing;
-        scaleY = cellsH * 1.14;
+        const unitMul = e.kind === Kind.Worker ? 1.22 : 1.08;
+        scaleX = cellsW * unitMul * e.facing;
+        scaleY = cellsH * (e.kind === Kind.Worker ? 1.22 : 1.14);
       }
       const lift = e.kind === Kind.Resource ? 0.38 : isBuilding(e.kind) ? 1.15 : 0.9;
       this.dummy.position.set(x, lift, z);

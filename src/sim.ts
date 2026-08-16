@@ -305,9 +305,20 @@ export class World {
         this.block[xx + zz * MAP] = 0;
       }
     }
-    const inFireLane = (zz: number): boolean => Math.abs(zz - icz) <= 4;
+    const inFireLane = (zz: number): boolean => Math.abs(zz - icz) < 4.4;
     const onZFlank = (xx: number, zz: number): boolean =>
-      Math.abs(xx - icx) <= 1.6 && Math.abs(zz - icz) >= 5.5 && Math.abs(zz - icz) <= 8.5;
+      Math.abs(xx - icx) <= 1.6 && Math.abs(zz - icz) >= 5.0 && Math.abs(zz - icz) <= 6.2;
+    const stampCampPad = (hx: number, hz: number): void => {
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = hx + dx;
+          const zz = hz + dz;
+          if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
+          this.tiles[xx + zz * MAP] = Tile.Dust;
+          this.block[xx + zz * MAP] = 0;
+        }
+      }
+    };
     const placeRock = (xx: number, zz: number): void => {
       if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) return;
       if (inFireLane(zz) || !onZFlank(xx, zz)) return;
@@ -315,32 +326,29 @@ export class World {
       this.block[xx + zz * MAP] = 1;
     };
     const rockOffsets: [number, number][] = [
+      [-1, -5],
+      [0, -6],
+      [1, -5],
       [-1, -6],
-      [0, -7],
       [1, -6],
-      [0, -8],
-      [-1, -7],
-      [1, -7],
+      [-1, 5],
+      [0, 6],
+      [1, 5],
       [-1, 6],
-      [0, 7],
       [1, 6],
-      [0, 8],
-      [-1, 7],
-      [1, 7],
     ];
     for (const [dx, dz] of rockOffsets) placeRock(icx + dx, icz + dz);
-    // Gems on camera Z flanks — visible left/right, not under HUD.
-    this.placeOpeningNode(Tile.Ore, icx, icz - 7);
-    this.placeOpeningNode(Tile.Gas, icx, icz + 7);
-    this.placeOpeningNode(Tile.Solar, icx + 1, icz - 6);
-    this.placeOpeningNode(Tile.Ore, icx - 1, icz + 6);
+    stampCampPad(icx, icz - 5);
+    stampCampPad(icx, icz + 5);
+    // Gems beside the rank wings — central playfield, not HUD corners.
+    this.placeOpeningNodeAt(Tile.Ore, cx - 0.2, cz - 5.85);
+    this.placeOpeningNodeAt(Tile.Gas, cx + 0.2, cz + 5.85);
+    this.placeOpeningNodeAt(Tile.Solar, cx + 1.0, cz - 5.5);
     const propSlots: [number, number, Tile][] = [
-      [icx - 1, icz - 7, Tile.PropWreck],
-      [icx + 1, icz - 8, Tile.PropVent],
-      [icx + 1, icz + 7, Tile.PropVent],
-      [icx - 1, icz + 8, Tile.PropWreck],
-      [icx, icz - 6, Tile.PropWreck],
-      [icx, icz + 6, Tile.PropVent],
+      [icx - 1, icz - 5, Tile.PropWreck],
+      [icx + 1, icz - 6, Tile.PropVent],
+      [icx + 1, icz + 5, Tile.PropVent],
+      [icx - 1, icz + 6, Tile.PropWreck],
     ];
     for (const [px, pz, kind] of propSlots) {
       if (inFireLane(pz)) continue;
@@ -348,12 +356,14 @@ export class World {
     }
   }
 
-  /** One ground tile + gem entity — no multi-tile ore panel on the opening tableau. */
-  private placeOpeningNode(kind: Tile, cx: number, cz: number): void {
+  /** One ground tile + gem entity at exact world coords. */
+  private placeOpeningNodeAt(kind: Tile, x: number, z: number): void {
+    const cx = x | 0;
+    const cz = z | 0;
     if (cx < 1 || cz < 1 || cx >= MAP - 1 || cz >= MAP - 1) return;
     this.tiles[cx + cz * MAP] = kind;
     this.block[cx + cz * MAP] = 0;
-    const node = this.spawn(Kind.Resource, 'vespari', 3, cx + 0.5, cz + 0.5);
+    const node = this.spawn(Kind.Resource, 'vespari', 3, x, z);
     if (node) {
       node.cargoType = kind;
       node.hp = kind === Tile.Ore ? 280 : kind === Tile.Gas ? 200 : 160;
@@ -400,6 +410,20 @@ export class World {
     const dx = e.x - MAP * 0.5;
     const dz = e.z - MAP * 0.52;
     return dx * dx + dz * dz < 110;
+  }
+
+  private openingFlankCampEnt(e: Ent): boolean {
+    if (!e.alive) return false;
+    const cx = MAP * 0.5;
+    const cz = MAP * 0.52;
+    const mdx = e.x - cx;
+    const mdz = e.z - cz;
+    if (Math.abs(mdx) > 1.2) return false;
+    const adz = Math.abs(mdz);
+    if (adz < 4.8 || adz > 6.5) return false;
+    if (e.kind === Kind.House || e.kind === Kind.Worker) return true;
+    if (e.kind !== Kind.Resource) return false;
+    return e.cargoType !== Tile.PropWreck && e.cargoType !== Tile.PropVent;
   }
 
   private strikeRange(e: Ent, st: (typeof STATS)[number], t: Ent): number {
@@ -517,26 +541,28 @@ export class World {
       pr.cooldown = -0.12;
     }
 
-    // Forward camps on camera Z flanks — left/right of playfield, not under HUD.
-    const oreX = cx;
-    const oreZ = cz - 7;
-    const gasX = cx;
-    const gasZ = cz + 7;
-    this.spawn(Kind.House, a, 0, cx + 0.3, cz - 7.1);
-    this.spawn(Kind.House, b, 1, cx - 0.4, cz + 7.0);
+    // Forward camps beside the rank wings — central playfield, not HUD corners.
+    const oreX = cx - 0.2;
+    const oreZ = cz - 5.85;
+    const gasX = cx + 0.2;
+    const gasZ = cz + 5.85;
+    this.spawn(Kind.House, a, 0, cx + 0.2, cz - 5.15);
+    this.spawn(Kind.House, b, 1, cx - 0.2, cz + 5.15);
     for (let i = 0; i < 3; i++) {
-      const w = this.spawn(Kind.Worker, a, 0, cx - 0.8 + i * 0.55, cz - 6.8);
+      const w = this.spawn(Kind.Worker, a, 0, cx - 0.7 + i * 0.55, cz - 5.45);
       if (w) {
         w.order = Ord.Gather;
         w.tx = oreX;
         w.tz = oreZ;
       }
     }
-    const wk = this.spawn(Kind.Worker, b, 1, cx + 0.6, cz + 6.9);
-    if (wk) {
-      wk.order = Ord.Gather;
-      wk.tx = gasX;
-      wk.tz = gasZ;
+    for (let i = 0; i < 2; i++) {
+      const wk = this.spawn(Kind.Worker, b, 1, cx - 0.4 + i * 0.55, cz + 5.45);
+      if (wk) {
+        wk.order = Ord.Gather;
+        wk.tx = gasX;
+        wk.tz = gasZ;
+      }
     }
   }
 
@@ -1027,16 +1053,7 @@ export class World {
         const e = this.ents[i];
         if (!e.alive) continue;
         if (this.openingClashEnt(e)) e.vis = true;
-        if (e.kind === Kind.House || e.kind === Kind.Worker) {
-          const mdx = e.x - MAP * 0.5;
-          const mdz = e.z - MAP * 0.52;
-          if (mdx * mdx + mdz * mdz < 130) e.vis = true;
-        }
-        if (e.kind === Kind.Resource) {
-          const mdx = e.x - MAP * 0.5;
-          const mdz = e.z - MAP * 0.52;
-          if (mdx * mdx + mdz * mdz < 130) e.vis = true;
-        }
+        if (this.openingFlankCampEnt(e)) e.vis = true;
       }
     }
   }
