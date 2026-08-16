@@ -7,7 +7,7 @@ import { Input } from './input';
 import { Hud } from './hud';
 import { Sfx } from './audio';
 
-const VERSION = '0.4.4-wave3';
+const VERSION = '0.4.5-wave3';
 
 const host = document.getElementById('app');
 if (!host) throw new Error('Starhold boot: #app host missing');
@@ -21,6 +21,12 @@ view.init(world);
 view.resize(host.clientWidth, host.clientHeight);
 
 const sfx = new Sfx();
+let hitSfx = 0;
+world.onHit = () => {
+  sfx.hit();
+  hitSfx++;
+};
+world.onMuzzle = () => sfx.muzzle();
 const input = new Input(host, world, view, sfx);
 input.pan.x = MAP * 0.5;
 input.pan.z = MAP * 0.52;
@@ -77,6 +83,7 @@ function publish(): void {
     max: MAX_ENTS,
     hall: Kind.Hall,
     winner: world.winner,
+    hitSfx,
   };
   const w = window as unknown as {
     __SPACEPIXEL__: typeof probe;

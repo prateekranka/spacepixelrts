@@ -66,6 +66,9 @@ export class World {
   seed = 0x5eed;
   /** -1 in play · 0 player win · 1 enemy win */
   winner = -1;
+  /** P57 — combat SFX hooks (wired from main; sim stays renderer-free). */
+  onHit?: () => void;
+  onMuzzle?: () => void;
   private heap = new Heap();
   private gScore = new Float32Array(MAP * MAP);
   private came = new Int32Array(MAP * MAP);
@@ -998,6 +1001,7 @@ export class World {
       t.hp -= applied * bonus;
       if (t.team === 1 && this.tick < 240) t.hitFlash = 0.45;
       this.spawnSpark(t.x, t.z, 1, e.civ);
+      this.onHit?.();
       this.markCombat(e, t);
       e.cooldown = e.kind === Kind.Ravager ? 0.72 : 0.85;
       if (e.kind === Kind.Ravager && t.hp <= 0) e.frenzy = Math.min(6, e.frenzy + 1);
@@ -1028,6 +1032,7 @@ export class World {
       kind: e.kind,
     });
     this.spawnSpark(e.x, e.z, 0, e.civ);
+    this.onMuzzle?.();
   }
 
   private spawnSpark(x: number, z: number, kind: number, civ: Civ): void {
@@ -1089,6 +1094,7 @@ export class World {
           if (e.team === 1 && this.tick < 240) e.hitFlash = 0.45;
           this.markCombat(e);
           this.spawnSpark(b.x, b.z, 1, b.civ);
+          this.onHit?.();
           hit = true;
           if (e.hp <= 0) this.kill(e);
           break;
