@@ -100,10 +100,5 @@ const palette = {
   nonBlackPixelShare: Math.round((nonBlack / n) * 10000) / 100,
 };
 
-const result = { url: URL, fps, palette, consoleIssues };
-if (SHOT) {
-  await page.screenshot({ path: SHOT });
-  result.screenshot = SHOT;
-}
-console.log(JSON.stringify(result, null, 2));
-await browser.close();
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';

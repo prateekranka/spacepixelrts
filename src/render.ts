@@ -194,9 +194,20 @@ export class GameRenderer {
       const uv = this.uvFor(e);
       if (!uv) continue;
 
-      const scaleX = (uv.w / CELL) * (isBuilding(e.kind) ? 2.15 : 1.15) * e.facing;
-      const scaleY = (uv.h / CELL) * (isBuilding(e.kind) ? 2.15 : 1.35);
-      this.dummy.position.set(x, isBuilding(e.kind) ? 0.95 : 0.55, z);
+      const cellsW = uv.w / CELL;
+      const cellsH = uv.h / CELL;
+      let scaleX: number;
+      let scaleY: number;
+      if (isBuilding(e.kind)) {
+        const targetH = 3.2;
+        const mul = targetH / cellsH;
+        scaleX = cellsW * mul * e.facing;
+        scaleY = cellsH * mul;
+      } else {
+        scaleX = cellsW * 1.9 * e.facing;
+        scaleY = cellsH * 2.05;
+      }
+      this.dummy.position.set(x, isBuilding(e.kind) ? 1.15 : 0.9, z);
       this.dummy.quaternion.copy(this.lastCamQ);
       this.dummy.scale.set(scaleX, scaleY, 1);
       this.dummy.updateMatrix();

@@ -1,0 +1,11 @@
+{
+  "piece": "wave1-skirmish",
+  "url": "https://spacepixelrts.pages.dev",
+  "winner": "AoE2:DE",
+  "wowed": false,
+  "singleBiggestGap": "Nothing on screen reads as a commanding RTS battle—six anonymous colored specks on undifferentiated dark tiles while the bottom half is empty black chrome, so a player cannot identify units, terrain, economy, or what to do next the way AoE2:DE does instantly at the same iPad size.",
+  "fps": 60,
+  "ents": 53,
+  "whatYouSaw": "The viewport is dominated by near-black isometric ground tiles in purple-grey with no readable biome, paths, or resource nodes. Six tiny blob units—three green on the left, three blue on the right—float with thin health bars; they have no silhouettes, weapons, or animation that communicate role or faction. A few white/yellow pixel sparks are the only hint of contact, not a legible skirmish. The top bar shows ORE/VOL/CHG/POP numerals; the minimap is a dark square with a few green and yellow dots. The lower command deck is mostly empty black with \"Nothing selected\" and three blank slots I/II/III. Performance is smooth at 60fps, but the image is visually sparse and muddy, not a battle anyone would pick over AoE2.",
+  "consoleIssues": []
+}

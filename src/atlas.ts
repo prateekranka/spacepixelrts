@@ -70,6 +70,12 @@ class Pix {
     for (let y = -r; y <= r; y++)
       for (let x = -r; x <= r; x++) if (Math.abs(x) + Math.abs(y) <= r) this.set(cx + x, cy + y, c);
   }
+  hex(cx: number, cy: number, r: number, c: Rgba): void {
+    for (let y = -r; y <= r; y++) {
+      const half = Math.floor((r * 0.87 * (r - Math.abs(y))) / r);
+      for (let x = -half; x <= half; x++) this.set(cx + x, cy + y, c);
+    }
+  }
   line(x0: number, y0: number, x1: number, y1: number, c: Rgba): void {
     const dx = Math.abs(x1 - x0);
     const dy = Math.abs(y1 - y0);
@@ -78,7 +84,7 @@ class Pix {
     let err = dx - dy;
     let x = x0;
     let y = y0;
-    for (let n = 0; n < 64; n++) {
+    for (let n = 0; n < 96; n++) {
       this.set(x, y, c);
       if (x === x1 && y === y1) break;
       const e2 = 2 * err;
@@ -104,11 +110,18 @@ class Pix {
           (x > 0 && opa(x - 1, y)) ||
           (x + 1 < w && opa(x + 1, y)) ||
           (y > 0 && opa(x, y - 1)) ||
-          (y + 1 < h && opa(x, y + 1))
+          (y + 1 < h && opa(x, y + 1)) ||
+          (x > 0 && y > 0 && opa(x - 1, y - 1)) ||
+          (x + 1 < w && y > 0 && opa(x + 1, y - 1)) ||
+          (x > 0 && y + 1 < h && opa(x, y + 1)) ||
+          (x + 1 < w && y + 1 < h && opa(x + 1, y + 1))
         )
           this.set(x, y, c);
       }
     }
+  }
+  finish(): void {
+    this.outline();
   }
 }
 
@@ -133,191 +146,274 @@ function uvAt(col: number, row: number, w = 1, h = 1): Uv {
   };
 }
 
+function magBanner(p: Pix, x: number, y: number, w: number, h: number): void {
+  p.fill(x, y, w, h, MAG);
+}
+
+/** Helion Compact — tall hex hull, sail, lance antenna. */
 function hiveBody(p: Pix, ox: number, oy: number, frame: number): void {
   const bob = frame & 1;
-  p.circ(ox, oy + 2 + bob, 7, PAL.hiveD);
-  p.circ(ox, oy + bob, 6, PAL.hive);
-  p.circ(ox - 2, oy - 2 + bob, 3, PAL.hiveH);
-  p.set(ox + 4, oy - 1 + bob, MAG);
-  p.set(ox + 5, oy - 1 + bob, MAG);
-  p.set(ox + 4, oy + bob, MAG);
-  p.line(ox - 2, oy - 6 + bob, ox - 4, oy - 10 + bob, PAL.ink);
-  p.line(ox + 2, oy - 6 + bob, ox + 4, oy - 10 + bob, PAL.ink);
-  p.circ(ox - 4, oy - 10 + bob, 1, PAL.hiveH);
-  p.circ(ox + 4, oy - 10 + bob, 1, PAL.hiveH);
-  p.fill(ox - 8, oy + 1 + bob, 5, 3, PAL.hiveD);
-  p.fill(ox + 4, oy + 1 + bob, 5, 3, PAL.hiveD);
+  const y = oy + bob;
+  p.hex(ox, y - 4, 11, PAL.hiveD);
+  p.hex(ox, y - 5, 9, PAL.hive);
+  p.hex(ox - 1, y - 7, 4, PAL.hiveH);
+  magBanner(p, ox - 5, y - 12, 6, 8);
+  p.line(ox - 2, y - 12, ox - 2, y - 18, PAL.ink);
+  p.line(ox + 2, y - 12, ox + 2, y - 18, PAL.ink);
+  p.circ(ox - 2, y - 18, 1, PAL.hiveH);
+  p.circ(ox + 2, y - 18, 1, PAL.hiveH);
+  p.fill(ox - 10, y + 2, 5, 4, PAL.hiveD);
+  p.fill(ox + 6, y + 2, 5, 4, PAL.hiveD);
+  p.fill(ox - 2, y + 6, 6, 3, PAL.hiveD);
 }
 
+/** Kryos Conclave — squat diamond, vertical spire, bright core. */
 function cryBody(p: Pix, ox: number, oy: number, frame: number): void {
   const bob = frame & 1;
-  p.diam(ox, oy + 1 + bob, 8, PAL.cryD);
-  p.diam(ox, oy + bob, 6, PAL.cry);
-  p.diam(ox - 1, oy - 2 + bob, 3, PAL.cryH);
-  p.set(ox, oy - 1 + bob, MAG);
-  p.set(ox + 1, oy - 1 + bob, MAG);
-  p.set(ox, oy + bob, MAG);
-  p.line(ox, oy - 6 + bob, ox, oy - 11 + bob, PAL.cryH);
-  p.set(ox, oy - 11 + bob, PAL.white);
+  const y = oy + bob;
+  p.diam(ox, y, 12, PAL.cryD);
+  p.diam(ox, y - 1, 10, PAL.cry);
+  p.diam(ox, y - 3, 5, PAL.cryH);
+  magBanner(p, ox - 2, y - 2, 5, 5);
+  p.line(ox, y - 8, ox, y - 17, PAL.cryH);
+  p.set(ox, y - 17, PAL.white);
+  p.set(ox - 1, y - 16, PAL.cryH);
+  p.set(ox + 1, y - 16, PAL.cryH);
+  p.fill(ox - 11, y + 4, 6, 3, PAL.cryD);
+  p.fill(ox + 6, y + 4, 6, 3, PAL.cryD);
 }
 
+/** Nihiline — asymmetric tendrils, spore sac, no right angles. */
 function voidBody(p: Pix, ox: number, oy: number, frame: number): void {
   const bob = frame & 1;
-  p.circ(ox, oy + 2 + bob, 7, PAL.voidD);
-  p.fill(ox - 6, oy - 2 + bob, 12, 10, PAL.voidC);
-  p.fill(ox - 7, oy + 4 + bob, 3, 8, PAL.voidD);
-  p.fill(ox + 5, oy + 2 + bob, 3, 10, PAL.voidD);
-  p.circ(ox - 1, oy - 1 + bob, 3, PAL.voidH);
-  p.set(ox + 3, oy + bob, MAG);
-  p.set(ox + 4, oy + bob, MAG);
-  p.set(ox + 3, oy + 1 + bob, MAG);
+  const y = oy + bob;
+  p.fill(ox - 9, y - 2, 16, 14, PAL.voidD);
+  p.fill(ox - 7, y - 5, 12, 12, PAL.voidC);
+  p.fill(ox + 4, y - 8, 7, 10, PAL.voidD);
+  p.circ(ox + 7, y - 6, 4, PAL.voidH);
+  p.fill(ox - 12, y + 2, 5, 10, PAL.voidD);
+  p.fill(ox - 11, y + 4, 3, 6, PAL.voidC);
+  p.fill(ox + 2, y + 6, 8, 5, PAL.voidD);
+  magBanner(p, ox - 1, y - 3, 4, 4);
+  p.line(ox - 8, y - 8, ox - 13, y - 14, PAL.voidH);
+  p.line(ox + 5, y - 10, ox + 10, y - 15, PAL.voidH);
+  p.circ(ox - 13, y - 14, 2, PAL.voidH);
+  p.circ(ox + 10, y - 15, 2, PAL.voidH);
 }
 
 function drawUnit(civ: 'vespari' | 'aurion' | 'voidmarked', role: string, frame: number): Pix {
   const p = Pix.alloc(CELL, CELL);
   const ox = 16;
-  const oy = 18;
+  const oy = 20;
+
   if (civ === 'vespari') hiveBody(p, ox, oy, frame);
   else if (civ === 'aurion') cryBody(p, ox, oy, frame);
   else voidBody(p, ox, oy, frame);
 
   if (role === 'worker') {
-    p.fill(ox + 6, oy + 4, 4, 3, PAL.ore);
+    p.fill(ox + 5, oy - 8, 7, 9, PAL.ore);
+    p.fill(ox + 6, oy - 7, 5, 3, PAL.oreH);
+    p.line(ox - 8, oy - 2, ox - 12, oy + 4, PAL.bone);
+    p.set(ox - 12, oy + 4, PAL.oreH);
+    p.fill(ox - 3, oy + 7, 8, 3, PAL.hiveD);
   } else if (role === 'scout') {
-    p.fill(ox - 10, oy + 2, 4, 2, PAL.white);
-    p.fill(ox + 7, oy + 2, 4, 2, PAL.white);
+    p.fill(ox - 14, oy - 4, 6, 3, PAL.white);
+    p.fill(ox - 15, oy - 3, 2, 1, PAL.hiveH);
+    p.fill(ox + 9, oy - 4, 6, 3, PAL.white);
+    p.fill(ox + 14, oy - 3, 2, 1, PAL.hiveH);
+    p.fill(ox - 2, oy - 14, 5, 4, PAL.hiveH);
+    p.line(ox + 2, oy - 10, ox + 10, oy - 12, PAL.bone);
   } else if (role === 'fighter') {
-    p.line(ox + 6, oy - 2, ox + 12, oy - 6, PAL.bone);
-    p.set(ox + 12, oy - 6, PAL.white);
+    p.line(ox + 4, oy - 6, ox + 14, oy - 12, PAL.bone);
+    p.line(ox + 5, oy - 5, ox + 15, oy - 11, PAL.white);
+    p.set(ox + 15, oy - 11, MAG);
+    magBanner(p, ox - 4, oy - 6, 4, 5);
+    p.fill(ox - 6, oy - 2, 4, 6, PAL.hiveD);
   } else if (role === 'siege') {
-    p.fill(ox - 4, oy + 6, 10, 5, PAL.rock);
-    p.fill(ox + 6, oy + 4, 6, 4, PAL.ore);
+    p.fill(ox - 12, oy + 2, 24, 7, PAL.rock);
+    p.fill(ox - 10, oy + 3, 20, 4, PAL.rockH);
+    p.fill(ox + 2, oy - 10, 14, 5, PAL.rock);
+    p.fill(ox + 12, oy - 11, 4, 3, PAL.ore);
+    p.line(ox + 14, oy - 10, ox + 14, oy - 6, PAL.ink);
+    p.circ(ox - 8, oy + 6, 3, PAL.rockH);
+    p.circ(ox + 8, oy + 6, 3, PAL.rockH);
   } else if (role === 'ravager') {
-    p.circ(ox, oy + 1, 8, PAL.hiveD);
-    p.circ(ox, oy, 6, PAL.blood);
-    p.set(ox + 3, oy - 1, MAG);
-    p.line(ox - 6, oy - 4, ox - 11, oy - 8, PAL.ink);
-    p.line(ox + 6, oy - 4, ox + 11, oy - 8, PAL.ink);
+    p.hex(ox, oy - 3, 10, PAL.hiveD);
+    p.hex(ox, oy - 4, 8, PAL.blood);
+    magBanner(p, ox - 3, oy - 10, 7, 6);
+    p.line(ox - 8, oy - 6, ox - 15, oy - 12, PAL.bone);
+    p.line(ox + 8, oy - 6, ox + 15, oy - 12, PAL.bone);
+    p.set(ox - 15, oy - 12, PAL.solH);
+    p.set(ox + 15, oy - 12, PAL.solH);
+    p.line(ox + 3, oy - 2, ox + 16, oy - 8, PAL.sol);
+    p.set(ox + 16, oy - 8, PAL.white);
   } else if (role === 'prism') {
-    p.diam(ox, oy, 10, PAL.cryD);
-    p.diam(ox, oy, 6, PAL.white);
-    p.set(ox, oy, MAG);
-    p.line(ox, oy - 8, ox, oy - 14, PAL.cryH);
+    p.diam(ox, oy - 2, 13, PAL.cryD);
+    p.diam(ox, oy - 3, 11, PAL.cry);
+    p.diam(ox, oy - 4, 7, PAL.white);
+    magBanner(p, ox - 3, oy - 4, 7, 7);
+    p.line(ox, oy - 12, ox, oy - 20, PAL.cryH);
+    p.fill(ox - 1, oy - 20, 3, 2, PAL.white);
+    p.fill(ox - 13, oy + 4, 5, 4, PAL.cryD);
+    p.fill(ox + 9, oy + 4, 5, 4, PAL.cryD);
   } else if (role === 'shade') {
-    p.fill(ox - 8, oy - 6, 16, 16, PAL.voidD);
-    p.fill(ox - 5, oy - 4, 8, 8, PAL.voidC);
-    p.set(ox, oy, MAG);
+    p.fill(ox - 10, oy - 10, 18, 16, PAL.voidD);
+    p.fill(ox - 7, oy - 8, 12, 12, PAL.voidC);
+    p.fill(ox + 2, oy - 14, 8, 10, PAL.voidD);
+    magBanner(p, ox - 2, oy - 6, 5, 5);
+    p.line(ox - 9, oy + 2, ox - 14, oy + 8, PAL.voidH);
+    p.line(ox + 6, oy + 2, ox + 13, oy + 7, PAL.voidH);
+    p.circ(ox - 14, oy + 8, 2, PAL.voidH);
+    p.line(ox + 4, oy - 12, ox + 12, oy - 16, PAL.blood);
   }
+
   if (frame === 3) {
-    // attack flash
-    p.circ(ox + 8, oy - 2, 2, PAL.white);
+    p.circ(ox + 10, oy - 8, 3, PAL.white);
+    p.circ(ox + 11, oy - 8, 2, PAL.solH);
   }
   if (frame === 4) {
     p.fill(0, 0, CELL, CELL, [0, 0, 0, 0]);
-    p.circ(ox, oy + 4, 6, PAL.ink);
-    p.circ(ox - 3, oy, 2, civ === 'vespari' ? PAL.hive : civ === 'aurion' ? PAL.cry : PAL.voidC);
+    p.circ(ox, oy + 2, 8, PAL.ink);
+    p.circ(ox - 4, oy - 2, 3, civ === 'vespari' ? PAL.hive : civ === 'aurion' ? PAL.cry : PAL.voidC);
+    p.circ(ox + 4, oy - 2, 2, MAG);
   }
-  p.outline();
+
+  p.finish();
   return p;
 }
 
 function drawHall(civ: 'vespari' | 'aurion' | 'voidmarked'): Pix {
   const p = Pix.alloc(CELL * 2, CELL * 2);
   if (civ === 'vespari') {
-    p.circ(32, 40, 22, PAL.hiveD);
-    p.circ(32, 36, 18, PAL.hive);
-    p.circ(20, 28, 10, PAL.hiveD);
-    p.circ(44, 28, 10, PAL.hiveD);
-    p.circ(32, 22, 12, PAL.hive);
-    p.circ(28, 20, 5, PAL.hiveH);
-    p.fill(30, 18, 5, 4, MAG);
-    p.circ(18, 18, 3, PAL.hiveH);
-    p.circ(46, 16, 3, PAL.hiveH);
+    p.fill(8, 44, 48, 14, PAL.hiveD);
+    p.circ(32, 42, 24, PAL.hiveD);
+    p.circ(32, 38, 20, PAL.hive);
+    p.circ(18, 30, 12, PAL.hiveD);
+    p.circ(46, 30, 12, PAL.hiveD);
+    p.circ(32, 22, 14, PAL.hive);
+    p.circ(26, 18, 7, PAL.hiveH);
+    magBanner(p, 28, 12, 9, 10);
+    p.line(22, 14, 18, 4, PAL.ink);
+    p.line(42, 14, 46, 4, PAL.ink);
+    p.circ(18, 4, 3, PAL.hiveH);
+    p.circ(46, 4, 3, PAL.hiveH);
+    p.fill(14, 50, 36, 6, PAL.hiveD);
   } else if (civ === 'aurion') {
-    p.diam(32, 36, 24, PAL.cryD);
-    p.diam(32, 34, 18, PAL.cry);
-    p.diam(32, 24, 10, PAL.cryH);
-    p.fill(30, 20, 5, 6, MAG);
-    p.line(32, 10, 32, 2, PAL.white);
-    p.line(18, 40, 8, 52, PAL.cryD);
-    p.line(46, 40, 56, 52, PAL.cryD);
+    p.diam(32, 40, 28, PAL.cryD);
+    p.diam(32, 36, 22, PAL.cry);
+    p.diam(32, 24, 14, PAL.cryH);
+    magBanner(p, 28, 22, 9, 10);
+    p.line(32, 10, 32, 0, PAL.white);
+    p.fill(30, 0, 5, 4, PAL.cryH);
+    p.line(14, 44, 2, 58, PAL.cryD);
+    p.line(50, 44, 62, 58, PAL.cryD);
+    p.fill(10, 52, 44, 8, PAL.cryD);
   } else {
-    p.fill(12, 18, 40, 36, PAL.voidD);
-    p.fill(18, 12, 28, 44, PAL.voidC);
-    p.fill(24, 8, 16, 20, PAL.voidD);
-    p.fill(30, 16, 5, 6, MAG);
-    p.line(16, 14, 8, 4, PAL.voidH);
-    p.line(48, 14, 56, 4, PAL.voidH);
-    p.fill(20, 40, 8, 16, PAL.voidD);
-    p.fill(38, 40, 8, 16, PAL.voidD);
+    p.fill(6, 16, 52, 44, PAL.voidD);
+    p.fill(12, 10, 40, 50, PAL.voidC);
+    p.fill(20, 6, 24, 28, PAL.voidD);
+    magBanner(p, 28, 18, 9, 10);
+    p.line(10, 16, 2, 2, PAL.voidH);
+    p.line(54, 16, 62, 2, PAL.voidH);
+    p.fill(14, 48, 10, 18, PAL.voidD);
+    p.fill(40, 48, 10, 18, PAL.voidD);
+    p.circ(2, 2, 4, PAL.voidH);
+    p.circ(62, 2, 4, PAL.voidH);
   }
-  p.outline();
+  p.finish();
   return p;
 }
 
 function drawHouse(civ: 'vespari' | 'aurion' | 'voidmarked'): Pix {
   const p = Pix.alloc(CELL, CELL);
   if (civ === 'vespari') {
-    p.circ(16, 20, 10, PAL.hiveD);
-    p.circ(16, 18, 8, PAL.hive);
-    p.circ(14, 15, 3, PAL.hiveH);
-    p.fill(15, 14, 3, 3, MAG);
+    p.fill(4, 22, 24, 8, PAL.hiveD);
+    p.hex(16, 18, 12, PAL.hiveD);
+    p.hex(16, 16, 10, PAL.hive);
+    p.hex(14, 12, 5, PAL.hiveH);
+    magBanner(p, 13, 8, 7, 8);
+    p.line(12, 8, 10, 2, PAL.ink);
+    p.line(20, 8, 22, 2, PAL.ink);
   } else if (civ === 'aurion') {
-    p.diam(16, 18, 11, PAL.cryD);
-    p.diam(16, 17, 8, PAL.cry);
-    p.fill(15, 14, 3, 3, MAG);
+    p.fill(3, 22, 26, 8, PAL.cryD);
+    p.diam(16, 18, 13, PAL.cryD);
+    p.diam(16, 16, 10, PAL.cry);
+    p.diam(16, 12, 5, PAL.cryH);
+    magBanner(p, 13, 13, 7, 6);
+    p.line(16, 6, 16, 1, PAL.white);
   } else {
-    p.fill(6, 12, 20, 16, PAL.voidD);
-    p.fill(9, 8, 14, 20, PAL.voidC);
-    p.fill(14, 12, 4, 3, MAG);
+    p.fill(2, 20, 28, 10, PAL.voidD);
+    p.fill(5, 8, 22, 20, PAL.voidC);
+    p.fill(8, 4, 16, 12, PAL.voidD);
+    magBanner(p, 13, 12, 7, 6);
+    p.line(6, 10, 2, 3, PAL.voidH);
+    p.line(26, 12, 30, 5, PAL.voidH);
   }
-  p.outline();
+  p.finish();
   return p;
 }
 
 function drawBarracks(civ: 'vespari' | 'aurion' | 'voidmarked'): Pix {
   const p = Pix.alloc(CELL, CELL);
   if (civ === 'vespari') {
-    p.fill(6, 10, 20, 18, PAL.hiveD);
-    p.circ(16, 14, 7, PAL.hive);
-    p.line(16, 6, 16, 2, PAL.ink);
-    p.fill(15, 12, 3, 3, MAG);
+    p.fill(2, 20, 28, 10, PAL.hiveD);
+    p.fill(4, 8, 24, 16, PAL.hive);
+    p.hex(16, 14, 9, PAL.hiveH);
+    magBanner(p, 13, 10, 7, 8);
+    p.line(16, 6, 16, 1, PAL.ink);
+    p.line(6, 22, 2, 28, PAL.hiveD);
+    p.line(26, 22, 30, 28, PAL.hiveD);
   } else if (civ === 'aurion') {
-    p.fill(5, 12, 22, 16, PAL.cryD);
-    p.fill(8, 8, 16, 18, PAL.cry);
-    p.fill(14, 10, 4, 4, MAG);
-    p.line(16, 6, 16, 1, PAL.white);
+    p.fill(2, 20, 28, 10, PAL.cryD);
+    p.fill(4, 10, 24, 14, PAL.cry);
+    p.diam(16, 14, 10, PAL.cryH);
+    magBanner(p, 13, 11, 7, 7);
+    p.line(16, 6, 16, 0, PAL.white);
+    p.fill(14, 0, 5, 3, PAL.cryH);
   } else {
-    p.fill(4, 10, 24, 18, PAL.voidD);
-    p.fill(8, 6, 16, 22, PAL.voidC);
-    p.fill(14, 10, 4, 4, MAG);
+    p.fill(1, 18, 30, 12, PAL.voidD);
+    p.fill(4, 6, 24, 20, PAL.voidC);
+    p.fill(10, 4, 12, 10, PAL.voidD);
+    magBanner(p, 13, 10, 7, 7);
+    p.line(4, 8, 0, 2, PAL.voidH);
+    p.line(28, 10, 31, 3, PAL.voidH);
   }
-  p.outline();
+  p.finish();
   return p;
 }
 
 function drawUnique(civ: 'vespari' | 'aurion' | 'voidmarked'): Pix {
   const p = Pix.alloc(CELL, CELL);
   if (civ === 'vespari') {
-    p.circ(16, 18, 9, PAL.hiveD);
-    p.circ(16, 16, 6, PAL.hiveH);
-    p.circ(10, 12, 4, PAL.hive);
-    p.circ(22, 12, 4, PAL.hive);
-    p.fill(15, 14, 3, 3, MAG);
+    p.fill(4, 20, 24, 10, PAL.hiveD);
+    p.circ(16, 16, 11, PAL.hiveD);
+    p.circ(16, 14, 8, PAL.sol);
+    p.circ(10, 10, 5, PAL.hive);
+    p.circ(22, 10, 5, PAL.hive);
+    magBanner(p, 13, 10, 7, 8);
+    p.line(16, 6, 16, 1, PAL.solH);
+    p.circ(16, 1, 2, PAL.white);
   } else if (civ === 'aurion') {
-    p.diam(16, 16, 12, PAL.cryD);
-    p.line(16, 16, 6, 6, PAL.cryH);
-    p.line(16, 16, 26, 6, PAL.cryH);
+    p.fill(2, 20, 28, 10, PAL.cryD);
+    p.diam(16, 16, 14, PAL.cryD);
+    p.diam(16, 14, 10, PAL.cry);
+    magBanner(p, 13, 12, 7, 7);
+    p.line(16, 16, 4, 4, PAL.cryH);
+    p.line(16, 16, 28, 4, PAL.cryH);
     p.line(16, 16, 16, 28, PAL.cryH);
-    p.fill(15, 15, 3, 3, MAG);
+    p.set(16, 4, PAL.white);
   } else {
-    p.circ(16, 16, 10, PAL.voidD);
-    p.circ(16, 16, 5, PAL.voidH);
-    p.fill(15, 15, 3, 3, MAG);
-    p.line(6, 6, 10, 10, PAL.voidH);
-    p.line(26, 6, 22, 10, PAL.voidH);
+    p.fill(2, 18, 28, 12, PAL.voidD);
+    p.circ(16, 14, 12, PAL.voidD);
+    p.circ(16, 14, 7, PAL.voidH);
+    magBanner(p, 13, 11, 7, 7);
+    p.line(4, 6, 10, 12, PAL.voidH);
+    p.line(28, 6, 22, 12, PAL.voidH);
+    p.circ(4, 6, 3, PAL.voidC);
+    p.circ(28, 6, 3, PAL.voidC);
+    p.fill(12, 22, 8, 6, PAL.voidD);
   }
-  p.outline();
+  p.finish();
   return p;
 }
 
@@ -351,8 +447,8 @@ function drawTile(kind: 'void' | 'dust' | 'rock' | 'ore' | 'gas' | 'sol'): Pix {
 
 function drawShadow(): Pix {
   const p = Pix.alloc(CELL, CELL);
-  p.circ(16, 20, 8, [0, 0, 0, 90]);
-  p.circ(16, 20, 5, [0, 0, 0, 120]);
+  p.circ(16, 22, 10, [0, 0, 0, 90]);
+  p.circ(16, 22, 6, [0, 0, 0, 120]);
   return p;
 }
 
@@ -360,17 +456,17 @@ function drawSel(): Pix {
   const p = Pix.alloc(CELL, CELL);
   for (let a = 0; a < 32; a++) {
     const t = (a / 32) * Math.PI * 2;
-    p.set(16 + Math.round(Math.cos(t) * 11), 20 + Math.round(Math.sin(t) * 6), PAL.solH);
+    p.set(16 + Math.round(Math.cos(t) * 12), 22 + Math.round(Math.sin(t) * 7), PAL.solH);
   }
-  p.set(16, 20, MAG);
+  p.set(16, 22, MAG);
   return p;
 }
 
 function drawFlag(): Pix {
   const p = Pix.alloc(CELL, CELL);
-  p.line(16, 6, 16, 26, PAL.white);
-  p.fill(16, 6, 8, 6, PAL.sol);
-  p.outline();
+  p.line(16, 4, 16, 28, PAL.white);
+  magBanner(p, 16, 4, 10, 8);
+  p.finish();
   return p;
 }
 
@@ -380,15 +476,16 @@ function drawBolt(kind: 'sting' | 'beam' | 'void' | 'rock'): Pix {
     p.fill(6, 0, 4, 16, PAL.cryH);
     p.fill(7, 0, 2, 16, PAL.white);
   } else if (kind === 'void') {
-    p.circ(8, 8, 4, PAL.voidH);
-    p.circ(8, 8, 2, PAL.white);
+    p.circ(8, 8, 5, PAL.voidH);
+    p.circ(8, 8, 3, PAL.white);
   } else if (kind === 'rock') {
-    p.circ(8, 8, 4, PAL.ore);
+    p.circ(8, 8, 5, PAL.ore);
     p.set(7, 7, PAL.oreH);
   } else {
-    p.circ(8, 8, 3, PAL.hiveH);
+    p.circ(8, 8, 4, PAL.hiveH);
     p.set(8, 8, PAL.white);
   }
+  p.finish();
   return p;
 }
 

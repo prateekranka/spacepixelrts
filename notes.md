@@ -672,3 +672,153 @@ on `space.contenthelper.in` (domain id `f02207fca6428b28de894ee27d42ba0bcfc08eaa
   Type: CNAME   Name: space   Target: spacepixelrts.pages.dev   Proxy: ON
   ```
   Pages auto-provisions the cert the instant this record exists.
+
+### checkpoint 2026-08-16 10:59:33
+- **orchestrator: RUNNING** (pid 20606, elapsed 27:29)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./critic/out/boot.png
+  ./critic/out/wave1-measure.png
+  ./critic/out/wave1.png
+  ./critic/run.ts
+  ./dist/assets/index-BKBz8dpF.js
+  ./dist/assets/index-BKBz8dpF.js.map
+  ./dist/index.html
+  ./dist/progress.html
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package-lock.json
+  ./package.json
+  ./public/progress.html
+  ./scripts/measure.mjs
+  ./scripts/monitor.sh
+  ./scripts/screenshot.mjs
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/content.ts
+  ./src/content/stats.ts
+  ./src/engine.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/input/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/render/atlas.ts
+  ./src/render/palette.ts
+  ./src/render/renderer.ts
+  ./src/sim.ts
+  ./src/sim/engine.ts
+  ./src/sim/world.ts
+  ./src/ui/hud.ts
+  ./tasks-monitor.log
+  ./tasks/README.md
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  b28354b domain: removed blocking spacepixel worker custom domain; CNAME pending manual add
+  1935f3a P00: mark the skirmish visible and pin the overlay to the world canvas.
+  34c0d76 notes: DNS blocked by existing workers-managed record on space host
+  2034e21 notes: GitHub repo + domain DNS status
+  a2b7f33 P10-P35: ship a playable Wave 1 skirmish with pixel atlas, command HUD, and combat
+- latest transcript tail:
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/index.html'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/critic/out/boot.png'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/critic/out/wave1.png'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/notes.md', 'offset': 500}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/package.json'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/hud.ts', 'limit': 80}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/content.ts'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/scripts/measure.mjs'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/render.ts', 'limit': 120}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/engine.ts', 'limit': 80}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/docs/DESIGN.md', 'limit': 80}
+  TOOL Shell {'command': 'git diff --stat && echo "==== hud diff ====" && git diff src/hud.ts | head -80 && echo "==== live curl ====
+
+### checkpoint 2026-08-16 11:02:34
+- **orchestrator: RUNNING** (pid 20606, elapsed 30:30)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./critic/out/boot.png
+  ./critic/out/critic-wave1.png
+  ./critic/out/live.png
+  ./critic/out/wave1-measure.png
+  ./critic/out/wave1.png
+  ./critic/run.ts
+  ./critic/verdict-wave1.json
+  ./critic/verdict-wave1.md
+  ./dist/assets/index-CskLPSVQ.js
+  ./dist/assets/index-CskLPSVQ.js.map
+  ./dist/index.html
+  ./dist/progress.html
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package-lock.json
+  ./package.json
+  ./public/progress.html
+  ./scripts/measure.mjs
+  ./scripts/monitor.sh
+  ./scripts/screenshot.mjs
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/content.ts
+  ./src/engine.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/sim.ts
+  ./tasks-monitor.log
+  ./tasks/P11-brief.md
+  ./tasks/P15-critic-brief.md
+  ./tasks/README.md
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  4c58919 P30: give the command deck AoE2 weight when nothing is selected
+  b28354b domain: removed blocking spacepixel worker custom domain; CNAME pending manual add
+  1935f3a P00: mark the skirmish visible and pin the overlay to the world canvas.
+  34c0d76 notes: DNS blocked by existing workers-managed record on space host
+  2034e21 notes: GitHub repo + domain DNS status
+- latest transcript tail:
+  TOOL StrReplace {'new_string': "import { Kind, MAP, type Civ } from './engine';", 'old_string': "import { Kind, MAP } from './engine';",
+  TOOL StrReplace {'new_string': 'function civPlateBg(civ: Civ): string {', 'old_string': "function civPlateBg(civ: import('./engine').Civ
+  TOOL Shell {'command': 'cd /Users/prateekranka/Cowork/spacepixelrts && npx tsc --noEmit 2>&1', 'description': 'Typecheck project wi
+  A: [REDACTED]
+  TOOL Read {'limit': 10, 'path': '/Users/prateekranka/Cowork/spacepixelrts/src/hud.ts'}
+  TOOL Grep {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/hud.ts', 'pattern': 'civPlateBg'}
+  A: [REDACTED]
+  TOOL StrReplace {'new_string': "import { Kind, MAP } from './engine';\nimport type { Civ } from './engine';", 'old_string': "import { Ki
+  TOOL Shell {'command': 'cd /Users/prateekranka/Cowork/spacepixelrts && npx tsc --noEmit 2>&1', 'description': 'Re-run TypeScript ch
+  A: Typecheck passed. Staging and committing `src/hud.ts`.
+  
+  [REDACTED]
+  TOOL Shell {'command': 'cd /Users/prateekranka/Cowork/spacepixelrts && (git add src/hud.ts && git commit -m "$(cat <<\'EOF\'\nP30: 
+  A: Done — `tsc --noEmit` passes and `src/hud.ts` is committed as `P30: give the command deck AoE2 weight when nothing is selected`.
+  
+  ## Empty selection (civ command card)
+  
+  - **Portrait:** Civ color plate (Helion = brass/bronze gradient) with a
+
+---
+
+### Custom domain — DNS live, cert provisioning ✅
+
+User added the DNS record. Status now:
+- `space.contenthelper.in` **DNS resolves** → Cloudflare IPs (`104.21.77.23` / `172.67.203.141`), proxied ✅
+- Pages domain `verification_data: active` (DNS verified) ✅
+- SSL cert still `pending` (Google CA, normal few-minute delay on first attach).
+- A fresh build+deploy was pushed, so the moment the cert lands the live game serves.
+- Live URL (already working): **https://spacepixelrts.pages.dev**
+
+Final URLs:
+- GitHub: **https://github.com/prateekranka/spacepixelrts**
+- Live: **https://spacepixelrts.pages.dev**
+- Custom: **https://space.contenthelper.in** (cert finalizing)
