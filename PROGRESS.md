@@ -5,9 +5,9 @@
 
 ## Now
 
-**Wave 3 P55 critic** — idle pulse shipped. Live **`0.4.3-wave3`**.
+**Wave 3 P56 building** — P55 critic **PASS** (`595346c`). Live **`0.4.3-wave3`**. Idle-worker gold pulse works.
 
-**Next:** fresh critic on `#idlew.pulse`. Then formation spread.
+**Next:** formation spread on multi-unit moves (P54 remaining §9 #2). Then combat SFX.
 
 ## Biggest gap
 
@@ -20,4 +20,4 @@
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P55 live `0.4.3-wave3`; critic next |
+| 3–5 polish / iPad / coherence | P55 **PASS**; P56 formation in flight |
