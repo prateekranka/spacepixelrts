@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 4 wrap critic (P66)** — P65 **PASS** (`0088c6c`). Live **`0.5.3-wave4`**.
+**Wave 5 integrator (P67)** — Wave 4 **PASS (locked)** (P66, `b3aaa6c`). Live **`0.5.3-wave4`**.
 
-Cull, Attack-lock peel, HUD safe-area all have fresh PASS. Opening still P41.
+Opening still P41. Match arc P49. Feel P58. Hardening P60–P65.
 
-**Next:** P66 names whether Wave 4 is locked or the remaining 60fps/iPad/bug gap.
+**Next:** P67 names the single biggest Wave 5 gap (full 1v1 coherence vs AoE2:DE).
 
 ## Biggest gap
 
-**Wave 4 wrap in critic.** Leftover candidate: `MAX_ENTS` 384 vs 400-unit contract (Wave 5 if critic PASSes).
+**Wave 4 locked.** Wave 5: three civs / full 1v1 coherence. Integrator in flight.
 
 ## Tracker
 
@@ -23,5 +23,5 @@ Cull, Attack-lock peel, HUD safe-area all have fresh PASS. Opening still P41.
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
-| 4 performance / iPad / bugs | P66 wrap critic |
-| 5 full 1v1 coherence | queued |
+| 4 performance / iPad / bugs | **PASS** (P66 critic) |
+| 5 full 1v1 coherence | P67 integrator |

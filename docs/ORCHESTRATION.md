@@ -136,13 +136,16 @@ Original plan IDs P40–P42 collide with live Wave 1/2 IDs. Live IDs win.
 | P63 | P62 critic | P62 | done | **PASS** `228140f` live 0.5.2-wave4 |
 | P64 | iPad HUD safe-area insets | P63 | done | shipped `0.5.3-wave4` `eae2824` |
 | P65 | P64 critic | P64 | done | **PASS** `0088c6c` live 0.5.3-wave4 |
-| P66 | Wave 4 wrap critic | P65 | critic | |
+| P66 | Wave 4 wrap critic | P65 | done | **PASS locked** `b3aaa6c` live 0.5.3-wave4 |
 
-### Wave 5 — coherence
+### Wave 5 — coherence (live numbering)
 
-| ID | Piece | Status | Latest critic |
-|---|---|---|---|
-| P70 | Integrator plays full 1v1 vs AoE2:DE bar | queued | |
+Original plan ID P50/P70 collide with live IDs. Live IDs win.
+
+| ID | Piece | Depends | Status | Latest critic |
+|---|---|---|---|---|
+| P67 | Wave 5 integrator: play full 1v1, name the gap | P66 | building | |
+| P68+ | TBD from P67 gap | P67 | queued | |
 
 ---
 
@@ -154,4 +157,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P65 safe-area PASS.** **P66** Wave 4 wrap critic in flight.
+**Wave 4 PASS (P66).** **P67** Wave 5 integrator in flight.
