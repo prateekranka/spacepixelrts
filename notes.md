@@ -106,3 +106,104 @@ Observed architecture decisions (from the code, sensible):
   TOOL Shell {'command': 'cursor-agent --help 2>&1 | rg -i "trust|yolo|force|model" && echo "=== models ===" && cursor-agent --list-m
   TOOL Read {'path': '/Users/prateekranka/.agents/skills/cloudflare/pages/SKILL.md', 'limit': 80}
   TOOL GetMcpTools {'server': 'cloudflare-docs', 'toolName': 'search_cloudflare_documentation'}
+
+### checkpoint 2026-08-16 10:35:28
+- **orchestrator: RUNNING** (pid 20606, elapsed 03:24)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./scripts/monitor.sh
+  ./src/atlas.ts
+  ./src/render.ts
+  ./src/sim.ts
+  ./tasks-monitor.log
+- git log:
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/paseo/SKILL.md'}
+  TOOL Read {'path': '/Users/prateekranka/.cursor/skills-cursor/loop/SKILL.md'}
+  A: The brief is clear. Next I’ll check the repo, toolchain, and a few design references so the architecture docs and scaffold are grounded.
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/sim.ts'}
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/codebase-design/SKILL.md'}
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/img2threejs/SKILL.md', 'limit': 80}
+  TOOL Read {'path': '/Users/prateekranka/.agents/skills/cloudflare/SKILL.md', 'limit': 80}
+  TOOL Glob {'glob_pattern': '**/*', 'target_directory': '/Users/prateekranka/.cursor/projects/Users-prateekranka-Cowork-spacepixelr
+  TOOL Shell {'command': 'echo "=== node ===" && node -v && echo "=== npm ===" && npm -v && echo "=== wrangler ===" && (wrangler --ve
+  TOOL Shell {'command': 'cursor-agent --help 2>&1 | rg -i "trust|yolo|force|model" && echo "=== models ===" && cursor-agent --list-m
+  TOOL Read {'path': '/Users/prateekranka/.agents/skills/cloudflare/pages/SKILL.md', 'limit': 80}
+  TOOL GetMcpTools {'server': 'cloudflare-docs', 'toolName': 'search_cloudflare_documentation'}
+
+### checkpoint 2026-08-16 10:36:45
+- **orchestrator: RUNNING** (pid 20606, elapsed 04:41)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./scripts/monitor.sh
+  ./src/atlas.ts
+  ./src/input.ts
+  ./src/render.ts
+  ./src/sim.ts
+  ./tasks-monitor.log
+- git log:
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/codebase-design/SKILL.md'}
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/img2threejs/SKILL.md', 'limit': 80}
+  TOOL Read {'path': '/Users/prateekranka/.agents/skills/cloudflare/SKILL.md', 'limit': 80}
+  TOOL Glob {'glob_pattern': '**/*', 'target_directory': '/Users/prateekranka/.cursor/projects/Users-prateekranka-Cowork-spacepixelr
+  TOOL Shell {'command': 'echo "=== node ===" && node -v && echo "=== npm ===" && npm -v && echo "=== wrangler ===" && (wrangler --ve
+  TOOL Shell {'command': 'cursor-agent --help 2>&1 | rg -i "trust|yolo|force|model" && echo "=== models ===" && cursor-agent --list-m
+  TOOL Read {'path': '/Users/prateekranka/.agents/skills/cloudflare/pages/SKILL.md', 'limit': 80}
+  TOOL GetMcpTools {'server': 'cloudflare-docs', 'toolName': 'search_cloudflare_documentation'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/atlas.ts'}
+  TOOL CallMcpTool {'server': 'cloudflare-docs', 'toolName': 'search_cloudflare_documentation', 'arguments': {'query': 'wrangler pages depl
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/impeccable/SKILL.md', 'limit': 60}
+  TOOL TodoWrite {'merge': False, 'todos': [{'id': 'docs', 'content': 'Write ARCHITECTURE.md, DESIGN.md, ORCHESTRATION.md, PROGRESS.md', 
+
+### checkpoint 2026-08-16 10:38:28
+- **orchestrator: RUNNING** (pid 20606, elapsed 06:24)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./index.html
+  ./public/progress.html
+  ./scripts/monitor.sh
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/sim.ts
+  ./tasks-monitor.log
+  ./wrangler.jsonc
+- git log:
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/codebase-design/SKILL.md'}
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/img2threejs/SKILL.md', 'limit': 80}
+  TOOL Read {'path': '/Users/prateekranka/.agents/skills/cloudflare/SKILL.md', 'limit': 80}
+  TOOL Glob {'glob_pattern': '**/*', 'target_directory': '/Users/prateekranka/.cursor/projects/Users-prateekranka-Cowork-spacepixelr
+  TOOL Shell {'command': 'echo "=== node ===" && node -v && echo "=== npm ===" && npm -v && echo "=== wrangler ===" && (wrangler --ve
+  TOOL Shell {'command': 'cursor-agent --help 2>&1 | rg -i "trust|yolo|force|model" && echo "=== models ===" && cursor-agent --list-m
+  TOOL Read {'path': '/Users/prateekranka/.agents/skills/cloudflare/pages/SKILL.md', 'limit': 80}
+  TOOL GetMcpTools {'server': 'cloudflare-docs', 'toolName': 'search_cloudflare_documentation'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/atlas.ts'}
+  TOOL CallMcpTool {'server': 'cloudflare-docs', 'toolName': 'search_cloudflare_documentation', 'arguments': {'query': 'wrangler pages depl
+  TOOL Read {'path': '/Users/prateekranka/.claude/skills/impeccable/SKILL.md', 'limit': 60}
+  TOOL TodoWrite {'merge': False, 'todos': [{'id': 'docs', 'content': 'Write ARCHITECTURE.md, DESIGN.md, ORCHESTRATION.md, PROGRESS.md', 
+
+---
+
+### ✅ Vision resolved — Grok 4.6 XHigh (per user directive)
+
+The user directed that **Grok 4.6 Extra High be used for vision** (the critic's "eyes").
+This is now **verified working**:
+
+- Test: fed an 8x8 red PNG to `cursor-agent --model cursor-grok-4.6-xhigh` → correctly answered "red".
+- Mechanism: `cursor-agent --trust --print --model cursor-grok-4.6-xhigh <screenshot.png> "judge blind vs AoE2:DE, name the single biggest gap"`.
+
+So the critic's visual loop is fully unblocked — no dependency on the dead `modlens` providers
+(gemini 429 / claude / antigravity). Updated `ORCHESTRATOR_BRIEF.md` §8 accordingly.
+
+- Mode: **silent monitoring** — user will check back; keep logging to notes.md only.

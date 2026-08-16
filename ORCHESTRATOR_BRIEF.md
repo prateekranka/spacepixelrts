@@ -159,14 +159,27 @@ ability to review them — you review every diff, so don't spawn more than you c
 
 ---
 
-## 8. Vision (important reality check)
+## 8. Vision (USE GROK 4.6 XHIGH — user directive)
 
-Judging "beauty/feel vs AoE2:DE" visually needs a vision-capable model. The `modlens` CLI
-is available (`modlens -i <png> -p <provider>`), but **most providers are currently dead**
-(gemini-api: 429 credits depleted; anthropic/claude-cli: expired; antigravity: keyring).
-Check what works before relying on it; if none do, critics must use **objective metrics**
-(FPS, console, palette, pixel evidence) + their own code/behavior reasoning, and you must
-clearly flag any judgment that genuinely needs eyes. Do not fake a visual verdict.
+Judging "beauty/feel vs AoE2:DE" visually needs a vision-capable model. **The user has
+directed that you use Grok 4.6 Extra High for vision as well.** It is vision-capable and
+reachable via the same Cursor CLI:
+
+```
+cursor-agent --trust --print --model cursor-grok-4.6-xhigh -p "<judge-the-attached-screenshot>" <screenshot.png>
+```
+
+The Cursor CLI accepts an image file path as an argument (or pasted/attached) and Grok
+XHigh can see it and give a real aesthetic verdict. So the critic's "eyes on the game"
+loop is:
+
+1. `scripts/screenshot.mjs` (or `page.screenshot()`) captures the running game as PNG.
+2. Feed that PNG to `cursor-agent --model cursor-grok-4.6-xhigh` asking it to judge, blind,
+   against AoE2:DE, and to name the single biggest gap if it loses.
+
+Do NOT rely on the dead `modlens` providers (gemini 429/claude expired/antigravity
+keyring). Grok XHigh IS the vision model. Always pair the visual verdict with the
+objective metric battery (FPS, console, palette) from `scripts/measure.mjs`.
 
 ---
 
