@@ -715,19 +715,26 @@ function drawFlag(): Pix {
 function drawBolt(kind: 'sting' | 'beam' | 'void' | 'rock'): Pix {
   const p = Pix.alloc(16, 16);
   if (kind === 'beam') {
-    p.fill(3, 0, 10, 16, PAL.cryH);
-    p.fill(5, 1, 6, 14, PAL.cry);
-    p.fill(6, 0, 4, 16, PAL.white);
+    p.fill(5, 0, 6, 16, PAL.cry);
+    p.fill(6, 1, 4, 14, PAL.cryH);
+    p.set(7, 8, PAL.white);
+    p.set(7, 7, PAL.cryH);
+    p.set(7, 9, PAL.cryH);
   } else if (kind === 'void') {
     p.circ(8, 8, 5, PAL.voidH);
-    p.circ(8, 8, 3, PAL.white);
+    p.circ(8, 8, 3, PAL.voidC);
+    p.set(8, 8, PAL.white);
   } else if (kind === 'rock') {
     p.circ(8, 8, 5, PAL.ore);
     p.set(7, 7, PAL.oreH);
   } else {
-    p.fill(0, 3, 16, 10, PAL.hiveH);
-    p.fill(1, 4, 14, 8, PAL.hive);
-    p.fill(2, 5, 12, 6, PAL.white);
+    p.fill(0, 6, 16, 4, PAL.ore);
+    p.fill(1, 7, 14, 2, PAL.solH);
+    p.set(7, 7, PAL.white);
+    p.set(6, 7, PAL.sol);
+    p.set(8, 7, PAL.sol);
+    p.set(0, 7, PAL.oreH);
+    p.set(15, 7, PAL.oreH);
   }
   p.finish();
   return p;

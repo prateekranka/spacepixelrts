@@ -247,38 +247,44 @@ export class GameRenderer {
       teamArr[drawn * 3] = rgb[0];
       teamArr[drawn * 3 + 1] = rgb[1];
       teamArr[drawn * 3 + 2] = rgb[2];
-      flashArr[drawn] = e.cooldown > 0.2 && e.kind !== Kind.Resource ? 0.55 : 0;
+      const clash =
+        world.tick < 240 &&
+        (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism) &&
+        (() => {
+          const dx = e.x - MAP * 0.5;
+          const dz = e.z - MAP * 0.52;
+          return dx * dx + dz * dz < 110;
+        })();
+      flashArr[drawn] = e.cooldown > 0.2 && e.kind !== Kind.Resource ? (clash ? 0.1 : 0.55) : 0;
       this.drawnEntIds.add(e.id);
       drawn++;
     }
 
     for (const b of world.bolts) {
+      if (drawn >= MAX_ENTS) break;
       const key =
         b.kind === Kind.Prism ? 'bolt-beam' : b.kind === Kind.Siege ? 'bolt-rock' : b.kind === Kind.Shade ? 'bolt-void' : 'bolt-sting';
       const uv = this.atlas.uv[key];
       const rgb = TEAM_RGB[b.team];
-      const trailX = b.x + b.vx * 0.45;
-      const trailZ = b.z + b.vz * 0.45;
-      for (let seg = 0; seg < 2; seg++) {
-        if (drawn >= MAX_ENTS) break;
-        const px = seg === 0 ? b.x : trailX;
-        const pz = seg === 0 ? b.z : trailZ;
-        this.dummy.position.set(px, 0.85, pz);
-        this.dummy.quaternion.copy(this.lastCamQ);
-        this.dummy.scale.set(2.05, 2.05, 1);
-        this.dummy.updateMatrix();
-        this.mesh.setMatrixAt(drawn, this.dummy.matrix);
-        this.shadows.setMatrixAt(drawn, this.dummy.matrix);
-        uvArr[drawn * 4] = uv.u0;
-        uvArr[drawn * 4 + 1] = uv.v0;
-        uvArr[drawn * 4 + 2] = uv.u1;
-        uvArr[drawn * 4 + 3] = uv.v1;
-        teamArr[drawn * 3] = rgb[0];
-        teamArr[drawn * 3 + 1] = rgb[1];
-        teamArr[drawn * 3 + 2] = rgb[2];
-        flashArr[drawn] = seg === 0 ? 0.55 : 0.38;
-        drawn++;
-      }
+      this.dummy.position.set(b.x, 0.85, b.z);
+      this.dummy.quaternion.copy(this.lastCamQ);
+      this.dummy.scale.set(1.28, 1.28, 1);
+      this.dummy.updateMatrix();
+      this.mesh.setMatrixAt(drawn, this.dummy.matrix);
+      this.dummy.position.set(b.x, 0.03, b.z);
+      this.dummy.quaternion.identity();
+      this.dummy.scale.set(0.001, 0.001, 0.001);
+      this.dummy.updateMatrix();
+      this.shadows.setMatrixAt(drawn, this.dummy.matrix);
+      uvArr[drawn * 4] = uv.u0;
+      uvArr[drawn * 4 + 1] = uv.v0;
+      uvArr[drawn * 4 + 2] = uv.u1;
+      uvArr[drawn * 4 + 3] = uv.v1;
+      teamArr[drawn * 3] = rgb[0];
+      teamArr[drawn * 3 + 1] = rgb[1];
+      teamArr[drawn * 3 + 2] = rgb[2];
+      flashArr[drawn] = 0;
+      drawn++;
     }
 
     this.mesh.count = drawn;
@@ -514,18 +520,27 @@ export class GameRenderer {
       if (!e.alive || !e.vis) continue;
       if (e.kind === Kind.Resource) continue;
       if (!this.drawnEntIds.has(e.id)) continue;
-      if (isBuilding(e.kind) && !selected.has(e.id) && e.hp >= e.maxHp * 0.995) continue;
-      const show = selected.has(e.id) || e.hp < e.maxHp * 0.995 || e.team !== 0;
-      if (!show) continue;
+      const damaged = e.hp < e.maxHp * 0.92;
+      const sel = selected.has(e.id);
+      if (!sel && !damaged) continue;
+      if (
+        !sel &&
+        world.tick < 240 &&
+        (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism)
+      ) {
+        const dx = e.x - MAP * 0.5;
+        const dz = e.z - MAP * 0.52;
+        if (dx * dx + dz * dz < 110) continue;
+      }
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
       const p = this.project(x, isBuilding(e.kind) ? 2.4 : 1.65, z);
-      const bw = isBuilding(e.kind) ? 44 : 30;
-      const bh = 6;
+      const bw = isBuilding(e.kind) ? 36 : 18;
+      const bh = 3;
       const ratio = Math.max(0, e.hp / e.maxHp);
-      const barY = p.y - 20;
+      const barY = p.y - 16;
       const isPlayer = e.team === 0;
-      if (selected.has(e.id)) {
+      if (sel) {
         const ringR = isBuilding(e.kind) ? 34 : 22;
         ctx.strokeStyle = isPlayer ? '#48f048' : '#f04848';
         ctx.lineWidth = 2.5;
@@ -533,7 +548,7 @@ export class GameRenderer {
         ctx.arc(p.x, p.y + 6, ringR, 0, Math.PI * 2);
         ctx.stroke();
       }
-      ctx.fillStyle = 'rgba(0,0,0,0.92)';
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
       ctx.fillRect(p.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
       if (isPlayer) {
         ctx.fillStyle = ratio > 0.55 ? '#40e840' : ratio > 0.3 ? '#e8c838' : '#e83838';
@@ -541,9 +556,9 @@ export class GameRenderer {
         ctx.fillStyle = ratio > 0.55 ? '#e83838' : ratio > 0.3 ? '#e87828' : '#a02020';
       }
       ctx.fillRect(p.x - bw / 2, barY, bw * ratio, bh);
-      if (selected.has(e.id)) {
+      if (sel) {
         ctx.strokeStyle = '#ffe848';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1;
         ctx.strokeRect(p.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
       }
     }
