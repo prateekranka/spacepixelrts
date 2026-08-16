@@ -5,15 +5,13 @@
 
 ## Now
 
-**Wave 2 P48 critic** — fighter wave shipped. Live **`0.3.4-wave2`**.
+**Wave 2 P49 building** — P48 **PASS** (`2980232`). Live **`0.3.4-wave2`**. Nine inbound, four Fighters.
 
-At tick 400: 9 military / 4 Fighters AttackMove the Nexus. Opening still quiet at tick 80.
-
-**Next:** fresh critic on army-not-scouts.
+**Gap:** still scout-heavy (5 scouts / 4 fighters, no siege). P49 mixed-arms wave.
 
 ## Biggest gap
 
-**Enemy military is a scout timer, not an army** (P47). P48: Orbit-age the marshal at tick 240 and send ≥6 military / ≥4 Fighters at the Nexus.
+**Inbound is scout-heavy** (P48). P49: ≥4 Fighters + ≥1 Siege on the Nexus.
 
 ## Tracker
 
@@ -21,5 +19,5 @@ At tick 400: 9 military / 4 Fighters AttackMove the Nexus. Opening still quiet a
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P48 live `0.3.4-wave2`; critic next |
+| 2 gameplay depth | P48 **PASS**; P49 mixed-arms wave |
 | 3–5 polish / iPad / coherence | queued |
