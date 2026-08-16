@@ -440,6 +440,17 @@ export class World {
     return e.cargoType !== Tile.PropWreck && e.cargoType !== Tile.PropVent;
   }
 
+  private openingMidGemWorkerEnt(e: Ent): boolean {
+    if (!e.alive || e.kind !== Kind.Worker) return false;
+    const cx = MAP * 0.5;
+    const cz = MAP * 0.52;
+    return Math.abs(e.tx - cx) < 0.15 && Math.abs(e.tz - cz) < 0.15;
+  }
+
+  private openingTableauWorker(e: Ent): boolean {
+    return this.openingFlankCampEnt(e) || this.openingMidGemWorkerEnt(e);
+  }
+
   private strikeRange(e: Ent, st: (typeof STATS)[number], t: Ent): number {
     let r = st.range + t.radius;
     if (this.tick < 240 && this.openingClashEnt(e) && !st.melee) r += 0.95;
@@ -578,6 +589,21 @@ export class World {
         wk.tz = gasZ;
       }
     }
+
+    // Contested mid gem — Helion workers gather between the firing wings.
+    const midSpawns: [number, number][] = [
+      [cx - 0.85, cz - 0.7],
+      [cx + 0.85, cz - 0.7],
+      [cx, cz + 0.85],
+    ];
+    for (const [wx, wz] of midSpawns) {
+      const w = this.spawn(Kind.Worker, a, 0, wx, wz);
+      if (w) {
+        w.order = Ord.Gather;
+        w.tx = cx;
+        w.tz = cz;
+      }
+    }
   }
 
   private thinkUnits(): void {
@@ -676,7 +702,7 @@ export class World {
   private thinkGather(e: Ent): void {
     const st = STATS[e.kind];
     const openingCampWorker =
-      this.tick < 240 && e.kind === Kind.Worker && this.openingFlankCampEnt(e);
+      this.tick < 240 && e.kind === Kind.Worker && this.openingTableauWorker(e);
     if (!openingCampWorker && (e.cargo >= GATHER_MAX || e.order === Ord.Return)) {
       const hall = this.nearestHall(e.team, e.x, e.z);
       if (!hall) {
@@ -783,6 +809,7 @@ export class World {
 
   private tryStrike(e: Ent, t: Ent, st: typeof STATS[number]): void {
     if (e.cooldown > 0) return;
+    if (this.tick < 240 && t.kind === Kind.Worker) return;
     const dmg = st.atk * (1 + e.frenzy * 0.12) * (e.civ === 'aurion' && isBuilding(e.kind) === false ? 1 : 1);
     const bonus = t.civ === 'aurion' ? 0.85 : 1; // compact armor
     const applied =
@@ -832,6 +859,7 @@ export class World {
         const e = this.ents[id];
         if (!e.alive || e.team === b.team) continue;
         if (e.kind === Kind.Resource) continue;
+        if (e.kind === Kind.Worker) continue;
         if (e.kind === Kind.Shade && e.stealth > 0.6) continue;
         if (dist2(b.x, b.z, e.x, e.z) < (e.radius + 0.25) ** 2) {
           e.hp -= b.dmg;
@@ -884,7 +912,7 @@ export class World {
       const e = this.ents[i];
       if (!e.alive || !isUnit(e.kind)) continue;
       if (this.tick < 240 && this.openingClashEnt(e) && e.order === Ord.Attack) continue;
-      if (this.tick < 240 && e.kind === Kind.Worker && this.openingFlankCampEnt(e)) continue;
+      if (this.tick < 240 && e.kind === Kind.Worker && this.openingTableauWorker(e)) continue;
       this.hash.query(e.x, e.z, 1.1, this.q);
       let sx = 0;
       let sz = 0;
@@ -1072,7 +1100,7 @@ export class World {
         const e = this.ents[i];
         if (!e.alive) continue;
         if (this.openingClashEnt(e)) e.vis = true;
-        if (this.openingFlankCampEnt(e)) e.vis = true;
+        if (this.openingFlankCampEnt(e) || this.openingMidGemWorkerEnt(e)) e.vis = true;
       }
     }
   }
