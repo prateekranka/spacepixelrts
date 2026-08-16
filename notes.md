@@ -301,3 +301,79 @@ So the critic's visual loop is fully unblocked — no dependency on the dead `mo
   TOOL Write {'contents': "/** Shared sim constants and enums. P10 owns behavior; these IDs are locked. */\n\nexport const TICK_HZ = 
   TOOL Write {'contents': '/** Master palette. All atlas pixels must land on these (plus magenta key + 0 alpha). */\n\nexport const P
   TOOL Write {'contents': "import { Kind, type Civ } from '../sim/engine';\nimport { MAG, PAL, type Rgba } from './palette';\n\nexpor
+
+### checkpoint 2026-08-16 10:46:46
+- **orchestrator: RUNNING** (pid 20606, elapsed 14:42)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./critic/out/wave1-measure.png
+  ./critic/out/wave1.png
+  ./dist/assets/index-Cjoq_b9Z.js
+  ./dist/assets/index-Cjoq_b9Z.js.map
+  ./dist/index.html
+  ./dist/progress.html
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package-lock.json
+  ./package.json
+  ./public/progress.html
+  ./scripts/measure.mjs
+  ./scripts/monitor.sh
+  ./scripts/screenshot.mjs
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/content.ts
+  ./src/engine.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/render/atlas.ts
+  ./src/render/palette.ts
+  ./src/render/renderer.ts
+  ./src/sim.ts
+  ./src/sim/engine.ts
+  ./src/sim/world.ts
+  ./tasks-monitor.log
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  a2b7f33 P10-P35: ship a playable Wave 1 skirmish with pixel atlas, command HUD, and combat
+  f70d8eb vision: use Grok 4.6 XHigh for critic visual judgment (verified working)
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/PROGRESS.md', 'contents': "# Starhold — live status\n\n**Live:** http
+  A: Docs are in place. Next I’ll scaffold a pixel-crisp isometric boot so the first deploy already looks like a battlefield, not a blank canvas.
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/.gitignore', 'contents': 'node_modules/\ndist/\n.DS_Store\n*.log\n.en
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/package.json', 'contents': '{\n  "name": "spacepixelrts",\n  "private
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/tsconfig.json', 'contents': '{\n  "compilerOptions": {\n    "target":
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/vite.config.ts', 'contents': "import { defineConfig } from 'vite';\n\
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/index.html', 'contents': '<!doctype html>\n<html lang="en">\n  <head>
+  TOOL Write {'contents': "/** Shared sim constants and enums. P10 owns behavior; these IDs are locked. */\n\nexport const TICK_HZ = 
+  TOOL Write {'contents': '/** Master palette. All atlas pixels must land on these (plus magenta key + 0 alpha). */\n\nexport const P
+  TOOL Write {'contents': "import { Kind, type Civ } from '../sim/engine';\nimport { MAG, PAL, type Rgba } from './palette';\n\nexpor
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/sim/engine.ts', 'old_string': 'export const enum Kind {\n  Worker
+  TOOL Write {'contents': "import * as THREE from 'three';\nimport {\n  iso,\n  MAP,\n  TEAM_TINT,\n  TILE_H,\n  TILE_W,\n  isBuildin
+
+---
+
+### GitHub repo + domain (setup checkpoint)
+
+- **GitHub repo created & pushed:** https://github.com/prateekranka/spacepixelrts (public, branch main).
+  `gh` is logged in as `prateekranka` (scopes: repo, workflow, read:org, gist, delete_repo).
+  `git remote origin` set; **auto-push added to the monitor loop** (pushes to origin every 3 min).
+- **Subdomain `space.contenthelper.in`:** still `pending` — the CNAME DNS record is not set.
+  Root cause confirmed: none of the available Cloudflare tokens have DNS-write on the
+  `contenthelper.in` zone. The new token (`cfat_...2bb36b`) has Pages read/write but NOT
+  zone/DNS access. **The live URL remains `https://spacepixelrts.pages.dev`.**
+
+  **Manual fix (one line, Cloudflare dashboard → contenthelper.in → DNS):**
+  ```
+  Type: CNAME   Name: space   Target: spacepixelrts.pages.dev   Proxy: ON
+  ```
+  Or provide a token with `Zone.Zone` read + `Zone.DNS` edit on `contenthelper.in`.

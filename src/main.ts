@@ -1,87 +1,95 @@
-/** Spacepixel boot — rAF loop, harness, landscape iPad. */
+import { DT, VERSION } from './sim/engine';
+import { World } from './sim/world';
+import { Renderer } from './render/renderer';
+import { Input } from './input/input';
+import { paintMinimap, syncHud } from './ui/hud';
+import type { DrawEnt } from './render/renderer';
 
-import { DT, Kind, MAP, MAX_ENTS } from './engine';
-import { World } from './sim';
-import { GameRenderer } from './render';
-import { Input } from './input';
-import { Hud } from './hud';
-import { Sfx } from './audio';
+const canvas = document.getElementById('view') as HTMLCanvasElement;
+const mini = document.getElementById('mini') as HTMLCanvasElement;
 
-const VERSION = '0.2.0-wave1';
-
-const host = document.getElementById('app')!;
 const world = new World();
-world.civ[0] = 'vespari';
-world.civ[1] = 'aurion';
 world.reset(0x5eed);
 
-const view = new GameRenderer(host);
-view.init(world);
-view.resize(host.clientWidth, host.clientHeight);
-
-const sfx = new Sfx();
-const input = new Input(host, world, view, sfx);
-input.pan.x = MAP * 0.5;
-input.pan.z = MAP * 0.5;
-
-const hud = new Hud(host);
-hud.bind(world, input, view);
+const gfx = new Renderer(canvas);
+const input = new Input(canvas, world, gfx);
+input.camX = 32;
+input.camZ = 30;
+input.zoom = 3;
 
 let acc = 0;
 let last = performance.now();
-let fpsSmoothed = 60;
+let ema = 16.6;
 let frames = 0;
-let fpsT = 0;
+let fpsT = last;
+
+function resize(): void {
+  gfx.resize(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
+}
+resize();
+window.addEventListener('resize', resize);
+
+function probe(): void {
+  const fps = 1000 / ema;
+  const alive = world.ents.reduce((n, e) => n + (e.alive ? 1 : 0), 0);
+  (window as unknown as { __STARHOLD__: unknown }).__STARHOLD__ = {
+    fps,
+    frameMs: ema,
+    tick: world.tick,
+    ents: alive,
+    drawCalls: gfx.drawCalls,
+    version: VERSION,
+  };
+}
 
 function frame(now: number): void {
-  requestAnimationFrame(frame);
-  const raw = Math.min(0.05, (now - last) / 1000);
+  const raw = Math.min(0.1, (now - last) / 1000);
   last = now;
+  ema = ema * 0.9 + raw * 1000 * 0.1;
   acc += raw;
-  fpsT += raw;
-  frames++;
-  if (fpsT >= 0.4) {
-    fpsSmoothed = Math.round(frames / fpsT);
-    frames = 0;
-    fpsT = 0;
-  }
-  input.tick(raw);
-  let steps = 0;
-  while (acc >= DT && steps < 5) {
+  while (acc >= DT) {
     world.step();
     acc -= DT;
-    steps++;
   }
   const alpha = acc / DT;
-  view.draw(world, alpha, input.selected, input.box);
-  hud.draw(world, input, fpsSmoothed);
-  publish();
+  const ents: DrawEnt[] = [];
+  for (const e of world.ents) {
+    if (!e.alive) continue;
+    ents.push({
+      x: e.px + (e.x - e.px) * alpha,
+      z: e.pz + (e.z - e.pz) * alpha,
+      kind: e.kind,
+      civ: e.civ,
+      team: e.team,
+      hp: e.hp,
+      maxHp: e.maxHp,
+      anim: e.anim,
+      facing: e.facing,
+      vis: e.vis,
+      selected: input.selected.has(e.id),
+    });
+  }
+  gfx.draw({
+    tiles: world.tiles,
+    ents,
+    bolts: world.bolts,
+    camX: input.camX,
+    camZ: input.camZ,
+    zoom: input.zoom,
+  });
+  if ((world.tick & 3) === 0) {
+    paintMinimap(mini, world, input.camX, input.camZ);
+    syncHud(world);
+  }
+  frames++;
+  if (now - fpsT > 500) {
+    fpsT = now;
+    probe();
+  }
+  requestAnimationFrame(frame);
 }
 
+probe();
 requestAnimationFrame(frame);
 
-function publish(): void {
-  const info = view.info();
-  const probe = {
-    version: VERSION,
-    tick: world.tick,
-    fps: fpsSmoothed,
-    ents: world.ents.reduce((n, e) => n + (e.alive ? 1 : 0), 0),
-    selected: input.selected.size,
-    teams: world.teams.slice(0, 2),
-    civ: world.civ.slice(0, 2),
-    rendererInfo: info,
-    map: MAP,
-    max: MAX_ENTS,
-    hall: Kind.Hall,
-  };
-  const w = window as unknown as { __SPACEPIXEL__: typeof probe; __STARHOLD__: typeof probe };
-  w.__SPACEPIXEL__ = probe;
-  w.__STARHOLD__ = probe;
-}
-
-window.addEventListener('resize', () => {
-  view.resize(host.clientWidth, host.clientHeight);
-});
-
-console.log(`Spacepixel ${VERSION} — wave 1 vertical slice`);
+export { world, gfx, input };

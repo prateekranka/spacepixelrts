@@ -10,7 +10,7 @@ export const VERSION = '0.1.0-p01';
 
 export type Civ = 'helion' | 'kryos' | 'nihiline';
 
-export const enum Kind {
+export enum Kind {
   Worker = 0,
   Scout,
   Fighter,
@@ -29,7 +29,7 @@ export const enum Kind {
   Resource,
 }
 
-export const enum Ord {
+export enum Ord {
   Idle = 0,
   Move,
   Attack,
@@ -41,7 +41,7 @@ export const enum Ord {
   AgeUp,
 }
 
-export const enum Tile {
+export enum Tile {
   Void = 0,
   Dust,
   Rock,

@@ -60,3 +60,6 @@ fi
 } >> notes.md
 
 echo "checkpoint written ($TS) — orchestrator ${PID:+RUNNING}${PID:-DOWN}"
+
+# Auto-push to GitHub so the user can follow progress remotely.
+git push -q origin main 2>/dev/null || true
