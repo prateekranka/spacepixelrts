@@ -5,15 +5,13 @@
 
 ## Now
 
-**Wave 2 P43 critic** — training unblocked. Live **`0.3.0-wave2`**, pop **22/30**.
+**Wave 2 P44 building** — P43 critic **PASS** (`73cb5dc`). Live **`0.3.0-wave2`**, train Worker works (22→23 pop, 220→170 ore). Tableau intact.
 
-P42 gap was pop 22/20 blocking `tryTrain`. P43: extra home habitats, corpses don't count pop, hall pick ≥2.2, train buttons show `pop cap` when blocked.
-
-**Next:** fresh critic on train-from-opening. Then P44 epochs.
+**Next:** Spark → Orbit age-up (DESIGN §4). Then win/lose + enemy pressure.
 
 ## Biggest gap
 
-**Match arc still thin** after P43: you can train, but no epochs, no win/lose, and the enemy marshal does not pressure the Nexus while you macro.
+**Match arc:** can train, cannot yet **age up**, win, or take Nexus pressure. P44 is Spark→Orbit.
 
 ## Tracker
 
@@ -21,5 +19,5 @@ P42 gap was pop 22/20 blocking `tryTrain`. P43: extra home habitats, corpses don
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P43 live `0.3.0-wave2` (22/30); critic next |
+| 2 gameplay depth | P43 **PASS**; P44 age-up in flight |
 | 3–5 polish / iPad / coherence | queued |
