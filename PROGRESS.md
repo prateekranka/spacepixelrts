@@ -5,15 +5,13 @@
 
 ## Now
 
-**Wave 2 P45 critic** — win/lose shipped. Live **`0.3.2-wave2`**.
+**Wave 2 P46 building** — P45 critic **PASS** (`9091679`). Live **`0.3.2-wave2`**. VICTORY/DEFEAT banners work; HUD clicks stick.
 
-P44 age-up **PASS**. P45: VICTORY/DEFEAT banners when a Nexus falls; command deck no longer rebuilds every frame.
-
-**Next:** fresh critic on banners + clickable HUD. Then P46 enemy pressure.
+**Next:** enemy marshal peels toward the player Nexus after tick 240 so macro has stakes.
 
 ## Biggest gap
 
-**Can train and age; cannot yet win or lose.** P45 is Nexus-kill banners. Then enemy pressure (P46).
+**Can train, age, and win/lose.** Missing: enemy pressure while you macro (P46).
 
 ## Tracker
 
@@ -21,5 +19,5 @@ P44 age-up **PASS**. P45: VICTORY/DEFEAT banners when a Nexus falls; command dec
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P45 live `0.3.2-wave2`; critic next |
+| 2 gameplay depth | P45 **PASS**; P46 AI pressure in flight |
 | 3–5 polish / iPad / coherence | queued |
