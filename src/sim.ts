@@ -340,6 +340,10 @@ export class World {
     this.placeOpeningNodeAt(Tile.Ore, cx - 0.25, cz - 5.35);
     this.placeOpeningNodeAt(Tile.Gas, cx + 1.1, cz + 5.35);
     this.placeOpeningNodeAt(Tile.Solar, cx + 1.1, cz - 5.35);
+    // Contested mid ore + duel-lane boulders on the clash X (gap midpoint).
+    this.placeOpeningNodeAt(Tile.Ore, cx, cz);
+    this.placePropAt(Tile.PropWreck, cx, cz - 2.85);
+    this.placePropAt(Tile.PropWreck, cx, cz + 2.85);
     const rockBillboards: [number, number][] = [
       [icx - 1, icz - 5],
       [icx, icz - 5],
@@ -374,6 +378,18 @@ export class World {
   private placeProp(kind: Tile, cx: number, cz: number): void {
     if (cx < 1 || cz < 1 || cx >= MAP - 1 || cz >= MAP - 1) return;
     const prop = this.spawn(Kind.Resource, 'vespari', 3, cx + 0.5, cz + 0.5);
+    if (prop) {
+      prop.cargoType = kind;
+      prop.hp = 9999;
+      prop.maxHp = 9999;
+      prop.radius = 0.45;
+    }
+  }
+
+  /** Prop billboard at exact world coords (duel-lane boulders). */
+  private placePropAt(kind: Tile, x: number, z: number): void {
+    if (x < 1 || z < 1 || x >= MAP - 1 || z >= MAP - 1) return;
+    const prop = this.spawn(Kind.Resource, 'vespari', 3, x, z);
     if (prop) {
       prop.cargoType = kind;
       prop.hp = 9999;

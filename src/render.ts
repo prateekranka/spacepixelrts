@@ -209,7 +209,15 @@ export class GameRenderer {
         scaleY = cellsH * mul;
       } else if (e.kind === Kind.Resource) {
         const isProp = e.cargoType === Tile.PropWreck || e.cargoType === Tile.PropVent;
-        const targetH = isProp ? 1.2 : 1.45;
+        const openCx = MAP * 0.5;
+        const openCz = MAP * 0.52;
+        const midGem =
+          !isProp && Math.abs(e.x - openCx) < 0.6 && Math.abs(e.z - openCz) < 0.6;
+        const midBoulder =
+          isProp &&
+          Math.abs(e.x - openCx) < 0.6 &&
+          Math.abs(Math.abs(e.z - openCz) - 2.85) < 0.35;
+        const targetH = midGem ? 1.55 : isProp ? (midBoulder ? 1.25 : 1.2) : 1.45;
         const mul = targetH / cellsH;
         scaleX = cellsW * mul;
         scaleY = cellsH * mul;
