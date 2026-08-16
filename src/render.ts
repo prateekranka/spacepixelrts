@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { Atlas, CELL, buildAtlas, roleOfKind } from './atlas';
-import { Kind, MAP, MAX_ENTS, Tile, type Ent } from './engine';
+import { Kind, MAP, MAX_ENTS, Tile, DISSOLVE_DUR, type Ent } from './engine';
 import { TEAM_RGB, isBuilding } from './content';
 import type { World } from './sim';
 
@@ -374,8 +374,10 @@ export class GameRenderer {
     }
     const role = roleOfKind(e.kind);
     let f = 0;
-    if (e.hp <= 0) f = 4;
-    else if (e.order === 2 /* attack */) f = 3;
+    if (e.hp <= 0) {
+      if (e.dissolveT > 0) f = e.dissolveT > DISSOLVE_DUR * 0.5 ? 5 : 6;
+      else f = 4;
+    } else if (e.order === 2 /* attack */) f = 3;
     else if (Math.abs(e.vx) + Math.abs(e.vz) > 0.08) f = 1 + ((e.anim * 6) | 0) % 2;
     else f = (e.anim * 2) & 1;
     return this.atlas.uv[`${civ}-${role}-${f}`];

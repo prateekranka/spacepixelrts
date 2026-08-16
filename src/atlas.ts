@@ -207,14 +207,31 @@ function voidBody(p: Pix, ox: number, oy: number, frame: number): void {
   p.circ(ox + 12, y - 17, 3, PAL.voidH);
 }
 
+function applyDissolve(p: Pix, strength: number): void {
+  for (let y = 0; y < p.h; y++) {
+    for (let x = 0; x < p.w; x++) {
+      const i = (x + y * p.w) * 4;
+      if (p.d[i + 3] < 20) continue;
+      const hash = (x * 17 + y * 31 + 5) & 7;
+      if (hash < strength * 8) {
+        p.d[i + 3] = 0;
+        continue;
+      }
+      p.d[i + 3] = Math.max(0, Math.floor(p.d[i + 3] * (1 - strength * 0.55)));
+    }
+  }
+}
+
 function drawUnit(civ: 'vespari' | 'aurion' | 'voidmarked', role: string, frame: number): Pix {
+  const dissolve = frame === 5 || frame === 6;
+  const bodyFrame = dissolve ? 0 : frame;
   const p = Pix.alloc(CELL, CELL);
   const ox = 16;
   const oy = 20;
 
-  if (civ === 'vespari') hiveBody(p, ox, oy, frame);
-  else if (civ === 'aurion') cryBody(p, ox, oy, frame);
-  else voidBody(p, ox, oy, frame);
+  if (civ === 'vespari') hiveBody(p, ox, oy, bodyFrame);
+  else if (civ === 'aurion') cryBody(p, ox, oy, bodyFrame);
+  else voidBody(p, ox, oy, bodyFrame);
 
   if (role === 'worker') {
     p.fill(ox + 4, oy - 10, 9, 11, PAL.ore);
@@ -285,7 +302,9 @@ function drawUnit(civ: 'vespari' | 'aurion' | 'voidmarked', role: string, frame:
     p.circ(ox + 10, oy - 8, 3, PAL.white);
     p.circ(ox + 11, oy - 8, 2, PAL.solH);
   }
-  if (frame === 4) {
+  if (dissolve) {
+    applyDissolve(p, frame === 5 ? 0.35 : 0.7);
+  } else if (frame === 4) {
     p.fill(0, 0, CELL, CELL, [0, 0, 0, 0]);
     p.circ(ox, oy + 2, 8, PAL.ink);
     p.circ(ox - 4, oy - 2, 3, civ === 'vespari' ? PAL.hive : civ === 'aurion' ? PAL.cry : PAL.voidC);
@@ -795,7 +814,7 @@ export function buildAtlas(): Atlas {
   let row = 2;
   for (const civ of civs) {
     for (const role of roles) {
-      for (let f = 0; f < 5; f++) {
+      for (let f = 0; f < 7; f++) {
         put(`${civ}-${role}-${f}`, drawUnit(civ, role, f), col, row);
         col++;
         if (col >= COLS) {

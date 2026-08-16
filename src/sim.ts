@@ -2,6 +2,8 @@
 
 import {
   DT,
+  DISSOLVE_DUR,
+  STAIN_DUR,
   Heap,
   Kind,
   MAP,
@@ -177,6 +179,7 @@ export class World {
     e.path = null;
     e.pathI = 0;
     e.hitFlash = 0;
+    e.dissolveT = 0;
     e.corpseT = 0;
     if (kind === Kind.Hall) e.hp = st.hp;
     return e;
@@ -186,7 +189,8 @@ export class World {
     if (!e.alive) return;
     if (isUnit(e.kind)) {
       e.hp = 0;
-      e.corpseT = 1.5;
+      e.dissolveT = DISSOLVE_DUR;
+      e.corpseT = STAIN_DUR;
       e.vx = e.vz = 0;
       e.path = null;
       e.tid = -1;
@@ -999,10 +1003,17 @@ export class World {
   private stepCorpses(): void {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
-      if (!e.alive || e.corpseT <= 0) continue;
+      if (!e.alive) continue;
+      if (e.dissolveT > 0) {
+        e.dissolveT -= DT;
+        if (e.dissolveT < 0) e.dissolveT = 0;
+        continue;
+      }
+      if (e.corpseT <= 0) continue;
       e.corpseT -= DT;
       if (e.corpseT <= 0) {
         e.alive = false;
+        e.dissolveT = 0;
         this.free.push(e.id);
       }
     }
@@ -1505,7 +1516,7 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team > 1) continue;
-      if (e.hp <= 0 || e.corpseT > 0) continue;
+      if (e.hp <= 0 || e.corpseT > 0 || e.dissolveT > 0) continue;
       const st = STATS[e.kind];
       this.teams[e.team].pop += st.pop;
       if (e.kind === Kind.Hall && e.progress >= 1) this.teams[e.team].cap += POP_HALL;
