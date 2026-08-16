@@ -24,12 +24,24 @@ AGENT_PID=""
 WATCHDOG_PID=""
 PGID=""
 
+# pty.fork() makes cursor-agent its own session; -PGID on python is not enough.
+reap_descendants() {
+  local sig="$1"
+  local root="$2"
+  local k
+  for k in $(pgrep -P "$root" 2>/dev/null || true); do
+    reap_descendants "$sig" "$k"
+    kill -"$sig" "$k" 2>/dev/null || true
+  done
+}
+
 reap_tree() {
   local sig="$1"
   if [[ -n "${PGID}" ]]; then
     kill -"${sig}" -- -"${PGID}" 2>/dev/null || true
   fi
   if [[ -n "${AGENT_PID}" ]]; then
+    reap_descendants "$sig" "${AGENT_PID}"
     pkill -"${sig}" -P "${AGENT_PID}" 2>/dev/null || true
     kill -"${sig}" "${AGENT_PID}" 2>/dev/null || true
   fi
@@ -51,7 +63,7 @@ trap cleanup EXIT INT TERM HUP
 # New session + PTY so kill -- -PGID reaps cursor-agent + MCP children, and
 # Node flushes --print incrementally (stdbuf does not unbuffer Node).
 python3 -c '
-import os, sys, pty, time
+import os, sys, pty, signal
 
 brief_path, log_path = sys.argv[1], sys.argv[2]
 brief = open(brief_path).read()
@@ -66,6 +78,15 @@ if pid == 0:
         "--model", "composer-2.5",
         "-p", brief,
     ])
+
+def on_term(_sig, _frm):
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGHUP, on_term)
+signal.signal(signal.SIGINT, on_term)
 
 while True:
     try:
@@ -93,9 +114,13 @@ PGID=$(ps -o pgid= -p "$AGENT_PID" | tr -d " ")
     msg="TIMEOUT:${TIMEOUT_SEC}s — killing process group ${PGID}"
     printf '\n%s\n' "$msg" >> "$LOG"
     printf '%s\n' "$msg"
-    kill -TERM -- -"$PGID" 2>/dev/null || kill -TERM "$AGENT_PID" 2>/dev/null || true
+    kill -TERM -- -"$PGID" 2>/dev/null || true
+    reap_descendants TERM "$AGENT_PID"
+    kill -TERM "$AGENT_PID" 2>/dev/null || true
     sleep 2
-    kill -KILL -- -"$PGID" 2>/dev/null || kill -KILL "$AGENT_PID" 2>/dev/null || true
+    kill -KILL -- -"$PGID" 2>/dev/null || true
+    reap_descendants KILL "$AGENT_PID"
+    kill -KILL "$AGENT_PID" 2>/dev/null || true
   fi
 ) &
 WATCHDOG_PID=$!
