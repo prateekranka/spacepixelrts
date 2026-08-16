@@ -306,44 +306,41 @@ export class World {
       }
     }
     const inFireLane = (zz: number): boolean => Math.abs(zz - icz) <= 4;
+    const onZFlank = (xx: number, zz: number): boolean =>
+      Math.abs(xx - icx) <= 1.6 && Math.abs(zz - icz) >= 5.5 && Math.abs(zz - icz) <= 8.5;
     const placeRock = (xx: number, zz: number): void => {
       if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) return;
-      if (inFireLane(zz)) return;
+      if (inFireLane(zz) || !onZFlank(xx, zz)) return;
       this.tiles[xx + zz * MAP] = Tile.Rock;
       this.block[xx + zz * MAP] = 1;
     };
     const rockOffsets: [number, number][] = [
-      [-12, -8],
-      [-11, -3],
-      [-10, 2],
-      [-9, 7],
-      [-8, -9],
-      [-7, -4],
-      [-6, 1],
-      [-6, 6],
-      [-5, -7],
-      [-4, 8],
-      [12, -8],
-      [11, -3],
-      [10, 2],
-      [9, 7],
-      [8, -9],
-      [7, -4],
-      [6, 1],
-      [6, 6],
+      [-1, -6],
+      [0, -7],
+      [1, -6],
+      [0, -8],
+      [-1, -7],
+      [1, -7],
+      [-1, 6],
+      [0, 7],
+      [1, 6],
+      [0, 8],
+      [-1, 7],
+      [1, 7],
     ];
     for (const [dx, dz] of rockOffsets) placeRock(icx + dx, icz + dz);
-    this.placeOpeningNode(Tile.Ore, icx + 5, icz - 4);
-    this.placeOpeningNode(Tile.Gas, icx - 5, icz - 4);
-    this.placeOpeningNode(Tile.Solar, icx + 5, icz + 4);
-    this.placeOpeningNode(Tile.Ore, icx - 5, icz + 4);
+    // Gems on camera Z flanks — visible left/right, not under HUD.
+    this.placeOpeningNode(Tile.Ore, icx, icz - 7);
+    this.placeOpeningNode(Tile.Gas, icx, icz + 7);
+    this.placeOpeningNode(Tile.Solar, icx + 1, icz - 6);
+    this.placeOpeningNode(Tile.Ore, icx - 1, icz + 6);
     const propSlots: [number, number, Tile][] = [
-      [icx - 10, icz - 7, Tile.PropWreck],
-      [icx + 10, icz - 7, Tile.PropVent],
-      [icx - 9, icz + 8, Tile.PropVent],
-      [icx + 9, icz + 8, Tile.PropWreck],
-      [icx - 12, icz + 1, Tile.PropWreck],
-      [icx + 12, icz - 1, Tile.PropVent],
+      [icx - 1, icz - 7, Tile.PropWreck],
+      [icx + 1, icz - 8, Tile.PropVent],
+      [icx + 1, icz + 7, Tile.PropVent],
+      [icx - 1, icz + 8, Tile.PropWreck],
+      [icx, icz - 6, Tile.PropWreck],
+      [icx, icz + 6, Tile.PropVent],
     ];
     for (const [px, pz, kind] of propSlots) {
       if (inFireLane(pz)) continue;
@@ -520,16 +517,26 @@ export class World {
       pr.cooldown = -0.12;
     }
 
-    // Forward camps in the opening frustum — empire presence on the clash depth band.
-    this.spawn(Kind.House, a, 0, cx + 4.2, cz - 5.2);
-    this.spawn(Kind.House, b, 1, cx - 4.2, cz + 5.2);
+    // Forward camps on camera Z flanks — left/right of playfield, not under HUD.
+    const oreX = cx;
+    const oreZ = cz - 7;
+    const gasX = cx;
+    const gasZ = cz + 7;
+    this.spawn(Kind.House, a, 0, cx + 0.3, cz - 7.1);
+    this.spawn(Kind.House, b, 1, cx - 0.4, cz + 7.0);
     for (let i = 0; i < 3; i++) {
-      const w = this.spawn(Kind.Worker, a, 0, cx + 3.2 + i * 0.55, cz - 6.2);
+      const w = this.spawn(Kind.Worker, a, 0, cx - 0.8 + i * 0.55, cz - 6.8);
       if (w) {
         w.order = Ord.Gather;
-        w.tx = cx + 5;
-        w.tz = cz - 4;
+        w.tx = oreX;
+        w.tz = oreZ;
       }
+    }
+    const wk = this.spawn(Kind.Worker, b, 1, cx + 0.6, cz + 6.9);
+    if (wk) {
+      wk.order = Ord.Gather;
+      wk.tx = gasX;
+      wk.tz = gasZ;
     }
   }
 

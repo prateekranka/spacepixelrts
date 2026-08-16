@@ -354,6 +354,24 @@ export class GameRenderer {
         ctx.drawImage(this.atlas.canvas, sx, sy, CELL, CELL, dx, dz, ds, ds);
       }
     }
+    const icx = (MAP * 0.5) | 0;
+    const icz = (MAP * 0.52) | 0;
+    const rockUv = this.atlas.uv['tile-rock'];
+    const rsx = rockUv.u0 * this.atlas.canvas.width;
+    const rsy = (1 - rockUv.v1) * this.atlas.canvas.height;
+    let decals = 0;
+    for (let i = 0; decals < 10 && i < 48; i++) {
+      const dx = ((i * 17 + 5) % 27) - 13;
+      const dz = ((i * 11 + 3) % 20) - 10;
+      if (Math.abs(dz) <= 4) continue;
+      const tx = icx + dx;
+      const tz = icz + dz;
+      if (tx < 1 || tz < 1 || tx >= MAP - 2 || tz >= MAP - 2) continue;
+      const px = tx * s;
+      const pz = tz * s;
+      ctx.drawImage(this.atlas.canvas, rsx, rsy, CELL, CELL, px, pz, s * 2, s * 2);
+      decals++;
+    }
     const tex = new THREE.CanvasTexture(c);
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;

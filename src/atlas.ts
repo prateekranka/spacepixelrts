@@ -467,20 +467,22 @@ function drawGem(kind: 'ore' | 'gas' | 'sol'): Pix {
 
 function drawDustTile(variant: 0 | 1 | 2): Pix {
   const p = Pix.alloc(CELL, CELL);
+  const ochre = [196, 165, 72, 255] as const;
+  const teal = [90, 168, 208, 255] as const;
+  const crater = [48, 42, 58, 255] as const;
   const bases = [
-    [108, 98, 132, 255],
-    [98, 88, 122, 255],
-    [112, 100, 138, 255],
+    [118, 108, 88, 255],
+    [88, 98, 118, 255],
+    [96, 86, 108, 255],
   ] as const;
   const darks = [
-    [82, 72, 98, 255],
-    [76, 66, 92, 255],
-    [88, 78, 104, 255],
+    [92, 78, 62, 255],
+    [62, 88, 108, 255],
+    [52, 46, 68, 255],
   ] as const;
   const base = bases[variant];
   const dark = darks[variant];
   p.fill(0, 0, CELL, CELL, base);
-  // Organic ground plates — irregular blobs, not a diamond grid.
   const blobs: [number, number, number][] =
     variant === 0
       ? [
@@ -497,18 +499,22 @@ function drawDustTile(variant: 0 | 1 | 2): Pix {
             [26, 8, 6],
           ]
         : [
-            [7, 12, 8],
-            [18, 6, 7],
-            [22, 24, 8],
-            [12, 26, 6],
+            [16, 16, 10],
+            [12, 12, 8],
+            [20, 20, 9],
           ];
   for (const [cx, cy, r] of blobs) p.circ(cx, cy, r, dark);
-  // Warmer highlight washes.
+  if (variant === 2) {
+    p.circ(16, 16, 11, crater);
+    p.circ(16, 16, 7, [38, 34, 48, 255] as const);
+    p.circ(14, 14, 3, [72, 66, 82, 255] as const);
+  }
+  const highlight: Rgba =
+    variant === 0 ? [212, 188, 120, 255] : variant === 1 ? [140, 196, 228, 255] : [128, 118, 142, 255];
   for (let i = 0; i < 5; i++) {
     const y0 = 3 + ((i * 6 + variant * 4) % 24);
-    p.line(1, y0, 30, y0 + 2, PAL.dustH);
+    p.line(1, y0, 30, y0 + 2, highlight);
   }
-  // Hairline cracks.
   const cracks: [number, number, number, number][] =
     variant === 0
       ? [
@@ -527,16 +533,17 @@ function drawDustTile(variant: 0 | 1 | 2): Pix {
             [5, 18, 16, 28],
             [22, 20, 28, 27],
           ];
-  for (const [x0, y0, x1, y1] of cracks) p.line(x0, y0, x1, y1, [62, 54, 78, 255]);
-  // Pebble clusters with warm glints.
+  const crackCol: Rgba =
+    variant === 1 ? teal : variant === 0 ? [142, 118, 72, 255] : [62, 54, 78, 255];
+  for (const [x0, y0, x1, y1] of cracks) p.line(x0, y0, x1, y1, crackCol);
   const pebbles: [number, number, number][] =
     variant === 0
       ? [
-          [9, 11, 2],
-          [22, 9, 2],
-          [14, 22, 3],
-          [25, 20, 2],
-          [17, 15, 2],
+          [9, 11, 3],
+          [22, 9, 3],
+          [14, 22, 4],
+          [25, 20, 3],
+          [17, 15, 3],
         ]
       : variant === 1
         ? [
@@ -554,8 +561,9 @@ function drawDustTile(variant: 0 | 1 | 2): Pix {
             [21, 21, 2],
           ];
   for (const [cx, cy, r] of pebbles) {
-    p.circ(cx, cy, r, PAL.dustE);
-    p.set(cx - 1, cy - 1, PAL.dustH);
+    const peb: Rgba = variant === 0 ? ochre : variant === 1 ? teal : PAL.dustE;
+    p.circ(cx, cy, r, peb);
+    p.set(cx - 1, cy - 1, variant === 0 ? [228, 204, 132, 255] : variant === 1 ? [186, 220, 240, 255] : PAL.dustH);
   }
   // Soft edge darkening — tile boundary without diamond outline.
   for (let i = 0; i < 8; i++) {
