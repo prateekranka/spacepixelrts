@@ -329,7 +329,7 @@ const HUD_CSS = `
 #game,#overlay{position:absolute;inset:0;width:100%;height:100%;display:block}
 #overlay{pointer-events:none;z-index:2}
 #topbar,#bottom,button{pointer-events:auto}
-#topbar{position:absolute;left:0;right:0;top:0;height:56px;display:flex;align-items:stretch;background:linear-gradient(#1a1428ee,#120e1cf2);border-bottom:2px solid #c9a227;box-shadow:0 8px 24px #0008}
+#topbar{position:absolute;left:0;right:0;top:0;box-sizing:border-box;height:calc(56px + env(safe-area-inset-top,0px));min-height:56px;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);display:flex;align-items:stretch;background:linear-gradient(#1a1428ee,#120e1cf2);border-bottom:2px solid #c9a227;box-shadow:0 8px 24px #0008}
 #brand{display:flex;gap:10px;align-items:center;padding:0 14px;min-width:210px}
 #brand .sigil{color:#c9a227;font-size:22px}
 #brand strong{display:block;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
@@ -354,7 +354,7 @@ const HUD_CSS = `
 #idlew:hover,#cmds button:not(:disabled):hover{background:#35264c}
 #idlew.pulse{animation:idlew-pulse 1.05s ease-in-out infinite;border-color:#f0d460;box-shadow:0 0 14px #c9a227aa,inset 0 0 10px #ffd36a33}
 @keyframes idlew-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:1;box-shadow:0 0 22px #f0d460cc,inset 0 0 14px #ffd36a55}}
-#bottom{position:absolute;left:0;right:0;bottom:0;height:168px;display:grid;grid-template-columns:168px 1fr 1.2fr;gap:10px;padding:8px 10px 10px;background:linear-gradient(#120e1cf2,#1a1428f4);border-top:2px solid #c9a227}
+#bottom{position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;height:calc(168px + env(safe-area-inset-bottom,0px));min-height:168px;display:grid;grid-template-columns:168px 1fr 1.2fr;gap:10px;padding:8px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));background:linear-gradient(#120e1cf2,#1a1428f4);border-top:2px solid #c9a227}
 #minimap{width:148px;height:148px;image-rendering:pixelated;border:2px solid #c9a227;background:#07060f;align-self:center;margin-left:6px}
 #card{display:flex;gap:12px;align-items:center;padding:8px 6px}
 #portrait{width:72px;height:72px;border:2px solid #c9a227;background:#1a0e08;flex:none;box-shadow:inset 0 0 12px #0008;position:relative;overflow:hidden}
