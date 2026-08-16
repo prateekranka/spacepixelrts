@@ -9,7 +9,7 @@ import { Hud } from './hud';
 import { Sfx } from './audio';
 import { enemyCiv, parseBootCiv } from './content';
 
-const VERSION = '0.6.0-wave5';
+const VERSION = '0.7.0-proc';
 const SEED = 0x5eed;
 const OPENING_PAN = { x: MAP * 0.5, z: MAP * 0.52, halfH: 5.8 };
 
@@ -125,4 +125,4 @@ window.addEventListener('resize', () => {
   view.resize(host.clientWidth, host.clientHeight);
 });
 
-console.log(`Spacepixel ${VERSION} — wave 5 civ roster`);
+console.log(`Spacepixel ${VERSION} — procedural GPU VFX`);

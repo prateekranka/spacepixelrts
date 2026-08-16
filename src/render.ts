@@ -5,6 +5,7 @@ import { Atlas, CELL, buildAtlas, roleOfKind } from './atlas';
 import { Kind, MAP, MAX_ENTS, Tile, DISSOLVE_DUR, type Ent } from './engine';
 import { TEAM_RGB, isBuilding } from './content';
 import type { World } from './sim';
+import { VfxRenderer } from './vfx';
 
 const VERT = /* glsl */ `
 attribute vec4 iUv;
@@ -56,6 +57,8 @@ export class GameRenderer {
   private nebula!: THREE.Points;
   private readonly drawnEntIds = new Set<number>();
   private lastDrawn = 0;
+  private lastVfx = 0;
+  private vfx!: VfxRenderer;
   private readonly viewBounds = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
   private readonly lookTarget = new THREE.Vector3();
   private readonly lookDir = new THREE.Vector3();
@@ -130,6 +133,9 @@ export class GameRenderer {
     this.shadows = new THREE.InstancedMesh(sgeo, smat, MAX_ENTS);
     this.shadows.frustumCulled = false;
     this.scene.add(this.shadows);
+
+    this.vfx = new VfxRenderer();
+    this.vfx.init(this.scene);
 
     this.buildMap(world);
     this.buildStars();
@@ -277,65 +283,8 @@ export class GameRenderer {
       drawn++;
     }
 
-    for (const b of world.bolts) {
-      if (drawn >= MAX_ENTS) break;
-      if (b.x < vb.minX || b.x > vb.maxX || b.z < vb.minZ || b.z > vb.maxZ) continue;
-      const key =
-        b.kind === Kind.Prism ? 'bolt-beam' : b.kind === Kind.Siege ? 'bolt-rock' : b.kind === Kind.Shade ? 'bolt-void' : 'bolt-sting';
-      const uv = this.atlas.uv[key];
-      const rgb = TEAM_RGB[b.team];
-      this.dummy.position.set(b.x, 0.85, b.z);
-      this.dummy.quaternion.copy(this.lastCamQ);
-      this.dummy.scale.set(0.95, 0.95, 1);
-      this.dummy.updateMatrix();
-      this.mesh.setMatrixAt(drawn, this.dummy.matrix);
-      this.dummy.position.set(b.x, 0.03, b.z);
-      this.dummy.quaternion.identity();
-      this.dummy.scale.set(0.001, 0.001, 0.001);
-      this.dummy.updateMatrix();
-      this.shadows.setMatrixAt(drawn, this.dummy.matrix);
-      uvArr[drawn * 4] = uv.u0;
-      uvArr[drawn * 4 + 1] = uv.v0;
-      uvArr[drawn * 4 + 2] = uv.u1;
-      uvArr[drawn * 4 + 3] = uv.v1;
-      teamArr[drawn * 3] = rgb[0];
-      teamArr[drawn * 3 + 1] = rgb[1];
-      teamArr[drawn * 3 + 2] = rgb[2];
-      flashArr[drawn] = 0;
-      drawn++;
-    }
-
-    for (const s of world.sparks) {
-      if (!s.active || drawn >= MAX_ENTS) break;
-      if (s.x < vb.minX || s.x > vb.maxX || s.z < vb.minZ || s.z > vb.maxZ) continue;
-      const key = s.kind === 0 ? `spark-muzzle-${s.civ}` : `spark-impact-${s.civ}`;
-      const uv = this.atlas.uv[key];
-      if (!uv) continue;
-      const fade = s.life / s.maxLife;
-      const lift = s.kind === 0 ? 0.95 : 0.82;
-      const scale = (s.kind === 0 ? 0.72 : 0.88) * (0.55 + 0.45 * fade);
-      this.dummy.position.set(s.x, lift, s.z);
-      this.dummy.quaternion.copy(this.lastCamQ);
-      this.dummy.scale.set(scale, scale, 1);
-      this.dummy.updateMatrix();
-      this.mesh.setMatrixAt(drawn, this.dummy.matrix);
-      this.dummy.position.set(s.x, 0.03, s.z);
-      this.dummy.quaternion.identity();
-      this.dummy.scale.set(0.001, 0.001, 0.001);
-      this.dummy.updateMatrix();
-      this.shadows.setMatrixAt(drawn, this.dummy.matrix);
-      uvArr[drawn * 4] = uv.u0;
-      uvArr[drawn * 4 + 1] = uv.v0;
-      uvArr[drawn * 4 + 2] = uv.u1;
-      uvArr[drawn * 4 + 3] = uv.v1;
-      teamArr[drawn * 3] = 1;
-      teamArr[drawn * 3 + 1] = 1;
-      teamArr[drawn * 3 + 2] = 1;
-      flashArr[drawn] = 0.28 + 0.42 * fade;
-      drawn++;
-    }
-
     this.lastDrawn = drawn;
+    this.lastVfx = this.vfx.draw(world, this.lastCamQ, vb);
     this.mesh.count = drawn;
     this.shadows.count = drawn;
     this.mesh.instanceMatrix.needsUpdate = true;
@@ -365,11 +314,12 @@ export class GameRenderer {
     };
   }
 
-  info(): { calls: number; tris: number; drawn: number } {
+  info(): { calls: number; tris: number; drawn: number; vfx: number } {
     return {
       calls: this.renderer.info.render.calls,
       tris: this.renderer.info.render.triangles,
       drawn: this.lastDrawn,
+      vfx: this.lastVfx,
     };
   }
 
