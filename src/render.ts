@@ -374,7 +374,7 @@ export class GameRenderer {
     const rsx = rockUv.u0 * this.atlas.canvas.width;
     const rsy = (1 - rockUv.v1) * this.atlas.canvas.height;
     let decals = 0;
-    for (let i = 0; decals < 10 && i < 48; i++) {
+    for (let i = 0; decals < 8 && i < 48; i++) {
       const dx = ((i * 17 + 5) % 27) - 13;
       const dz = ((i * 11 + 3) % 20) - 10;
       if (Math.abs(dz) <= 4) continue;

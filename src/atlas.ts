@@ -468,24 +468,15 @@ function drawGem(kind: 'ore' | 'gas' | 'sol'): Pix {
   return p;
 }
 
+/** Quiet dust-belt floor — one purple-brown family; variants differ only in crack/pebble layout. */
+const DUST_BASE = [106, 90, 112, 255] as const;
+const DUST_DARK = [88, 76, 94, 255] as const;
+const DUST_DEEP = [72, 62, 80, 255] as const;
+const DUST_PEB = [96, 84, 100, 255] as const;
+
 function drawDustTile(variant: 0 | 1 | 2): Pix {
   const p = Pix.alloc(CELL, CELL);
-  const ochre = [196, 165, 72, 255] as const;
-  const teal = [90, 168, 208, 255] as const;
-  const crater = [48, 42, 58, 255] as const;
-  const bases = [
-    [118, 108, 88, 255],
-    [88, 98, 118, 255],
-    [96, 86, 108, 255],
-  ] as const;
-  const darks = [
-    [92, 78, 62, 255],
-    [62, 88, 108, 255],
-    [52, 46, 68, 255],
-  ] as const;
-  const base = bases[variant];
-  const dark = darks[variant];
-  p.fill(0, 0, CELL, CELL, base);
+  p.fill(0, 0, CELL, CELL, DUST_BASE);
   const blobs: [number, number, number][] =
     variant === 0
       ? [
@@ -502,22 +493,12 @@ function drawDustTile(variant: 0 | 1 | 2): Pix {
             [26, 8, 6],
           ]
         : [
-            [16, 16, 10],
+            [14, 14, 10],
             [12, 12, 8],
             [20, 20, 9],
+            [8, 22, 7],
           ];
-  for (const [cx, cy, r] of blobs) p.circ(cx, cy, r, dark);
-  if (variant === 2) {
-    p.circ(16, 16, 11, crater);
-    p.circ(16, 16, 7, [38, 34, 48, 255] as const);
-    p.circ(14, 14, 3, [72, 66, 82, 255] as const);
-  }
-  const highlight: Rgba =
-    variant === 0 ? [212, 188, 120, 255] : variant === 1 ? [140, 196, 228, 255] : [128, 118, 142, 255];
-  for (let i = 0; i < 5; i++) {
-    const y0 = 3 + ((i * 6 + variant * 4) % 24);
-    p.line(1, y0, 30, y0 + 2, highlight);
-  }
+  for (const [cx, cy, r] of blobs) p.circ(cx, cy, r, DUST_DARK);
   const cracks: [number, number, number, number][] =
     variant === 0
       ? [
@@ -536,51 +517,38 @@ function drawDustTile(variant: 0 | 1 | 2): Pix {
             [5, 18, 16, 28],
             [22, 20, 28, 27],
           ];
-  const crackCol: Rgba =
-    variant === 1 ? teal : variant === 0 ? [142, 118, 72, 255] : [62, 54, 78, 255];
-  for (const [x0, y0, x1, y1] of cracks) p.line(x0, y0, x1, y1, crackCol);
+  for (const [x0, y0, x1, y1] of cracks) p.line(x0, y0, x1, y1, DUST_DEEP);
   const pebbles: [number, number, number][] =
     variant === 0
       ? [
-          [9, 11, 3],
-          [22, 9, 3],
-          [14, 22, 4],
-          [25, 20, 3],
-          [17, 15, 3],
+          [9, 11, 2],
+          [22, 9, 2],
+          [14, 22, 2],
+          [25, 20, 2],
+          [17, 15, 2],
         ]
       : variant === 1
         ? [
             [7, 18, 2],
-            [19, 7, 3],
+            [19, 7, 2],
             [24, 24, 2],
             [11, 26, 2],
             [15, 12, 2],
           ]
         : [
             [6, 6, 2],
-            [17, 16, 3],
+            [17, 16, 2],
             [26, 12, 2],
             [13, 27, 2],
             [21, 21, 2],
           ];
-  for (const [cx, cy, r] of pebbles) {
-    const peb: Rgba = variant === 0 ? ochre : variant === 1 ? teal : PAL.dustE;
-    p.circ(cx, cy, r, peb);
-    p.set(cx - 1, cy - 1, variant === 0 ? [228, 204, 132, 255] : variant === 1 ? [186, 220, 240, 255] : PAL.dustH);
-  }
-  // Soft edge darkening — tile boundary without diamond outline.
-  for (let i = 0; i < 8; i++) {
-    p.set(i, 0, dark);
-    p.set(31 - i, 0, dark);
-    p.set(i, 31, dark);
-    p.set(31 - i, 31, dark);
-  }
+  for (const [cx, cy, r] of pebbles) p.circ(cx, cy, r, DUST_PEB);
   return p;
 }
 
 function drawRockTile(): Pix {
   const p = Pix.alloc(CELL, CELL);
-  p.fill(0, 0, CELL, CELL, PAL.dustD);
+  p.fill(0, 0, CELL, CELL, DUST_BASE);
   // Boulder silhouette — irregular mass, lit rim top-left.
   const pts: [number, number][] = [
     [8, 22],
@@ -609,7 +577,7 @@ function drawRockTile(): Pix {
       if (x + y < 28) p.set(x, y, PAL.rockH);
     }
   }
-  p.line(10, 9, 18, 8, PAL.white);
+  p.line(10, 9, 18, 8, PAL.rockH);
   p.set(11, 9, PAL.rockH);
   p.set(17, 8, PAL.rockH);
   // Ground shadow wedge.
@@ -649,41 +617,10 @@ function drawPropVent(): Pix {
 function drawTile(kind: 'void' | 'dust' | 'rock' | 'ore' | 'gas' | 'sol'): Pix {
   if (kind === 'dust') return drawDustTile(0);
   if (kind === 'rock') return drawRockTile();
+  if (kind === 'ore' || kind === 'gas' || kind === 'sol') return drawDustTile(0);
   const p = Pix.alloc(CELL, CELL);
-  const base =
-    kind === 'void' ? PAL.void : kind === 'ore' ? PAL.dust : kind === 'gas' ? PAL.dust : PAL.dust;
-  p.fill(0, 0, CELL, CELL, base);
-  if (kind === 'ore' || kind === 'gas' || kind === 'sol') {
-    // Resource tiles sit on dust ground — no diamond grid.
-    for (let y = 0; y < CELL; y++) {
-      for (let x = 0; x < CELL; x++) {
-        if (((x + y) >> 2) & 1) p.set(x, y, PAL.dustD);
-      }
-    }
-  } else if (kind === 'void') {
-    diamondEdge(p, [32, 28, 52, 255], PAL.void);
-    for (let i = 0; i < 18; i++) {
-      const x = (i * 7 + kind.length * 3) % 32;
-      const y = (i * 13 + 5) % 32;
-      p.set(x, y, PAL.white);
-    }
-  }
-  if (kind === 'ore') {
-    p.circ(16, 17, 6, PAL.ore);
-    p.set(13, 14, PAL.oreH);
-    p.set(18, 16, PAL.oreH);
-    p.set(15, 19, PAL.oreH);
-  }
-  if (kind === 'gas') {
-    p.circ(16, 16, 7, PAL.gas);
-    p.circ(14, 14, 3, PAL.gasH);
-    p.set(18, 17, PAL.gasH);
-  }
-  if (kind === 'sol') {
-    p.circ(16, 16, 6, PAL.sol);
-    p.circ(16, 16, 3, PAL.solH);
-    p.set(16, 12, PAL.solH);
-  }
+  p.fill(0, 0, CELL, CELL, PAL.void);
+  diamondEdge(p, [32, 28, 52, 255], PAL.void);
   return p;
 }
 
