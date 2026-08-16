@@ -15,8 +15,9 @@ import {
   makeEnt,
   mulberry32,
   tileAt,
+  MAX_SPARKS,
 } from './engine';
-import type { Bolt, Civ, Ent, TeamEco } from './engine';
+import type { Bolt, Civ, Ent, Spark, TeamEco } from './engine';
 import {
   BUILD_HP_START,
   GATHER_MAX,
@@ -54,6 +55,7 @@ export class World {
   ];
   readonly civ: Civ[] = ['vespari', 'aurion', 'voidmarked', 'vespari'];
   readonly bolts: Bolt[] = [];
+  readonly sparks: Spark[] = [];
   readonly flags: { x: number; z: number; t: number }[] = [];
   readonly hash = new Spatial();
   readonly q: number[] = [];
@@ -73,11 +75,23 @@ export class World {
   private marshalPeelQ: number[] = [];
   private marshalPeelI = 0;
   private marshalSiegeSpawned = false;
+  private sparkHead = 0;
 
   constructor() {
     for (let i = 0; i < MAX_ENTS; i++) {
       this.ents[i].id = i;
       this.free.push(i);
+    }
+    for (let i = 0; i < MAX_SPARKS; i++) {
+      this.sparks.push({
+        active: false,
+        x: 0,
+        z: 0,
+        life: 0,
+        maxLife: 0.1,
+        kind: 0,
+        civ: 'vespari',
+      });
     }
   }
 
@@ -86,6 +100,8 @@ export class World {
     this.tick = 0;
     this.winner = -1;
     this.bolts.length = 0;
+    for (let i = 0; i < MAX_SPARKS; i++) this.sparks[i].active = false;
+    this.sparkHead = 0;
     this.flags.length = 0;
     this.free.length = 0;
     for (let i = 0; i < MAX_ENTS; i++) {
@@ -312,6 +328,7 @@ export class World {
     this.stepCorpses();
     this.moveSeparate();
     this.stepBolts();
+    this.stepSparks();
     this.updateFog();
     this.stepFlags();
     this.stepEnemyMarshal();
@@ -927,6 +944,7 @@ export class World {
     if (st.melee) {
       t.hp -= applied * bonus;
       if (t.team === 1 && this.tick < 240) t.hitFlash = 0.45;
+      this.spawnSpark(t.x, t.z, 1, e.civ);
       e.cooldown = e.kind === Kind.Ravager ? 0.72 : 0.85;
       if (e.kind === Kind.Ravager && t.hp <= 0) e.frenzy = Math.min(6, e.frenzy + 1);
     } else {
@@ -949,10 +967,33 @@ export class World {
       vx: (dx / d) * spd,
       vz: (dz / d) * spd,
       team: e.team,
+      civ: e.civ,
       dmg,
       life,
       kind: e.kind,
     });
+    this.spawnSpark(e.x, e.z, 0, e.civ);
+  }
+
+  private spawnSpark(x: number, z: number, kind: number, civ: Civ): void {
+    const s = this.sparks[this.sparkHead];
+    this.sparkHead = (this.sparkHead + 1) % MAX_SPARKS;
+    s.x = x;
+    s.z = z;
+    s.kind = kind;
+    s.civ = civ;
+    s.maxLife = kind === 0 ? 0.1 : 0.12;
+    s.life = s.maxLife;
+    s.active = true;
+  }
+
+  private stepSparks(): void {
+    for (let i = 0; i < MAX_SPARKS; i++) {
+      const s = this.sparks[i];
+      if (!s.active) continue;
+      s.life -= DT;
+      if (s.life <= 0) s.active = false;
+    }
   }
 
   private stepCorpses(): void {
@@ -984,6 +1025,7 @@ export class World {
         if (dist2(b.x, b.z, e.x, e.z) < (e.radius + 0.25) ** 2) {
           e.hp -= b.dmg;
           if (e.team === 1 && this.tick < 240) e.hitFlash = 0.45;
+          this.spawnSpark(b.x, b.z, 1, b.civ);
           hit = true;
           if (e.hp <= 0) this.kill(e);
           break;

@@ -102,9 +102,24 @@ export interface Bolt {
   vx: number;
   vz: number;
   team: number;
+  civ: Civ;
   dmg: number;
   life: number;
   kind: Kind;
+}
+
+export const MAX_SPARKS = 96;
+
+/** Short-lived muzzle / impact burst (pooled, no per-tick alloc). */
+export interface Spark {
+  active: boolean;
+  x: number;
+  z: number;
+  life: number;
+  maxLife: number;
+  /** 0 muzzle · 1 impact */
+  kind: number;
+  civ: Civ;
 }
 
 export function makeEnt(): Ent {

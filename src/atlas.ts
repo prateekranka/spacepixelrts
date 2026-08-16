@@ -674,6 +674,43 @@ function drawFlag(): Pix {
   return p;
 }
 
+function drawSpark(kind: 'muzzle' | 'impact', civ: 'vespari' | 'aurion' | 'voidmarked'): Pix {
+  const p = Pix.alloc(16, 16);
+  let core: Rgba = PAL.white;
+  let halo: Rgba = PAL.solH;
+  let edge: Rgba = PAL.sol;
+  if (civ === 'aurion') {
+    halo = PAL.cryH;
+    edge = PAL.cry;
+  } else if (civ === 'voidmarked') {
+    halo = PAL.voidH;
+    edge = PAL.voidC;
+  }
+  if (kind === 'muzzle') {
+    p.circ(8, 8, 3, halo);
+    p.circ(8, 8, 2, edge);
+    p.circ(8, 8, 1, core);
+    p.set(4, 8, halo);
+    p.set(12, 8, halo);
+    p.set(8, 4, halo);
+    p.set(8, 12, halo);
+    p.set(6, 6, edge);
+    p.set(10, 10, edge);
+  } else {
+    p.circ(8, 8, 4, halo);
+    p.circ(8, 8, 2, edge);
+    p.circ(8, 8, 1, core);
+    p.set(3, 6, edge);
+    p.set(13, 10, edge);
+    p.set(6, 13, edge);
+    p.set(11, 3, edge);
+    p.set(5, 11, halo);
+    p.set(12, 5, halo);
+  }
+  p.finish();
+  return p;
+}
+
 function drawBolt(kind: 'sting' | 'beam' | 'void' | 'rock'): Pix {
   const p = Pix.alloc(16, 16);
   if (kind === 'beam') {
@@ -738,6 +775,14 @@ export function buildAtlas(): Atlas {
   put('bolt-beam', drawBolt('beam'), 10, 0);
   put('bolt-void', drawBolt('void'), 11, 0);
   put('bolt-rock', drawBolt('rock'), 12, 0);
+  const sparkCivs = ['vespari', 'aurion', 'voidmarked'] as const;
+  let sparkCol = 15;
+  for (const civ of sparkCivs) {
+    put(`spark-muzzle-${civ}`, drawSpark('muzzle', civ), sparkCol, 0);
+    sparkCol++;
+    put(`spark-impact-${civ}`, drawSpark('impact', civ), sparkCol, 0);
+    sparkCol++;
+  }
   putGem('gem-ore', drawGem('ore'), 0, 1);
   putGem('gem-gas', drawGem('gas'), 1, 1);
   putGem('gem-sol', drawGem('sol'), 2, 1);

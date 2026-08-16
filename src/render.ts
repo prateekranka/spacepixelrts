@@ -264,7 +264,7 @@ export class GameRenderer {
           return dx * dx + dz * dz < 110;
         })();
       const shootFlash =
-        e.cooldown > 0.26 && e.kind !== Kind.Resource ? (clash ? 0.04 : 0.55) : 0;
+        e.cooldown > 0.26 && e.kind !== Kind.Resource ? (clash ? 0.42 : 0.55) : 0;
       flashArr[drawn] = Math.max(e.hitFlash, shootFlash);
       this.drawnEntIds.add(e.id);
       drawn++;
@@ -294,6 +294,35 @@ export class GameRenderer {
       teamArr[drawn * 3 + 1] = rgb[1];
       teamArr[drawn * 3 + 2] = rgb[2];
       flashArr[drawn] = 0;
+      drawn++;
+    }
+
+    for (const s of world.sparks) {
+      if (!s.active || drawn >= MAX_ENTS) break;
+      const key = s.kind === 0 ? `spark-muzzle-${s.civ}` : `spark-impact-${s.civ}`;
+      const uv = this.atlas.uv[key];
+      if (!uv) continue;
+      const fade = s.life / s.maxLife;
+      const lift = s.kind === 0 ? 0.95 : 0.82;
+      const scale = (s.kind === 0 ? 0.72 : 0.88) * (0.55 + 0.45 * fade);
+      this.dummy.position.set(s.x, lift, s.z);
+      this.dummy.quaternion.copy(this.lastCamQ);
+      this.dummy.scale.set(scale, scale, 1);
+      this.dummy.updateMatrix();
+      this.mesh.setMatrixAt(drawn, this.dummy.matrix);
+      this.dummy.position.set(s.x, 0.03, s.z);
+      this.dummy.quaternion.identity();
+      this.dummy.scale.set(0.001, 0.001, 0.001);
+      this.dummy.updateMatrix();
+      this.shadows.setMatrixAt(drawn, this.dummy.matrix);
+      uvArr[drawn * 4] = uv.u0;
+      uvArr[drawn * 4 + 1] = uv.v0;
+      uvArr[drawn * 4 + 2] = uv.u1;
+      uvArr[drawn * 4 + 3] = uv.v1;
+      teamArr[drawn * 3] = 1;
+      teamArr[drawn * 3 + 1] = 1;
+      teamArr[drawn * 3 + 2] = 1;
+      flashArr[drawn] = 0.28 + 0.42 * fade;
       drawn++;
     }
 
