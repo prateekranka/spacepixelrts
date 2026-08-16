@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 4 P64** — iPad HUD safe-area. P63 **PASS** (`228140f`) Attack-lock peel. Live **`0.5.2-wave4`**.
+**Wave 4 P65 critic** — P64 shipped **`0.5.3-wave4`** (HUD `safe-area-inset`). Live deployed.
 
-Opening still P41. P63 leftover (Kryos Idle as wrecks form) is **not** a restage — leave it.
+Opening still P41. Leftover: `MAX_ENTS` 384.
 
-**Next:** P64 builder, then critic.
+**Next:** fresh critic on insets vs desktop opening.
 
 ## Biggest gap
 
-**HUD has no `safe-area-inset`** — iPad home indicator can cover the command deck.
+**P64 in critic.** Home bar must not eat commands; desktop clash must stay unobstructed.
 
 ## Tracker
 
@@ -23,5 +23,5 @@ Opening still P41. P63 leftover (Kryos Idle as wrecks form) is **not** a restage
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
-| 4 performance / iPad / bugs | P61–P63 **PASS**; P64 safe-area |
+| 4 performance / iPad / bugs | P61–P63 **PASS**; P64 shipped; P65 critic |
 | 5 full 1v1 coherence | queued |

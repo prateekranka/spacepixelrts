@@ -134,8 +134,8 @@ Original plan IDs P40–P42 collide with live Wave 1/2 IDs. Live IDs win.
 | P61 | P60 critic | P60 | done | **PASS** `a7d4e26` live 0.5.1-wave4 |
 | P62 | Attack-lock: right-click ground is Move | P61 | done | shipped `0.5.2-wave4` `f1d67e0` |
 | P63 | P62 critic | P62 | done | **PASS** `228140f` live 0.5.2-wave4 |
-| P64 | iPad HUD safe-area insets | P63 | building | |
-| P65 | P64 critic | P64 | queued | |
+| P64 | iPad HUD safe-area insets | P63 | done | shipped `0.5.3-wave4` `eae2824` |
+| P65 | P64 critic | P64 | critic | |
 | P66+ | TBD (MAX_ENTS / Wave 4 wrap) | P65 | queued | |
 
 ### Wave 5 — coherence
@@ -154,4 +154,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P63 Attack-lock PASS.** **P64** iPad HUD safe-area in flight. Leftover: `MAX_ENTS` 384. Do not restage Kryos Idle.
+**P64 shipped `0.5.3-wave4`.** **P65** HUD safe-area critic in flight. Leftover: `MAX_ENTS` 384.
