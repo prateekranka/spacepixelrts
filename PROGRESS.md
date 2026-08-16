@@ -5,24 +5,19 @@
 
 ## Now
 
-**P80 GPU particle VFX** — Wave 5 **PASS (locked)** (P70, `6818f8e`). Live **`0.6.0-wave5`**.
+**P80 critic** — GPU particles shipped **`0.7.0-proc`**. Live deployed.
 
-User directive: procedural-first (`docs/PROCEDURAL.md`). P80 → P81 terrain → P82 SDF units. p99 **< 8 ms**.
+Default opening still P41. p99 bar **< 8 ms**.
 
-**Next:** P80 builder, then critic.
+**Next:** fresh critic on clash VFX + budget.
 
 ## Biggest gap
 
-**Sparks/bolts are still atlas quads.** Convert to GPU-instanced additive particles (broken plume).
+**P80 in critic.** Atlas-quad sparks must be gone; opening belt still reads.
 
 ## Tracker
 
 | Wave | Status |
 |---|---|
-| 0 docs/harness/deploy | done |
-| 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3 feel / VFX / command | **PASS** (P58 critic) |
-| 4 performance / iPad / bugs | **PASS** (P66 critic) |
-| 5 full 1v1 coherence | **PASS** (P70 critic) |
-| 6 procedural-first | P80 GPU particles |
+| 0–5 | **PASS** (P41 / P49 / P58 / P66 / P70) |
+| 6 procedural-first | P80 shipped; critic |
