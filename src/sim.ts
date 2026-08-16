@@ -230,8 +230,33 @@ export class World {
     else if (p0 && !p1) this.winner = 0;
   }
 
+  /** Compact hex-ish slots around a move destination (AoE2-style formation spread). */
+  private formationOffsets(n: number, spacing: number): { dx: number; dz: number }[] {
+    if (n <= 1) return [{ dx: 0, dz: 0 }];
+    const cols = Math.ceil(Math.sqrt(n));
+    const rows = Math.ceil(n / cols);
+    const out: { dx: number; dz: number }[] = [];
+    const rowH = spacing * 0.866;
+    let k = 0;
+    for (let r = 0; r < rows && k < n; r++) {
+      const inRow = Math.min(cols, n - k);
+      const rowW = (inRow - 1) * spacing;
+      const stagger = r % 2 === 1 ? spacing * 0.5 : 0;
+      for (let c = 0; c < inRow; c++) {
+        out.push({
+          dx: c * spacing - rowW * 0.5 + stagger,
+          dz: r * rowH - (rows - 1) * rowH * 0.5,
+        });
+        k++;
+      }
+    }
+    return out;
+  }
+
   issue(ids: number[], ord: Ord, x: number, z: number, tid: number): void {
     this.flags.push({ x, z, t: 0.9 });
+    const spread = ids.length > 1 && (ord === Ord.Move || ord === Ord.AttackMove);
+    const unitIds: number[] = [];
     for (const id of ids) {
       const e = this.ents[id];
       if (!e.alive || e.team !== 0) continue;
@@ -240,11 +265,26 @@ export class World {
         e.rallyZ = z;
         continue;
       }
+      unitIds.push(id);
+    }
+    let offsets: { dx: number; dz: number }[] | null = null;
+    if (spread && unitIds.length > 1) {
+      let maxR = 0.32;
+      for (const id of unitIds) {
+        maxR = Math.max(maxR, STATS[this.ents[id].kind].radius);
+      }
+      const spacing = clamp(maxR * 2.6, 0.7, 1.1);
+      offsets = this.formationOffsets(unitIds.length, spacing);
+    }
+    for (let i = 0; i < unitIds.length; i++) {
+      const e = this.ents[unitIds[i]];
+      const gx = offsets ? x + offsets[i].dx : x;
+      const gz = offsets ? z + offsets[i].dz : z;
       e.order = ord;
-      e.tx = x;
-      e.tz = z;
+      e.tx = gx;
+      e.tz = gz;
       e.tid = tid;
-      e.path = this.pathfind(e.x, e.z, x, z);
+      e.path = this.pathfind(e.x, e.z, gx, gz);
       e.pathI = 0;
       if (e.kind === Kind.Shade) e.stealth = 0;
     }
