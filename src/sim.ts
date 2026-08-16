@@ -557,18 +557,28 @@ export class World {
       const x = cx + (row - 0.5) * rowPitch;
       const zOff = (col - 1.5) * colPitch;
       const f0 = this.spawn(Kind.Fighter, a, 0, x, zHelion + zOff);
-      const f1 = this.spawn(Kind.Fighter, b, 1, x, zKryos + zOff);
       if (f0) {
         f0.order = Ord.Attack;
         f0.tx = x;
         f0.tz = zKryos + zOff;
         f0.cooldown = -0.08 * (i % 5);
       }
+      const kryosLiving = (row === 0 && col >= 1 && col <= 2) || (row === 1 && col <= 2);
+      const f1 = this.spawn(Kind.Fighter, b, 1, x, zKryos + zOff);
       if (f1) {
-        f1.order = Ord.Attack;
-        f1.tx = x;
-        f1.tz = zHelion + zOff;
-        f1.cooldown = -0.08 * ((i + 2) % 5);
+        if (kryosLiving) {
+          f1.order = Ord.Attack;
+          f1.tx = x;
+          f1.tz = zHelion + zOff;
+          f1.cooldown = -0.08 * ((i + 2) % 5);
+        } else {
+          f1.hp = 0;
+          f1.corpseT = 4;
+          f1.vx = f1.vz = 0;
+          f1.path = null;
+          f1.tid = -1;
+          f1.order = Ord.Idle;
+        }
       }
     }
     const rv = this.spawn(uniqueUnit(a), a, 0, cx - 1.35, zHelion);
@@ -577,13 +587,6 @@ export class World {
       rv.tx = cx - 1.35;
       rv.tz = zKryos;
       rv.cooldown = -0.15;
-    }
-    const pr = this.spawn(uniqueUnit(b), b, 1, cx - 1.35, zKryos);
-    if (pr) {
-      pr.order = Ord.Attack;
-      pr.tx = cx - 1.35;
-      pr.tz = zHelion;
-      pr.cooldown = -0.12;
     }
 
     // Forward camps — workers + gem parked beyond Helion wing with visible Z gap.
