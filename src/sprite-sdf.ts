@@ -17,7 +17,6 @@ attribute vec4 iMeta;
 attribute vec3 iTeam;
 attribute float iFlash;
 varying vec2 vUv;
-varying vec2 vUv;
 varying vec4 vMeta;
 varying vec3 vTeam;
 varying float vFlash;
@@ -31,7 +30,6 @@ void main() {
 `;
 
 export const SDF_FRAG = /* glsl */ `
-varying vec2 vUv;
 varying vec2 vUv;
 varying vec4 vMeta;
 varying vec3 vTeam;
