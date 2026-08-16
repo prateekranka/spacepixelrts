@@ -121,6 +121,53 @@ vec3 civHi(float civ) {
   return VOIDH;
 }
 
+// Top-left key light: lit upper-left, shadow lower-right, base mid.
+vec3 shadeRectCol(vec2 q, vec2 lo, vec2 hi, vec3 base, vec3 lit, vec3 shad) {
+  float w = hi.x - lo.x;
+  float h = hi.y - lo.y;
+  if (q.y <= lo.y + h * 0.40 || q.x <= lo.x + w * 0.40) {
+    if (q.y >= hi.y - h * 0.40 && q.x >= hi.x - w * 0.40) return base;
+    return lit;
+  }
+  if (q.y >= hi.y - h * 0.40 || q.x >= hi.x - w * 0.40) return shad;
+  return base;
+}
+
+vec3 paintShade(vec3 col, vec2 q, vec2 lo, vec2 hi, vec3 base, vec3 lit, vec3 shad) {
+  if (inBox(q, lo, hi)) return shadeRectCol(q, lo, hi, base, lit, shad);
+  return col;
+}
+
+vec3 shadeCircCol(vec2 q, vec2 c, float r, vec3 base, vec3 lit, vec3 shad) {
+  vec2 d = q - c;
+  if (d.y <= -r * 0.28 && d.x <= -r * 0.28) return lit;
+  if (d.y >= r * 0.28 && d.x >= r * 0.28) return shad;
+  if (d.y <= -r * 0.28 || d.x <= -r * 0.28) return lit;
+  if (d.y >= r * 0.28 || d.x >= r * 0.28) return shad;
+  return base;
+}
+
+vec3 paintShadeC(vec3 col, vec2 q, vec2 c, float r, vec3 base, vec3 lit, vec3 shad) {
+  if (inCirc(q, c, r)) return shadeCircCol(q, c, r, base, lit, shad);
+  return col;
+}
+
+bool inTaperCol(vec2 q, float topCx, float topW, float botCx, float botW, float yTop, float yBot) {
+  if (q.y < yTop || q.y > yBot) return false;
+  float t = (q.y - yTop) / max(yBot - yTop, 0.001);
+  float halfW = mix(topW * 0.5, botW * 0.5, t);
+  float cx = mix(topCx, botCx, t);
+  return abs(q.x - cx) <= halfW;
+}
+
+vec3 paintTaper(vec3 col, vec2 q, float topCx, float topW, float botCx, float botW, float yTop, float yBot, vec3 base, vec3 lit, vec3 shad) {
+  if (!inTaperCol(q, topCx, topW, botCx, botW, yTop, yBot)) return col;
+  float t = (q.y - yTop) / max(yBot - yTop, 0.001);
+  float cx = mix(topCx, botCx, t);
+  float w = mix(topW, botW, t);
+  return shadeRectCol(q, vec2(cx - w * 0.5, yTop), vec2(cx + w * 0.5, yBot), base, lit, shad);
+}
+
 // ── Worker: hunched hauler with big ore crate + hard-hat beacon ──────────────
 vec3 drawWorker(vec2 q, float civ, float frame) {
   vec3 col = vec3(0.0);
@@ -128,33 +175,41 @@ vec3 drawWorker(vec2 q, float civ, float frame) {
   vec3 md = civMid(civ);
   vec3 hi = civHi(civ);
 
-  // Legs (short, planted)
-  col = paint(col, dk, inBox(q, vec2(-7.0, 6.0), vec2(-3.0, 13.0)));
-  col = paint(col, dk, inBox(q, vec2(-1.0, 7.0), vec2(3.0, 12.0)));
-  // Hunched torso
-  if (civ < 0.5) col = paint(col, md, inCirc(q, vec2(-4.0, 1.0), 7.0));
-  else if (civ < 1.5) col = paint(col, md, inDiam(q, vec2(-4.0, 1.0), 7.0));
-  else col = paint(col, md, inBox(q, vec2(-9.0, -3.0), vec2(1.0, 8.0)));
-  col = paint(col, hi, inBox(q, vec2(-7.0, -2.0), vec2(-1.0, 4.0)));
-  col = paintMag(col, inBox(q, vec2(-6.0, -1.0), vec2(-2.0, 3.0)));
-  // Head + hard-hat beacon
-  col = paint(col, dk, inCirc(q, vec2(-5.0, -7.0), 4.0));
-  col = paint(col, SOLH, inCirc(q, vec2(-5.0, -10.0), 2.0));
-  col = paint(col, WHITE, inCirc(q, vec2(-5.0, -10.0), 1.0));
-  // BIG ore crate (dominant right-side read — taller than body)
-  col = paint(col, ORE, inBox(q, vec2(1.0, -14.0), vec2(16.0, 4.0)));
-  col = paint(col, OREH, inBox(q, vec2(2.0, -13.0), vec2(15.0, -5.0)));
-  col = paint(col, WHITE, inBox(q, vec2(5.0, -11.0), vec2(9.0, -3.0)));
-  col = paint(col, BONE, inBox(q, vec2(3.0, -7.0), vec2(11.0, -4.0)));
-  col = paint(col, INK, inBox(q, vec2(1.0, -14.0), vec2(16.0, -13.0)));
-  col = paint(col, INK, inBox(q, vec2(16.0, -14.0), vec2(17.0, 4.0)));
-  // Mining drill arm (left)
-  col = paint(col, BONE, onLine(q, vec2(-8.0, 0.0), vec2(-13.0, -6.0), 1.2));
-  col = paint(col, ROCKH, onLine(q, vec2(-13.0, -6.0), vec2(-15.0, -9.0), 1.0));
-  // Ink outline
-  col = paint(col, INK, onLine(q, vec2(2.0, 3.0), vec2(15.0, 3.0), 0.6));
-  col = paint(col, INK, onLine(q, vec2(15.0, 3.0), vec2(15.0, -11.0), 0.6));
-  col = paint(col, INK, onLine(q, vec2(15.0, -11.0), vec2(2.0, -11.0), 0.6));
+  // Connected legs — overlap pelvis, reach ground
+  col = paintTaper(col, q, -6.0, 5.0, -5.0, 3.5, 2.0, 13.0, md, hi, dk);
+  col = paintShade(col, q, vec2(-6.0, 12.0), vec2(-3.0, 14.0), dk, md, dk);
+  col = paintTaper(col, q, -1.0, 4.5, 1.0, 3.5, 3.0, 14.0, md, hi, dk);
+
+  // Pelvis + hunched torso (civ silhouette)
+  col = paintShade(col, q, vec2(-9.0, 0.0), vec2(1.0, 6.0), md, hi, dk);
+  if (civ < 0.5) col = paintShadeC(col, q, vec2(-5.0, -1.0), 7.0, md, hi, dk);
+  else if (civ < 1.5) col = paintShade(col, q, vec2(-10.0, -4.0), vec2(0.0, 5.0), md, hi, dk);
+  else col = paintShade(col, q, vec2(-10.0, -5.0), vec2(0.0, 4.0), md, hi, dk);
+  col = paintMag(col, inBox(q, vec2(-7.0, -1.0), vec2(-2.0, 3.0)));
+
+  // Head + hard-hat (lit brim upper-left)
+  col = paintShadeC(col, q, vec2(-6.0, -6.0), 3.5, dk, md, dk);
+  col = paintShade(col, q, vec2(-9.0, -10.0), vec2(-3.0, -6.0), ORE, OREH, ORE);
+  col = paint(col, SOLH, inCirc(q, vec2(-6.0, -9.0), 1.2));
+
+  // BIG ore crate (~1/3 sprite width) — dominant tool
+  col = paintShade(col, q, vec2(0.0, -14.0), vec2(11.0, 2.0), ORE, OREH, ORE);
+  col = paint(col, WHITE, inBox(q, vec2(3.0, -12.0), vec2(7.0, -5.0)));
+  col = paint(col, BONE, inBox(q, vec2(1.0, -3.0), vec2(9.0, -1.0)));
+  col = paint(col, INK, onLine(q, vec2(0.0, -14.0), vec2(11.0, -14.0), 0.7));
+  col = paint(col, INK, onLine(q, vec2(11.0, -14.0), vec2(11.0, 2.0), 0.7));
+
+  // Both arms bent, hands overlapping crate edges
+  col = paint(col, BONE, onLine(q, vec2(-8.0, 0.0), vec2(-4.0, -2.0), 1.3));
+  col = paint(col, BONE, onLine(q, vec2(-4.0, -2.0), vec2(1.0, -5.0), 1.3));
+  col = paint(col, BONE, inCirc(q, vec2(1.0, -5.0), 1.6));
+  col = paint(col, OREH, inCirc(q, vec2(1.0, -5.0), 1.0));
+  col = paint(col, BONE, onLine(q, vec2(-5.0, 0.0), vec2(-1.0, -7.0), 1.3));
+  col = paint(col, BONE, onLine(q, vec2(-1.0, -7.0), vec2(6.0, -9.0), 1.3));
+  col = paint(col, BONE, inCirc(q, vec2(6.0, -9.0), 1.6));
+  col = paint(col, OREH, inCirc(q, vec2(6.0, -9.0), 1.0));
+
+  col = paint(col, INK, onLine(q, vec2(-8.0, 14.0), vec2(6.0, 14.0), 0.5));
   return col;
 }
 
@@ -165,31 +220,34 @@ vec3 drawScout(vec2 q, float civ, float frame) {
   vec3 md = civMid(civ);
   vec3 hi = civHi(civ);
 
-  // Low wedge hull (horizontal silhouette)
+  // Low wedge hull (lit top edge)
   if (civ < 0.5) {
-    col = paint(col, dk, inTri(q, vec2(-14.0, 4.0), vec2(14.0, 0.0), vec2(-10.0, 8.0)));
-    col = paint(col, md, inTri(q, vec2(-12.0, 3.0), vec2(12.0, 1.0), vec2(-8.0, 6.0)));
+    col = paintShade(col, q, vec2(-14.0, 3.0), vec2(12.0, 8.0), dk, md, dk);
+    col = paint(col, md, inTri(q, vec2(-12.0, 3.0), vec2(10.0, 1.0), vec2(-8.0, 7.0)));
   } else if (civ < 1.5) {
-    col = paint(col, dk, inBox(q, vec2(-14.0, 2.0), vec2(14.0, 7.0)));
-    col = paint(col, md, inTri(q, vec2(14.0, 1.0), vec2(16.0, 4.0), vec2(14.0, 7.0)));
-    col = paint(col, CRYH, inDiam(q, vec2(0.0, 4.0), 5.0));
+    col = paintShade(col, q, vec2(-14.0, 3.0), vec2(14.0, 8.0), dk, md, dk);
+    col = paint(col, hi, inDiam(q, vec2(2.0, 5.0), 4.0));
   } else {
-    col = paint(col, dk, inBox(q, vec2(-13.0, 3.0), vec2(13.0, 8.0)));
-    col = paint(col, VOIDD, inBox(q, vec2(8.0, 1.0), vec2(15.0, 6.0)));
-    col = paint(col, md, inBox(q, vec2(-11.0, 4.0), vec2(10.0, 7.0)));
+    col = paintShade(col, q, vec2(-13.0, 4.0), vec2(13.0, 8.0), dk, md, dk);
+    col = paint(col, VOIDD, inBox(q, vec2(8.0, 2.0), vec2(14.0, 6.0)));
   }
-  // Pointed nose (facing right)
-  col = paint(col, hi, inTri(q, vec2(10.0, 2.0), vec2(16.0, 4.0), vec2(10.0, 6.0)));
-  col = paint(col, WHITE, inCirc(q, vec2(14.0, 4.0), 1.0));
-  // Sensor dish (left-front, big read)
-  col = paint(col, WHITE, inCirc(q, vec2(-12.0, -2.0), 5.0));
-  col = paint(col, hi, inCirc(q, vec2(-12.0, -2.0), 3.0));
-  col = paint(col, INK, inCirc(q, vec2(-12.0, -2.0), 5.5) && !inCirc(q, vec2(-12.0, -2.0), 4.5));
-  // Engine exhaust (rear-left glow)
-  col = paint(col, SOLH, inBox(q, vec2(-16.0, 3.0), vec2(-12.0, 7.0)));
-  col = paint(col, SOL, inBox(q, vec2(-15.0, 4.0), vec2(-13.0, 6.0)));
-  // Wing fin
-  col = paint(col, dk, onLine(q, vec2(-6.0, -4.0), vec2(4.0, -7.0), 1.2));
+  col = paint(col, hi, inTri(q, vec2(10.0, 2.0), vec2(16.0, 5.0), vec2(10.0, 7.0)));
+  col = paint(col, WHITE, inCirc(q, vec2(14.0, 5.0), 1.0));
+
+  // Sensor dish bracket + big dish (taller than hull)
+  col = paint(col, ROCK, onLine(q, vec2(-5.0, -1.0), vec2(-9.0, -1.0), 1.2));
+  col = paint(col, ROCK, onLine(q, vec2(-5.0, -1.0), vec2(-7.0, -5.0), 1.2));
+  col = paint(col, ROCK, onLine(q, vec2(-9.0, -1.0), vec2(-7.0, -5.0), 1.2));
+  col = paintShadeC(col, q, vec2(-11.0, -4.0), 7.0, WHITE, WHITE, ROCKH);
+  col = paintShadeC(col, q, vec2(-11.0, -4.0), 4.5, hi, CRYH, md);
+  col = paint(col, INK, inCirc(q, vec2(-11.0, -4.0), 7.5) && !inCirc(q, vec2(-11.0, -4.0), 6.5));
+  col = paint(col, WHITE, inCirc(q, vec2(-13.0, -5.0), 1.5));
+
+  // Engine exhaust (rear glow)
+  col = paintShade(col, q, vec2(-16.0, 4.0), vec2(-12.0, 8.0), SOL, SOLH, ORE);
+  col = paint(col, SOLH, inBox(q, vec2(-15.0, 5.0), vec2(-13.0, 7.0)));
+
+  col = paint(col, dk, onLine(q, vec2(-4.0, -5.0), vec2(6.0, -8.0), 1.3));
   col = paint(col, INK, onLine(q, vec2(-14.0, 8.0), vec2(14.0, 7.0), 0.5));
   return col;
 }
@@ -201,31 +259,45 @@ vec3 drawFighter(vec2 q, float civ, float frame) {
   vec3 md = civMid(civ);
   vec3 hi = civHi(civ);
 
-  // Legs (braced stance)
-  col = paint(col, dk, inBox(q, vec2(-5.0, 7.0), vec2(-1.0, 14.0)));
-  col = paint(col, dk, inBox(q, vec2(1.0, 6.0), vec2(5.0, 13.0)));
-  // Torso
-  if (civ < 0.5) col = paint(col, md, inHex(q, vec2(-1.0, -1.0), 8.0));
-  else if (civ < 1.5) col = paint(col, md, inDiam(q, vec2(-1.0, -1.0), 8.0));
-  else col = paint(col, md, inBox(q, vec2(-6.0, -5.0), vec2(4.0, 5.0)));
-  col = paintMag(col, inBox(q, vec2(-4.0, -3.0), vec2(2.0, 2.0)));
-  col = paint(col, hi, inBox(q, vec2(-3.0, -2.0), vec2(1.0, 1.0)));
-  // Shoulder armor (wide read)
-  col = paint(col, dk, inBox(q, vec2(-8.0, -6.0), vec2(-4.0, -1.0)));
-  col = paint(col, dk, inBox(q, vec2(2.0, -7.0), vec2(6.0, -2.0)));
-  col = paint(col, hi, inCirc(q, vec2(-6.0, -3.0), 2.0));
-  col = paint(col, hi, inCirc(q, vec2(4.0, -4.0), 2.0));
-  // Head / helmet
-  col = paint(col, dk, inCirc(q, vec2(-1.0, -10.0), 4.0));
-  col = paint(col, BONE, inBox(q, vec2(-3.0, -11.0), vec2(1.0, -9.0)));
-  // Rifle barrel (dominant forward weapon)
-  col = paint(col, BONE, onLine(q, vec2(4.0, -2.0), vec2(17.0, -4.0), 1.5));
-  col = paint(col, ROCK, onLine(q, vec2(4.0, -2.0), vec2(14.0, -3.5), 1.0));
-  col = paint(col, INK, onLine(q, vec2(17.0, -4.0), vec2(17.0, -4.0), 1.0));
-  col = paint(col, ROCKH, inBox(q, vec2(2.0, -4.0), vec2(6.0, 0.0)));
-  // Stock
-  col = paint(col, BONE, onLine(q, vec2(0.0, -1.0), vec2(-4.0, 2.0), 1.2));
-  col = paint(col, INK, onLine(q, vec2(-5.0, 14.0), vec2(5.0, 13.0), 0.5));
+  // Connected legs — overlap pelvis, no floating feet
+  col = paintTaper(col, q, -5.0, 5.0, -4.5, 3.5, 1.0, 13.0, md, hi, dk);
+  col = paintShade(col, q, vec2(-6.0, 12.0), vec2(-3.0, 14.0), dk, md, dk);
+  col = paintTaper(col, q, 3.0, 4.5, 4.0, 3.5, 2.0, 14.0, md, hi, dk);
+
+  // Pelvis bridges torso to legs
+  col = paintShade(col, q, vec2(-6.0, 0.0), vec2(5.0, 5.0), md, hi, dk);
+
+  // Torso (civ silhouette)
+  if (civ < 0.5) col = paintShadeC(col, q, vec2(-2.0, -1.0), 7.5, md, hi, dk);
+  else if (civ < 1.5) col = paintShade(col, q, vec2(-7.0, -4.0), vec2(3.0, 5.0), md, hi, dk);
+  else col = paintShade(col, q, vec2(-7.0, -5.0), vec2(3.0, 5.0), md, hi, dk);
+  col = paintMag(col, inBox(q, vec2(-4.0, -2.0), vec2(1.0, 2.0)));
+
+  // Shoulders + neck + head
+  col = paintShade(col, q, vec2(-9.0, -5.0), vec2(-4.0, -1.0), dk, md, dk);
+  col = paintShade(col, q, vec2(2.0, -6.0), vec2(7.0, -2.0), dk, md, dk);
+  col = paintShade(col, q, vec2(-2.0, -5.0), vec2(1.0, -3.0), dk, md, dk);
+  col = paintShadeC(col, q, vec2(-1.0, -9.0), 4.0, dk, md, dk);
+  col = paint(col, BONE, inBox(q, vec2(-3.0, -10.0), vec2(1.0, -8.0)));
+  col = paint(col, INK, inBox(q, vec2(-1.0, -10.0), vec2(2.0, -9.0)));
+
+  // Rifle — stock + receiver + barrel + muzzle (longer than torso)
+  col = paintShade(col, q, vec2(-7.0, -2.0), vec2(-3.0, 1.0), BONE, WHITE, ROCK);
+  col = paintShade(col, q, vec2(-1.0, -3.0), vec2(5.0, 0.0), ROCK, ROCKH, ROCK);
+  col = paint(col, ROCK, onLine(q, vec2(4.0, -2.0), vec2(16.0, -3.0), 1.6));
+  col = paint(col, ROCKH, onLine(q, vec2(5.0, -2.5), vec2(14.0, -3.2), 0.8));
+  col = paint(col, INK, inBox(q, vec2(15.0, -4.5), vec2(17.0, -2.0)));
+  col = paint(col, ROCKH, inCirc(q, vec2(16.5, -3.5), 1.2));
+
+  // Arms gripping rifle
+  col = paint(col, BONE, onLine(q, vec2(2.0, -2.0), vec2(7.0, -2.0), 1.4));
+  col = paint(col, BONE, onLine(q, vec2(2.0, -2.0), vec2(4.0, -0.5), 1.2));
+  col = paint(col, BONE, inCirc(q, vec2(7.0, -2.0), 1.5));
+  col = paint(col, BONE, onLine(q, vec2(-3.0, -1.0), vec2(-5.0, -2.0), 1.2));
+  col = paint(col, BONE, onLine(q, vec2(-3.0, -1.0), vec2(-4.0, 0.0), 1.2));
+  col = paint(col, BONE, inCirc(q, vec2(-5.0, -1.5), 1.5));
+
+  col = paint(col, INK, onLine(q, vec2(-8.0, 14.0), vec2(8.0, 14.0), 0.5));
   return col;
 }
 
@@ -236,27 +308,30 @@ vec3 drawSiege(vec2 q, float civ, float frame) {
   vec3 md = civMid(civ);
   vec3 hi = civHi(civ);
 
-  // Treads (very wide bottom — tank read)
-  col = paint(col, ROCK, inBox(q, vec2(-14.0, 6.0), vec2(14.0, 12.0)));
-  col = paint(col, ROCKH, inBox(q, vec2(-12.0, 7.0), vec2(12.0, 10.0)));
-  col = paint(col, INK, inCirc(q, vec2(-10.0, 9.0), 3.0));
-  col = paint(col, INK, inCirc(q, vec2(10.0, 9.0), 3.0));
-  col = paint(col, ROCKH, inCirc(q, vec2(-10.0, 9.0), 2.0));
-  col = paint(col, ROCKH, inCirc(q, vec2(10.0, 9.0), 2.0));
+  // Solid tread base (lit top, not hollow U-holes)
+  col = paintShade(col, q, vec2(-15.0, 7.0), vec2(15.0, 13.0), ROCK, ROCKH, ROCK);
+  col = paint(col, INK, inBox(q, vec2(-15.0, 12.0), vec2(15.0, 13.0)));
+  col = paintShadeC(col, q, vec2(-10.0, 10.0), 2.8, ROCK, ROCKH, ROCK);
+  col = paintShadeC(col, q, vec2(10.0, 10.0), 2.8, ROCK, ROCKH, ROCK);
+  col = paint(col, INK, inCirc(q, vec2(-10.0, 10.0), 3.0) && !inCirc(q, vec2(-10.0, 10.0), 2.5));
+  col = paint(col, INK, inCirc(q, vec2(10.0, 10.0), 3.0) && !inCirc(q, vec2(10.0, 10.0), 2.5));
+
   // Hull
-  if (civ < 0.5) col = paint(col, md, inHex(q, vec2(0.0, 0.0), 10.0));
-  else if (civ < 1.5) col = paint(col, md, inBox(q, vec2(-10.0, -4.0), vec2(10.0, 5.0)));
-  else col = paint(col, md, inBox(q, vec2(-11.0, -5.0), vec2(9.0, 4.0)));
+  if (civ < 0.5) col = paintShadeC(col, q, vec2(0.0, -1.0), 9.5, md, hi, dk);
+  else if (civ < 1.5) col = paintShade(col, q, vec2(-11.0, -5.0), vec2(11.0, 5.0), md, hi, dk);
+  else col = paintShade(col, q, vec2(-12.0, -5.0), vec2(10.0, 4.0), md, hi, dk);
   col = paintMag(col, inBox(q, vec2(-4.0, -2.0), vec2(4.0, 2.0)));
-  // Turret
-  col = paint(col, dk, inBox(q, vec2(-6.0, -8.0), vec2(6.0, -3.0)));
-  col = paint(col, hi, inBox(q, vec2(-4.0, -7.0), vec2(4.0, -4.0)));
-  // Big cannon (elevated, pointing right-up)
-  col = paint(col, ROCK, onLine(q, vec2(4.0, -6.0), vec2(18.0, -12.0), 2.0));
-  col = paint(col, ROCKH, onLine(q, vec2(4.0, -6.0), vec2(16.0, -11.0), 1.2));
-  col = paint(col, INK, onLine(q, vec2(18.0, -12.0), vec2(18.0, -12.0), 1.5));
-  col = paint(col, ORE, inBox(q, vec2(15.0, -13.0), vec2(19.0, -10.0)));
-  // Civ accents
+
+  // Elevated turret
+  col = paintShade(col, q, vec2(-7.0, -9.0), vec2(7.0, -4.0), dk, md, dk);
+  col = paintShade(col, q, vec2(-5.0, -8.0), vec2(5.0, -5.0), hi, WHITE, hi);
+
+  // Thick cannon + muzzle brake
+  col = paint(col, ROCK, onLine(q, vec2(5.0, -7.0), vec2(18.0, -11.0), 2.5));
+  col = paint(col, ROCKH, onLine(q, vec2(6.0, -7.5), vec2(16.0, -10.5), 1.4));
+  col = paintShade(col, q, vec2(15.0, -12.5), vec2(19.0, -9.5), ROCK, ROCKH, ROCK);
+  col = paint(col, INK, inBox(q, vec2(18.0, -12.0), vec2(19.5, -10.0)));
+
   if (civ < 0.5) col = paint(col, hi, inCirc(q, vec2(0.0, -1.0), 3.0));
   else if (civ < 1.5) col = paint(col, CRYH, inDiam(q, vec2(0.0, -1.0), 3.0));
   else col = paint(col, VOIDH, inBox(q, vec2(-2.0, -1.0), vec2(2.0, 2.0)));
@@ -268,23 +343,24 @@ vec3 drawRavager(vec2 q, float civ, float frame) {
   vec3 col = vec3(0.0);
   float lunge = mod(floor(frame), 2.0) * 1.5;
 
-  // Low beast body
-  col = paint(col, HIVED, inHex(q, vec2(-2.0, 2.0), 9.0));
-  col = paint(col, BLOOD, inHex(q, vec2(-2.0, 1.0), 7.0));
-  col = paint(col, HIVE, inHex(q, vec2(-2.0, 0.0), 5.0));
+  col = paintShadeC(col, q, vec2(-2.0, 1.0), 9.0, HIVED, HIVE, HIVED);
+  col = paint(col, BLOOD, inHex(q, vec2(-2.0, 0.0), 7.0));
+  col = paint(col, HIVE, inHex(q, vec2(-2.0, -1.0), 5.0));
   col = paintMag(col, inBox(q, vec2(-3.0, -2.0), vec2(3.0, 2.0)));
-  // Head / maw
-  col = paint(col, HIVED, inCirc(q, vec2(2.0, -5.0), 5.0));
+
+  col = paintShadeC(col, q, vec2(2.0, -5.0), 5.0, HIVED, HIVE, HIVED);
   col = paint(col, BLOOD, inBox(q, vec2(0.0, -6.0), vec2(6.0, -4.0)));
   col = paint(col, WHITE, inCirc(q, vec2(4.0, -5.0), 1.0));
-  // Scythe claw arms (lunging forward)
+
+  // Scythe claws (dominant forward weapon)
   col = paint(col, BONE, onLine(q, vec2(-4.0, -2.0), vec2(-14.0 - lunge, -10.0), 1.5));
   col = paint(col, BONE, onLine(q, vec2(2.0, -1.0), vec2(14.0 + lunge, -8.0), 1.5));
   col = paint(col, SOLH, onLine(q, vec2(-14.0 - lunge, -10.0), vec2(-16.0 - lunge, -14.0), 1.8));
   col = paint(col, SOLH, onLine(q, vec2(14.0 + lunge, -8.0), vec2(16.0 + lunge, -12.0), 1.8));
-  // Hind legs
-  col = paint(col, HIVED, inBox(q, vec2(-8.0, 6.0), vec2(-4.0, 12.0)));
-  col = paint(col, HIVED, inBox(q, vec2(2.0, 7.0), vec2(6.0, 11.0)));
+
+  // Connected hind legs
+  col = paintTaper(col, q, -6.0, 4.0, -5.0, 3.0, 4.0, 12.0, HIVED, HIVE, HIVED);
+  col = paintTaper(col, q, 4.0, 4.0, 5.0, 3.0, 5.0, 11.0, HIVED, HIVE, HIVED);
   col = paint(col, INK, onLine(q, vec2(-8.0, 12.0), vec2(6.0, 11.0), 0.5));
   return col;
 }
@@ -295,21 +371,22 @@ vec3 drawPrism(vec2 q, float civ, float frame) {
   float hover = mod(floor(frame), 2.0) * -1.0;
   vec2 h = vec2(0.0, hover);
 
-  // Floating crystal body (diamond — no legs)
   col = paint(col, CRYD, inDiam(q + h, vec2(0.0, -2.0), 12.0));
   col = paint(col, CRY, inDiam(q + h, vec2(0.0, -3.0), 10.0));
   col = paint(col, CRYH, inDiam(q + h, vec2(0.0, -4.0), 6.0));
-  col = paint(col, WHITE, inDiam(q + h, vec2(0.0, -5.0), 3.0));
+  col = paint(col, WHITE, inDiam(q + h, vec2(-2.0, -5.0), 3.0));
   col = paintMag(col, inBox(q + h, vec2(-3.0, -4.0), vec2(3.0, 0.0)));
-  // Focus lens (front)
-  col = paint(col, WHITE, inCirc(q + h, vec2(0.0, -8.0), 3.0));
+
+  // Focus lens (dominant front read)
+  col = paintShadeC(col, q + h, vec2(0.0, -8.0), 3.5, WHITE, WHITE, CRYH);
   col = paint(col, CRYH, inCirc(q + h, vec2(0.0, -8.0), 2.0));
-  // Beam weapon (pointing right)
+
+  // Beam weapon
   col = paint(col, CRYH, onLine(q + h, vec2(4.0, -4.0), vec2(17.0, -6.0), 1.2));
   col = paint(col, WHITE, onLine(q + h, vec2(8.0, -4.5), vec2(16.0, -6.0), 0.6));
-  // Hover stabilizers
-  col = paint(col, CRYD, inBox(q + h, vec2(-11.0, 4.0), vec2(-7.0, 6.0)));
-  col = paint(col, CRYD, inBox(q + h, vec2(7.0, 4.0), vec2(11.0, 6.0)));
+
+  col = paintShade(col, q + h, vec2(-11.0, 4.0), vec2(-7.0, 6.0), CRYD, CRY, CRYD);
+  col = paintShade(col, q + h, vec2(7.0, 4.0), vec2(11.0, 6.0), CRYD, CRY, CRYD);
   col = paint(col, INK, onLine(q + h, vec2(-12.0, 6.0), vec2(12.0, 6.0), 0.5));
   return col;
 }
@@ -318,24 +395,24 @@ vec3 drawPrism(vec2 q, float civ, float frame) {
 vec3 drawShade(vec2 q, float civ, float frame) {
   vec3 col = vec3(0.0);
 
-  // Tattered cloak (asymmetric, thin vertical)
-  col = paint(col, VOIDD, inBox(q, vec2(-5.0, -12.0), vec2(3.0, 12.0)));
-  col = paint(col, VOIDC, inBox(q, vec2(-4.0, -10.0), vec2(2.0, 10.0)));
-  // Tatter fringes (asymmetric void read)
+  col = paintShade(col, q, vec2(-5.0, -12.0), vec2(3.0, 12.0), VOIDD, VOIDC, VOIDD);
+  col = paintShade(col, q, vec2(-4.0, -10.0), vec2(2.0, 10.0), VOIDC, VOIDH, VOIDD);
+
   col = paint(col, VOIDD, inTri(q, vec2(-5.0, 10.0), vec2(-9.0, 14.0), vec2(-3.0, 12.0)));
   col = paint(col, VOIDD, inTri(q, vec2(3.0, 8.0), vec2(8.0, 13.0), vec2(4.0, 11.0)));
   col = paint(col, VOIDD, inTri(q, vec2(-2.0, -12.0), vec2(-7.0, -16.0), vec2(0.0, -13.0)));
   col = paint(col, VOIDH, inTri(q, vec2(2.0, -11.0), vec2(7.0, -15.0), vec2(3.0, -13.0)));
-  // Hood
-  col = paint(col, VOIDD, inCirc(q, vec2(-1.0, -10.0), 5.0));
-  col = paint(col, VOIDC, inCirc(q, vec2(-1.0, -10.0), 3.0));
-  // ONE glowing eye (signature read)
+
+  col = paintShadeC(col, q, vec2(-1.0, -10.0), 5.0, VOIDD, VOIDC, VOIDD);
   col = paint(col, VOIDH, inCirc(q, vec2(0.0, -10.0), 2.0));
   col = paint(col, WHITE, inCirc(q, vec2(1.0, -10.0), 1.0));
   col = paintMag(col, inBox(q, vec2(-2.0, -4.0), vec2(1.0, 0.0)));
-  // Dagger (subtle, forward)
-  col = paint(col, BONE, onLine(q, vec2(2.0, 0.0), vec2(12.0, -3.0), 0.8));
-  col = paint(col, INK, onLine(q, vec2(12.0, -3.0), vec2(14.0, -4.0), 0.6));
+
+  // Dagger gripped forward
+  col = paint(col, BONE, onLine(q, vec2(2.0, 0.0), vec2(10.0, -2.0), 1.0));
+  col = paint(col, BONE, onLine(q, vec2(2.0, 0.0), vec2(3.0, 1.0), 1.0));
+  col = paint(col, BONE, inCirc(q, vec2(3.0, 0.5), 1.2));
+  col = paint(col, INK, onLine(q, vec2(10.0, -2.0), vec2(13.0, -3.0), 0.7));
   return col;
 }
 
@@ -375,133 +452,110 @@ vec3 unitRole(vec2 p, float civ, float kind, float frame) {
 
 vec3 helionHall(vec2 p) {
   vec3 col = vec3(0.0);
-  // Stone foundation + walls
-  col = paint(col, HIVED, inBox(p, vec2(-20.0, 0.0), vec2(20.0, 22.0)));
-  col = paint(col, HIVE, inBox(p, vec2(-17.0, 4.0), vec2(17.0, 20.0)));
-  // Domed roof (sits on walls — not a flat face)
-  col = paint(col, HIVED, inCirc(p, vec2(0.0, 34.0), 20.0));
-  col = paint(col, HIVE, inCirc(p, vec2(0.0, 32.0), 16.0));
-  col = paint(col, HIVEH, inCirc(p, vec2(-7.0, 36.0), 6.0));
-  // Side hive pods
-  col = paint(col, HIVED, inCirc(p, vec2(-20.0, 16.0), 8.0));
-  col = paint(col, HIVED, inCirc(p, vec2(20.0, 16.0), 8.0));
-  // Central spire mast
-  col = paint(col, HIVE, inBox(p, vec2(-3.0, 38.0), vec2(3.0, 52.0)));
-  col = paint(col, HIVEH, inCirc(p, vec2(0.0, 54.0), 5.0));
-  col = paint(col, SOLH, inCirc(p, vec2(0.0, 58.0), 2.0));
-  // Arched door (small team-color panel)
-  col = paint(col, INK, inBox(p, vec2(-6.0, 4.0), vec2(6.0, 16.0)));
-  col = paint(col, BONE, inBox(p, vec2(-4.0, 6.0), vec2(4.0, 14.0)));
-  col = paintMag(col, inBox(p, vec2(-3.0, 7.0), vec2(3.0, 12.0)));
-  col = paint(col, HIVEH, inCirc(p, vec2(0.0, 14.0), 4.0));
-  // Pillars + windows
-  if (abs(p.x + 11.0) <= 1.0 && p.y >= 8.0 && p.y <= 20.0) col = INK;
-  if (abs(p.x - 11.0) <= 1.0 && p.y >= 8.0 && p.y <= 20.0) col = INK;
-  col = paint(col, SOLH, inBox(p, vec2(-16.0, 12.0), vec2(-13.0, 16.0)));
-  col = paint(col, SOLH, inBox(p, vec2(13.0, 12.0), vec2(16.0, 16.0)));
+  col = paintShade(col, p, vec2(-22.0, 0.0), vec2(22.0, 6.0), HIVED, HIVE, HIVED);
+  col = paintShade(col, p, vec2(-20.0, 4.0), vec2(20.0, 24.0), HIVE, HIVEH, HIVED);
+  col = paintShadeC(col, p, vec2(0.0, 36.0), 19.0, HIVE, HIVEH, HIVED);
+  col = paintShadeC(col, p, vec2(0.0, 34.0), 14.0, HIVE, HIVEH, HIVED);
+  col = paintShadeC(col, p, vec2(-22.0, 16.0), 7.0, HIVED, HIVE, HIVED);
+  col = paintShadeC(col, p, vec2(22.0, 16.0), 7.0, HIVED, HIVE, HIVED);
+  col = paintShade(col, p, vec2(-3.0, 38.0), vec2(3.0, 52.0), HIVE, HIVEH, HIVED);
+  col = paintShadeC(col, p, vec2(0.0, 56.0), 5.0, HIVEH, SOLH, HIVE);
+  col = paint(col, SOLH, inCirc(p, vec2(0.0, 60.0), 2.0));
+  col = paint(col, INK, inBox(p, vec2(-7.0, 4.0), vec2(7.0, 18.0)));
+  col = paint(col, VOIDD, inBox(p, vec2(-5.0, 5.0), vec2(5.0, 16.0)));
+  col = paintMag(col, inBox(p, vec2(-4.0, 8.0), vec2(4.0, 14.0)));
+  col = paint(col, HIVEH, inCirc(p, vec2(0.0, 16.0), 5.0));
+  col = paint(col, INK, inBox(p, vec2(-13.0, 8.0), vec2(-11.0, 22.0)));
+  col = paint(col, INK, inBox(p, vec2(11.0, 8.0), vec2(13.0, 22.0)));
+  col = paint(col, SOLH, inBox(p, vec2(-17.0, 14.0), vec2(-14.0, 15.0)));
+  col = paint(col, SOLH, inBox(p, vec2(14.0, 14.0), vec2(17.0, 15.0)));
+  col = paint(col, INK, inBox(p, vec2(-20.0, 22.0), vec2(20.0, 24.0)));
   return col;
 }
 
 vec3 kryosHall(vec2 p) {
   vec3 col = vec3(0.0);
-  // Angular platform + walls
-  col = paint(col, CRYD, inBox(p, vec2(-22.0, 0.0), vec2(22.0, 8.0)));
-  col = paint(col, CRYD, inBox(p, vec2(-18.0, 8.0), vec2(18.0, 24.0)));
-  col = paint(col, CRY, inBox(p, vec2(-15.0, 10.0), vec2(15.0, 22.0)));
-  // Faceted roof tiers
+  col = paintShade(col, p, vec2(-22.0, 0.0), vec2(22.0, 8.0), CRYD, CRY, CRYD);
+  col = paintShade(col, p, vec2(-18.0, 8.0), vec2(18.0, 24.0), CRY, CRYH, CRYD);
   col = paint(col, CRYD, inTri(p, vec2(0.0, 40.0), vec2(-20.0, 24.0), vec2(20.0, 24.0)));
   col = paint(col, CRY, inTri(p, vec2(0.0, 34.0), vec2(-14.0, 25.0), vec2(14.0, 25.0)));
   col = paint(col, CRYH, inTri(p, vec2(0.0, 28.0), vec2(-8.0, 26.0), vec2(8.0, 26.0)));
-  // Crystal spire
   col = paint(col, CRYD, inTri(p, vec2(0.0, 58.0), vec2(-5.0, 34.0), vec2(5.0, 34.0)));
   col = paint(col, WHITE, inTri(p, vec2(0.0, 50.0), vec2(-2.0, 36.0), vec2(2.0, 36.0)));
-  // Buttresses
-  col = paint(col, CRYD, inBox(p, vec2(-24.0, 10.0), vec2(-18.0, 26.0)));
-  col = paint(col, CRYD, inBox(p, vec2(18.0, 10.0), vec2(24.0, 26.0)));
-  // Door
+  col = paintShade(col, p, vec2(-24.0, 10.0), vec2(-18.0, 26.0), CRYD, CRY, CRYD);
+  col = paintShade(col, p, vec2(18.0, 10.0), vec2(24.0, 26.0), CRYD, CRY, CRYD);
   col = paint(col, INK, inBox(p, vec2(-5.0, 4.0), vec2(5.0, 18.0)));
-  col = paintMag(col, inBox(p, vec2(-3.0, 6.0), vec2(3.0, 14.0)));
+  col = paint(col, VOIDD, inBox(p, vec2(-4.0, 5.0), vec2(4.0, 16.0)));
+  col = paintMag(col, inBox(p, vec2(-3.0, 8.0), vec2(3.0, 14.0)));
   col = paint(col, CRYH, inBox(p, vec2(-1.0, 9.0), vec2(1.0, 12.0)));
-  col = paint(col, SOLH, inBox(p, vec2(-14.0, 14.0), vec2(-11.0, 18.0)));
-  col = paint(col, SOLH, inBox(p, vec2(11.0, 14.0), vec2(14.0, 18.0)));
+  col = paint(col, SOLH, inBox(p, vec2(-14.0, 14.0), vec2(-13.0, 15.0)));
+  col = paint(col, SOLH, inBox(p, vec2(13.0, 14.0), vec2(14.0, 15.0)));
+  col = paint(col, INK, inBox(p, vec2(-18.0, 22.0), vec2(18.0, 24.0)));
   return col;
 }
 
 vec3 nihilineHall(vec2 p) {
   vec3 col = vec3(0.0);
-  // Tattered tower base
-  col = paint(col, VOIDD, inBox(p, vec2(-20.0, 0.0), vec2(20.0, 10.0)));
-  col = paint(col, VOIDC, inBox(p, vec2(-16.0, 8.0), vec2(16.0, 36.0)));
-  col = paint(col, VOIDD, inBox(p, vec2(-10.0, 4.0), vec2(10.0, 30.0)));
-  // Asymmetric spire fragments
+  col = paintShade(col, p, vec2(-20.0, 0.0), vec2(20.0, 10.0), VOIDD, VOIDC, VOIDD);
+  col = paintShade(col, p, vec2(-16.0, 8.0), vec2(16.0, 36.0), VOIDC, VOIDH, VOIDD);
+  col = paintShade(col, p, vec2(-10.0, 4.0), vec2(10.0, 30.0), VOIDD, VOIDC, VOIDD);
   col = paint(col, VOIDD, inTri(p, vec2(-4.0, 50.0), vec2(-14.0, 28.0), vec2(2.0, 30.0)));
   col = paint(col, VOIDC, inTri(p, vec2(6.0, 54.0), vec2(12.0, 26.0), vec2(0.0, 32.0)));
   col = paint(col, VOIDH, inCirc(p, vec2(2.0, 48.0), 4.0));
-  // Tendril wings
-  col = paint(col, VOIDD, inBox(p, vec2(-28.0, 16.0), vec2(-18.0, 22.0)));
-  col = paint(col, VOIDD, inBox(p, vec2(18.0, 14.0), vec2(30.0, 24.0)));
+  col = paintShade(col, p, vec2(-28.0, 16.0), vec2(-18.0, 22.0), VOIDD, VOIDC, VOIDD);
+  col = paintShade(col, p, vec2(18.0, 14.0), vec2(30.0, 24.0), VOIDD, VOIDC, VOIDD);
   col = paint(col, VOIDH, inCirc(p, vec2(-30.0, 20.0), 3.0));
   col = paint(col, VOIDH, inCirc(p, vec2(30.0, 18.0), 3.0));
-  // Door (void portal)
   col = paint(col, INK, inBox(p, vec2(-6.0, 4.0), vec2(6.0, 18.0)));
-  col = paintMag(col, inBox(p, vec2(-4.0, 6.0), vec2(4.0, 16.0)));
+  col = paint(col, INK, inBox(p, vec2(-4.0, 5.0), vec2(4.0, 16.0)));
+  col = paintMag(col, inBox(p, vec2(-3.0, 8.0), vec2(3.0, 14.0)));
   col = paint(col, VOIDH, inCirc(p, vec2(0.0, 12.0), 3.0));
+  col = paint(col, SOLH, inBox(p, vec2(-14.0, 20.0), vec2(-13.0, 21.0)));
+  col = paint(col, SOLH, inBox(p, vec2(13.0, 18.0), vec2(14.0, 19.0)));
   return col;
 }
 
 vec3 helionHouse(vec2 p) {
   vec3 col = vec3(0.0);
-  // Rectangular walls
-  col = paint(col, HIVED, inBox(p, vec2(-10.0, 0.0), vec2(10.0, 13.0)));
-  col = paint(col, HIVE, inBox(p, vec2(-8.0, 2.0), vec2(8.0, 11.0)));
-  // Domed roof (clearly above walls)
-  col = paint(col, HIVED, inCirc(p, vec2(0.0, 20.0), 11.0));
-  col = paint(col, HIVE, inCirc(p, vec2(0.0, 19.0), 9.0));
-  col = paint(col, HIVEH, inCirc(p, vec2(-2.0, 22.0), 3.0));
+  col = paintShade(col, p, vec2(-10.0, 0.0), vec2(10.0, 13.0), HIVED, HIVE, HIVED);
+  col = paintShade(col, p, vec2(-8.0, 2.0), vec2(8.0, 11.0), HIVE, HIVEH, HIVED);
+  col = paintShadeC(col, p, vec2(0.0, 20.0), 11.0, HIVE, HIVEH, HIVED);
+  col = paintShadeC(col, p, vec2(0.0, 19.0), 8.0, HIVE, HIVEH, HIVED);
   col = paint(col, INK, inBox(p, vec2(-10.0, 13.0), vec2(10.0, 14.0)));
-  // Door (narrow team panel)
   col = paint(col, INK, inBox(p, vec2(-3.0, 2.0), vec2(3.0, 9.0)));
-  col = paint(col, BONE, inBox(p, vec2(-2.0, 3.0), vec2(2.0, 8.0)));
+  col = paint(col, VOIDD, inBox(p, vec2(-2.0, 3.0), vec2(2.0, 8.0)));
   col = paintMag(col, inBox(p, vec2(-2.0, 4.0), vec2(2.0, 7.0)));
   col = paint(col, HIVEH, inCirc(p, vec2(0.0, 8.0), 3.0));
-  // Lit window
-  col = paint(col, SOLH, inBox(p, vec2(5.0, 6.0), vec2(8.0, 10.0)));
-  col = paint(col, INK, inBox(p, vec2(5.0, 6.0), vec2(8.0, 6.5)));
-  if (abs(p.x + 7.0) <= 0.5 && p.y >= 3.0 && p.y <= 11.0) col = INK;
-  if (abs(p.x - 7.0) <= 0.5 && p.y >= 3.0 && p.y <= 11.0) col = INK;
+  col = paint(col, SOLH, inBox(p, vec2(5.0, 7.0), vec2(8.0, 8.0)));
+  col = paint(col, INK, inBox(p, vec2(7.0, 3.0), vec2(8.0, 11.0)));
   return col;
 }
 
 vec3 kryosHouse(vec2 p) {
   vec3 col = vec3(0.0);
-  col = paint(col, CRYD, inBox(p, vec2(-10.0, 0.0), vec2(10.0, 12.0)));
-  col = paint(col, CRY, inBox(p, vec2(-8.0, 2.0), vec2(8.0, 10.0)));
-  // Sharp pitched crystal roof
+  col = paintShade(col, p, vec2(-10.0, 0.0), vec2(10.0, 12.0), CRYD, CRY, CRYD);
+  col = paintShade(col, p, vec2(-8.0, 2.0), vec2(8.0, 10.0), CRY, CRYH, CRYD);
   col = paint(col, CRYD, inTri(p, vec2(0.0, 26.0), vec2(-11.0, 12.0), vec2(11.0, 12.0)));
   col = paint(col, CRY, inTri(p, vec2(0.0, 22.0), vec2(-8.0, 13.0), vec2(8.0, 13.0)));
   col = paint(col, CRYH, inTri(p, vec2(0.0, 18.0), vec2(-4.0, 13.0), vec2(4.0, 13.0)));
   col = paint(col, INK, inBox(p, vec2(-10.0, 12.0), vec2(10.0, 13.0)));
   col = paint(col, INK, inBox(p, vec2(-3.0, 2.0), vec2(3.0, 9.0)));
+  col = paint(col, VOIDD, inBox(p, vec2(-2.0, 3.0), vec2(2.0, 8.0)));
   col = paintMag(col, inBox(p, vec2(-2.0, 4.0), vec2(2.0, 8.0)));
-  col = paint(col, WHITE, inDiam(p, vec2(6.0, 6.0), 2.5));
-  col = paint(col, CRYH, inDiam(p, vec2(6.0, 6.0), 1.5));
+  col = paint(col, SOLH, inBox(p, vec2(5.0, 6.0), vec2(8.0, 7.0)));
   return col;
 }
 
 vec3 nihilineHouse(vec2 p) {
   vec3 col = vec3(0.0);
-  // Crooked walls
-  col = paint(col, VOIDD, inBox(p, vec2(-12.0, 0.0), vec2(10.0, 14.0)));
-  col = paint(col, VOIDC, inBox(p, vec2(-10.0, 2.0), vec2(8.0, 12.0)));
-  // Asymmetric tattered roof
+  col = paintShade(col, p, vec2(-12.0, 0.0), vec2(10.0, 14.0), VOIDD, VOIDC, VOIDD);
+  col = paintShade(col, p, vec2(-10.0, 2.0), vec2(8.0, 12.0), VOIDC, VOIDH, VOIDD);
   col = paint(col, VOIDD, inTri(p, vec2(-2.0, 24.0), vec2(-14.0, 13.0), vec2(6.0, 14.0)));
   col = paint(col, VOIDC, inTri(p, vec2(4.0, 22.0), vec2(12.0, 14.0), vec2(2.0, 14.0)));
-  // Door
   col = paint(col, INK, inBox(p, vec2(-4.0, 2.0), vec2(4.0, 10.0)));
-  col = paintMag(col, inBox(p, vec2(-3.0, 3.0), vec2(3.0, 9.0)));
-  // Glowing window slit
-  col = paint(col, VOIDH, inBox(p, vec2(4.0, 7.0), vec2(8.0, 10.0)));
-  if (p.x <= -8.0 && p.x >= -12.0 && p.y >= 6.0 && p.y <= 10.0) col = VOIDH;
+  col = paint(col, INK, inBox(p, vec2(-3.0, 3.0), vec2(3.0, 9.0)));
+  col = paintMag(col, inBox(p, vec2(-3.0, 4.0), vec2(3.0, 8.0)));
+  col = paint(col, SOLH, inBox(p, vec2(4.0, 7.0), vec2(8.0, 8.0)));
   return col;
 }
 
