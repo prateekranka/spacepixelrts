@@ -247,32 +247,38 @@ export class GameRenderer {
       teamArr[drawn * 3] = rgb[0];
       teamArr[drawn * 3 + 1] = rgb[1];
       teamArr[drawn * 3 + 2] = rgb[2];
-      flashArr[drawn] = e.cooldown > 0.55 && e.kind !== Kind.Resource ? 0.22 : 0;
+      flashArr[drawn] = e.cooldown > 0.2 && e.kind !== Kind.Resource ? 0.55 : 0;
       this.drawnEntIds.add(e.id);
       drawn++;
     }
 
     for (const b of world.bolts) {
-      if (drawn >= MAX_ENTS) break;
       const key =
         b.kind === Kind.Prism ? 'bolt-beam' : b.kind === Kind.Siege ? 'bolt-rock' : b.kind === Kind.Shade ? 'bolt-void' : 'bolt-sting';
       const uv = this.atlas.uv[key];
-      this.dummy.position.set(b.x, 0.85, b.z);
-      this.dummy.quaternion.copy(this.lastCamQ);
-      this.dummy.scale.set(0.92, 0.92, 1);
-      this.dummy.updateMatrix();
-      this.mesh.setMatrixAt(drawn, this.dummy.matrix);
-      this.shadows.setMatrixAt(drawn, this.dummy.matrix);
-      uvArr[drawn * 4] = uv.u0;
-      uvArr[drawn * 4 + 1] = uv.v0;
-      uvArr[drawn * 4 + 2] = uv.u1;
-      uvArr[drawn * 4 + 3] = uv.v1;
       const rgb = TEAM_RGB[b.team];
-      teamArr[drawn * 3] = rgb[0];
-      teamArr[drawn * 3 + 1] = rgb[1];
-      teamArr[drawn * 3 + 2] = rgb[2];
-      flashArr[drawn] = 0.38;
-      drawn++;
+      const trailX = b.x + b.vx * 0.45;
+      const trailZ = b.z + b.vz * 0.45;
+      for (let seg = 0; seg < 2; seg++) {
+        if (drawn >= MAX_ENTS) break;
+        const px = seg === 0 ? b.x : trailX;
+        const pz = seg === 0 ? b.z : trailZ;
+        this.dummy.position.set(px, 0.85, pz);
+        this.dummy.quaternion.copy(this.lastCamQ);
+        this.dummy.scale.set(2.05, 2.05, 1);
+        this.dummy.updateMatrix();
+        this.mesh.setMatrixAt(drawn, this.dummy.matrix);
+        this.shadows.setMatrixAt(drawn, this.dummy.matrix);
+        uvArr[drawn * 4] = uv.u0;
+        uvArr[drawn * 4 + 1] = uv.v0;
+        uvArr[drawn * 4 + 2] = uv.u1;
+        uvArr[drawn * 4 + 3] = uv.v1;
+        teamArr[drawn * 3] = rgb[0];
+        teamArr[drawn * 3 + 1] = rgb[1];
+        teamArr[drawn * 3 + 2] = rgb[2];
+        flashArr[drawn] = seg === 0 ? 0.55 : 0.38;
+        drawn++;
+      }
     }
 
     this.mesh.count = drawn;

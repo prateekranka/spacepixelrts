@@ -428,7 +428,7 @@ export class World {
 
   private strikeRange(e: Ent, st: (typeof STATS)[number], t: Ent): number {
     let r = st.range + t.radius;
-    if (this.tick < 160 && this.openingClashEnt(e) && !st.melee) r += 0.95;
+    if (this.tick < 240 && this.openingClashEnt(e) && !st.melee) r += 0.95;
     return r;
   }
 
@@ -781,20 +781,16 @@ export class World {
       e.cooldown = e.kind === Kind.Ravager ? 0.72 : 0.85;
       if (e.kind === Kind.Ravager && t.hp <= 0) e.frenzy = Math.min(6, e.frenzy + 1);
     } else {
-      this.spawnBolt(e, t, applied * bonus, e.kind === Kind.Prism ? 11 : e.kind === Kind.Siege ? 6.5 : 8.5);
       const opening = this.tick < 240 && this.openingClashEnt(e);
-      e.cooldown = opening
-        ? e.kind === Kind.Prism
-          ? 0.72
-          : 0.58
-        : e.kind === Kind.Prism
-          ? 1.15
-          : 0.95;
+      const spd = opening ? 6.0 : e.kind === Kind.Prism ? 11 : e.kind === Kind.Siege ? 6.5 : 8.5;
+      const life = opening ? 1.4 : 1.1;
+      this.spawnBolt(e, t, applied * bonus, spd, life);
+      e.cooldown = opening ? 0.32 : e.kind === Kind.Prism ? 1.15 : 0.95;
     }
     if (t.hp <= 0) this.kill(t);
   }
 
-  private spawnBolt(e: Ent, t: Ent, dmg: number, spd: number): void {
+  private spawnBolt(e: Ent, t: Ent, dmg: number, spd: number, life = 1.1): void {
     const dx = t.x - e.x;
     const dz = t.z - e.z;
     const d = Math.hypot(dx, dz) || 1;
@@ -805,7 +801,7 @@ export class World {
       vz: (dz / d) * spd,
       team: e.team,
       dmg,
-      life: 1.1,
+      life,
       kind: e.kind,
     });
   }

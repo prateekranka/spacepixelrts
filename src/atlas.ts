@@ -715,8 +715,9 @@ function drawFlag(): Pix {
 function drawBolt(kind: 'sting' | 'beam' | 'void' | 'rock'): Pix {
   const p = Pix.alloc(16, 16);
   if (kind === 'beam') {
-    p.fill(6, 0, 4, 16, PAL.cryH);
-    p.fill(7, 0, 2, 16, PAL.white);
+    p.fill(3, 0, 10, 16, PAL.cryH);
+    p.fill(5, 1, 6, 14, PAL.cry);
+    p.fill(6, 0, 4, 16, PAL.white);
   } else if (kind === 'void') {
     p.circ(8, 8, 5, PAL.voidH);
     p.circ(8, 8, 3, PAL.white);
@@ -724,8 +725,9 @@ function drawBolt(kind: 'sting' | 'beam' | 'void' | 'rock'): Pix {
     p.circ(8, 8, 5, PAL.ore);
     p.set(7, 7, PAL.oreH);
   } else {
-    p.circ(8, 8, 4, PAL.hiveH);
-    p.set(8, 8, PAL.white);
+    p.fill(0, 3, 16, 10, PAL.hiveH);
+    p.fill(1, 4, 14, 8, PAL.hive);
+    p.fill(2, 5, 12, 6, PAL.white);
   }
   p.finish();
   return p;
