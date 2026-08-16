@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 5 P68** — civ picker shipped. Live **`0.6.0-wave5`**.
+**Wave 5 P69 critic** — P68 shipped **`0.6.0-wave5`**. Live deployed.
 
-Default opening stays Helion vs Kryos (P41). `?civ=voidmarked` proves the third people.
+Default boot still Helion vs Kryos. `?civ=voidmarked` for Nihiline + Shade.
 
-**Next:** P68 critic.
+**Next:** fresh critic on default tableau + Nihiline silhouettes.
 
 ## Biggest gap
 
-**§9 #3 playable** — three civs on canvas via picker / URL; critic pass pending.
+**P68 in critic.** Third people must show; default opening must stay P41.
 
 ## Tracker
 
@@ -24,4 +24,4 @@ Default opening stays Helion vs Kryos (P41). `?civ=voidmarked` proves the third 
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
 | 4 performance / iPad / bugs | **PASS** (P66 critic) |
-| 5 full 1v1 coherence | P68 civ picker shipped; critic next |
+| 5 full 1v1 coherence | P68 shipped; P69 critic |
