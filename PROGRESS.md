@@ -5,9 +5,11 @@
 
 ## Now
 
-**Wave 3 P57 building** — P56 critic **PASS** (`67170eb`). Live **`0.4.4-wave3`**. Multi-unit Move spreads; min pairwise 0.64.
+**Wave 3 P57 critic** — hit SFX shipped. Live **`0.4.5-wave3`**.
 
-**Next:** combat hit SFX (last P54 command-feel item). Then Wave 3 critic.
+Rate-limited `Sfx.hit()` on melee/impact; `hitSfx` probe. Opening tableau unchanged.
+
+**Next:** fresh critic. P54 command-feel list then complete.
 
 ## Biggest gap
 
@@ -20,4 +22,4 @@
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P56 **PASS**; P57 combat SFX |
+| 3–5 polish / iPad / coherence | P57 live `0.4.5-wave3`; critic next |
