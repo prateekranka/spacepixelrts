@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 4 P65 critic** — P64 shipped **`0.5.3-wave4`** (HUD `safe-area-inset`). Live deployed.
+**Wave 4 wrap critic (P66)** — P65 **PASS** (`0088c6c`). Live **`0.5.3-wave4`**.
 
-Opening still P41. Leftover: `MAX_ENTS` 384.
+Cull, Attack-lock peel, HUD safe-area all have fresh PASS. Opening still P41.
 
-**Next:** fresh critic on insets vs desktop opening.
+**Next:** P66 names whether Wave 4 is locked or the remaining 60fps/iPad/bug gap.
 
 ## Biggest gap
 
-**P64 in critic.** Home bar must not eat commands; desktop clash must stay unobstructed.
+**Wave 4 wrap in critic.** Leftover candidate: `MAX_ENTS` 384 vs 400-unit contract (Wave 5 if critic PASSes).
 
 ## Tracker
 
@@ -23,5 +23,5 @@ Opening still P41. Leftover: `MAX_ENTS` 384.
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
-| 4 performance / iPad / bugs | P61–P63 **PASS**; P64 shipped; P65 critic |
+| 4 performance / iPad / bugs | P66 wrap critic |
 | 5 full 1v1 coherence | queued |
