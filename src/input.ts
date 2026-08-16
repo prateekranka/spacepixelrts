@@ -274,7 +274,7 @@ export class Input {
   }
 
   private zoom(f: number): void {
-    this.halfH = Math.min(28, Math.max(7, this.halfH * f));
+    this.halfH = Math.min(28, Math.max(4, this.halfH * f));
   }
 
   private edgePan(dt: number): void {

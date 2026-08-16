@@ -17,7 +17,17 @@ const FPS_SECONDS = Number(argVal('--fps-seconds', '4'));
 const SHOT = argVal('--screenshot', null);
 const WAIT_SECONDS = Number(argVal('--wait', '3'));
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({
+  channel: 'chrome',
+  headless: true,
+  args: [
+    '--disable-frame-rate-limit',
+    '--disable-gpu-vsync',
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+  ],
+});
 const page = await browser.newPage({ viewport: { width: 1180, height: 820 } });
 
 const consoleIssues = [];

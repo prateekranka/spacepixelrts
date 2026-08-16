@@ -23,8 +23,8 @@ view.resize(host.clientWidth, host.clientHeight);
 const sfx = new Sfx();
 const input = new Input(host, world, view, sfx);
 input.pan.x = MAP * 0.5;
-input.pan.z = MAP * 0.48;
-input.halfH = 8;
+input.pan.z = MAP * 0.52;
+input.halfH = 5.0;
 
 const hud = new Hud(host);
 hud.bind(world, input, view);

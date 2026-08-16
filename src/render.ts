@@ -199,13 +199,13 @@ export class GameRenderer {
       let scaleX: number;
       let scaleY: number;
       if (isBuilding(e.kind)) {
-        const targetH = 3.2;
+        const targetH = 3.0;
         const mul = targetH / cellsH;
         scaleX = cellsW * mul * e.facing;
         scaleY = cellsH * mul;
       } else {
-        scaleX = cellsW * 1.9 * e.facing;
-        scaleY = cellsH * 2.05;
+        scaleX = cellsW * 2.15 * e.facing;
+        scaleY = cellsH * 2.25;
       }
       this.dummy.position.set(x, isBuilding(e.kind) ? 1.15 : 0.9, z);
       this.dummy.quaternion.copy(this.lastCamQ);
