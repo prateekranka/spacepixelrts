@@ -5,9 +5,11 @@
 
 ## Now
 
-**Wave 2 P44 building** — P43 critic **PASS** (`73cb5dc`). Live **`0.3.0-wave2`**, train Worker works (22→23 pop, 220→170 ore). Tableau intact.
+**Wave 2 P44 critic** — Spark→Orbit shipped. Live **`0.3.1-wave2`**.
 
-**Next:** Spark → Orbit age-up (DESIGN §4). Then win/lose + enemy pressure.
+P43 train **PASS**. P44: Age Up 400 ore / 80 chg / 40s; Hall cannot train while aging; Yard Fighter gated on Orbit.
+
+**Next:** fresh critic on age-up. Then P45 win/lose.
 
 ## Biggest gap
 
@@ -19,5 +21,5 @@
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P43 **PASS**; P44 age-up in flight |
+| 2 gameplay depth | P44 live `0.3.1-wave2`; critic next |
 | 3–5 polish / iPad / coherence | queued |

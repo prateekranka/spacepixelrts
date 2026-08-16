@@ -88,7 +88,7 @@ Opening tableau is locked (P41). P20–P26 in the original plan were largely abs
 |---|---|---|---|---|
 | P42 | Integrator: play the skirmish, name the gap | P41 | done | no playable match arc; pop 22/20 blocks train |
 | P43 | Unblock training: pop < cap, home habitats, corpse pop, hall pick | P42 | done | **PASS** `73cb5dc` live 22/30 train Worker |
-| P44 | Epochs / AgeUp in sim + HUD (Orbit unlock) | P43 | building | |
+| P44 | Epochs / AgeUp in sim + HUD (Orbit unlock) | P43 | critic | builder `9de3da6` live 0.3.1-wave2 |
 | P45 | Win/lose: destroy Nexus, banners | P43 | queued | |
 | P46 | Enemy marshal threatens player Nexus during macro | P43 | queued | |
 | P47 | Wave 2 critic: match arc vs AoE2:DE | P44–P46 | queued | |
