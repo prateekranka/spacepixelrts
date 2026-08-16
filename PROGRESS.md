@@ -5,9 +5,11 @@
 
 ## Now
 
-**Wave 2 P46 building** — P45 critic **PASS** (`9091679`). Live **`0.3.2-wave2`**. VICTORY/DEFEAT banners work; HUD clicks stick.
+**Wave 2 P46 critic** — enemy peel shipped. Live **`0.3.3-wave2`**.
 
-**Next:** enemy marshal peels toward the player Nexus after tick 240 so macro has stakes.
+P45 win/lose **PASS**. After tick 240, Kryos military AttackMove the player Nexus (no 6+ gate). Opening 0–239 unchanged.
+
+**Next:** fresh critic on threat-while-macro. Then P47 Wave 2 match-arc critic.
 
 ## Biggest gap
 
@@ -19,5 +21,5 @@
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P45 **PASS**; P46 AI pressure in flight |
+| 2 gameplay depth | P46 live `0.3.3-wave2`; critic next |
 | 3–5 polish / iPad / coherence | queued |
