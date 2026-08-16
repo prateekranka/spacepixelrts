@@ -305,9 +305,9 @@ export class World {
         this.block[xx + zz * MAP] = 0;
       }
     }
-    const inFireLane = (zz: number): boolean => Math.abs(zz - icz) < 4.4;
+    const inFireLane = (zz: number): boolean => Math.abs(zz - icz) < 3.6;
     const onZFlank = (xx: number, zz: number): boolean =>
-      Math.abs(xx - icx) <= 1.6 && Math.abs(zz - icz) >= 5.0 && Math.abs(zz - icz) <= 6.2;
+      Math.abs(xx - icx) <= 1.6 && Math.abs(zz - icz) >= 5.0 && Math.abs(zz - icz) <= 6.8;
     const stampCampPad = (hx: number, hz: number): void => {
       for (let dz = -1; dz <= 1; dz++) {
         for (let dx = -1; dx <= 1; dx++) {
@@ -340,10 +340,10 @@ export class World {
     for (const [dx, dz] of rockOffsets) placeRock(icx + dx, icz + dz);
     stampCampPad(icx, icz - 6);
     stampCampPad(icx, icz + 6);
-    // Gems beside the rank wings — workers in front, house behind.
-    this.placeOpeningNodeAt(Tile.Ore, cx + 0.9, cz - 4.75);
-    this.placeOpeningNodeAt(Tile.Gas, cx + 0.9, cz + 4.75);
-    this.placeOpeningNodeAt(Tile.Solar, cx + 1.0, cz - 5.5);
+    // Gems beside camp workers — visible gap north of Helion wing (~cz-3.48).
+    this.placeOpeningNodeAt(Tile.Ore, cx + 1.1, cz - 5.35);
+    this.placeOpeningNodeAt(Tile.Gas, cx + 1.1, cz + 5.35);
+    this.placeOpeningNodeAt(Tile.Solar, cx + 1.0, cz - 6.2);
     const propSlots: [number, number, Tile][] = [
       [icx - 1, icz - 5, Tile.PropWreck],
       [icx + 1, icz - 6, Tile.PropVent],
@@ -420,7 +420,7 @@ export class World {
     const mdz = e.z - cz;
     if (Math.abs(mdx) > 1.2) return false;
     const adz = Math.abs(mdz);
-    if (adz < 4.4 || adz > 6.4) return false;
+    if (adz < 5.0 || adz > 6.8) return false;
     if (e.kind === Kind.House || e.kind === Kind.Worker) return true;
     if (e.kind !== Kind.Resource) return false;
     return e.cargoType !== Tile.PropWreck && e.cargoType !== Tile.PropVent;
@@ -501,7 +501,7 @@ export class World {
     // Opening clash — two 2×4 ranks on the same depth (X), split on Z; hold Attack in place.
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
-    const colPitch = 1.55;
+    const colPitch = 1.12;
     const rowPitch = 1.4;
     const gap = 3.6;
     const zHelion = cz - gap / 2;
@@ -541,15 +541,15 @@ export class World {
       pr.cooldown = -0.12;
     }
 
-    // Forward camps — workers + gem in front of house (away from the clash).
-    const oreX = cx + 0.9;
-    const oreZ = cz - 4.75;
-    const gasX = cx + 0.9;
-    const gasZ = cz + 4.75;
-    this.spawn(Kind.House, a, 0, cx, cz - 6.05);
-    this.spawn(Kind.House, b, 1, cx, cz + 6.05);
+    // Forward camps — workers + gem parked beyond Helion wing with visible Z gap.
+    const oreX = cx + 1.1;
+    const oreZ = cz - 5.35;
+    const gasX = cx + 1.1;
+    const gasZ = cz + 5.35;
+    this.spawn(Kind.House, a, 0, cx, cz - 6.45);
+    this.spawn(Kind.House, b, 1, cx, cz + 6.45);
     for (let i = 0; i < 3; i++) {
-      const w = this.spawn(Kind.Worker, a, 0, cx - 0.9 + i * 0.7, cz - 4.75);
+      const w = this.spawn(Kind.Worker, a, 0, cx - 1.0 + i * 0.75, cz - 5.35);
       if (w) {
         w.order = Ord.Gather;
         w.tx = oreX;
@@ -557,7 +557,7 @@ export class World {
       }
     }
     for (let i = 0; i < 3; i++) {
-      const wk = this.spawn(Kind.Worker, b, 1, cx - 0.9 + i * 0.7, cz + 4.75);
+      const wk = this.spawn(Kind.Worker, b, 1, cx - 1.0 + i * 0.75, cz + 5.35);
       if (wk) {
         wk.order = Ord.Gather;
         wk.tx = gasX;
