@@ -15,6 +15,8 @@ export const enum Tile {
   Ore = 3,
   Gas = 4,
   Solar = 5,
+  PropWreck = 6,
+  PropVent = 7,
 }
 
 export const enum Kind {

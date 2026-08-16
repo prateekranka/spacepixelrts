@@ -290,7 +290,7 @@ export class World {
     this.clearBase(MAP - 11, MAP - 11);
   }
 
-  /** Dust pad + rim rocks + gem nodes under the opening camera frustum. */
+  /** Dust pad + interior rocks + gem nodes + props under the opening camera frustum. */
   private stampOpeningGround(): void {
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
@@ -305,38 +305,50 @@ export class World {
         this.block[xx + zz * MAP] = 0;
       }
     }
-    const fireZ0 = icz - 4;
-    const fireZ1 = icz + 4;
-    const rim = (xx: number, zz: number): void => {
+    const inFireLane = (zz: number): boolean => Math.abs(zz - icz) <= 4;
+    const placeRock = (xx: number, zz: number): void => {
       if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) return;
-      if (zz >= fireZ0 && zz <= fireZ1) return;
+      if (inFireLane(zz)) return;
       this.tiles[xx + zz * MAP] = Tile.Rock;
       this.block[xx + zz * MAP] = 1;
     };
-    for (let x = -14; x <= 13; x++) {
-      rim(icx + x, icz - 10);
-      rim(icx + x, icz + 9);
+    const rockOffsets: [number, number][] = [
+      [-12, -8],
+      [-11, -3],
+      [-10, 2],
+      [-9, 7],
+      [-8, -9],
+      [-7, -4],
+      [-6, 1],
+      [-6, 6],
+      [-5, -7],
+      [-4, 8],
+      [12, -8],
+      [11, -3],
+      [10, 2],
+      [9, 7],
+      [8, -9],
+      [7, -4],
+      [6, 1],
+      [6, 6],
+    ];
+    for (const [dx, dz] of rockOffsets) placeRock(icx + dx, icz + dz);
+    this.placeOpeningNode(Tile.Ore, icx + 5, icz - 4);
+    this.placeOpeningNode(Tile.Gas, icx - 5, icz - 4);
+    this.placeOpeningNode(Tile.Solar, icx + 5, icz + 4);
+    this.placeOpeningNode(Tile.Ore, icx - 5, icz + 4);
+    const propSlots: [number, number, Tile][] = [
+      [icx - 10, icz - 7, Tile.PropWreck],
+      [icx + 10, icz - 7, Tile.PropVent],
+      [icx - 9, icz + 8, Tile.PropVent],
+      [icx + 9, icz + 8, Tile.PropWreck],
+      [icx - 12, icz + 1, Tile.PropWreck],
+      [icx + 12, icz - 1, Tile.PropVent],
+    ];
+    for (const [px, pz, kind] of propSlots) {
+      if (inFireLane(pz)) continue;
+      this.placeProp(kind, px, pz);
     }
-    for (let z = -10; z <= 9; z++) {
-      rim(icx - 14, icz + z);
-      rim(icx + 13, icz + z);
-    }
-    for (const [dx, dz] of [
-      [-6, -5],
-      [6, -5],
-      [-6, 5],
-      [6, 5],
-      [-7, -5],
-      [7, -5],
-      [-7, 5],
-      [7, 5],
-    ]) {
-      rim(icx + dx, icz + dz);
-    }
-    this.placeOpeningNode(Tile.Ore, icx - 8, icz - 5);
-    this.placeOpeningNode(Tile.Gas, icx + 8, icz - 5);
-    this.placeOpeningNode(Tile.Solar, icx - 8, icz + 5);
-    this.placeOpeningNode(Tile.Ore, icx + 8, icz + 5);
   }
 
   /** One ground tile + gem entity — no multi-tile ore panel on the opening tableau. */
@@ -349,6 +361,19 @@ export class World {
       node.cargoType = kind;
       node.hp = kind === Tile.Ore ? 280 : kind === Tile.Gas ? 200 : 160;
       node.maxHp = node.hp;
+      node.radius = 0.55;
+    }
+  }
+
+  /** Decorative prop billboard — not gatherable. */
+  private placeProp(kind: Tile, cx: number, cz: number): void {
+    if (cx < 1 || cz < 1 || cx >= MAP - 1 || cz >= MAP - 1) return;
+    const prop = this.spawn(Kind.Resource, 'vespari', 3, cx + 0.5, cz + 0.5);
+    if (prop) {
+      prop.cargoType = kind;
+      prop.hp = 9999;
+      prop.maxHp = 9999;
+      prop.radius = 0.45;
     }
   }
 
@@ -493,6 +518,18 @@ export class World {
       pr.tx = cx - 1.35;
       pr.tz = zHelion;
       pr.cooldown = -0.12;
+    }
+
+    // Forward camps in the opening frustum — empire presence on the clash depth band.
+    this.spawn(Kind.House, a, 0, cx + 4.2, cz - 5.2);
+    this.spawn(Kind.House, b, 1, cx - 4.2, cz + 5.2);
+    for (let i = 0; i < 3; i++) {
+      const w = this.spawn(Kind.Worker, a, 0, cx + 3.2 + i * 0.55, cz - 6.2);
+      if (w) {
+        w.order = Ord.Gather;
+        w.tx = cx + 5;
+        w.tz = cz - 4;
+      }
     }
   }
 
@@ -860,6 +897,7 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.kind !== Kind.Resource) continue;
+      if (e.cargoType !== Tile.Ore && e.cargoType !== Tile.Gas && e.cargoType !== Tile.Solar) continue;
       const d = dist2(x, z, e.x, e.z);
       if (d < bestD) {
         bestD = d;
@@ -982,6 +1020,11 @@ export class World {
         const e = this.ents[i];
         if (!e.alive) continue;
         if (this.openingClashEnt(e)) e.vis = true;
+        if (e.kind === Kind.House || e.kind === Kind.Worker) {
+          const mdx = e.x - MAP * 0.5;
+          const mdz = e.z - MAP * 0.52;
+          if (mdx * mdx + mdz * mdz < 130) e.vis = true;
+        }
         if (e.kind === Kind.Resource) {
           const mdx = e.x - MAP * 0.5;
           const mdz = e.z - MAP * 0.52;

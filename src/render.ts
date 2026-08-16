@@ -203,12 +203,13 @@ export class GameRenderer {
       let scaleX: number;
       let scaleY: number;
       if (isBuilding(e.kind)) {
-        const targetH = 3.0;
+        const targetH = e.kind === Kind.Hall ? 2.4 : e.kind === Kind.House ? 1.42 : 1.85;
         const mul = targetH / cellsH;
         scaleX = cellsW * mul * e.facing;
         scaleY = cellsH * mul;
       } else if (e.kind === Kind.Resource) {
-        const targetH = 0.85;
+        const isProp = e.cargoType === Tile.PropWreck || e.cargoType === Tile.PropVent;
+        const targetH = isProp ? 0.95 : 1.05;
         const mul = targetH / cellsH;
         scaleX = cellsW * mul;
         scaleY = cellsH * mul;
@@ -313,6 +314,8 @@ export class GameRenderer {
     if (e.kind === Kind.Barracks) return this.atlas.uv[`${civ}-barracks`];
     if (e.kind === Kind.UniqueB) return this.atlas.uv[`${civ}-unique`];
     if (e.kind === Kind.Resource) {
+      if (e.cargoType === Tile.PropWreck) return this.atlas.uv['prop-wreck'];
+      if (e.cargoType === Tile.PropVent) return this.atlas.uv['prop-vent'];
       if (e.cargoType === Tile.Gas) return this.atlas.uv['gem-gas'];
       if (e.cargoType === Tile.Solar) return this.atlas.uv['gem-sol'];
       return this.atlas.uv['gem-ore'];
@@ -334,10 +337,13 @@ export class GameRenderer {
     const ctx = c.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
     const keys = ['tile-void', 'tile-dust', 'tile-rock', 'tile-ore', 'tile-gas', 'tile-sol'];
+    const dustKeys = ['tile-dust', 'tile-dust-b', 'tile-dust-c'];
     for (let z = 0; z < MAP; z++) {
       for (let x = 0; x < MAP; x++) {
         const t = world.tiles[x + z * MAP];
-        const uv = this.atlas.uv[keys[t] ?? 'tile-void'];
+        let key = keys[t] ?? 'tile-void';
+        if (t === Tile.Dust) key = dustKeys[(x * 13 + z * 7) % 3] ?? 'tile-dust';
+        const uv = this.atlas.uv[key];
         const sx = uv.u0 * this.atlas.canvas.width;
         const sy = (1 - uv.v1) * this.atlas.canvas.height;
         const isRes = t === Tile.Ore || t === Tile.Gas || t === Tile.Solar;
@@ -483,6 +489,7 @@ export class GameRenderer {
       if (!e.alive || !e.vis) continue;
       if (e.kind === Kind.Resource) continue;
       if (!this.drawnEntIds.has(e.id)) continue;
+      if (isBuilding(e.kind) && !selected.has(e.id) && e.hp >= e.maxHp * 0.995) continue;
       const show = selected.has(e.id) || e.hp < e.maxHp * 0.995 || e.team !== 0;
       if (!show) continue;
       const x = e.px + (e.x - e.px) * alpha;
