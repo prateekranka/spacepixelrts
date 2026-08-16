@@ -141,3 +141,12 @@ export const POP_HOUSE = 5;
 export const POP_HALL = 10;
 export const GATHER_MAX = 8;
 export const BUILD_HP_START = 0.08;
+
+export const EPOCH_NAME = ['Spark', 'Orbit', 'Dominion', 'Apex'] as const;
+
+/** Minimum epoch to train a unit from the Yard (DESIGN §4). */
+export function minTrainEpoch(kind: Kind): number {
+  if (kind === Kind.Fighter || kind === Kind.Shade) return 1;
+  if (kind === Kind.Siege || kind === Kind.Ravager || kind === Kind.Prism) return 2;
+  return 0;
+}

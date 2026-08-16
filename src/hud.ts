@@ -14,6 +14,8 @@ import {
   uniqueUnit,
   labelOf,
   isBuilding,
+  EPOCH_NAME,
+  minTrainEpoch,
 } from './content';
 import type { World } from './sim';
 import type { Input } from './input';
@@ -117,6 +119,7 @@ export class Hud {
       /* user uses hold/right-click; flash hint */
       this.hintEl.textContent = 'Hold or right-click the field to attack-move.';
     }
+    if (cmd === 'ageup') world.tryAgeUp(0);
     if (cmd.startsWith('train-')) {
       const kind = Number(cmd.slice(6)) as Kind;
       for (const id of input.selected) {
@@ -165,14 +168,16 @@ export class Hud {
   private renderCmds(world: World, input: Input, kind: Kind | null): void {
     const civ = world.civ[0];
     const eco = world.teams[0];
-    const trainBtn = (kind: Kind, label: string, sub?: string) => {
+    const aging = eco.ageT > 0;
+    const trainBtn = (kind: Kind, label: string, sub?: string, extraDisabled = false) => {
       const st = STATS[kind];
       const overCap = eco.pop + st.pop > eco.cap;
+      const locked = minTrainEpoch(kind) > eco.epoch;
       return {
         cmd: `train-${kind}`,
         label,
-        sub: overCap ? 'pop cap' : (sub ?? `${st.ore} ore`),
-        disabled: overCap,
+        sub: locked ? EPOCH_NAME[minTrainEpoch(kind)]! : overCap ? 'pop cap' : (sub ?? `${st.ore} ore`),
+        disabled: overCap || locked || extraDisabled,
       };
     };
     const btns: { cmd: string; label: string; sub?: string; disabled?: boolean }[] = [];
@@ -182,8 +187,16 @@ export class Hud {
       btns.push({ cmd: 'attack', label: 'Attack', sub: 'hold field', disabled: true });
       btns.push({ cmd: 'stop', label: 'Stop', sub: 'halt order', disabled: true });
     } else if (kind === Kind.Hall) {
-      btns.push(trainBtn(Kind.Worker, workerName(civ)));
-      btns.push(trainBtn(Kind.Scout, 'Scout'));
+      const canAge =
+        eco.epoch === 0 && !aging && eco.ore >= 400 && eco.energy >= 80;
+      btns.push({
+        cmd: 'ageup',
+        label: 'Spark → Orbit',
+        sub: aging ? `${Math.ceil(eco.ageT)}s` : '400 ore · 80 chg',
+        disabled: eco.epoch >= 1 || aging || !canAge,
+      });
+      btns.push(trainBtn(Kind.Worker, workerName(civ), undefined, aging));
+      btns.push(trainBtn(Kind.Scout, 'Scout', undefined, aging));
       btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: `${STATS[Kind.House].ore} ore` });
       btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: `${STATS[Kind.Barracks].ore} ore` });
       btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: `${STATS[Kind.UniqueB].ore} ore` });

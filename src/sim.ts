@@ -25,6 +25,7 @@ import {
   STATS,
   isBuilding,
   isUnit,
+  minTrainEpoch,
   uniqueUnit,
 } from './content';
 
@@ -39,10 +40,10 @@ export class World {
   readonly explored = [new Uint8Array(MAP * MAP), new Uint8Array(MAP * MAP)];
   readonly visible = [new Uint8Array(MAP * MAP), new Uint8Array(MAP * MAP)];
   readonly teams: TeamEco[] = [
-    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0 },
-    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0 },
-    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0 },
-    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0 },
+    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 },
+    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 },
+    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0 },
+    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0 },
   ];
   readonly civ: Civ[] = ['vespari', 'aurion', 'voidmarked', 'vespari'];
   readonly bolts: Bolt[] = [];
@@ -78,8 +79,8 @@ export class World {
       this.ents[i].id = i;
       this.free.push(i);
     }
-    this.teams[0] = { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0 };
-    this.teams[1] = { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0 };
+    this.teams[0] = { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 };
+    this.teams[1] = { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 };
     this.explored[0].fill(0);
     this.explored[1].fill(0);
     this.visible[0].fill(0);
@@ -184,11 +185,28 @@ export class World {
     }
   }
 
+  tryAgeUp(team: number): boolean {
+    const eco = this.teams[team];
+    if (eco.epoch !== 0 || eco.ageT > 0) return false;
+    if (eco.ore < 400 || eco.energy < 80) return false;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== team || e.kind !== Kind.Hall) continue;
+      if (e.trainT > 0) return false;
+    }
+    eco.ore -= 400;
+    eco.energy -= 80;
+    eco.ageT = 40;
+    return true;
+  }
+
   tryTrain(building: Ent, kind: Kind): boolean {
     if (!building.alive || !isBuilding(building.kind)) return false;
     if (building.trainT > 0) return false;
     const st = STATS[kind];
     const eco = this.teams[building.team];
+    if (building.kind === Kind.Hall && eco.ageT > 0) return false;
+    if (building.kind === Kind.Barracks && eco.epoch < minTrainEpoch(kind)) return false;
     if (eco.ore < st.ore || eco.gas < st.gas || eco.energy < st.energy) return false;
     if (eco.pop + st.pop > eco.cap) return false;
     eco.ore -= st.ore;
@@ -253,6 +271,7 @@ export class World {
     }
     this.thinkUnits();
     this.thinkBuildings();
+    this.stepAge();
     this.stepCorpses();
     this.moveSeparate();
     this.stepBolts();
@@ -786,6 +805,18 @@ export class World {
       b.hp = Math.min(b.maxHp, b.maxHp * b.progress);
       if (b.progress >= 1) e.order = Ord.Idle;
     } else this.steer(e, b.x, b.z, st.spd);
+  }
+
+  private stepAge(): void {
+    for (let t = 0; t < 2; t++) {
+      const eco = this.teams[t];
+      if (eco.ageT <= 0) continue;
+      eco.ageT -= DT;
+      if (eco.ageT <= 0) {
+        eco.ageT = 0;
+        if (eco.epoch === 0) eco.epoch = 1;
+      }
+    }
   }
 
   private thinkBuildings(): void {

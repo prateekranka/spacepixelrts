@@ -90,6 +90,10 @@ export interface TeamEco {
   energy: number;
   pop: number;
   cap: number;
+  /** 0 Spark · 1 Orbit · 2 Dominion · 3 Apex */
+  epoch: number;
+  /** seconds remaining on current age-up research */
+  ageT: number;
 }
 
 export interface Bolt {
