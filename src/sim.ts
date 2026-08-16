@@ -88,6 +88,21 @@ export class World {
     this.spawnScenario();
     this.recountPop();
     this.updateFog();
+    this.revealOpeningVision(MAP * 0.5, MAP * 0.52);
+    this.refreshVis();
+  }
+
+  private refreshVis(): void {
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive) continue;
+      if (e.team === 0) {
+        e.vis = true;
+        continue;
+      }
+      const idx = tileAt(e.x, e.z);
+      e.vis = this.visible[0][idx] === 1 && !(e.kind === Kind.Shade && e.stealth > 0.55);
+    }
   }
 
   spawn(kind: Kind, civ: Civ, team: number, x: number, z: number): Ent | null {
@@ -243,7 +258,7 @@ export class World {
         const n = hash2(x, z, this.seed);
         const n2 = hash2(x + 40, z + 11, this.seed ^ 9);
         let t = Tile.Void;
-        if (n > 0.62) t = Tile.Dust;
+        if (n > 0.46) t = Tile.Dust;
         if (n2 > 0.84) {
           t = Tile.Rock;
           this.block[x + z * MAP] = 1;
@@ -270,8 +285,69 @@ export class World {
     this.stampPatch(Tile.Ore, 9, rng);
     this.stampPatch(Tile.Gas, 6, rng);
     this.stampPatch(Tile.Solar, 5, rng);
+    this.stampOpeningGround();
     this.clearBase(10, 10);
     this.clearBase(MAP - 11, MAP - 11);
+  }
+
+  /** Dust pad + resource blips under the opening camera tableau. */
+  private stampOpeningGround(): void {
+    const cx = MAP * 0.5;
+    const cz = MAP * 0.52;
+    const icx = cx | 0;
+    const icz = cz | 0;
+    for (let z = -4; z <= 4; z++) {
+      for (let x = -6; x <= 6; x++) {
+        const xx = icx + x;
+        const zz = icz + z;
+        if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
+        this.tiles[xx + zz * MAP] = Tile.Dust;
+        this.block[xx + zz * MAP] = 0;
+      }
+    }
+    this.placePatch(Tile.Ore, icx - 4, icz + 2, 2.1);
+    this.placePatch(Tile.Gas, icx + 5, icz - 2, 1.7);
+    this.placePatch(Tile.Solar, icx + 1, icz - 4, 1.6);
+    this.placePatch(Tile.Ore, icx + 3, icz + 3, 1.5);
+  }
+
+  private placePatch(kind: Tile, cx: number, cz: number, r: number): void {
+    const r2 = r * r;
+    for (let z = -3; z <= 3; z++) {
+      for (let x = -3; x <= 3; x++) {
+        if (x * x + z * z > r2) continue;
+        const xx = cx + x;
+        const zz = cz + z;
+        if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
+        this.tiles[xx + zz * MAP] = kind;
+        this.block[xx + zz * MAP] = 0;
+      }
+    }
+    const node = this.spawn(Kind.Resource, 'vespari', 3, cx + 0.5, cz + 0.5);
+    if (node) {
+      node.cargoType = kind;
+      node.hp = kind === Tile.Ore ? 280 : kind === Tile.Gas ? 200 : 160;
+      node.maxHp = node.hp;
+    }
+  }
+
+  private revealOpeningVision(cx: number, cz: number): void {
+    const r = 9;
+    const r2 = r * r;
+    const icx = cx | 0;
+    const icz = cz | 0;
+    for (let z = icz - r; z <= icz + r; z++) {
+      if (z < 0 || z >= MAP) continue;
+      for (let x = icx - r; x <= icx + r; x++) {
+        if (x < 0 || x >= MAP) continue;
+        const dx = x + 0.5 - cx;
+        const dz = z + 0.5 - cz;
+        if (dx * dx + dz * dz > r2) continue;
+        const idx = x + z * MAP;
+        this.visible[0][idx] = 1;
+        this.explored[0][idx] = 1;
+      }
+    }
   }
 
   private stampPatch(kind: Tile, count: number, rng: () => number): void {
@@ -338,41 +414,36 @@ export class World {
     this.spawn(Kind.Scout, a, 0, 16, 14);
     this.spawn(Kind.Scout, b, 1, MAP - 16, MAP - 14);
 
-    // Opening clash — critic's first frame is a battle, not an empty field.
-    const mid = MAP * 0.5;
+    // Opening clash — packed 8×6 brawl centered on default camera look-at.
+    const cx = MAP * 0.5;
+    const cz = MAP * 0.52;
     for (let i = 0; i < 8; i++) {
       const col = i % 4;
       const row = (i / 4) | 0;
-      const f0 = this.spawn(Kind.Fighter, a, 0, mid - 6 + col * 0.9, mid - 3 + row * 0.85);
-      const f1 = this.spawn(Kind.Fighter, b, 1, mid + 4 + col * 0.9, mid + 2 + row * 0.85);
+      const f0 = this.spawn(Kind.Fighter, a, 0, cx - 3.8 + col * 0.85, cz - 1.2 + row * 0.95);
+      const f1 = this.spawn(Kind.Fighter, b, 1, cx + 2.2 + col * 0.85, cz - 0.8 + row * 0.95);
       if (f0) {
         f0.order = Ord.AttackMove;
-        f0.tx = mid + 5;
-        f0.tz = mid + 4;
+        f0.tx = cx + 4;
+        f0.tz = cz + 1;
       }
       if (f1) {
         f1.order = Ord.AttackMove;
-        f1.tx = mid - 5;
-        f1.tz = mid - 3;
+        f1.tx = cx - 4;
+        f1.tz = cz - 1;
       }
     }
-    const rv = this.spawn(Kind.Ravager, a, 0, mid - 4.5, mid - 1.5);
+    const rv = this.spawn(uniqueUnit(a), a, 0, cx - 2.4, cz + 1.8);
     if (rv) {
       rv.order = Ord.AttackMove;
-      rv.tx = mid + 4;
-      rv.tz = mid + 3;
+      rv.tx = cx + 3.5;
+      rv.tz = cz + 1.2;
     }
-    const pr = this.spawn(Kind.Prism, b, 1, mid + 6.5, mid + 3.2);
+    const pr = this.spawn(uniqueUnit(b), b, 1, cx + 3.6, cz + 1.6);
     if (pr) {
       pr.order = Ord.AttackMove;
-      pr.tx = mid - 4;
-      pr.tz = mid - 2;
-    }
-    const sh = this.spawn(uniqueUnit(b) === Kind.Shade ? Kind.Shade : Kind.Fighter, b, 1, mid + 3, mid + 5);
-    if (sh) {
-      sh.order = Ord.AttackMove;
-      sh.tx = mid - 2;
-      sh.tz = mid;
+      pr.tx = cx - 3.5;
+      pr.tz = cz;
     }
   }
 

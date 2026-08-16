@@ -14,11 +14,12 @@ export interface Atlas {
 }
 
 const PAL = {
-  ink: [12, 8, 22, 255],
-  void: [10, 8, 20, 255],
-  dust: [28, 22, 42, 255],
-  rock: [58, 48, 62, 255],
-  rockH: [86, 72, 90, 255],
+  ink: [18, 14, 30, 255],
+  void: [24, 20, 44, 255],
+  dust: [52, 46, 72, 255],
+  rock: [78, 68, 88, 255],
+  rockH: [108, 96, 118, 255],
+  dustE: [68, 60, 92, 255],
   ore: [198, 154, 72, 255],
   oreH: [240, 214, 120, 255],
   gas: [92, 168, 210, 255],
@@ -419,16 +420,36 @@ function drawUnique(civ: 'vespari' | 'aurion' | 'voidmarked'): Pix {
   return p;
 }
 
+function diamondEdge(p: Pix, edge: Rgba, shade: Rgba): void {
+  for (let i = 0; i <= 15; i++) {
+    p.set(16 - i, i, edge);
+    p.set(16 + i, i, edge);
+    p.set(16 - i, 31 - i, shade);
+    p.set(16 + i, 31 - i, shade);
+  }
+  p.set(16, 0, PAL.white);
+  p.set(31, 16, shade);
+  p.set(16, 31, shade);
+  p.set(0, 16, edge);
+}
+
 function drawTile(kind: 'void' | 'dust' | 'rock' | 'ore' | 'gas' | 'sol'): Pix {
   const p = Pix.alloc(CELL, CELL);
   const base =
-    kind === 'void' ? PAL.void : kind === 'dust' ? PAL.dust : kind === 'rock' ? PAL.rock : kind === 'ore' ? PAL.dust : kind === 'gas' ? PAL.void : PAL.dust;
+    kind === 'void' ? PAL.void : kind === 'dust' ? PAL.dust : kind === 'rock' ? PAL.rock : kind === 'ore' ? PAL.dust : kind === 'gas' ? PAL.dust : PAL.dust;
   p.fill(0, 0, CELL, CELL, base);
+  if (kind === 'dust' || kind === 'ore' || kind === 'gas' || kind === 'sol') {
+    diamondEdge(p, PAL.dustE, PAL.rock);
+  } else if (kind === 'rock') {
+    diamondEdge(p, PAL.rockH, PAL.rock);
+  } else {
+    diamondEdge(p, [32, 28, 52, 255], PAL.void);
+  }
   for (let i = 0; i < 18; i++) {
     const x = (i * 7 + kind.length * 3) % 32;
     const y = (i * 13 + 5) % 32;
     if (kind === 'void') p.set(x, y, PAL.white);
-    if (kind === 'dust') p.set(x, y, PAL.rock);
+    if (kind === 'dust') p.set(x, y, PAL.rockH);
     if (kind === 'rock') p.circ(10, 12, 6, PAL.rockH);
     if (kind === 'ore') {
       p.circ(12, 14, 5, PAL.ore);
