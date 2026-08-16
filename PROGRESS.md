@@ -5,11 +5,11 @@
 
 ## Now
 
-**Wave 2 P48 building** — P47 **PASS** for the match-arc skeleton (`eb865d9`). Live **`0.3.3-wave2`**.
+**Wave 2 P48 critic** — fighter wave shipped. Live **`0.3.4-wave2`**.
 
-Train, age, win/lose, scout peel all work. Opening still P41.
+At tick 400: 9 military / 4 Fighters AttackMove the Nexus. Opening still quiet at tick 80.
 
-**Biggest remaining gap vs AoE2:DE:** inbound pressure is three Scouts, not a fighter army. P48 sends a 6+ military wave after tick 240.
+**Next:** fresh critic on army-not-scouts.
 
 ## Biggest gap
 
@@ -21,5 +21,5 @@ Train, age, win/lose, scout peel all work. Opening still P41.
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P47 **PASS** skeleton; P48 fighter wave |
+| 2 gameplay depth | P48 live `0.3.4-wave2`; critic next |
 | 3–5 polish / iPad / coherence | queued |

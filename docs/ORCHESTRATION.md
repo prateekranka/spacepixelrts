@@ -92,7 +92,7 @@ Opening tableau is locked (P41). P20–P26 in the original plan were largely abs
 | P45 | Win/lose: destroy Nexus, banners | P43 | done | **PASS** `9091679` live 0.3.2-wave2 |
 | P46 | Enemy marshal threatens player Nexus during macro | P43 | done | **PASS** `2d055e1` live 0.3.3-wave2 (scout raid) |
 | P47 | Wave 2 critic: match arc vs AoE2:DE | P44–P46 | done | **PASS** skeleton `eb865d9`; gap = scout raid not army |
-| P48 | Enemy fighter wave (6+ military, ≥4 Fighters) | P47 | building | |
+| P48 | Enemy fighter wave (6+ military, ≥4 Fighters) | P47 | critic | builder `f8f7abc` live 0.3.4-wave2 |
 
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
