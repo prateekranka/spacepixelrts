@@ -433,6 +433,27 @@ function diamondEdge(p: Pix, edge: Rgba, shade: Rgba): void {
   p.set(0, 16, edge);
 }
 
+/** Tight ground gem — transparent padding, no magenta key. */
+function drawGem(kind: 'ore' | 'gas' | 'sol'): Pix {
+  const p = Pix.alloc(16, 16);
+  if (kind === 'ore') {
+    p.diam(8, 9, 5, PAL.ore);
+    p.set(6, 7, PAL.oreH);
+    p.set(9, 8, PAL.oreH);
+    p.set(8, 10, PAL.oreH);
+  } else if (kind === 'gas') {
+    p.diam(8, 8, 6, PAL.gas);
+    p.circ(7, 7, 2, PAL.gasH);
+    p.set(10, 9, PAL.gasH);
+  } else {
+    p.circ(8, 8, 5, PAL.sol);
+    p.circ(8, 8, 2, PAL.solH);
+    p.set(8, 5, PAL.solH);
+  }
+  p.finish();
+  return p;
+}
+
 function drawTile(kind: 'void' | 'dust' | 'rock' | 'ore' | 'gas' | 'sol'): Pix {
   const p = Pix.alloc(CELL, CELL);
   const base =
@@ -525,6 +546,22 @@ export function buildAtlas(): Atlas {
     uv[key] = uvAt(col, row, w, h);
   };
 
+  const putGem = (key: string, pix: Pix, col: number, row: number) => {
+    const ox = (CELL - pix.w) >> 1;
+    const oy = (CELL - pix.h) >> 1;
+    const x = col * CELL + ox;
+    const y = row * CELL + oy;
+    blit(ctx, pix, x, y);
+    uv[key] = {
+      u0: x / SHEET,
+      v0: 1 - (y + pix.h) / SHEET,
+      u1: (x + pix.w) / SHEET,
+      v1: 1 - y / SHEET,
+      w: pix.w,
+      h: pix.h,
+    };
+  };
+
   put('tile-void', drawTile('void'), 0, 0);
   put('tile-dust', drawTile('dust'), 1, 0);
   put('tile-rock', drawTile('rock'), 2, 0);
@@ -538,6 +575,9 @@ export function buildAtlas(): Atlas {
   put('bolt-beam', drawBolt('beam'), 10, 0);
   put('bolt-void', drawBolt('void'), 11, 0);
   put('bolt-rock', drawBolt('rock'), 12, 0);
+  putGem('gem-ore', drawGem('ore'), 0, 1);
+  putGem('gem-gas', drawGem('gas'), 1, 1);
+  putGem('gem-sol', drawGem('sol'), 2, 1);
 
   const civs = ['vespari', 'aurion', 'voidmarked'] as const;
   const roles = ['worker', 'scout', 'fighter', 'siege', 'ravager', 'prism', 'shade'] as const;

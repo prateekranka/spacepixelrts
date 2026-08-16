@@ -305,10 +305,24 @@ export class World {
         this.block[xx + zz * MAP] = 0;
       }
     }
-    this.placePatch(Tile.Ore, icx - 4, icz + 2, 2.1);
-    this.placePatch(Tile.Gas, icx + 5, icz - 2, 1.7);
-    this.placePatch(Tile.Solar, icx + 1, icz - 4, 1.6);
-    this.placePatch(Tile.Ore, icx + 3, icz + 3, 1.5);
+    // Ring resource nodes outside the brawl pad — single-tile markers + small gem entities.
+    this.placeOpeningNode(Tile.Ore, icx - 9, icz);
+    this.placeOpeningNode(Tile.Gas, icx + 9, icz - 1);
+    this.placeOpeningNode(Tile.Solar, icx, icz - 8);
+    this.placeOpeningNode(Tile.Ore, icx + 1, icz + 8);
+  }
+
+  /** One ground tile + gem entity — no multi-tile ore panel on the opening tableau. */
+  private placeOpeningNode(kind: Tile, cx: number, cz: number): void {
+    if (cx < 1 || cz < 1 || cx >= MAP - 1 || cz >= MAP - 1) return;
+    this.tiles[cx + cz * MAP] = kind;
+    this.block[cx + cz * MAP] = 0;
+    const node = this.spawn(Kind.Resource, 'vespari', 3, cx + 0.5, cz + 0.5);
+    if (node) {
+      node.cargoType = kind;
+      node.hp = kind === Tile.Ore ? 280 : kind === Tile.Gas ? 200 : 160;
+      node.maxHp = node.hp;
+    }
   }
 
   private placePatch(kind: Tile, cx: number, cz: number, r: number): void {
@@ -355,23 +369,11 @@ export class World {
       const cx = 8 + (rng() * (MAP - 16)) | 0;
       const cz = 8 + (rng() * (MAP - 16)) | 0;
       if ((cx < 18 && cz < 18) || (cx > MAP - 18 && cz > MAP - 18)) continue;
+      const mdx = cx + 0.5 - MAP * 0.5;
+      const mdz = cz + 0.5 - MAP * 0.52;
+      if (mdx * mdx + mdz * mdz < 14 * 14) continue;
       const r = kind === Tile.Ore ? 2 : 1.6;
-      for (let z = -3; z <= 3; z++) {
-        for (let x = -3; x <= 3; x++) {
-          if (x * x + z * z > r * r) continue;
-          const xx = cx + x;
-          const zz = cz + z;
-          if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
-          this.tiles[xx + zz * MAP] = kind;
-          this.block[xx + zz * MAP] = 0;
-        }
-      }
-      const node = this.spawn(Kind.Resource, 'vespari', 3, cx + 0.5, cz + 0.5);
-      if (node) {
-        node.cargoType = kind;
-        node.hp = kind === Tile.Ore ? 280 : kind === Tile.Gas ? 200 : 160;
-        node.maxHp = node.hp;
-      }
+      this.placePatch(kind, cx, cz, r);
     }
   }
 
@@ -420,8 +422,8 @@ export class World {
     for (let i = 0; i < 8; i++) {
       const col = i % 4;
       const row = (i / 4) | 0;
-      const f0 = this.spawn(Kind.Fighter, a, 0, cx - 3.8 + col * 0.85, cz - 1.2 + row * 0.95);
-      const f1 = this.spawn(Kind.Fighter, b, 1, cx + 2.2 + col * 0.85, cz - 0.8 + row * 0.95);
+      const f0 = this.spawn(Kind.Fighter, a, 0, cx - 3.8 + col * 1.15, cz - 1.2 + row * 1.25);
+      const f1 = this.spawn(Kind.Fighter, b, 1, cx + 2.2 + col * 1.15, cz - 0.8 + row * 1.25);
       if (f0) {
         f0.order = Ord.AttackMove;
         f0.tx = cx + 4;

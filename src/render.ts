@@ -203,21 +203,35 @@ export class GameRenderer {
         const mul = targetH / cellsH;
         scaleX = cellsW * mul * e.facing;
         scaleY = cellsH * mul;
+      } else if (e.kind === Kind.Resource) {
+        const targetH = 0.85;
+        const mul = targetH / cellsH;
+        scaleX = cellsW * mul;
+        scaleY = cellsH * mul;
       } else {
         scaleX = cellsW * 2.15 * e.facing;
         scaleY = cellsH * 2.25;
       }
-      this.dummy.position.set(x, isBuilding(e.kind) ? 1.15 : 0.9, z);
+      const lift = e.kind === Kind.Resource ? 0.38 : isBuilding(e.kind) ? 1.15 : 0.9;
+      this.dummy.position.set(x, lift, z);
       this.dummy.quaternion.copy(this.lastCamQ);
       this.dummy.scale.set(scaleX, scaleY, 1);
       this.dummy.updateMatrix();
       this.mesh.setMatrixAt(drawn, this.dummy.matrix);
 
-      this.dummy.position.set(x, 0.03, z);
-      this.dummy.quaternion.identity();
-      this.dummy.scale.set(e.radius * 2.2, 1, e.radius * 1.6);
-      this.dummy.updateMatrix();
-      this.shadows.setMatrixAt(drawn, this.dummy.matrix);
+      if (e.kind === Kind.Resource) {
+        this.dummy.position.set(x, 0.03, z);
+        this.dummy.quaternion.identity();
+        this.dummy.scale.set(e.radius * 1.1, 1, e.radius * 0.85);
+        this.dummy.updateMatrix();
+        this.shadows.setMatrixAt(drawn, this.dummy.matrix);
+      } else {
+        this.dummy.position.set(x, 0.03, z);
+        this.dummy.quaternion.identity();
+        this.dummy.scale.set(e.radius * 2.2, 1, e.radius * 1.6);
+        this.dummy.updateMatrix();
+        this.shadows.setMatrixAt(drawn, this.dummy.matrix);
+      }
 
       uvArr[drawn * 4] = uv.u0;
       uvArr[drawn * 4 + 1] = uv.v0;
@@ -294,9 +308,9 @@ export class GameRenderer {
     if (e.kind === Kind.Barracks) return this.atlas.uv[`${civ}-barracks`];
     if (e.kind === Kind.UniqueB) return this.atlas.uv[`${civ}-unique`];
     if (e.kind === Kind.Resource) {
-      if (e.cargoType === Tile.Gas) return this.atlas.uv['tile-gas'];
-      if (e.cargoType === Tile.Solar) return this.atlas.uv['tile-sol'];
-      return this.atlas.uv['tile-ore'];
+      if (e.cargoType === Tile.Gas) return this.atlas.uv['gem-gas'];
+      if (e.cargoType === Tile.Solar) return this.atlas.uv['gem-sol'];
+      return this.atlas.uv['gem-ore'];
     }
     const role = roleOfKind(e.kind);
     let f = 0;
