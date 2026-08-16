@@ -55,6 +55,10 @@ export class GameRenderer {
   private stars!: THREE.Points;
   private nebula!: THREE.Points;
   private readonly drawnEntIds = new Set<number>();
+  private lastDrawn = 0;
+  private readonly viewBounds = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
+  private readonly lookTarget = new THREE.Vector3();
+  private readonly lookDir = new THREE.Vector3();
 
   constructor(host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -183,6 +187,8 @@ export class GameRenderer {
 
   draw(world: World, alpha: number, selected: Set<number>, box: { x0: number; y0: number; x1: number; y1: number } | null): void {
     this.camera.getWorldQuaternion(this.lastCamQ);
+    this.updateViewBounds(1);
+    const vb = this.viewBounds;
     this.drawnEntIds.clear();
     let drawn = 0;
     const uvArr = this.iUv.array as Float32Array;
@@ -195,6 +201,7 @@ export class GameRenderer {
       if (e.kind === Kind.Shade && e.stealth > 0.7 && e.team !== 0) continue;
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
+      if (x < vb.minX || x > vb.maxX || z < vb.minZ || z > vb.maxZ) continue;
       const uv = this.uvFor(e);
       if (!uv) continue;
 
@@ -272,6 +279,7 @@ export class GameRenderer {
 
     for (const b of world.bolts) {
       if (drawn >= MAX_ENTS) break;
+      if (b.x < vb.minX || b.x > vb.maxX || b.z < vb.minZ || b.z > vb.maxZ) continue;
       const key =
         b.kind === Kind.Prism ? 'bolt-beam' : b.kind === Kind.Siege ? 'bolt-rock' : b.kind === Kind.Shade ? 'bolt-void' : 'bolt-sting';
       const uv = this.atlas.uv[key];
@@ -299,6 +307,7 @@ export class GameRenderer {
 
     for (const s of world.sparks) {
       if (!s.active || drawn >= MAX_ENTS) break;
+      if (s.x < vb.minX || s.x > vb.maxX || s.z < vb.minZ || s.z > vb.maxZ) continue;
       const key = s.kind === 0 ? `spark-muzzle-${s.civ}` : `spark-impact-${s.civ}`;
       const uv = this.atlas.uv[key];
       if (!uv) continue;
@@ -326,6 +335,7 @@ export class GameRenderer {
       drawn++;
     }
 
+    this.lastDrawn = drawn;
     this.mesh.count = drawn;
     this.shadows.count = drawn;
     this.mesh.instanceMatrix.needsUpdate = true;
@@ -355,8 +365,31 @@ export class GameRenderer {
     };
   }
 
-  info(): { calls: number; tris: number } {
-    return { calls: this.renderer.info.render.calls, tris: this.renderer.info.render.triangles };
+  info(): { calls: number; tris: number; drawn: number } {
+    return {
+      calls: this.renderer.info.render.calls,
+      tris: this.renderer.info.render.triangles,
+      drawn: this.lastDrawn,
+    };
+  }
+
+  /** World-space xz AABB for the visible ground patch (+margin tiles). */
+  private updateViewBounds(margin: number): void {
+    const b = this.viewBounds;
+    const halfW = (this.camera.right - this.camera.left) * 0.5;
+    const halfH = (this.camera.top - this.camera.bottom) * 0.5;
+    // Angled ortho frustum: span along world x/z is ~ sum of camera half-extents.
+    const ex = halfW + halfH;
+    const ez = halfW + halfH;
+    this.camera.getWorldDirection(this.lookDir);
+    const dist = -this.camera.position.y / this.lookDir.y;
+    this.lookTarget.copy(this.camera.position).addScaledVector(this.lookDir, dist);
+    const cx = this.lookTarget.x;
+    const cz = this.lookTarget.z;
+    b.minX = cx - ex - margin;
+    b.maxX = cx + ex + margin;
+    b.minZ = cz - ez - margin;
+    b.maxZ = cz + ez + margin;
   }
 
   private uvFor(e: Ent) {
