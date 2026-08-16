@@ -54,6 +54,7 @@ export class GameRenderer {
   private lastCamQ = new THREE.Quaternion();
   private stars!: THREE.Points;
   private nebula!: THREE.Points;
+  private readonly drawnEntIds = new Set<number>();
 
   constructor(host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -182,6 +183,7 @@ export class GameRenderer {
 
   draw(world: World, alpha: number, selected: Set<number>, box: { x0: number; y0: number; x1: number; y1: number } | null): void {
     this.camera.getWorldQuaternion(this.lastCamQ);
+    this.drawnEntIds.clear();
     let drawn = 0;
     const uvArr = this.iUv.array as Float32Array;
     const teamArr = this.iTeam.array as Float32Array;
@@ -244,6 +246,7 @@ export class GameRenderer {
       teamArr[drawn * 3 + 1] = rgb[1];
       teamArr[drawn * 3 + 2] = rgb[2];
       flashArr[drawn] = e.cooldown > 0.55 && e.kind !== Kind.Resource ? 0.22 : 0;
+      this.drawnEntIds.add(e.id);
       drawn++;
     }
 
@@ -479,6 +482,7 @@ export class GameRenderer {
       const e = world.ents[i];
       if (!e.alive || !e.vis) continue;
       if (e.kind === Kind.Resource) continue;
+      if (!this.drawnEntIds.has(e.id)) continue;
       const show = selected.has(e.id) || e.hp < e.maxHp * 0.995 || e.team !== 0;
       if (!show) continue;
       const x = e.px + (e.x - e.px) * alpha;

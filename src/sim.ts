@@ -434,51 +434,43 @@ export class World {
     this.spawn(Kind.Scout, a, 0, 16, 14);
     this.spawn(Kind.Scout, b, 1, MAP - 16, MAP - 14);
 
-    // Opening clash — 12v12 Fighters + uniques in a 10×6 tile box, crossing AttackMove.
+    // Opening clash — both wings on the camera depth plane (same X center), separated on Z.
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
-    const gap = 2.2;
-    const front0 = cx - gap * 0.5;
-    const front1 = cx + gap * 0.5;
-    const zCols = [-2.0, 0, 2.0];
-    const xDepth = [0, -0.85, -1.7, -2.55];
-    let slot = 0;
-    for (let row = 0; row < 4; row++) {
-      for (let col = 0; col < 3; col++) {
-        const jx = (slot % 5) * 0.07 - 0.14;
-        const jz = ((slot * 3) % 5) * 0.06 - 0.12;
-        const z = cz + zCols[col] + jz;
-        const x0 = front0 + xDepth[row] + jx;
-        const x1 = front1 - xDepth[row] - jx;
-        const f0 = this.spawn(Kind.Fighter, a, 0, x0, z);
-        const f1 = this.spawn(Kind.Fighter, b, 1, x1, z);
-        if (f0) {
-          f0.order = Ord.AttackMove;
-          f0.tx = cx + 5.5;
-          f0.tz = cz + (col - 1) * 0.4;
-          f0.cooldown = -0.12 * (slot % 6);
-        }
-        if (f1) {
-          f1.order = Ord.AttackMove;
-          f1.tx = cx - 5.5;
-          f1.tz = cz + (col - 1) * 0.4;
-          f1.cooldown = -0.1 * ((slot + 2) % 6);
-        }
-        slot++;
+    const zHelion = cz - 1.8;
+    const zKryos = cz + 1.8;
+    const xOffsets = [-1.1, -0.55, 0, 0.55, 1.1, -0.85, 0, 0.85];
+    for (let i = 0; i < 8; i++) {
+      const jx = (i % 3) * 0.04 - 0.04;
+      const jz = ((i * 2) % 3) * 0.04 - 0.04;
+      const x = cx + xOffsets[i] + jx;
+      const f0 = this.spawn(Kind.Fighter, a, 0, x, zHelion + jz);
+      const f1 = this.spawn(Kind.Fighter, b, 1, x, zKryos - jz);
+      if (f0) {
+        f0.order = Ord.AttackMove;
+        f0.tx = cx;
+        f0.tz = zKryos;
+        f0.cooldown = -0.12 * (i % 6);
+      }
+      if (f1) {
+        f1.order = Ord.AttackMove;
+        f1.tx = cx;
+        f1.tz = zHelion;
+        f1.cooldown = -0.1 * ((i + 2) % 6);
       }
     }
-    const rv = this.spawn(uniqueUnit(a), a, 0, front0 - 3.0, cz);
+    const rv = this.spawn(uniqueUnit(a), a, 0, cx - 1.6, zHelion);
     if (rv) {
       rv.order = Ord.AttackMove;
-      rv.tx = cx + 6;
-      rv.tz = cz;
+      rv.tx = cx;
+      rv.tz = zKryos;
       rv.cooldown = -0.2;
     }
-    const pr = this.spawn(uniqueUnit(b), b, 1, front1 + 3.0, cz);
+    const pr = this.spawn(uniqueUnit(b), b, 1, cx - 1.6, zKryos);
     if (pr) {
       pr.order = Ord.AttackMove;
-      pr.tx = cx - 6;
-      pr.tz = cz;
+      pr.tx = cx;
+      pr.tz = zHelion;
       pr.cooldown = -0.15;
     }
   }
@@ -507,11 +499,21 @@ export class World {
         if (target) {
           e.tid = target.id;
           const d = Math.sqrt(dist2(e.x, e.z, target.x, target.z));
+          const clashZ = MAP * 0.52;
+          const crossedCenter = e.team === 0 ? e.z >= clashZ : e.z <= clashZ;
+          const marchThrough =
+            this.tick < 90 &&
+            e.order === Ord.AttackMove &&
+            this.openingClashEnt(e) &&
+            !st.melee &&
+            !crossedCenter;
           if (d <= this.strikeRange(e, st, target)) {
-            e.vx = e.vz = 0;
-            e.path = null;
             this.tryStrike(e, target, st);
-            continue;
+            if (!marchThrough) {
+              e.vx = e.vz = 0;
+              e.path = null;
+              continue;
+            }
           }
           if (e.order === Ord.Idle && d < st.los) {
             e.order = Ord.Attack;
@@ -524,8 +526,15 @@ export class World {
       if (e.order === Ord.Gather || e.order === Ord.Return) this.thinkGather(e);
       else if (e.order === Ord.Build) this.thinkBuild(e);
       else if (e.order === Ord.Move || e.order === Ord.Attack || e.order === Ord.AttackMove) {
-        const gx = target && e.order !== Ord.Move ? target.x : e.tx;
-        const gz = target && e.order !== Ord.Move ? target.z : e.tz;
+        const clashZ = MAP * 0.52;
+        const crossedCenter = e.team === 0 ? e.z >= clashZ : e.z <= clashZ;
+        const openingMarch =
+          this.tick < 90 &&
+          e.order === Ord.AttackMove &&
+          this.openingClashEnt(e) &&
+          !crossedCenter;
+        const gx = target && e.order !== Ord.Move && !openingMarch ? target.x : e.tx;
+        const gz = target && e.order !== Ord.Move && !openingMarch ? target.z : e.tz;
         this.steer(e, gx, gz, st.spd * (1 + e.frenzy * 0.08));
         if (e.order === Ord.Move && dist2(e.x, e.z, e.tx, e.tz) < 0.16) {
           e.order = Ord.Idle;
@@ -657,18 +666,18 @@ export class World {
       dmg *
       (isBuilding(t.kind) && e.kind === Kind.Siege ? 1.8 : 1) *
       (e.civ === 'aurion' ? 0.92 : 1) *
-      (this.tick < 120 && this.openingClashEnt(e) ? 0.62 : 1);
+      (this.tick < 150 && this.openingClashEnt(e) ? 0.42 : 1);
     if (st.melee) {
       t.hp -= applied * bonus;
       e.cooldown = e.kind === Kind.Ravager ? 0.72 : 0.85;
       if (e.kind === Kind.Ravager && t.hp <= 0) e.frenzy = Math.min(6, e.frenzy + 1);
     } else {
       this.spawnBolt(e, t, applied * bonus, e.kind === Kind.Prism ? 11 : e.kind === Kind.Siege ? 6.5 : 8.5);
-      const opening = this.tick < 120 && this.openingClashEnt(e);
+      const opening = this.tick < 150 && this.openingClashEnt(e);
       e.cooldown = opening
         ? e.kind === Kind.Prism
-          ? 0.62
-          : 0.48
+          ? 0.72
+          : 0.58
         : e.kind === Kind.Prism
           ? 1.15
           : 0.95;
