@@ -6,6 +6,7 @@ import { Kind, MAP, MAX_ENTS, Tile, DISSOLVE_DUR, type Ent } from './engine';
 import { TEAM_RGB, isBuilding } from './content';
 import type { World } from './sim';
 import { VfxRenderer } from './vfx';
+import { buildTerrainMesh } from './terrain';
 
 const VERT = /* glsl */ `
 attribute vec4 iUv;
@@ -367,58 +368,7 @@ export class GameRenderer {
   }
 
   private buildMap(world: World): void {
-    const s = 32;
-    const c = document.createElement('canvas');
-    c.width = MAP * s;
-    c.height = MAP * s;
-    const ctx = c.getContext('2d')!;
-    ctx.imageSmoothingEnabled = false;
-    const keys = ['tile-void', 'tile-dust', 'tile-rock', 'tile-ore', 'tile-gas', 'tile-sol'];
-    const dustKeys = ['tile-dust', 'tile-dust-b', 'tile-dust-c'];
-    for (let z = 0; z < MAP; z++) {
-      for (let x = 0; x < MAP; x++) {
-        const t = world.tiles[x + z * MAP];
-        let key = keys[t] ?? 'tile-void';
-        if (t === Tile.Dust) key = dustKeys[(x * 13 + z * 7) % 3] ?? 'tile-dust';
-        const uv = this.atlas.uv[key];
-        const sx = uv.u0 * this.atlas.canvas.width;
-        const sy = (1 - uv.v1) * this.atlas.canvas.height;
-        const isRes = t === Tile.Ore || t === Tile.Gas || t === Tile.Solar;
-        const bleed = isRes ? 10 : 0;
-        const dx = x * s - bleed;
-        const dz = z * s - bleed;
-        const ds = s + bleed * 2;
-        ctx.drawImage(this.atlas.canvas, sx, sy, CELL, CELL, dx, dz, ds, ds);
-      }
-    }
-    const icx = (MAP * 0.5) | 0;
-    const icz = (MAP * 0.52) | 0;
-    const rockUv = this.atlas.uv['tile-rock'];
-    const rsx = rockUv.u0 * this.atlas.canvas.width;
-    const rsy = (1 - rockUv.v1) * this.atlas.canvas.height;
-    let decals = 0;
-    for (let i = 0; decals < 8 && i < 48; i++) {
-      const dx = ((i * 17 + 5) % 27) - 13;
-      const dz = ((i * 11 + 3) % 20) - 10;
-      if (Math.abs(dz) <= 4) continue;
-      const tx = icx + dx;
-      const tz = icz + dz;
-      if (tx < 1 || tz < 1 || tx >= MAP - 2 || tz >= MAP - 2) continue;
-      const px = tx * s;
-      const pz = tz * s;
-      ctx.drawImage(this.atlas.canvas, rsx, rsy, CELL, CELL, px, pz, s * 2, s * 2);
-      decals++;
-    }
-    const tex = new THREE.CanvasTexture(c);
-    tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.NearestFilter;
-    tex.generateMipmaps = false;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.flipY = true;
-    const mat = new THREE.MeshBasicMaterial({ map: tex });
-    this.mapMesh = new THREE.Mesh(new THREE.PlaneGeometry(MAP, MAP), mat);
-    this.mapMesh.rotation.x = -Math.PI / 2;
-    this.mapMesh.position.set(MAP / 2, 0, MAP / 2);
+    this.mapMesh = buildTerrainMesh(world);
     this.scene.add(this.mapMesh);
   }
 
