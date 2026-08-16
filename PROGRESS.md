@@ -5,20 +5,23 @@
 
 ## Now
 
-Composer 2.5 **P15 critic: FAIL**. P12 closer zoom shipped (`halfH` 5, min zoom 4). Fresh **P16 critic** is in flight on the post-zoom live build.
+**P27 critic FAIL.** Hold-fire ranks finally pass (two countable wings, bolts, HUD, p99 4.1ms). Single gap: the opening shot is still a **skirmish on an empty dotted grid**, not a place you would command.
+
+P28 builder next: terrain craft + in-frustum camp/economy so the camera is a belt, not a shadertoy.
 
 ## Biggest gap
 
-The opening canvas still does not read as an AoE2 battle: too few units in frame, terrain too dark, palette too muddy. P15 named it. P12 made infantry larger; next fail will name whether framing or art is still the one gap.
+The frustum must look like a **place** (dust variation, rock, gems, a scrap of base/workers) around the two ranks — not 75% void grid.
 
 ## Tracker
 
 | Id | Status |
 |---|---|
-| P00–P02 docs / harness / deploy | done |
-| P10–P14 sim / input / map | shipped |
-| P11 / P20 silhouettes | iterate (punched, still blob-adjacent) |
-| P12 closer zoom | shipped, awaiting P16 critic |
-| P15 Wave 1 critic | **FAIL** — dark postage-stamp fight, 280 colors |
-| P16 critic (post-zoom) | in flight |
-| P40–P50 | queued |
+| P00–P02 | docs, harness, deploy — done |
+| P12 | closer zoom — done |
+| P19 | gem nodes — done |
+| P21 | battle lines — shipped |
+| P25 | depth-plane wings — shipped |
+| P27 | hold-fire ranks — shipped; critic FAIL (place) |
+| P15/P16/P18/P20/P22/P24/P26/P27 critics | FAIL |
+| P28 | queued — fill frustum as a world |

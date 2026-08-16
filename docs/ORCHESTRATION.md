@@ -127,4 +127,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-Units and terrain read as dark blobs vs AoE2:DE (avg luma 29 on https://spacepixelrts.pages.dev). P11b is the fix.
+P27 critic FAIL: hold-fire ranks **pass** (two countable wings, bolts, HUD, p99). Gap is **empire presence** — dust/rock/gems do not read; fight floats on a dotted void grid (~75% near-void palette). P28: make the frustum a place.

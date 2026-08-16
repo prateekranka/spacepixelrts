@@ -173,7 +173,7 @@ Must match AoE2's "I can read the fight":
 - **Map:** 64×64 tiles. Tiles: `Void | Dust | Rock | Ore | Gas | Solar`. Rock blocks pathing.
 - **Bases:** Player Spark base at ~(10,10), enemy at ~(53,53). Cleared dust pads 13×13.
 - **Nodes:** ~9 ore patches, 6 gas, 5 solar, not inside starting pads.
-- **Opening tableau (first frame the critic sees):** not an empty field. Mid-map, two Fighter clumps (8 vs 8) already AttackMoving through each other, plus one unique each. Workers already walking to the nearest ore. This is the "wow or not" shot.
+- **Opening tableau (first frame the critic sees):** not an empty field and **not one overlap pile**. Mid-map, two **facing ranks** (8 vs 8 Fighters plus one unique each) on the **same camera depth (world X)**, split on **world Z** (screen left/right). They **hold `Ord.Attack` in place** and exchange bolts across a gap — they must **not** AttackMove into a single stack. Each sprite is countable (pitch > billboard scale). Dust/rock/gems fill the frustum; workers walk to ore off-camera. This is the "wow or not" shot.
 
 Enemy is a **scripted AI** (P-wave 2): keep 8 workers, train fighters, attack-move the player's Nexus when 6+ military exist. Not a ladder bot. It must look alive.
 
