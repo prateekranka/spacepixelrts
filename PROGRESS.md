@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 4 P60** — viewport culling. Live **`0.5.0-wave4`**. P59 named the gap.
+**Wave 4 P61 critic** — P60 shipped **`0.5.1-wave4`** (viewport AABB cull + `rendererInfo.drawn`). Live deployed.
 
-Opening still P41. Later Wave 4: HUD safe-area, Attack-lock pick radius. Do not raise `MAX_ENTS` in P60.
+Opening still P41. P60 leftover: HUD safe-area, Attack-lock, `MAX_ENTS` 384.
 
-**Next:** P60 builder, then fresh critic.
+**Next:** fresh critic on live cull vs opening tableau.
 
 ## Biggest gap
 
-**Renderer uploads every instance with no viewport cull** (`MAX_ENTS` 384). Off-screen horde should not grow `mesh.count`.
+**P60 in critic.** Off-screen horde must not grow `drawn`; opening clash must still upload.
 
 ## Tracker
 
@@ -23,5 +23,5 @@ Opening still P41. Later Wave 4: HUD safe-area, Attack-lock pick radius. Do not 
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
-| 4 performance / iPad / bugs | P59 done; P60 culling |
+| 4 performance / iPad / bugs | P60 shipped; P61 critic |
 | 5 full 1v1 coherence | queued |
