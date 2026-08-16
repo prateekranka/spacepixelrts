@@ -5,9 +5,11 @@
 
 ## Now
 
-**Wave 2 P49 building** — P48 **PASS** (`2980232`). Live **`0.3.4-wave2`**. Nine inbound, four Fighters.
+**Wave 2 P49 critic** — mixed-arms shipped. Live **`0.3.5-wave2`**.
 
-**Gap:** still scout-heavy (5 scouts / 4 fighters, no siege). P49 mixed-arms wave.
+P48 army **PASS**. P49: Dominion marshal, siege head-start, stop scout spam after 240.
+
+**Next:** fresh critic on fighters+siege inbound.
 
 ## Biggest gap
 
@@ -19,5 +21,5 @@
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P48 **PASS**; P49 mixed-arms wave |
+| 2 gameplay depth | P49 live `0.3.5-wave2`; critic next |
 | 3–5 polish / iPad / coherence | queued |
