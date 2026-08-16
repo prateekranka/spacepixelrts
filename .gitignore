@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.*
+.wrangler/
+playwright-report/
+test-results/
+critic/out/
+.vite/
+*.tsbuildinfo
+.cursor/
+tasks/*.log
+tasks-orchestrator.log

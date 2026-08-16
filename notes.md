@@ -207,3 +207,97 @@ So the critic's visual loop is fully unblocked — no dependency on the dead `mo
 (gemini 429 / claude / antigravity). Updated `ORCHESTRATOR_BRIEF.md` §8 accordingly.
 
 - Mode: **silent monitoring** — user will check back; keep logging to notes.md only.
+
+### checkpoint 2026-08-16 10:41:28
+- **orchestrator: RUNNING** (pid 20606, elapsed 09:24)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package.json
+  ./public/progress.html
+  ./scripts/monitor.sh
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/sim.ts
+  ./tasks-monitor.log
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  f70d8eb vision: use Grok 4.6 XHigh for critic visual judgment (verified working)
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL TodoWrite {'merge': False, 'todos': [{'id': 'docs', 'content': 'Write ARCHITECTURE.md, DESIGN.md, ORCHESTRATION.md, PROGRESS.md', 
+  A: Design is locked: three original civs, isometric pixel pipeline, fixed-tick sim. Next I’ll write the contract docs, then scaffold and deploy.
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/docs/DESIGN.md', 'contents': '# Spacepixel RTS — Design\n\nWorking ti
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/docs/ARCHITECTURE.md', 'contents': "# Spacepixel RTS — Architecture\n
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/docs/ORCHESTRATION.md', 'contents': '# Spacepixel RTS — Orchestration
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/PROGRESS.md', 'contents': "# Starhold — live status\n\n**Live:** http
+  A: Docs are in place. Next I’ll scaffold a pixel-crisp isometric boot so the first deploy already looks like a battlefield, not a blank canvas.
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/.gitignore', 'contents': 'node_modules/\ndist/\n.DS_Store\n*.log\n.en
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/package.json', 'contents': '{\n  "name": "spacepixelrts",\n  "private
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/tsconfig.json', 'contents': '{\n  "compilerOptions": {\n    "target":
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/vite.config.ts', 'contents': "import { defineConfig } from 'vite';\n\
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/index.html', 'contents': '<!doctype html>\n<html lang="en">\n  <head>
+
+### checkpoint 2026-08-16 10:44:28
+- **orchestrator: RUNNING** (pid 20606, elapsed 12:24)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./dist/assets/index-Cjoq_b9Z.js
+  ./dist/assets/index-Cjoq_b9Z.js.map
+  ./dist/index.html
+  ./dist/progress.html
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package-lock.json
+  ./package.json
+  ./public/progress.html
+  ./scripts/measure.mjs
+  ./scripts/monitor.sh
+  ./scripts/screenshot.mjs
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/content.ts
+  ./src/engine.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/render/atlas.ts
+  ./src/render/palette.ts
+  ./src/sim.ts
+  ./src/sim/engine.ts
+  ./tasks-monitor.log
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  f70d8eb vision: use Grok 4.6 XHigh for critic visual judgment (verified working)
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/docs/ARCHITECTURE.md', 'contents': "# Spacepixel RTS — Architecture\n
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/docs/ORCHESTRATION.md', 'contents': '# Spacepixel RTS — Orchestration
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/PROGRESS.md', 'contents': "# Starhold — live status\n\n**Live:** http
+  A: Docs are in place. Next I’ll scaffold a pixel-crisp isometric boot so the first deploy already looks like a battlefield, not a blank canvas.
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/.gitignore', 'contents': 'node_modules/\ndist/\n.DS_Store\n*.log\n.en
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/package.json', 'contents': '{\n  "name": "spacepixelrts",\n  "private
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/tsconfig.json', 'contents': '{\n  "compilerOptions": {\n    "target":
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/vite.config.ts', 'contents': "import { defineConfig } from 'vite';\n\
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/index.html', 'contents': '<!doctype html>\n<html lang="en">\n  <head>
+  TOOL Write {'contents': "/** Shared sim constants and enums. P10 owns behavior; these IDs are locked. */\n\nexport const TICK_HZ = 
+  TOOL Write {'contents': '/** Master palette. All atlas pixels must land on these (plus magenta key + 0 alpha). */\n\nexport const P
+  TOOL Write {'contents': "import { Kind, type Civ } from '../sim/engine';\nimport { MAG, PAL, type Rgba } from './palette';\n\nexpor

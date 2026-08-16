@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="20" />
+    <title>Spacepixel — live progress</title>
+    <style>
+      :root { --ink:#f4efe4; --void:#07060f; --brass:#c9a227; --panel:#140f22; }
+      html,body{margin:0;background:var(--void);color:var(--ink);font:15px/1.45 "Trebuchet MS",sans-serif}
+      header{padding:28px 32px 12px;border-bottom:2px solid var(--brass);display:flex;justify-content:space-between;align-items:end;gap:16px}
+      h1{margin:0;letter-spacing:.16em;text-transform:uppercase;font-size:22px}
+      h1 span{color:var(--brass)}
+      .play{color:var(--void);background:var(--brass);text-decoration:none;padding:10px 16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+      main{padding:24px 32px 64px;max-width:980px}
+      table{width:100%;border-collapse:collapse;margin:18px 0 32px}
+      th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #2a2038}
+      th{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#c9a227}
+      .ok{color:#5ad45a} .go{color:#e0b84a} .wait{color:#8878a0}
+      a{color:#7ec8e8}
+      p.lead{max-width:62ch;opacity:.8}
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Spacepixel <span>progress</span></h1>
+      <a class="play" href="/">Play the match</a>
+    </header>
+    <main>
+      <p class="lead">A pixel-art real-time strategy game built to the Age of Empires II: Definitive Edition bar — battle clarity, command feel, 60 fps on a landscape iPad. This page reloads every 20 seconds as the swarm ships.</p>
+      <p>Live: <a href="https://spacepixelrts.pages.dev">spacepixelrts.pages.dev</a> · intended custom host <a href="https://space.contenthelper.in">space.contenthelper.in</a></p>
+      <h2>Waves</h2>
+      <table>
+        <tr><th>Wave</th><th>Scope</th><th>Status</th></tr>
+        <tr><td>0</td><td>Scaffold, git, deploy, progress</td><td class="ok">done</td></tr>
+        <tr><td>1</td><td>Sim, pixel pipeline, camera, path, map — playable clash</td><td class="go">building / in critic loop</td></tr>
+        <tr><td>2</td><td>Civs, buildings, economy, combat, fog, AI</td><td class="go">in the slice, needs polish</td></tr>
+        <tr><td>3</td><td>HUD, minimap, audio, VFX</td><td class="go">first chrome shipped</td></tr>
+        <tr><td>4</td><td>60 fps / iPad hardening</td><td class="wait">pending critic</td></tr>
+        <tr><td>5</td><td>Integrator coherence pass</td><td class="wait">pending</td></tr>
+      </table>
+      <h2>Pieces</h2>
+      <table>
+        <tr><th>Id</th><th>Piece</th><th>Status</th><th>Critic</th><th>Biggest gap</th></tr>
+        <tr><td>P00</td><td>scaffold + deploy</td><td class="ok">done</td><td class="ok">pass</td><td>—</td></tr>
+        <tr><td>P10</td><td>simulation tick</td><td class="go">shipped</td><td class="wait">awaiting</td><td>—</td></tr>
+        <tr><td>P11</td><td>pixel atlas + Three.js</td><td class="go">shipped</td><td class="wait">awaiting</td><td>—</td></tr>
+        <tr><td>P12</td><td>camera + command input</td><td class="go">shipped</td><td class="wait">awaiting</td><td>—</td></tr>
+        <tr><td>P13</td><td>pathfinding</td><td class="go">shipped</td><td class="wait">awaiting</td><td>—</td></tr>
+        <tr><td>P14</td><td>map generation</td><td class="go">shipped</td><td class="wait">awaiting</td><td>—</td></tr>
+        <tr><td>P20–P23</td><td>civ silhouettes + buildings</td><td class="go">first pass</td><td class="wait">awaiting</td><td>—</td></tr>
+        <tr><td>P24–P27</td><td>economy, combat, fog, AI</td><td class="go">first pass</td><td class="wait">awaiting</td><td>—</td></tr>
+        <tr><td>P30–P35</td><td>HUD / minimap / iPad chrome</td><td class="go">first pass</td><td class="wait">awaiting</td><td>—</td></tr>
+      </table>
+    </main>
+  </body>
+</html>
