@@ -5,11 +5,11 @@
 
 ## Now
 
-**Wave 3 P51 building** — P50 integrator named the gap. Live still **`0.3.5-wave2`**.
+**Wave 3 P51 critic** — muzzle/impact shipped. Live **`0.4.0-wave3`**.
 
-Wave 2 **PASS**. Combat still HP-flash-and-bolts; opening muzzle is clamped to 0.04; no impact spark.
+Pooled sparks, clash shootFlash 0.42, impact on bolt/melee. Opening tableau unchanged.
 
-**Next:** P51 muzzle + impact VFX (`0.4.0-wave3`).
+**Next:** fresh critic on whether the clash reads from VFX. Builder timed out after commit; process group reaped.
 
 ## Biggest gap
 
@@ -22,4 +22,4 @@ Wave 2 **PASS**. Combat still HP-flash-and-bolts; opening muzzle is clamped to 0
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P51 muzzle/impact in flight |
+| 3–5 polish / iPad / coherence | P51 live `0.4.0-wave3`; critic next |

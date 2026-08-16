@@ -112,7 +112,7 @@ HUD/minimap/VFX already exist from Wave 1 chrome. Live Wave 3 starts with an int
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
 | P50 | Wave 3 integrator: play for feel, name the gap | P49 | done | combat is HP-flash-and-bolts; no muzzle/impact chain |
-| P51 | Muzzle + impact sparks | P50 | building | |
+| P51 | Muzzle + impact sparks | P50 | critic | builder `c94b9b3` live 0.4.0-wave3 |
 
 Original P30–P35 chrome mostly shipped in the vertical slice; critic will say what still fails vs AoE2:DE.
 
