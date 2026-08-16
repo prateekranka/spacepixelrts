@@ -7,7 +7,7 @@ import { TEAM_RGB, isBuilding } from './content';
 import type { World } from './sim';
 import { VfxRenderer } from './vfx';
 import { buildTerrainMesh } from './terrain';
-import { SDF_FRAG, SDF_VERT, civIndex, spriteSize } from './sprite-sdf';
+import { SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
 
 const VERT = /* glsl */ `
 attribute vec4 iUv;
@@ -117,9 +117,29 @@ export class GameRenderer {
     sdfGeo.setAttribute('iTeam', this.iSdfTeam);
     sdfGeo.setAttribute('iFlash', this.iSdfFlash);
 
+    const spriteAtlas = buildSprites();
+    const spriteTex = new THREE.CanvasTexture(spriteAtlas.canvas);
+    spriteTex.magFilter = THREE.NearestFilter;
+    spriteTex.minFilter = THREE.NearestFilter;
+    spriteTex.generateMipmaps = false;
+    spriteTex.colorSpace = THREE.SRGBColorSpace;
+    spriteTex.flipY = true;
+    spriteTex.needsUpdate = true;
+
     const sdfMat = new THREE.ShaderMaterial({
       vertexShader: SDF_VERT,
       fragmentShader: SDF_FRAG,
+      uniforms: {
+        uSpriteAtlas: { value: spriteTex },
+        uAtlasSize: {
+          value: new THREE.Vector2(spriteAtlas.width, spriteAtlas.height),
+        },
+        uAtlasCols: { value: spriteAtlas.cols },
+        uCell: { value: spriteAtlas.cell },
+        uHallCell: { value: spriteAtlas.hallCell },
+        uUnitRows: { value: spriteAtlas.unitRows },
+        uBuildingRow: { value: spriteAtlas.buildingRow },
+      },
       transparent: true,
       depthWrite: false,
     });

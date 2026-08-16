@@ -69,17 +69,16 @@ export function drawFighter(): Pix {
   // 4. HEAD + HELMET above neck.
   dark(cx - 4, 2, 9, 7); // head+helmet
 
-  // 5. RIFLE — held by arms (front arm grips trigger, back arm supports stock).
-  //    Draw arms FIRST (behind the rifle) so they read as gripping.
-  // front arm (right side, reaching to the rifle trigger area)
-  dark(cx + 4, 10, 4, 5); // front forearm down to the grip
-  // back arm (left side, supporting the stock)
-  dark(cx - 6, 8, 4, 5); // back forearm
+  // 5. RIFLE — stock flairs at grip, receiver thick, barrel thin, muzzle brake bump.
+  dark(cx - 4, 9, 5, 4); // stock flair (wider at bottom)
+  dark(cx + 2, 6, 6, 4); // receiver block (thick)
+  dark(cx + 8, 7, 10, 2); // barrel (thin pipe)
+  dark(cx + 17, 6, 4, 4); // muzzle brake bump
 
-  // rifle: receiver at chin height, barrel extending right, stock at chest.
-  dark(cx + 3, 7, 15, 3); // barrel+receiver (y 7..9, pointing right)
-  dark(cx + 18, 5, 3, 5); // muzzle brake
-  dark(cx - 3, 8, 5, 3); // stock (left, against chest)
+  // Arms gripping — front forearm shoulder → trigger, hand ON barrel (no gap).
+  dark(cx + 3, 9, 3, 3); // front upper arm / shoulder
+  dark(cx + 5, 10, 4, 4); // front forearm to grip
+  dark(cx - 6, 8, 4, 5); // back arm supporting stock
 
   // 6. Fill with lit colors from top-left, shadow lower-right.
   //    Legs: front leg lighter, back leg darker.
@@ -114,22 +113,33 @@ export function drawFighter(): Pix {
   p.set(cx + 2, 5, BONE); // visor slit (facing right)
   p.set(cx + 1, 5, BONE);
 
-  // RIFLE fill: top edge highlighted, body mid, muzzle metal.
-  for (let x = cx + 3; x <= cx + 17; x++) {
-    p.set(x, 7, x > cx + 14 ? GUN_H : GUN); // barrel top (lit)
-    p.set(x, 8, GUN);
-    p.set(x, 9, GUN_H);
+  // RIFLE fill: receiver thick, barrel thin, stock flair, muzzle brake.
+  for (let y = 6; y <= 9; y++) {
+    for (let x = cx + 2; x <= cx + 7; x++) {
+      const c = y < 8 && x < cx + 5 ? GUN_H : GUN;
+      p.set(x, y, c);
+    }
   }
-  p.fillRect(cx + 18, 5, 3, 5, GUN_H); // muzzle
-  p.set(cx + 20, 6, WHITE); // muzzle glow point
-  p.fillRect(cx - 3, 8, 5, 3, GUN); // stock
+  for (let x = cx + 8; x <= cx + 17; x++) {
+    p.set(x, 7, x > cx + 14 ? GUN_H : GUN);
+    p.set(x, 8, GUN);
+  }
+  for (let y = 6; y <= 9; y++) {
+    for (let x = cx + 17; x <= cx + 20; x++) p.set(x, y, GUN_H);
+  }
+  p.set(cx + 20, 7, WHITE);
+  for (let y = 9; y <= 12; y++) {
+    for (let x = cx - 4; x <= cx; x++) p.set(x, y, y > 10 ? GUN : GUN_H);
+  }
 
-  // ARMS (grip): front hand on the trigger, back hand on the stock.
-  for (let x = cx + 4; x < cx + 7; x++) p.set(x, 10, HIVE); // front arm
-  p.set(cx + 8, 10, SKIN); // front HAND gripping trigger
-  p.set(cx + 8, 9, SKIN);
-  for (let x = cx - 5; x < cx - 2; x++) p.set(x, 9, HIVE_D); // back arm
-  p.set(cx - 6, 9, SKIN_D); // back hand on stock
+  // ARMS (grip): front hand skin pixels touching barrel.
+  for (let y = 9; y <= 12; y++) p.set(cx + 5, y, HIVE);
+  for (let y = 10; y <= 12; y++) p.set(cx + 6, y, HIVE);
+  p.set(cx + 7, 10, SKIN);
+  p.set(cx + 7, 11, SKIN);
+  p.set(cx + 8, 10, SKIN); // hand on barrel — no gap
+  for (let x = cx - 5; x < cx - 2; x++) p.set(x, 9, HIVE_D);
+  p.set(cx - 6, 9, SKIN_D);
 
   // 7. DITHER in the shadow zone.
   for (let y = 14; y < 19; y++) {
@@ -148,48 +158,48 @@ export function drawWorker(): Pix {
 
   // silhouette first (connected)
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
-  dark(cx - 3, 17, 6, 12); // legs
-  dark(cx + 2, 17, 5, 11);
-  dark(cx - 7, 7, 14, 12); // hunched torso (lower)
-  dark(cx - 3, 3, 8, 6); // head (tucked, hunched)
+  dark(cx - 3, 18, 6, 11); // legs
+  dark(cx + 2, 18, 5, 10);
+  dark(cx - 7, 8, 14, 12); // hunched torso (1px lower)
+  dark(cx - 3, 4, 8, 6); // head tucked under load
 
-  // THE CRATE — dominant, bigger than the head, held in front (right side).
-  dark(cx + 7, 9, 12, 12); // crate silhouette
+  // THE CRATE — overlaps thighs (load on body, not floating).
+  dark(cx + 6, 11, 13, 13); // crate silhouette down onto thighs
   // fill crate (ore) — gold, lit top-left
-  for (let y = 9; y < 21; y++) {
-    for (let x = cx + 7; x < cx + 19; x++) {
-      const c = x < cx + 11 && y < 13 ? ORE_H : ORE;
+  for (let y = 11; y < 24; y++) {
+    for (let x = cx + 6; x < cx + 19; x++) {
+      const c = x < cx + 10 && y < 15 ? ORE_H : ORE;
       p.set(x, y, c);
     }
   }
-  p.set(cx + 9, 10, WHITE); // crate glint
-  p.set(cx + 10, 11, ORE_H);
+  p.set(cx + 8, 12, WHITE);
+  p.set(cx + 9, 13, ORE_H);
 
   // BODY fill (hunched, lit top-left)
-  for (let y = 7; y < 19; y++) {
+  for (let y = 8; y < 20; y++) {
     for (let x = cx - 6; x <= cx + 5; x++) {
       const c = x < cx - 3 && y < 11 ? HIVE_H : ((x > cx + 2 || y > 15) ? HIVE_D : HIVE);
       p.set(x, y, c);
     }
   }
   // head + hard-hat (lit)
-  for (let y = 3; y < 9; y++) {
-    const c = y < 5 ? HIVE_H : HIVE;
+  for (let y = 4; y < 10; y++) {
+    const c = y < 6 ? HIVE_H : HIVE;
     p.set(cx - 2, y, c);
     p.set(cx - 1, y, c);
     p.set(cx, y, c);
   }
-  p.set(cx, 2, ORE_H); // hard-hat beacon
-  p.set(cx, 1, WHITE);
+  p.set(cx, 3, ORE_H);
+  p.set(cx, 2, WHITE);
 
-  // BOTH ARMS wrapping the crate: left arm reaches to crate top, right arm under crate.
-  p.fillRect(cx + 2, 10, 6, 2, HIVE); // left arm → crate top edge
-  p.fillRect(cx + 2, 18, 6, 2, HIVE_D); // right arm → crate bottom edge
-  p.set(cx + 8, 11, SKIN); // hand gripping
-  p.set(cx + 8, 19, SKIN_D); // other hand
+  // BOTH ARMS wrapping the crate.
+  p.fillRect(cx + 1, 11, 6, 2, HIVE);
+  p.fillRect(cx + 1, 20, 6, 2, HIVE_D);
+  p.set(cx + 7, 12, SKIN);
+  p.set(cx + 7, 21, SKIN_D);
 
-  // legs (visible below, connected to torso)
-  for (let y = 19; y < 29; y++) {
+  // legs (visible below crate overlap)
+  for (let y = 20; y < 29; y++) {
     p.set(cx - 2, y, HIVE);
     p.set(cx - 1, y, y < 23 ? HIVE : HIVE_D);
     p.set(cx + 3, y, HIVE_D);
@@ -235,10 +245,10 @@ export function drawHall(): Pix {
     }
   }
 
-  // DOOR — dark opening near bottom-center (a place you enter).
-  p.fillRect(cx - 4, 52, 9, 8, INK);
-  p.fillRect(cx - 3, 53, 7, 6, [20, 14, 26, 255]);
-  p.set(cx - 2, 59, WALL_D); // threshold
+  // DOOR — short wide inset at bottom-center on the ground plane.
+  p.fillRect(cx - 6, 55, 13, 5, INK);
+  p.fillRect(cx - 5, 56, 11, 3, [20, 14, 26, 255]);
+  p.set(cx - 4, 59, WALL_D); // threshold line
 
   // WINDOW slots (1px lit) on the upper wall.
   for (let i = 0; i < 3; i++) {
