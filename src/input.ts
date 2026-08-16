@@ -13,6 +13,9 @@ export interface Box {
   y1: number;
 }
 
+/** Screen-space pick radius (CSS px) — matches ARCHITECTURE.md hit test. */
+const PICK_PX = 28;
+
 export class Input {
   selected = new Set<number>();
   groups: number[][] = [[], [], [], []];
@@ -206,10 +209,10 @@ export class Input {
   private orderAt(cx: number, cy: number, attackMove: boolean): void {
     if (this.selected.size === 0) return;
     const w = this.pickWorld(cx, cy);
-    const enemy = this.closest(w.x, w.z, 1.4, 1);
-    const node = this.closest(w.x, w.z, 1.5, 3);
+    const enemy = this.closestEnemyScreen(cx, cy);
+    const node = enemy ? null : this.closestResource(cx, cy, w.x, w.z);
     const ids = [...this.selected];
-    if (enemy && enemy.team !== 0) {
+    if (enemy) {
       this.world.issue(ids, Ord.Attack, enemy.x, enemy.z, enemy.id);
       this.sfx.attack();
     } else if (node && node.kind === Kind.Resource) {
@@ -245,6 +248,42 @@ export class Input {
       this.sfx.build();
       this.place = null;
     }
+  }
+
+  /** Enemy attack pick: pointer must be on the sprite, not a world disk near the clash belt. */
+  private closestEnemyScreen(cx: number, cy: number) {
+    const r = this.host.getBoundingClientRect();
+    const px = cx - r.left;
+    const py = cy - r.top;
+    let best = null as (typeof this.world.ents)[0] | null;
+    let bestD = PICK_PX * PICK_PX;
+    for (const e of this.world.ents) {
+      if (!e.alive || !e.vis || e.team === 0) continue;
+      const footY = isBuilding(e.kind) ? 1.65 : 0.6;
+      const p = this.view.project(e.x, footY, e.z);
+      const dx = p.x - px;
+      const dy = p.y - py;
+      const d = dx * dx + dy * dy;
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  /** Resource gather: modest world radius, but only when the pointer is on the node sprite. */
+  private closestResource(cx: number, cy: number, wx: number, wz: number) {
+    const node = this.closest(wx, wz, 1.5, 3);
+    if (!node || node.kind !== Kind.Resource) return null;
+    const r = this.host.getBoundingClientRect();
+    const px = cx - r.left;
+    const py = cy - r.top;
+    const p = this.view.project(node.x, 0.05, node.z);
+    const dx = p.x - px;
+    const dy = p.y - py;
+    if (dx * dx + dy * dy > PICK_PX * PICK_PX) return null;
+    return node;
   }
 
   private closest(x: number, z: number, r: number, teamFilter: number) {
