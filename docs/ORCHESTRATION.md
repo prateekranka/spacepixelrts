@@ -87,7 +87,7 @@ Opening tableau is locked (P41). P20–P26 in the original plan were largely abs
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
 | P42 | Integrator: play the skirmish, name the gap | P41 | done | no playable match arc; pop 22/20 blocks train |
-| P43 | Unblock training: pop < cap, home habitats, corpse pop, hall pick | P42 | building | |
+| P43 | Unblock training: pop < cap, home habitats, corpse pop, hall pick | P42 | critic | builder `0c7ef5a` live 22/30 |
 | P44 | Epochs / AgeUp in sim + HUD (Orbit unlock) | P43 | queued | |
 | P45 | Win/lose: destroy Nexus, banners | P43 | queued | |
 | P46 | Enemy marshal threatens player Nexus during macro | P43 | queued | |
@@ -138,4 +138,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**Wave 1 PASS** (P41, `0.2.16-wave1`). **P42** named Wave 2 gap: no match arc / pop 22/20. **P43** unblocks training.
+**Wave 1 PASS** (P41). **P43** live `0.3.0-wave2` pop 22/30 — training unblocked. Critic next. Then epochs / win / AI pressure.
