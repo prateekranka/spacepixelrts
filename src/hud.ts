@@ -36,18 +36,18 @@ export class Hud {
         <div id="brand">
           <span class="sigil">◆</span>
           <div>
-            <strong id="civname">Vespari Hive</strong>
-            <em>Spacepixel</em>
+            <strong id="civname">Helion Compact</strong>
+            <em>Starhold</em>
           </div>
         </div>
         <div id="res">
           <span data-k="ore"><i></i><b id="ore">0</b><small>Ore</small></span>
-          <span data-k="gas"><i></i><b id="gas">0</b><small>Gas</small></span>
-          <span data-k="nrg"><i></i><b id="nrg">0</b><small>Energy</small></span>
-          <span data-k="pop"><i></i><b id="pop">0/0</b><small>Brood</small></span>
+          <span data-k="gas"><i></i><b id="gas">0</b><small>Vol</small></span>
+          <span data-k="nrg"><i></i><b id="nrg">0</b><small>Chg</small></span>
+          <span data-k="pop"><i></i><b id="pop">0/0</b><small>Pop</small></span>
         </div>
         <div id="meta">
-          <button type="button" id="idlew">Idle drone</button>
+          <button type="button" id="idlew">Idle worker</button>
           <b id="fps">60</b>
         </div>
       </div>

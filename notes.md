@@ -377,3 +377,215 @@ So the critic's visual loop is fully unblocked — no dependency on the dead `mo
   Type: CNAME   Name: space   Target: spacepixelrts.pages.dev   Proxy: ON
   ```
   Or provide a token with `Zone.Zone` read + `Zone.DNS` edit on `contenthelper.in`.
+
+### checkpoint 2026-08-16 10:47:29
+- **orchestrator: RUNNING** (pid 20606, elapsed 15:25)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./critic/out/wave1-measure.png
+  ./critic/out/wave1.png
+  ./dist/assets/index-Cjoq_b9Z.js
+  ./dist/assets/index-Cjoq_b9Z.js.map
+  ./dist/index.html
+  ./dist/progress.html
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package-lock.json
+  ./package.json
+  ./public/progress.html
+  ./scripts/measure.mjs
+  ./scripts/monitor.sh
+  ./scripts/screenshot.mjs
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/content.ts
+  ./src/engine.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/input/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/render/atlas.ts
+  ./src/render/palette.ts
+  ./src/render/renderer.ts
+  ./src/sim.ts
+  ./src/sim/engine.ts
+  ./src/sim/world.ts
+  ./src/ui/hud.ts
+  ./tasks-monitor.log
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  2034e21 notes: GitHub repo + domain DNS status
+  a2b7f33 P10-P35: ship a playable Wave 1 skirmish with pixel atlas, command HUD, and combat
+  f70d8eb vision: use Grok 4.6 XHigh for critic visual judgment (verified working)
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/tsconfig.json', 'contents': '{\n  "compilerOptions": {\n    "target":
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/vite.config.ts', 'contents': "import { defineConfig } from 'vite';\n\
+  TOOL Write {'path': '/Users/prateekranka/Cowork/spacepixelrts/index.html', 'contents': '<!doctype html>\n<html lang="en">\n  <head>
+  TOOL Write {'contents': "/** Shared sim constants and enums. P10 owns behavior; these IDs are locked. */\n\nexport const TICK_HZ = 
+  TOOL Write {'contents': '/** Master palette. All atlas pixels must land on these (plus magenta key + 0 alpha). */\n\nexport const P
+  TOOL Write {'contents': "import { Kind, type Civ } from '../sim/engine';\nimport { MAG, PAL, type Rgba } from './palette';\n\nexpor
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/sim/engine.ts', 'old_string': 'export const enum Kind {\n  Worker
+  TOOL Write {'contents': "import * as THREE from 'three';\nimport {\n  iso,\n  MAP,\n  TEAM_TINT,\n  TILE_H,\n  TILE_W,\n  isBuildin
+  TOOL Write {'contents': "/** P01 stub world — living opening tableau. P10 replaces internals with SoA + command queue. */\n\nimport
+  TOOL Write {'contents': "import { MAP, Ord, clamp, dist2 } from '../sim/engine';\nimport type { World } from '../sim/world';\nimpor
+  TOOL Write {'contents': "import { MAP, Tile } from '../sim/engine';\nimport type { World } from '../sim/world';\n\nexport function 
+  TOOL Write {'contents': "import { DT, VERSION } from './sim/engine';\nimport { World } from './sim/world';\nimport { Renderer } fro
+
+### checkpoint 2026-08-16 10:50:29
+- **orchestrator: RUNNING** (pid 20606, elapsed 18:26)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./critic/out/wave1-measure.png
+  ./critic/out/wave1.png
+  ./critic/run.ts
+  ./dist/assets/index-Cjoq_b9Z.js
+  ./dist/assets/index-Cjoq_b9Z.js.map
+  ./dist/index.html
+  ./dist/progress.html
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package-lock.json
+  ./package.json
+  ./public/progress.html
+  ./scripts/measure.mjs
+  ./scripts/monitor.sh
+  ./scripts/screenshot.mjs
+  ./src/audio.ts
+  ./src/content.ts
+  ./src/content/stats.ts
+  ./src/engine.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/input/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/render/atlas.ts
+  ./src/render/palette.ts
+  ./src/render/renderer.ts
+  ./src/sim/engine.ts
+  ./src/sim/world.ts
+  ./src/ui/hud.ts
+  ./tasks-monitor.log
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  2034e21 notes: GitHub repo + domain DNS status
+  a2b7f33 P10-P35: ship a playable Wave 1 skirmish with pixel atlas, command HUD, and combat
+  f70d8eb vision: use Grok 4.6 XHigh for critic visual judgment (verified working)
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/render/renderer.ts', 'old_string': "import {\n  iso,\n  MAP,\n  T
+  TOOL Delete {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/sim.ts'}
+  TOOL Delete {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/atlas.ts'}
+  TOOL Write {'contents': "/** P20 will fill STATS. Locked kinds live in sim/engine.ts. */\nexport type { Civ } from '../sim/engine';
+  TOOL Write {'contents': "import { spawn } from 'node:child_process';\nimport { mkdir, writeFile } from 'node:fs/promises';\nimport 
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts'}
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/render/renderer.ts', 'limit': 20}
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts', 'old_string': '    for (const e of this.world.en
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts', 'old_string': '    for (const e of this.world.en
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts', 'old_string': '  private boxing = false;\n  priv
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts', 'old_string': '    this.boxing = true;\n    this
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/critic/run.ts', 'old_string': "const OUT = new URL('./out/', import.m
+
+### checkpoint 2026-08-16 10:53:31
+- **orchestrator: RUNNING** (pid 20606, elapsed 21:27)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./critic/out/wave1-measure.png
+  ./critic/out/wave1.png
+  ./critic/run.ts
+  ./dist/assets/index-Cjoq_b9Z.js
+  ./dist/assets/index-Cjoq_b9Z.js.map
+  ./dist/index.html
+  ./dist/progress.html
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package-lock.json
+  ./package.json
+  ./public/progress.html
+  ./scripts/measure.mjs
+  ./scripts/monitor.sh
+  ./scripts/screenshot.mjs
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/content.ts
+  ./src/content/stats.ts
+  ./src/engine.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/input/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/render/atlas.ts
+  ./src/render/palette.ts
+  ./src/render/renderer.ts
+  ./src/sim.ts
+  ./src/sim/engine.ts
+  ./src/sim/world.ts
+  ./src/ui/hud.ts
+  ./tasks-monitor.log
+  ./tasks/README.md
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  2034e21 notes: GitHub repo + domain DNS status
+  a2b7f33 P10-P35: ship a playable Wave 1 skirmish with pixel atlas, command HUD, and combat
+  f70d8eb vision: use Grok 4.6 XHigh for critic visual judgment (verified working)
+  b7b5661 notes: add monitoring log + monitor script
+  fb76161 Initial: orchestrator brief for Grok 4.6 XHigh (sub-agents: Composer 2.5)
+- latest transcript tail:
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts', 'old_string': '    for (const e of this.world.en
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts', 'old_string': '    for (const e of this.world.en
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts', 'old_string': '  private boxing = false;\n  priv
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/input/input.ts', 'old_string': '    this.boxing = true;\n    this
+  TOOL StrReplace {'path': '/Users/prateekranka/Cowork/spacepixelrts/critic/run.ts', 'old_string': "const OUT = new URL('./out/', import.m
+  TOOL Shell {'command': 'npm install', 'working_directory': '/Users/prateekranka/Cowork/spacepixelrts', 'description': 'Install npm 
+  TOOL Write {'contents': '# Piece reports live here. Logs (*.log) are gitignored.\n', 'path': '/Users/prateekranka/Cowork/spacepixel
+  TOOL Shell {'command': 'ls node_modules | head -40 && echo "---" && test -d node_modules/three && echo three_ok && test -d node_mod
+  TOOL Shell {'command': 'npx tsc --noEmit', 'description': 'Typecheck the TypeScript project', 'working_directory': '/Users/prateekr
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/render/renderer.ts', 'offset': 170, 'limit': 20}
+  TOOL StrReplace {'new_string': "import { Kind, iso, MAP, TEAM_TINT, uniso, isBuilding, isUnit, type Civ } from '../sim/engine';", 'old_s
+  TOOL StrReplace {'new_string': '    const sx = (cssX * cap - this.w / 2) / zoom + iso(camX, camZ).sx;\n    const sy = (cssY * cap - this
+
+---
+
+### Domain DNS — blocked by existing "workers-managed" record
+
+New error when adding the CNAME (from Cloudflare dashboard):
+**"a DNS record managed by workers already exists on that host."**
+
+Meaning: `space.contenthelper.in` is already claimed by a DNS record that Cloudflare
+Workers (or another managed service) owns. Before attaching it to Pages, that record
+must be removed.
+
+Tokens on hand still cannot touch zone DNS (OAuth `cfoat_...` has `zone:read` but DNS
+read/write returns "Authentication error"; the `cfat_6KJo...` token has only Pages access).
+So this must be done in the dashboard OR with a new zone-scoped API token.
+
+**To fix (dashboard, ~1 min), Cloudflare → contenthelper.in → DNS → Records:**
+1. Search/look for any record for `space` or a **wildcard** `*.contenthelper.in` (any type:
+   CNAME, A, AAAA, or a "Workers" route record). Also check **Workers & Pages → Routes**
+   for a non-zoneless Workers route on `space.contenthelper.in` or `*.contenthelper.in`.
+2. Delete that record/route.
+3. Re-add the Pages custom domain (or the CNAME: `space` CNAME → `spacepixelrts.pages.dev`,
+   proxied). Cloudflare will auto-provision the cert once the host is free.
+
+Live URL unchanged: **https://spacepixelrts.pages.dev**
+GitHub: **https://github.com/prateekranka/spacepixelrts**

@@ -3,9 +3,9 @@
 import { Kind, type Civ } from './engine';
 
 export const CIV_NAME: Record<Civ, string> = {
-  vespari: 'Vespari Hive',
-  aurion: 'Aurion Compact',
-  voidmarked: 'Voidmarked',
+  vespari: 'Helion Compact',
+  aurion: 'Kryos Conclave',
+  voidmarked: 'Nihiline',
 };
 
 export const TEAM_RGB: [number, number, number][] = [
@@ -82,28 +82,22 @@ export const STATS: Record<number, Stats> = {
   },
 };
 
-export function hallName(civ: Civ): string {
-  if (civ === 'vespari') return 'Chitin Nexus';
-  if (civ === 'aurion') return 'Prism Keep';
-  return 'Umbra Sanctum';
+export function hallName(_civ: Civ): string {
+  return 'Nexus';
 }
 
-export function houseName(civ: Civ): string {
-  if (civ === 'vespari') return 'Brood Pod';
-  if (civ === 'aurion') return 'Facet Lodge';
-  return 'Veil Crypt';
+export function houseName(_civ: Civ): string {
+  return 'Habitat';
 }
 
-export function barracksName(civ: Civ): string {
-  if (civ === 'vespari') return 'Mandible Spire';
-  if (civ === 'aurion') return 'Lattice Yard';
-  return 'Rift Dock';
+export function barracksName(_civ: Civ): string {
+  return 'Yard';
 }
 
 export function uniqueName(civ: Civ): string {
-  if (civ === 'vespari') return 'Spore Nursery';
-  if (civ === 'aurion') return 'Refraction Spire';
-  return 'Umbra Relay';
+  if (civ === 'vespari') return 'Sunwell';
+  if (civ === 'aurion') return 'Cryo Bastion';
+  return 'Bloom Nest';
 }
 
 export function uniqueUnit(civ: Civ): Kind {
@@ -112,16 +106,12 @@ export function uniqueUnit(civ: Civ): Kind {
   return Kind.Shade;
 }
 
-export function workerName(civ: Civ): string {
-  if (civ === 'vespari') return 'Larva Drone';
-  if (civ === 'aurion') return 'Shard Wright';
-  return 'Wake Binder';
+export function workerName(_civ: Civ): string {
+  return 'Worker';
 }
 
-export function fighterName(civ: Civ): string {
-  if (civ === 'vespari') return 'Stinger';
-  if (civ === 'aurion') return 'Facet Lance';
-  return 'Rift Blade';
+export function fighterName(_civ: Civ): string {
+  return 'Fighter';
 }
 
 export function labelOf(kind: Kind, civ: Civ): string {
@@ -131,9 +121,9 @@ export function labelOf(kind: Kind, civ: Civ): string {
   if (kind === Kind.UniqueB) return uniqueName(civ);
   if (kind === Kind.Worker) return workerName(civ);
   if (kind === Kind.Fighter) return fighterName(civ);
-  if (kind === Kind.Ravager) return 'Ravager';
-  if (kind === Kind.Prism) return 'Prism Guard';
-  if (kind === Kind.Shade) return 'Phase Shade';
+  if (kind === Kind.Ravager) return 'Solar Lance';
+  if (kind === Kind.Prism) return 'Glacier Titan';
+  if (kind === Kind.Shade) return 'Spore Rider';
   if (kind === Kind.Scout) return 'Scout';
   if (kind === Kind.Siege) return 'Breaker';
   return 'Unknown';
@@ -148,6 +138,6 @@ export function isUnit(k: Kind): boolean {
 }
 
 export const POP_HOUSE = 5;
-export const POP_HALL = 5;
+export const POP_HALL = 10;
 export const GATHER_MAX = 8;
 export const BUILD_HP_START = 0.08;

@@ -68,6 +68,7 @@ export class GameRenderer {
 
     this.overlay = document.createElement('canvas');
     this.overlay.id = 'overlay';
+    this.overlay.style.pointerEvents = 'none';
     host.appendChild(this.overlay);
     this.octx = this.overlay.getContext('2d')!;
 

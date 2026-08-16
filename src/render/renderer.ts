@@ -1,15 +1,5 @@
 import * as THREE from 'three';
-import {
-  iso,
-  MAP,
-  TEAM_TINT,
-  TILE_H,
-  TILE_W,
-  isBuilding,
-  isUnit,
-  type Civ,
-} from '../sim/engine';
-import { Kind } from '../sim/engine';
+import { Kind, iso, MAP, TEAM_TINT, uniso, isBuilding, isUnit, type Civ } from '../sim/engine';
 import { buildAtlas, spriteKey, tileKey, type Atlas, type Uv } from './atlas';
 
 export type DrawEnt = {
@@ -186,8 +176,7 @@ export class Renderer {
     const cap = this.renderer.getPixelRatio();
     const sx = (cssX * cap - this.w / 2) / zoom + iso(camX, camZ).sx;
     const sy = (cssY * cap - this.h / 2) / zoom + iso(camX, camZ).sy;
-    const w = { x: sx / TILE_W + sy / TILE_H, z: sy / TILE_H - sx / TILE_W };
-    return w;
+    return uniso(sx, sy);
   }
 
   private makeStars(): THREE.Points {

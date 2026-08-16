@@ -1,4 +1,4 @@
-import { MAP, Ord, clamp, dist2 } from '../sim/engine';
+import { MAP, Ord, clamp, dist2, isUnit } from '../sim/engine';
 import type { World } from '../sim/world';
 import type { Renderer } from '../render/renderer';
 
@@ -9,7 +9,6 @@ export class Input {
   selected = new Set<number>();
   private dragging = false;
   private boxing = false;
-  private box0 = { x: 0, y: 0 };
   private pan0 = { x: 0, y: 0, camX: 0, camZ: 0 };
   private pointers = new Map<number, { x: number; y: number }>();
   box: { x0: number; y0: number; x1: number; y1: number } | null = null;
@@ -41,7 +40,6 @@ export class Input {
       return;
     }
     this.boxing = true;
-    this.box0 = { x: e.clientX, y: e.clientY };
     this.box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
   }
 
@@ -110,7 +108,7 @@ export class Input {
     let best = -1;
     let bestD = 1.1;
     for (const e of this.world.ents) {
-      if (!e.alive || e.team !== 0 || e.kind >= 7) continue;
+      if (!e.alive || e.team !== 0 || !isUnit(e.kind)) continue;
       const d = dist2(e.x, e.z, w.x, w.z);
       if (d < bestD) {
         bestD = d;
@@ -130,7 +128,7 @@ export class Input {
     const y1 = Math.max(this.box.y0, this.box.y1);
     this.selected.clear();
     for (const e of this.world.ents) {
-      if (!e.alive || e.team !== 0 || e.kind >= 7) continue;
+      if (!e.alive || e.team !== 0 || !isUnit(e.kind)) continue;
       const p = this.worldToCss(e.x, e.z);
       if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1) this.selected.add(e.id);
     }
