@@ -5,19 +5,17 @@
 
 ## Now
 
-**P82 SDF sprites** — P81 **PASS** (`73c00a5`). Live **`0.7.1-proc`**.
+**P82 critic** — SDF sprites shipped **`0.7.2-proc`**. Live deployed.
 
-Terrain + GPU VFX locked. Last procedural piece: drop baked unit atlas.
-
-**Next:** P82 builder, then critic.
+**Next:** fresh critic — three peoples as SDF, opening still readable, p99 < 8.
 
 ## Biggest gap
 
-**Units/buildings still sample a CPU atlas.** SDF fragment-shader silhouettes, three civs distinct.
+**P82 in critic.** True GLSL SDF units, not soup.
 
 ## Tracker
 
 | Wave | Status |
 |---|---|
 | 0–5 | **PASS** |
-| 6 procedural-first | P80–P81 **PASS**; P82 SDF sprites |
+| 6 procedural-first | P80–P81 **PASS**; P82 shipped; critic |
