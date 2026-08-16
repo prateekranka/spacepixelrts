@@ -52,6 +52,8 @@ export class World {
   readonly q: number[] = [];
   tick = 0;
   seed = 0x5eed;
+  /** -1 in play · 0 player win · 1 enemy win */
+  winner = -1;
   private heap = new Heap();
   private gScore = new Float32Array(MAP * MAP);
   private came = new Int32Array(MAP * MAP);
@@ -71,6 +73,7 @@ export class World {
   reset(seed = 0x5eed): void {
     this.seed = seed;
     this.tick = 0;
+    this.winner = -1;
     this.bolts.length = 0;
     this.flags.length = 0;
     this.free.length = 0;
@@ -163,6 +166,24 @@ export class World {
     e.order = Ord.Idle;
     this.free.push(e.id);
     this.recountPop();
+    this.checkWinner();
+  }
+
+  private hasNexus(team: number): boolean {
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== team || e.kind !== Kind.Hall) continue;
+      if (e.hp > 0 && e.progress >= 1) return true;
+    }
+    return false;
+  }
+
+  checkWinner(): void {
+    if (this.winner !== -1) return;
+    const p0 = this.hasNexus(0);
+    const p1 = this.hasNexus(1);
+    if (!p0 && p1) this.winner = 1;
+    else if (p0 && !p1) this.winner = 0;
   }
 
   issue(ids: number[], ord: Ord, x: number, z: number, tid: number): void {
@@ -279,6 +300,7 @@ export class World {
     this.stepFlags();
     this.stepAi();
     if ((this.tick & 7) === 0) this.recountPop();
+    this.checkWinner();
   }
 
   private genMap(): void {

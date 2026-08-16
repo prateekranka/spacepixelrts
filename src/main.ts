@@ -7,7 +7,7 @@ import { Input } from './input';
 import { Hud } from './hud';
 import { Sfx } from './audio';
 
-const VERSION = '0.3.1-wave2';
+const VERSION = '0.3.2-wave2';
 
 const host = document.getElementById('app');
 if (!host) throw new Error('Starhold boot: #app host missing');
@@ -76,6 +76,7 @@ function publish(): void {
     map: MAP,
     max: MAX_ENTS,
     hall: Kind.Hall,
+    winner: world.winner,
   };
   const w = window as unknown as {
     __SPACEPIXEL__: typeof probe;

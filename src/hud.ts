@@ -30,6 +30,10 @@ export class Hud {
   private cmdsEl: HTMLElement;
   private fpsEl: HTMLElement;
   private hintEl: HTMLElement;
+  private matchEndEl: HTMLElement;
+  private matchTitleEl: HTMLElement;
+  private matchSubEl: HTMLElement;
+  private cmdsSig = '';
 
   constructor(host: HTMLElement) {
     this.root = document.createElement('div');
@@ -66,6 +70,12 @@ export class Hud {
         <div id="cmds"></div>
       </div>
       <p id="hint">Landscape command deck · two-finger pan · pinch zoom · box-select to rally the swarm</p>
+      <div id="match-end" hidden>
+        <div class="match-panel">
+          <h1 id="match-title">VICTORY</h1>
+          <p id="match-sub">Enemy Nexus shattered</p>
+        </div>
+      </div>
     `;
     host.appendChild(this.root);
     this.minimap = this.root.querySelector('#minimap')!;
@@ -75,6 +85,9 @@ export class Hud {
     this.cmdsEl = this.root.querySelector('#cmds')!;
     this.fpsEl = this.root.querySelector('#fps')!;
     this.hintEl = this.root.querySelector('#hint')!;
+    this.matchEndEl = this.root.querySelector('#match-end')!;
+    this.matchTitleEl = this.root.querySelector('#match-title')!;
+    this.matchSubEl = this.root.querySelector('#match-sub')!;
     this.injectCss();
   }
 
@@ -107,6 +120,19 @@ export class Hud {
     this.fpsEl.className = fps < 55 ? 'low' : '';
     this.drawMini(world, input);
     this.drawCard(world, input);
+    this.drawMatchEnd(world);
+  }
+
+  private drawMatchEnd(world: World): void {
+    if (world.winner === -1) {
+      this.matchEndEl.hidden = true;
+      return;
+    }
+    this.matchEndEl.hidden = false;
+    const win = world.winner === 0;
+    this.matchEndEl.className = win ? 'win' : 'lose';
+    this.matchTitleEl.textContent = win ? 'VICTORY' : 'DEFEAT';
+    this.matchSubEl.textContent = win ? 'Enemy Nexus shattered' : 'Your Nexus is ash';
   }
 
   private handle(cmd: string, world: World, input: Input): void {
@@ -220,6 +246,11 @@ export class Hud {
       { cmd: 'group-1', label: 'II', sub: 'group' },
       { cmd: 'group-2', label: 'III', sub: 'group' },
     );
+    const sig =
+      `${kind ?? 'none'}|${input.place}|` +
+      btns.map((b) => `${b.cmd}:${b.label}:${b.sub ?? ''}:${b.disabled ? 1 : 0}`).join('|');
+    if (sig === this.cmdsSig) return;
+    this.cmdsSig = sig;
     this.cmdsEl.innerHTML = btns
       .map((b) => {
         const placeOn = b.cmd.startsWith('build-') && input.place === Number(b.cmd.slice(6));
@@ -331,6 +362,14 @@ const HUD_CSS = `
 #cmds button.verb strong{font-size:13px;letter-spacing:.02em}
 #cmds small{opacity:.55;font-size:10px;letter-spacing:.04em}
 #hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.45;pointer-events:none;white-space:nowrap}
+#match-end{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;z-index:8}
+#match-end .match-panel{padding:18px 28px 16px;border:3px solid #c9a227;background:linear-gradient(#1a1428f2,#120e1cf0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;min-width:280px}
+#match-end.win .match-panel{border-color:#7ec87a;box-shadow:0 0 0 2px #000,0 0 32px #7ec87a44,0 12px 40px #000a,inset 0 0 24px #0006}
+#match-end.lose .match-panel{border-color:#e84d4d;box-shadow:0 0 0 2px #000,0 0 32px #e84d4d44,0 12px 40px #000a,inset 0 0 24px #0006}
+#match-title{margin:0 0 8px;font-size:28px;letter-spacing:.18em;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 16px #c9a22766}
+#match-end.win #match-title{color:#8ee88a;text-shadow:0 2px 0 #000,0 0 20px #7ec87a88}
+#match-end.lose #match-title{color:#ff6a6a;text-shadow:0 2px 0 #000,0 0 20px #e84d4d88}
+#match-sub{margin:0;font-size:13px;letter-spacing:.08em;opacity:.82;text-transform:uppercase}
 @media (orientation:portrait){
   #rotate-gate{display:flex !important}
   #hud,canvas{visibility:hidden}
