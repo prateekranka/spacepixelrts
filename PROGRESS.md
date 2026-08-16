@@ -5,9 +5,11 @@
 
 ## Now
 
-**Wave 3 P52 building** — P51 critic **PASS** (`d161f43`). Live **`0.4.0-wave3`**. Impact flash sells the clash; projectile streaks still subtle.
+**Wave 3 P52 critic** — death dissolve shipped. Live **`0.4.1-wave3`**.
 
-**Next:** P52 death dissolve + corpse stain (P50 remainder).
+2-tick dissolve then 1.5s stain; opening Kryos wrecks stay as set dressing.
+
+**Next:** fresh critic on live deaths. Then P53 HP bars / foot ellipses.
 
 ## Biggest gap
 
@@ -20,4 +22,4 @@
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P51 **PASS**; P52 death VFX |
+| 3–5 polish / iPad / coherence | P52 live `0.4.1-wave3`; critic next |
