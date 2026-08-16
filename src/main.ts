@@ -7,7 +7,7 @@ import { Input } from './input';
 import { Hud } from './hud';
 import { Sfx } from './audio';
 
-const VERSION = '0.2.16-wave1';
+const VERSION = '0.3.0-wave2';
 
 const host = document.getElementById('app');
 if (!host) throw new Error('Starhold boot: #app host missing');
@@ -77,13 +77,22 @@ function publish(): void {
     max: MAX_ENTS,
     hall: Kind.Hall,
   };
-  const w = window as unknown as { __SPACEPIXEL__: typeof probe; __STARHOLD__: typeof probe };
+  const w = window as unknown as {
+    __SPACEPIXEL__: typeof probe;
+    __STARHOLD__: typeof probe;
+    __STARHOLD_INPUT__: Input;
+    __STARHOLD_VIEW__: GameRenderer;
+    __STARHOLD_WORLD__: World;
+  };
   w.__SPACEPIXEL__ = probe;
   w.__STARHOLD__ = probe;
+  w.__STARHOLD_INPUT__ = input;
+  w.__STARHOLD_VIEW__ = view;
+  w.__STARHOLD_WORLD__ = world;
 }
 
 window.addEventListener('resize', () => {
   view.resize(host.clientWidth, host.clientHeight);
 });
 
-console.log(`Spacepixel ${VERSION} — wave 1 vertical slice`);
+console.log(`Spacepixel ${VERSION} — wave 2 empire loop`);

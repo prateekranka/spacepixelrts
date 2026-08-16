@@ -164,6 +164,17 @@ export class Hud {
 
   private renderCmds(world: World, input: Input, kind: Kind | null): void {
     const civ = world.civ[0];
+    const eco = world.teams[0];
+    const trainBtn = (kind: Kind, label: string, sub?: string) => {
+      const st = STATS[kind];
+      const overCap = eco.pop + st.pop > eco.cap;
+      return {
+        cmd: `train-${kind}`,
+        label,
+        sub: overCap ? 'pop cap' : (sub ?? `${st.ore} ore`),
+        disabled: overCap,
+      };
+    };
     const btns: { cmd: string; label: string; sub?: string; disabled?: boolean }[] = [];
     if (kind === null) {
       btns.push({ cmd: 'idleworker', label: 'Idle worker', sub: 'find drone' });
@@ -171,19 +182,15 @@ export class Hud {
       btns.push({ cmd: 'attack', label: 'Attack', sub: 'hold field', disabled: true });
       btns.push({ cmd: 'stop', label: 'Stop', sub: 'halt order', disabled: true });
     } else if (kind === Kind.Hall) {
-      btns.push({ cmd: `train-${Kind.Worker}`, label: workerName(civ), sub: `${STATS[Kind.Worker].ore} ore` });
-      btns.push({ cmd: `train-${Kind.Scout}`, label: 'Scout', sub: `${STATS[Kind.Scout].ore} ore` });
+      btns.push(trainBtn(Kind.Worker, workerName(civ)));
+      btns.push(trainBtn(Kind.Scout, 'Scout'));
       btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: `${STATS[Kind.House].ore} ore` });
       btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: `${STATS[Kind.Barracks].ore} ore` });
       btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: `${STATS[Kind.UniqueB].ore} ore` });
     } else if (kind === Kind.Barracks) {
-      btns.push({ cmd: `train-${Kind.Fighter}`, label: fighterName(civ), sub: `${STATS[Kind.Fighter].ore} ore` });
-      btns.push({ cmd: `train-${Kind.Siege}`, label: 'Breaker', sub: `${STATS[Kind.Siege].ore} ore` });
-      btns.push({
-        cmd: `train-${uniqueUnit(civ)}`,
-        label: labelOf(uniqueUnit(civ), civ),
-        sub: `${STATS[uniqueUnit(civ)].ore} ore`,
-      });
+      btns.push(trainBtn(Kind.Fighter, fighterName(civ)));
+      btns.push(trainBtn(Kind.Siege, 'Breaker'));
+      btns.push(trainBtn(uniqueUnit(civ), labelOf(uniqueUnit(civ), civ)));
     } else if (kind === Kind.Worker) {
       btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: `${STATS[Kind.House].ore} ore` });
       btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: `${STATS[Kind.Barracks].ore} ore` });

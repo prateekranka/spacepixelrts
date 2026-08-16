@@ -521,9 +521,13 @@ export class World {
     const b = this.civ[1];
     this.spawn(Kind.Hall, a, 0, 10.5, 10.5);
     this.spawn(Kind.House, a, 0, 13.5, 8.5);
+    this.spawn(Kind.House, a, 0, 12.0, 12.0);
+    this.spawn(Kind.House, a, 0, 8.8, 9.0);
     this.spawn(Kind.Barracks, a, 0, 8.2, 13.6);
     this.spawn(Kind.Hall, b, 1, MAP - 10.5, MAP - 10.5);
     this.spawn(Kind.House, b, 1, MAP - 13.2, MAP - 8.4);
+    this.spawn(Kind.House, b, 1, MAP - 12.0, MAP - 12.0);
+    this.spawn(Kind.House, b, 1, MAP - 8.8, MAP - 9.0);
     this.spawn(Kind.Barracks, b, 1, MAP - 8.1, MAP - 13.5);
 
     for (let i = 0; i < 5; i++) {
@@ -1204,6 +1208,7 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team > 1) continue;
+      if (e.hp <= 0 || e.corpseT > 0) continue;
       const st = STATS[e.kind];
       this.teams[e.team].pop += st.pop;
       if (e.kind === Kind.Hall && e.progress >= 1) this.teams[e.team].cap += POP_HALL;

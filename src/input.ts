@@ -258,8 +258,9 @@ export class Input {
       if (isBuilding(e.kind) && teamFilter === 0) {
         /* allow */
       }
+      const pickR = isBuilding(e.kind) ? Math.max(r, 2.2) : r;
       const d = dist2(x, z, e.x, e.z);
-      const rr = (r + e.radius) * (r + e.radius);
+      const rr = (pickR + e.radius) * (pickR + e.radius);
       if (d < rr && d < bestD) {
         bestD = d;
         best = e;
