@@ -1,6 +1,6 @@
 /** P30 / P31 / P35 — AoE2-style command chrome for landscape iPad. */
 
-import { Kind, MAP } from './engine';
+import { Kind, MAP, Ord } from './engine';
 import type { Civ } from './engine';
 import {
   CIV_NAME,
@@ -33,6 +33,7 @@ export class Hud {
   private matchEndEl: HTMLElement;
   private matchTitleEl: HTMLElement;
   private matchSubEl: HTMLElement;
+  private idlewEl: HTMLButtonElement;
   private cmdsSig = '';
 
   constructor(host: HTMLElement) {
@@ -88,6 +89,7 @@ export class Hud {
     this.matchEndEl = this.root.querySelector('#match-end')!;
     this.matchTitleEl = this.root.querySelector('#match-title')!;
     this.matchSubEl = this.root.querySelector('#match-sub')!;
+    this.idlewEl = this.root.querySelector('#idlew')!;
     this.injectCss();
   }
 
@@ -118,6 +120,10 @@ export class Hud {
     (this.root.querySelector('#civname') as HTMLElement).textContent = CIV_NAME[world.civ[0]];
     this.fpsEl.textContent = `${fps} FPS`;
     this.fpsEl.className = fps < 55 ? 'low' : '';
+    const idlePulse = world.ents.some(
+      (e) => e.alive && e.team === 0 && e.kind === Kind.Worker && e.hp > 0 && e.order === Ord.Idle,
+    );
+    this.idlewEl.classList.toggle('pulse', idlePulse);
     this.drawMini(world, input);
     this.drawCard(world, input);
     this.drawMatchEnd(world);
@@ -346,6 +352,8 @@ const HUD_CSS = `
 #meta b.low{color:#e84d4d;opacity:1}
 #idlew,#cmds button{background:#241a36;color:#f4efe4;border:1px solid #c9a22788;border-radius:2px;min-height:40px;padding:6px 10px;font:inherit;cursor:pointer}
 #idlew:hover,#cmds button:not(:disabled):hover{background:#35264c}
+#idlew.pulse{animation:idlew-pulse 1.05s ease-in-out infinite;border-color:#f0d460;box-shadow:0 0 14px #c9a227aa,inset 0 0 10px #ffd36a33}
+@keyframes idlew-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:1;box-shadow:0 0 22px #f0d460cc,inset 0 0 14px #ffd36a55}}
 #bottom{position:absolute;left:0;right:0;bottom:0;height:168px;display:grid;grid-template-columns:168px 1fr 1.2fr;gap:10px;padding:8px 10px 10px;background:linear-gradient(#120e1cf2,#1a1428f4);border-top:2px solid #c9a227}
 #minimap{width:148px;height:148px;image-rendering:pixelated;border:2px solid #c9a227;background:#07060f;align-self:center;margin-left:6px}
 #card{display:flex;gap:12px;align-items:center;padding:8px 6px}
