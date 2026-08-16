@@ -5,9 +5,9 @@
 
 ## Now
 
-**Wave 3 P55 building** — P54 integrator: VFX chrome passes; **§9 #2 command feel** still fails vs AoE2:DE (blob moves, silent combat, no idle pulse). Live **`0.4.2-wave3`**.
+**Wave 3 P55 critic** — idle pulse shipped. Live **`0.4.3-wave3`**.
 
-**Next:** idle-worker HUD pulse (smallest ack layer). Then formation / SFX.
+**Next:** fresh critic on `#idlew.pulse`. Then formation spread.
 
 ## Biggest gap
 
@@ -20,4 +20,4 @@
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P54: command feel gap; P55 idle pulse |
+| 3–5 polish / iPad / coherence | P55 live `0.4.3-wave3`; critic next |
