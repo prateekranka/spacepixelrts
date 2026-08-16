@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 2 P46 critic** — enemy peel shipped. Live **`0.3.3-wave2`**.
+**Wave 2 P47 critic** — P43–P46 all **PASS**. Live **`0.3.3-wave2`**.
 
-P45 win/lose **PASS**. After tick 240, Kryos military AttackMove the player Nexus (no 6+ gate). Opening 0–239 unchanged.
+Train, Spark→Orbit, win/lose banners, enemy peel after tick 240. Opening tableau still P41.
 
-**Next:** fresh critic on threat-while-macro. Then P47 Wave 2 match-arc critic.
+**Next:** fresh Wave 2 match-arc critic vs AoE2:DE. Marginal from P46: raid is three Scouts, not a fighter wave.
 
 ## Biggest gap
 
-**Can train, age, and win/lose.** Missing: enemy pressure while you macro (P46).
+**P46 PASS** (scout raid is light). Wave 2 match-arc critic (P47) next.
 
 ## Tracker
 
@@ -21,5 +21,5 @@ P45 win/lose **PASS**. After tick 240, Kryos military AttackMove the player Nexu
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P46 live `0.3.3-wave2`; critic next |
+| 2 gameplay depth | P46 **PASS**; P47 match-arc critic |
 | 3–5 polish / iPad / coherence | queued |

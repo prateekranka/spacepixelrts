@@ -90,8 +90,8 @@ Opening tableau is locked (P41). P20–P26 in the original plan were largely abs
 | P43 | Unblock training: pop < cap, home habitats, corpse pop, hall pick | P42 | done | **PASS** `73cb5dc` live 22/30 train Worker |
 | P44 | Epochs / AgeUp in sim + HUD (Orbit unlock) | P43 | done | **PASS** `5b3467d` live 0.3.1-wave2 |
 | P45 | Win/lose: destroy Nexus, banners | P43 | done | **PASS** `9091679` live 0.3.2-wave2 |
-| P46 | Enemy marshal threatens player Nexus during macro | P43 | critic | builder `dbbf15b` live 0.3.3-wave2 |
-| P47 | Wave 2 critic: match arc vs AoE2:DE | P44–P46 | queued | |
+| P46 | Enemy marshal threatens player Nexus during macro | P43 | done | **PASS** `2d055e1` live 0.3.3-wave2 (scout raid) |
+| P47 | Wave 2 critic: match arc vs AoE2:DE | P44–P46 | critic | |
 
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
@@ -138,4 +138,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P45 PASS.** Next: **P46** enemy Nexus pressure after the opening. Then P47 Wave 2 critic.
+**P46 PASS.** Next: **P47** Wave 2 match-arc critic vs AoE2:DE.
