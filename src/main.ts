@@ -7,7 +7,7 @@ import { Input } from './input';
 import { Hud } from './hud';
 import { Sfx } from './audio';
 
-const VERSION = '0.4.5-wave3';
+const VERSION = '0.5.0-wave4';
 
 const host = document.getElementById('app');
 if (!host) throw new Error('Starhold boot: #app host missing');

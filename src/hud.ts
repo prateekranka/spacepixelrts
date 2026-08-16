@@ -350,7 +350,7 @@ const HUD_CSS = `
 #meta{display:flex;align-items:center;gap:12px;padding:0 14px}
 #meta b{font-variant-numeric:tabular-nums;font-size:13px;opacity:.7}
 #meta b.low{color:#e84d4d;opacity:1}
-#idlew,#cmds button{background:#241a36;color:#f4efe4;border:1px solid #c9a22788;border-radius:2px;min-height:40px;padding:6px 10px;font:inherit;cursor:pointer}
+#idlew,#cmds button{background:#241a36;color:#f4efe4;border:1px solid #c9a22788;border-radius:2px;min-height:44px;min-width:44px;padding:6px 10px;font:inherit;cursor:pointer}
 #idlew:hover,#cmds button:not(:disabled):hover{background:#35264c}
 #idlew.pulse{animation:idlew-pulse 1.05s ease-in-out infinite;border-color:#f0d460;box-shadow:0 0 14px #c9a227aa,inset 0 0 10px #ffd36a33}
 @keyframes idlew-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:1;box-shadow:0 0 22px #f0d460cc,inset 0 0 14px #ffd36a55}}
