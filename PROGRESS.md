@@ -5,15 +5,17 @@
 
 ## Now
 
-**Wave 2 P49 critic** — mixed-arms shipped. Live **`0.3.5-wave2`**.
+**Wave 2 PASS** — P49 critic: mixed-arms inbound (8 Fighters + 2 Siege + 3 Scouts at tick 420). Live **`0.3.5-wave2`**.
 
-P48 army **PASS**. P49: Dominion marshal, siege head-start, stop scout spam after 240.
+P43 train, P44 Orbit, P45 win/lose, P46–P49 marshal pressure. Opening tableau still P41.
 
-**Next:** fresh critic on fighters+siege inbound.
+**Next:** Wave 3 integrator plays for *feel* vs AoE2:DE (command, VFX, empire presence) and names the single biggest remaining gap.
+
+**DIRECTIVE:** orphans reaped; spawn wrapper kills pty children; no leaked `pNN` tmux.
 
 ## Biggest gap
 
-**Inbound is scout-heavy** (P48). P49: ≥4 Fighters + ≥1 Siege on the Nexus.
+**Wave 2 PASS.** Marginal: three trailing Scouts lag the fighter–siege ball. Wave 3: command feel / VFX / empire presence.
 
 ## Tracker
 
@@ -21,5 +23,5 @@ P48 army **PASS**. P49: Dominion marshal, siege head-start, stop scout spam afte
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P49 live `0.3.5-wave2`; critic next |
-| 3–5 polish / iPad / coherence | queued |
+| 2 gameplay depth | **PASS** (P49 mixed-arms) |
+| 3–5 polish / iPad / coherence | Wave 3 integrator next |

@@ -93,7 +93,7 @@ Opening tableau is locked (P41). P20–P26 in the original plan were largely abs
 | P46 | Enemy marshal threatens player Nexus during macro | P43 | done | **PASS** `2d055e1` live 0.3.3-wave2 (scout raid) |
 | P47 | Wave 2 critic: match arc vs AoE2:DE | P44–P46 | done | **PASS** skeleton `eb865d9`; gap = scout raid not army |
 | P48 | Enemy fighter wave (6+ military, ≥4 Fighters) | P47 | done | **PASS** `2980232` 9 inbound / 4 Fighters |
-| P49 | Mixed-arms wave (fighters + siege) | P48 | critic | builder `8dc277c` live 0.3.5-wave2 |
+| P49 | Mixed-arms wave (fighters + siege) | P48 | done | **PASS** `tasks/P49-critic.md` 8 Fighters + 2 Siege at t420 |
 
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
@@ -105,16 +105,15 @@ Opening tableau is locked (P41). P20–P26 in the original plan were largely abs
 | P25 | Unique units/buildings + AI marshal | P22 P23 | iterate — AI delayed | |
 | P26 | Wave 2 integrator | P20–P25 | done as P42 | |
 
-### Wave 3 — feel
+### Wave 3 — feel (live numbering)
+
+HUD/minimap/VFX already exist from Wave 1 chrome. Live Wave 3 starts with an integrator:
 
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
-| P30 | HUD command bar + portraits + idle-villager | P26 | queued | |
-| P31 | Minimap | P24 P30 | queued | |
-| P32 | VFX: muzzle, beams, ice burst, spore, selection ellipse | P23 | queued | |
-| P33 | Audio (optional if time; do not fake wow with silence if VFX carry) | P32 | queued | |
-| P34 | Empire presence: banners, bob, vents glow, nebula | P11 | queued | |
-| P35 | Wave 3 integrator | P30–P34 | queued | |
+| P50 | Wave 3 integrator: play for feel, name the gap | P49 | building | |
+
+Original P30–P35 chrome mostly shipped in the vertical slice; critic will say what still fails vs AoE2:DE.
 
 ### Wave 4 — performance / hardening
 
@@ -140,4 +139,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P48 PASS.** Gap: scout-heavy blob. **P49** mixed-arms (fighters + siege) in flight.
+**Wave 2 PASS** (P49). **P50** Wave 3 integrator in flight.
