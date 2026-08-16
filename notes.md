@@ -589,3 +589,86 @@ So this must be done in the dashboard OR with a new zone-scoped API token.
 
 Live URL unchanged: **https://spacepixelrts.pages.dev**
 GitHub: **https://github.com/prateekranka/spacepixelrts**
+
+### checkpoint 2026-08-16 10:56:32
+- **orchestrator: RUNNING** (pid 20606, elapsed 24:28)
+- files in repo:
+  ./ORCHESTRATOR_BRIEF.md
+  ./PROGRESS.md
+  ./critic/out/boot.png
+  ./critic/out/wave1-measure.png
+  ./critic/out/wave1.png
+  ./critic/run.ts
+  ./dist/assets/index-BKBz8dpF.js
+  ./dist/assets/index-BKBz8dpF.js.map
+  ./dist/index.html
+  ./dist/progress.html
+  ./docs/ARCHITECTURE.md
+  ./docs/DESIGN.md
+  ./docs/ORCHESTRATION.md
+  ./index.html
+  ./package-lock.json
+  ./package.json
+  ./public/progress.html
+  ./scripts/measure.mjs
+  ./scripts/monitor.sh
+  ./scripts/screenshot.mjs
+  ./src/atlas.ts
+  ./src/audio.ts
+  ./src/content.ts
+  ./src/content/stats.ts
+  ./src/engine.ts
+  ./src/hud.ts
+  ./src/input.ts
+  ./src/input/input.ts
+  ./src/main.ts
+  ./src/render.ts
+  ./src/render/atlas.ts
+  ./src/render/palette.ts
+  ./src/render/renderer.ts
+  ./src/sim.ts
+  ./src/sim/engine.ts
+  ./src/sim/world.ts
+  ./src/ui/hud.ts
+  ./tasks-monitor.log
+  ./tasks/README.md
+  ./tsconfig.json
+  ./vite.config.ts
+  ./wrangler.jsonc
+- git log:
+  34c0d76 notes: DNS blocked by existing workers-managed record on space host
+  2034e21 notes: GitHub repo + domain DNS status
+  a2b7f33 P10-P35: ship a playable Wave 1 skirmish with pixel atlas, command HUD, and combat
+  f70d8eb vision: use Grok 4.6 XHigh for critic visual judgment (verified working)
+  b7b5661 notes: add monitoring log + monitor script
+- latest transcript tail:
+  TOOL Shell {'command': 'npm install', 'working_directory': '/Users/prateekranka/Cowork/spacepixelrts', 'description': 'Install npm 
+  TOOL Write {'contents': '# Piece reports live here. Logs (*.log) are gitignored.\n', 'path': '/Users/prateekranka/Cowork/spacepixel
+  TOOL Shell {'command': 'ls node_modules | head -40 && echo "---" && test -d node_modules/three && echo three_ok && test -d node_mod
+  TOOL Shell {'command': 'npx tsc --noEmit', 'description': 'Typecheck the TypeScript project', 'working_directory': '/Users/prateekr
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/src/render/renderer.ts', 'offset': 170, 'limit': 20}
+  TOOL StrReplace {'new_string': "import { Kind, iso, MAP, TEAM_TINT, uniso, isBuilding, isUnit, type Civ } from '../sim/engine';", 'old_s
+  TOOL StrReplace {'new_string': '    const sx = (cssX * cap - this.w / 2) / zoom + iso(camX, camZ).sx;\n    const sy = (cssY * cap - this
+  TOOL Shell {'command': 'npx tsc --noEmit', 'description': 'Re-run TypeScript check', 'working_directory': '/Users/prateekranka/Cowo
+  TOOL Shell {'command': 'npm run build', 'description': 'Production Vite + tsc build', 'working_directory': '/Users/prateekranka/Cow
+  TOOL TodoWrite {'merge': True, 'todos': [{'id': 'docs', 'status': 'completed'}, {'id': 'scaffold', 'status': 'in_progress'}, {'id': 'cr
+  TOOL Shell {'command': 'npm run critic', 'description': 'Run Playwright critic harness', 'working_directory': '/Users/prateekranka/
+  TOOL Read {'path': '/Users/prateekranka/Cowork/spacepixelrts/package.json'}
+
+---
+
+### Domain blocker FIXED ✅ (worker record removed) — CNAME still needs one manual step
+
+Root cause found and fixed: a Worker named **`spacepixel`** owned a **Worker custom domain**
+on `space.contenthelper.in` (domain id `f02207fca6428b28de894ee27d42ba0bcfc08eaa`). That
+"Worker type DNS record" was what blocked the Pages CNAME.
+
+- Deleted the worker custom domain via Workers API (`workers:write` scope on OAuth token) ✅
+- Deleted + re-added the Pages custom domain → now `pending` / "CNAME record not set" (hangs
+  only on the DNS record, host is free).
+- **Remaining:** create the CNAME. OAuth token still can't write DNS (no `dns_records`
+  scope). One manual step OR a zone-scoped DNS-edit token:
+  ```
+  Type: CNAME   Name: space   Target: spacepixelrts.pages.dev   Proxy: ON
+  ```
+  Pages auto-provisions the cert the instant this record exists.
