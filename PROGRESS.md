@@ -5,17 +5,15 @@
 
 ## Now
 
-**Wave 2 PASS** — P49 critic: mixed-arms inbound (8 Fighters + 2 Siege + 3 Scouts at tick 420). Live **`0.3.5-wave2`**.
+**Wave 3 P51 building** — P50 integrator named the gap. Live still **`0.3.5-wave2`**.
 
-P43 train, P44 Orbit, P45 win/lose, P46–P49 marshal pressure. Opening tableau still P41.
+Wave 2 **PASS**. Combat still HP-flash-and-bolts; opening muzzle is clamped to 0.04; no impact spark.
 
-**Next:** Wave 3 integrator plays for *feel* vs AoE2:DE (command, VFX, empire presence) and names the single biggest remaining gap.
-
-**DIRECTIVE:** orphans reaped; spawn wrapper kills pty children; no leaked `pNN` tmux.
+**Next:** P51 muzzle + impact VFX (`0.4.0-wave3`).
 
 ## Biggest gap
 
-**Wave 2 PASS.** Marginal: three trailing Scouts lag the fighter–siege ball. Wave 3: command feel / VFX / empire presence.
+**Combat VFX chain** (P50): muzzle suppressed, no impact spark, death is static wrecks. P51 is muzzle+impact.
 
 ## Tracker
 
@@ -24,4 +22,4 @@ P43 train, P44 Orbit, P45 win/lose, P46–P49 marshal pressure. Opening tableau 
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | Wave 3 integrator next |
+| 3–5 polish / iPad / coherence | P51 muzzle/impact in flight |
