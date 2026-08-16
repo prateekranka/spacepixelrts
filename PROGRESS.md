@@ -5,19 +5,19 @@
 
 ## Now
 
-**P80 critic** — GPU particles shipped **`0.7.0-proc`**. Live deployed.
+**P81 procedural terrain** — P80 **PASS** (`6a10bdc`). Live **`0.7.0-proc`**.
 
-Default opening still P41. p99 bar **< 8 ms**.
+GPU particles locked. Next: GLSL ground (value weather, dune banding, elevation rims). Units still atlas (P82).
 
-**Next:** fresh critic on clash VFX + budget.
+**Next:** P81 builder, then critic.
 
 ## Biggest gap
 
-**P80 in critic.** Atlas-quad sparks must be gone; opening belt still reads.
+**Ground is still a baked canvas atlas.** Procedural shader terrain, readable at RTS zoom.
 
 ## Tracker
 
 | Wave | Status |
 |---|---|
-| 0–5 | **PASS** (P41 / P49 / P58 / P66 / P70) |
-| 6 procedural-first | P80 shipped; critic |
+| 0–5 | **PASS** |
+| 6 procedural-first | P80 **PASS**; P81 terrain |
