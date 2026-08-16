@@ -5,15 +5,13 @@
 
 ## Now
 
-**Wave 3 P51 critic** — muzzle/impact shipped. Live **`0.4.0-wave3`**.
+**Wave 3 P52 building** — P51 critic **PASS** (`d161f43`). Live **`0.4.0-wave3`**. Impact flash sells the clash; projectile streaks still subtle.
 
-Pooled sparks, clash shootFlash 0.42, impact on bolt/melee. Opening tableau unchanged.
-
-**Next:** fresh critic on whether the clash reads from VFX. Builder timed out after commit; process group reaped.
+**Next:** P52 death dissolve + corpse stain (P50 remainder).
 
 ## Biggest gap
 
-**Combat VFX chain** (P50): muzzle suppressed, no impact spark, death is static wrecks. P51 is muzzle+impact.
+**Death is pop-out / static wrecks** (P50). P52: 2-frame dissolve + 1.5s stain. Then HP/ellipses.
 
 ## Tracker
 
@@ -22,4 +20,4 @@ Pooled sparks, clash shootFlash 0.42, impact on bolt/melee. Opening tableau unch
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P51 live `0.4.0-wave3`; critic next |
+| 3–5 polish / iPad / coherence | P51 **PASS**; P52 death VFX |

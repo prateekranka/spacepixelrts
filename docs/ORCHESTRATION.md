@@ -112,7 +112,8 @@ HUD/minimap/VFX already exist from Wave 1 chrome. Live Wave 3 starts with an int
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
 | P50 | Wave 3 integrator: play for feel, name the gap | P49 | done | combat is HP-flash-and-bolts; no muzzle/impact chain |
-| P51 | Muzzle + impact sparks | P50 | critic | builder `c94b9b3` live 0.4.0-wave3 |
+| P51 | Muzzle + impact sparks | P50 | done | **PASS** `d161f43` live 0.4.0-wave3 |
+| P52 | Death dissolve + corpse stain | P51 | building | |
 
 Original P30–P35 chrome mostly shipped in the vertical slice; critic will say what still fails vs AoE2:DE.
 
@@ -140,4 +141,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P50:** biggest Wave 3 gap is muzzle→impact VFX. **P51** in flight.
+**P51 PASS.** Next: **P52** death dissolve. Then HP bars / foot ellipses.
