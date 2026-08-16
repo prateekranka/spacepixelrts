@@ -9,13 +9,13 @@ Grok 4.6 Extra High is the orchestrator. Composer 2.5 are builders, critics, int
 For every piece:
 
 1. Orchestrator writes a **self-contained brief** (spec, files to read, DoD, verify steps).
-2. Spawn builder:
+2. Spawn builder via the leak-safe wrapper (bounded timeout, process-group kill on exit):
 
 ```
-cursor-agent --trust --yolo --print --model composer-2.5 -p "<brief>"
+scripts/spawn-composer.sh tasks/<id>-brief.md tasks/<id>.md 600
 ```
 
-From repo root. Optionally in tmux: session name = piece id, transcript `tasks/<id>.log`.
+Never leave a Composer process running after the piece finishes. Do not spawn raw `cursor-agent` in a detached tmux session without the wrapper.
 
 3. Orchestrator reviews the **diff**, not the agent's claim.
 4. Spawn a **fresh** critic (new process, no builder context) that inspects the **running game** via `npm run critic` and/or Playwright against `npm run dev`. Blind bar: AoE2:DE.
@@ -127,4 +127,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**Wave 1 PASS** (P41 critic, `0.2.16-wave1`). Opening tableau wowed vs AoE2:DE. Next: Wave 2 integrator plays the skirmish. Marginal: keep Kryos wrecks looking like a fight, not a diorama.
+**Wave 1 PASS** (P41 critic, `0.2.16-wave1`). Opening tableau wowed vs AoE2:DE. **P42** Wave 2 integrator in flight (bounded 600s spawn). Marginal: keep Kryos wrecks looking like a fight, not a diorama.
