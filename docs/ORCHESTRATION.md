@@ -129,8 +129,10 @@ Original plan IDs P40–P42 collide with live Wave 1/2 IDs. Live IDs win.
 
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
-| P59 | Wave 4 integrator: load / iPad / bugs, name the gap | P58 | building | |
-| P60+ | TBD from P59 gap (60fps load, iPad QA, or bug) | P59 | queued | |
+| P59 | Wave 4 integrator: load / iPad / bugs, name the gap | P58 | done | cull + MAX_ENTS 384; idlew 44px `0.5.0-wave4` |
+| P60 | Viewport cull instance uploads | P59 | building | |
+| P61 | P60 critic | P60 | queued | |
+| P62+ | TBD (safe-area / Attack-lock / MAX_ENTS) | P61 | queued | |
 
 ### Wave 5 — coherence
 
@@ -148,4 +150,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**Wave 3 PASS (P58).** **P59** Wave 4 integrator in flight. P58 leftover: opening Attack-lock on clash right-click.
+**P59 done.** **P60** viewport culling in flight. Leftovers: HUD safe-area, Attack-lock pick radius, `MAX_ENTS` 384.

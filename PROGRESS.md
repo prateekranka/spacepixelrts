@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 4 integrator (P59)** — Wave 3 feel **PASS** (P58). Live **`0.5.0-wave4`**.
+**Wave 4 P60** — viewport culling. Live **`0.5.0-wave4`**. P59 named the gap.
 
-Opening still P41. Match arc still P49. Feel still P51–P58. P59: viewport/frustum culling + `MAX_ENTS` contract is the Wave 4 gap; `#idlew` touch target hardened to 44 px.
+Opening still P41. Later Wave 4: HUD safe-area, Attack-lock pick radius. Do not raise `MAX_ENTS` in P60.
 
-**Next:** Builder adds renderer viewport culling; safe-area on HUD; Attack-lock input fix.
+**Next:** P60 builder, then fresh critic.
 
 ## Biggest gap
 
-**No viewport/frustum culling + `MAX_ENTS` 384** — opening and ~256-ent stress green on critic, but 400-unit iPad bar has no headroom path (`tasks/P59.md`).
+**Renderer uploads every instance with no viewport cull** (`MAX_ENTS` 384). Off-screen horde should not grow `mesh.count`.
 
 ## Tracker
 
@@ -23,5 +23,5 @@ Opening still P41. Match arc still P49. Feel still P51–P58. P59: viewport/frus
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
-| 4 performance / iPad / bugs | P59 integrator **done** |
+| 4 performance / iPad / bugs | P59 done; P60 culling |
 | 5 full 1v1 coherence | queued |
