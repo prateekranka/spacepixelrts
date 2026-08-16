@@ -147,7 +147,15 @@ Original plan ID P50/P70 collide with live IDs. Live IDs win.
 | P67 | Wave 5 integrator: play full 1v1, name the gap | P66 | done | Nihiline never spawns; need civ picker |
 | P68 | Civ picker so Nihiline appears | P67 | done | shipped `0.6.0-wave5` `cb32bfb` |
 | P69 | P68 critic | P68 | done | **PASS** `dbf6140` live 0.6.0-wave5 |
-| P70 | Wave 5 wrap critic | P69 | critic | |
+| P70 | Wave 5 wrap critic | P69 | done | **PASS locked** `6818f8e` live 0.6.0-wave5 |
+
+### Wave 6 — procedural-first (`docs/PROCEDURAL.md`)
+
+| ID | Piece | Depends | Status | Latest critic |
+|---|---|---|---|---|
+| P80 | GPU-instanced particle VFX (sparks/bolts) | P70 | building | |
+| P81 | Procedural terrain shader | P80 | queued | |
+| P82 | SDF unit/building quads (drop atlas) | P81 | queued | |
 
 ---
 
@@ -159,4 +167,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P69 Nihiline PASS.** **P70** Wave 5 wrap critic in flight.
+**Wave 5 PASS (P70).** **P80** GPU particle VFX in flight (`docs/PROCEDURAL.md`). p99 bar **< 8 ms**.

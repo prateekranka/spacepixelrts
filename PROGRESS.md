@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 5 wrap critic (P70)** — P69 **PASS** (`dbf6140`). Live **`0.6.0-wave5`**.
+**P80 GPU particle VFX** — Wave 5 **PASS (locked)** (P70, `6818f8e`). Live **`0.6.0-wave5`**.
 
-Nihiline playable. Default opening still P41.
+User directive: procedural-first (`docs/PROCEDURAL.md`). P80 → P81 terrain → P82 SDF units. p99 **< 8 ms**.
 
-**Next:** P70 names whether Wave 5 (full 1v1 coherence) is locked.
+**Next:** P80 builder, then critic.
 
 ## Biggest gap
 
-**Wave 5 wrap in critic.** Three peoples are on canvas; judge the whole 1v1 vs AoE2:DE.
+**Sparks/bolts are still atlas quads.** Convert to GPU-instanced additive particles (broken plume).
 
 ## Tracker
 
@@ -24,4 +24,5 @@ Nihiline playable. Default opening still P41.
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
 | 4 performance / iPad / bugs | **PASS** (P66 critic) |
-| 5 full 1v1 coherence | P69 Nihiline **PASS**; P70 wrap critic |
+| 5 full 1v1 coherence | **PASS** (P70 critic) |
+| 6 procedural-first | P80 GPU particles |
