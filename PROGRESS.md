@@ -5,9 +5,11 @@
 
 ## Now
 
-**Wave 3 P53 building** — P52 critic **PASS** (`f087d5e`). Live **`0.4.1-wave3`**. Dissolve → stain → gone works; opening wrecks stay.
+**Wave 3 P53 critic** — ellipses/HP shipped. Live **`0.4.2-wave3`**.
 
-**Next:** foot ellipses + HP bars only when selected/damaged/in-combat.
+Foot ellipses at ground; HP only selected/damaged/in-combat; opening clash has no HP wallpaper.
+
+**Next:** fresh critic. P50 VFX/chrome list then complete.
 
 ## Biggest gap
 
@@ -20,4 +22,4 @@
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P52 **PASS**; P53 ellipses/HP |
+| 3–5 polish / iPad / coherence | P53 live `0.4.2-wave3`; critic next |
