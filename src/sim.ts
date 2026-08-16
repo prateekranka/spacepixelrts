@@ -32,6 +32,9 @@ import {
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
 const DC = [1, 1, 1, 1, 1.4142, 1.4142, 1.4142, 1.4142];
+/** Scripted marshal wave trains faster off-screen (DESIGN §6). */
+const MARSHAL_FIGHTER_TRAIN = 1;
+const MARSHAL_PEEL_STAGGER_TICKS = 3;
 
 export class World {
   readonly ents: Ent[] = Array.from({ length: MAX_ENTS }, makeEnt);
@@ -305,6 +308,7 @@ export class World {
     this.stepBolts();
     this.updateFog();
     this.stepFlags();
+    this.stepEnemyMarshal();
     this.stepMarshalPeel();
     this.stepAi();
     if ((this.tick & 7) === 0) this.recountPop();
@@ -890,8 +894,8 @@ export class World {
           const u = this.spawn(e.trainKind, e.civ, e.team, e.rallyX, e.rallyZ);
           if (u) {
             if (e.team === 1 && this.tick >= 240 && isUnit(u.kind) && u.kind !== Kind.Worker) {
-              const ph = this.nearestHall(0, e.x, e.z);
-              if (ph) this.orderAttackMoveHall(u, ph);
+              u.order = Ord.Idle;
+              this.queueMarshalPeel(u);
             } else {
               u.order = Ord.AttackMove;
               u.tx = e.rallyX + (e.team === 0 ? 1 : -1);
@@ -1264,25 +1268,76 @@ export class World {
     this.marshalPeelBuilt = true;
   }
 
+  private queueMarshalPeel(e: Ent): void {
+    if (!this.shouldMarshalPeel(e)) return;
+    if (!this.marshalPeelQ.includes(e.id)) this.marshalPeelQ.push(e.id);
+  }
+
+  /** Tick 240: off-screen Orbit for the enemy marshal; keep ore/charge for Yard production. */
+  private stepEnemyMarshal(): void {
+    if (this.tick < 240) return;
+    const eco = this.teams[1];
+    eco.ore = Math.max(eco.ore, 120);
+    eco.energy = Math.max(eco.energy, 40);
+    if (this.tick === 240) {
+      eco.epoch = 1;
+      eco.ageT = 0;
+      eco.ore = Math.max(eco.ore, 300);
+      eco.energy = Math.max(eco.energy, 100);
+    }
+    this.pumpMarshalTraining();
+  }
+
+  private pumpMarshalTraining(): void {
+    const eco = this.teams[1];
+    if (eco.epoch < minTrainEpoch(Kind.Fighter)) return;
+    let hall: Ent | null = null;
+    let barracks: Ent | null = null;
+    let workers = 0;
+    let fighters = 0;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1) continue;
+      if (e.kind === Kind.Hall) hall = e;
+      if (e.kind === Kind.Barracks) barracks = e;
+      if (e.kind === Kind.Worker) workers++;
+      if (e.kind === Kind.Fighter && e.hp > 0) fighters++;
+    }
+    const st = STATS[Kind.Fighter];
+    const room = eco.pop + st.pop <= eco.cap;
+    const pay = eco.ore >= st.ore && eco.energy >= st.energy;
+    if (fighters >= 8 || !room || !pay) return;
+    if (barracks && barracks.trainT <= 0) this.tryMarshalTrain(barracks, Kind.Fighter);
+    if (hall && hall.trainT <= 0 && workers >= 8 && eco.ageT <= 0) {
+      this.tryMarshalTrain(hall, Kind.Fighter);
+    }
+  }
+
+  private tryMarshalTrain(building: Ent, kind: Kind): boolean {
+    if (!this.tryTrain(building, kind)) return false;
+    if (building.team === 1 && kind === Kind.Fighter && this.tick >= 240) {
+      building.trainT = Math.min(building.trainT, MARSHAL_FIGHTER_TRAIN);
+    }
+    return true;
+  }
+
   /** After opening clash, stagger enemy military toward the player Nexus. */
   private stepMarshalPeel(): void {
     if (this.tick < 240) return;
     const playerHall = this.nearestHall(0, 10.5, 10.5);
     if (!playerHall) return;
     if (!this.marshalPeelBuilt) this.buildMarshalPeelQueue();
-    const elapsed = (this.tick - 240) * DT;
-    const target = Math.min(this.marshalPeelQ.length, Math.floor(elapsed / 0.15) + 1);
-    while (this.marshalPeelI < target) {
-      const id = this.marshalPeelQ[this.marshalPeelI++];
-      const e = this.ents[id];
-      if (e.alive && this.shouldMarshalPeel(e)) this.orderAttackMoveHall(e, playerHall);
-    }
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team !== 1 || !isUnit(e.kind) || e.kind === Kind.Worker) continue;
-      if (this.shouldMarshalPeel(e) && !this.marshalPeelQ.includes(e.id)) {
-        this.orderAttackMoveHall(e, playerHall);
-      }
+      this.queueMarshalPeel(e);
+    }
+    while (this.marshalPeelI < this.marshalPeelQ.length) {
+      const peelAt = 240 + this.marshalPeelI * MARSHAL_PEEL_STAGGER_TICKS;
+      if (this.tick < peelAt) break;
+      const id = this.marshalPeelQ[this.marshalPeelI++];
+      const e = this.ents[id];
+      if (e.alive && this.shouldMarshalPeel(e)) this.orderAttackMoveHall(e, playerHall);
     }
   }
 
@@ -1316,6 +1371,7 @@ export class World {
     if (barracks && barracks.trainT <= 0 && eco.pop < eco.cap) {
       const k = fighters > 6 && eco.gas >= 45 ? uniqueUnit(this.civ[1]) : Kind.Fighter;
       if (
+        this.tick < 240 &&
         eco.epoch >= minTrainEpoch(k) &&
         eco.ore >= STATS[k].ore &&
         eco.gas >= STATS[k].gas &&
@@ -1323,6 +1379,7 @@ export class World {
       ) {
         this.tryTrain(barracks, k);
       } else if (
+        this.tick < 240 &&
         this.tick >= 28 &&
         military < 5 &&
         eco.ore >= STATS[Kind.Scout].ore &&
@@ -1335,6 +1392,7 @@ export class World {
       hall &&
       hall.trainT <= 0 &&
       workers >= 8 &&
+      this.tick < 240 &&
       this.tick >= 28 &&
       military < 5 &&
       eco.pop + STATS[Kind.Scout].pop <= eco.cap &&
@@ -1342,16 +1400,6 @@ export class World {
       eco.energy >= STATS[Kind.Scout].energy
     ) {
       this.tryTrain(hall, Kind.Scout);
-    }
-    if (this.tick >= 240 && hall) {
-      const enemyHall = this.nearestHall(0, hall.x, hall.z);
-      if (enemyHall) {
-        for (let i = 0; i < MAX_ENTS; i++) {
-          const e = this.ents[i];
-          if (!e.alive || e.team !== 1 || !isUnit(e.kind) || e.kind === Kind.Worker) continue;
-          if (!this.isRaidingPlayerHall(e)) this.orderAttackMoveHall(e, enemyHall);
-        }
-      }
     }
   }
 
