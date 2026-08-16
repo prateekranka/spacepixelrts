@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 3 P53 critic** — ellipses/HP shipped. Live **`0.4.2-wave3`**.
+**Wave 3 P54 integrator** — P53 critic **PASS** (`ba0a111`). Live **`0.4.2-wave3`**.
 
-Foot ellipses at ground; HP only selected/damaged/in-combat; opening clash has no HP wallpaper.
+P51 muzzle/impact, P52 death dissolve, P53 foot ellipses + earned HP — all passed. Opening still P41.
 
-**Next:** fresh critic. P50 VFX/chrome list then complete.
+**Next:** Wave 3 integrator names the remaining feel gap vs AoE2:DE.
 
 ## Biggest gap
 
-**HP chrome / selection boxes** (P50). P53: foot ellipses; HP only selected/damaged/in-combat.
+**Wave 3 VFX/chrome slice PASS.** Integrator (P54) names the next feel gap vs AoE2:DE.
 
 ## Tracker
 
@@ -22,4 +22,4 @@ Foot ellipses at ground; HP only selected/damaged/in-combat; opening clash has n
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P53 live `0.4.2-wave3`; critic next |
+| 3–5 polish / iPad / coherence | P51–P53 **PASS**; P54 integrator |
