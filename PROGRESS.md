@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 3 P57 critic** — hit SFX shipped. Live **`0.4.5-wave3`**.
+**Wave 3 P58 critic** — P57 **PASS** (`a740c9d`). Live **`0.4.5-wave3`**.
 
-Rate-limited `Sfx.hit()` on melee/impact; `hitSfx` probe. Opening tableau unchanged.
+VFX chrome (P51–P53) and command-feel (P55 pulse, P56 formation, P57 hit SFX) all passed. Opening still P41.
 
-**Next:** fresh critic. P54 command-feel list then complete.
+**Next:** fresh Wave 3 feel critic vs AoE2:DE.
 
 ## Biggest gap
 
-**Combat is silent** (P54). P57: rate-limited hit SFX.
+**P54 command-feel items shipped.** Wave 3 critic (P58) next vs AoE2:DE.
 
 ## Tracker
 
@@ -22,4 +22,4 @@ Rate-limited `Sfx.hit()` on melee/impact; `hitSfx` probe. Opening tableau unchan
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P57 live `0.4.5-wave3`; critic next |
+| 3–5 polish / iPad / coherence | P57 **PASS**; P58 Wave 3 critic |
