@@ -127,4 +127,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-P27 critic FAIL: hold-fire ranks **pass** (two countable wings, bolts, HUD, p99). Gap is **empire presence** — dust/rock/gems do not read; fight floats on a dotted void grid (~75% near-void palette). P28: make the frustum a place.
+**Wave 1 PASS** (P41 critic, `0.2.16-wave1`). Opening tableau wowed vs AoE2:DE. Next: Wave 2 integrator plays the skirmish. Marginal: keep Kryos wrecks looking like a fight, not a diorama.
