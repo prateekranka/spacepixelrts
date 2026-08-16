@@ -5,15 +5,13 @@
 
 ## Now
 
-**Wave 3 P54 integrator** — P53 critic **PASS** (`ba0a111`). Live **`0.4.2-wave3`**.
+**Wave 3 P55 building** — P54 integrator: VFX chrome passes; **§9 #2 command feel** still fails vs AoE2:DE (blob moves, silent combat, no idle pulse). Live **`0.4.2-wave3`**.
 
-P51 muzzle/impact, P52 death dissolve, P53 foot ellipses + earned HP — all passed. Opening still P41.
-
-**Next:** Wave 3 integrator names the remaining feel gap vs AoE2:DE.
+**Next:** idle-worker HUD pulse (smallest ack layer). Then formation / SFX.
 
 ## Biggest gap
 
-**Wave 3 VFX/chrome slice PASS.** Integrator (P54) names the next feel gap vs AoE2:DE.
+**Orders feel like dragging sprites** (P54 / §9 #2). P55: idle-worker pulse. Then formation spread and combat SFX.
 
 ## Tracker
 
@@ -22,4 +20,4 @@ P51 muzzle/impact, P52 death dissolve, P53 foot ellipses + earned HP — all pas
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P51–P53 **PASS**; P54 integrator |
+| 3–5 polish / iPad / coherence | P54: command feel gap; P55 idle pulse |

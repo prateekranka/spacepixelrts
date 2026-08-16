@@ -115,7 +115,8 @@ HUD/minimap/VFX already exist from Wave 1 chrome. Live Wave 3 starts with an int
 | P51 | Muzzle + impact sparks | P50 | done | **PASS** `d161f43` live 0.4.0-wave3 |
 | P52 | Death dissolve + corpse stain | P51 | done | **PASS** `f087d5e` live 0.4.1-wave3 |
 | P53 | Foot ellipses + combat-only HP bars | P52 | done | **PASS** `ba0a111` live 0.4.2-wave3 |
-| P54 | Wave 3 integrator (feel vs AoE2:DE) | P53 | building | |
+| P54 | Wave 3 integrator (feel vs AoE2:DE) | P53 | done | §9 #2 fail — blob/silent/no idle pulse |
+| P55 | Idle-worker HUD pulse | P54 | building | |
 
 Original P30–P35 chrome mostly shipped in the vertical slice; critic will say what still fails vs AoE2:DE.
 
@@ -143,4 +144,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P53 PASS.** **P54** Wave 3 integrator in flight.
+**P54:** command feel vs AoE2:DE. **P55** idle-worker pulse in flight.
