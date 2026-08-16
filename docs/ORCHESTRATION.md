@@ -154,9 +154,8 @@ Original plan ID P50/P70 collide with live IDs. Live IDs win.
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
 | P80 | GPU-instanced particle VFX (sparks/bolts) | P70 | done | **PASS** `6a10bdc` live 0.7.0-proc |
-| P81 | Procedural terrain shader | P80 | critic | shipped `0.7.1-proc` `a9ebb4f` |
-| P81 | Procedural terrain shader | P80 | queued | |
-| P82 | SDF unit/building quads (drop atlas) | P81 | queued | |
+| P81 | Procedural terrain shader | P80 | done | **PASS** `73c00a5` live 0.7.1-proc |
+| P82 | SDF unit/building quads (drop atlas) | P81 | building | |
 
 ---
 
@@ -168,4 +167,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P81 shipped `0.7.1-proc`.** Terrain critic in flight.
+**P81 terrain PASS.** **P82** SDF unit/building quads in flight.

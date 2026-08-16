@@ -5,17 +5,19 @@
 
 ## Now
 
-**P81 critic** — procedural terrain shipped **`0.7.1-proc`**. Live deployed.
+**P82 SDF sprites** — P81 **PASS** (`73c00a5`). Live **`0.7.1-proc`**.
 
-**Next:** fresh critic on banding/rims vs opening readability.
+Terrain + GPU VFX locked. Last procedural piece: drop baked unit atlas.
+
+**Next:** P82 builder, then critic.
 
 ## Biggest gap
 
-**P81 in critic.** Ground must read as weather/dunes, not bury the clash.
+**Units/buildings still sample a CPU atlas.** SDF fragment-shader silhouettes, three civs distinct.
 
 ## Tracker
 
 | Wave | Status |
 |---|---|
 | 0–5 | **PASS** |
-| 6 procedural-first | P80 **PASS**; P81 shipped; critic |
+| 6 procedural-first | P80–P81 **PASS**; P82 SDF sprites |
