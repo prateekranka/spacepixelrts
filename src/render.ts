@@ -53,6 +53,7 @@ export class GameRenderer {
   private mapMesh!: THREE.Mesh;
   private lastCamQ = new THREE.Quaternion();
   private stars!: THREE.Points;
+  private nebula!: THREE.Points;
 
   constructor(host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -127,6 +128,7 @@ export class GameRenderer {
 
     this.buildMap(world);
     this.buildStars();
+    this.buildNebula();
     this.fogTex = new THREE.DataTexture(this.fogData, MAP, MAP, THREE.RGBAFormat);
     this.fogTex.magFilter = THREE.NearestFilter;
     this.fogTex.minFilter = THREE.NearestFilter;
@@ -357,12 +359,15 @@ export class GameRenderer {
   }
 
   private buildStars(): void {
-    const n = 500;
+    const cx = MAP * 0.5;
+    const cz = MAP * 0.52;
+    const n = 280;
     const pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
-      pos[i * 3] = Math.random() * MAP;
+      const bias = i < 180 ? 1 : 0;
+      pos[i * 3] = bias ? cx + (Math.random() - 0.5) * 26 : Math.random() * MAP;
       pos[i * 3 + 1] = 8 + Math.random() * 18;
-      pos[i * 3 + 2] = Math.random() * MAP;
+      pos[i * 3 + 2] = bias ? cz + (Math.random() - 0.5) * 18 : Math.random() * MAP;
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -371,6 +376,37 @@ export class GameRenderer {
       new THREE.PointsMaterial({ color: 0xe8e0ff, size: 0.08, sizeAttenuation: true, transparent: true, opacity: 0.7 }),
     );
     this.scene.add(this.stars);
+  }
+
+  private buildNebula(): void {
+    const cx = MAP * 0.5;
+    const cz = MAP * 0.52;
+    const n = 55;
+    const pos = new Float32Array(n * 3);
+    const col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      pos[i * 3] = cx + (Math.random() - 0.5) * 24;
+      pos[i * 3 + 1] = 0.25 + Math.random() * 1.4;
+      pos[i * 3 + 2] = cz + (Math.random() - 0.5) * 16;
+      col[i * 3] = 0.35 + Math.random() * 0.35;
+      col[i * 3 + 1] = 0.18 + Math.random() * 0.22;
+      col[i * 3 + 2] = 0.45 + Math.random() * 0.4;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    this.nebula = new THREE.Points(
+      g,
+      new THREE.PointsMaterial({
+        size: 0.55,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0.28,
+        vertexColors: true,
+        depthWrite: false,
+      }),
+    );
+    this.scene.add(this.nebula);
   }
 
   private updateFog(world: World): void {

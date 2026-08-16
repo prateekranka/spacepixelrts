@@ -244,7 +244,6 @@ export class World {
     this.moveSeparate();
     this.stepBolts();
     this.updateFog();
-    this.stepOpeningClash();
     this.stepFlags();
     this.stepAi();
     if ((this.tick & 7) === 0) this.recountPop();
@@ -291,14 +290,15 @@ export class World {
     this.clearBase(MAP - 11, MAP - 11);
   }
 
-  /** Dust pad + resource blips under the opening camera tableau. */
+  /** Dust pad + nebula wisps under the full opening camera frustum. */
   private stampOpeningGround(): void {
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
     const icx = cx | 0;
     const icz = cz | 0;
-    for (let z = -6; z <= 6; z++) {
-      for (let x = -10; x <= 10; x++) {
+    const rng = mulberry32(this.seed ^ 0xab21);
+    for (let z = -9; z <= 9; z++) {
+      for (let x = -14; x <= 14; x++) {
         const xx = icx + x;
         const zz = icz + z;
         if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
@@ -306,11 +306,19 @@ export class World {
         this.block[xx + zz * MAP] = 0;
       }
     }
-    // Ring resource nodes outside the brawl pad — single-tile markers + small gem entities.
-    this.placeOpeningNode(Tile.Ore, icx - 9, icz);
-    this.placeOpeningNode(Tile.Gas, icx + 9, icz - 1);
-    this.placeOpeningNode(Tile.Solar, icx, icz - 8);
-    this.placeOpeningNode(Tile.Ore, icx + 1, icz + 8);
+    for (let i = 0; i < 48; i++) {
+      const xx = icx + ((rng() * 28) | 0) - 14;
+      const zz = icz + ((rng() * 18) | 0) - 9;
+      if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
+      const roll = rng();
+      const t = roll > 0.72 ? Tile.Gas : roll > 0.44 ? Tile.Solar : Tile.Dust;
+      this.tiles[xx + zz * MAP] = t;
+      this.block[xx + zz * MAP] = 0;
+    }
+    this.placeOpeningNode(Tile.Ore, icx - 11, icz);
+    this.placeOpeningNode(Tile.Gas, icx + 11, icz - 1);
+    this.placeOpeningNode(Tile.Solar, icx, icz - 9);
+    this.placeOpeningNode(Tile.Ore, icx + 1, icz + 9);
   }
 
   /** One ground tile + gem entity — no multi-tile ore panel on the opening tableau. */
@@ -351,7 +359,7 @@ export class World {
     if (e.kind !== Kind.Fighter && e.kind !== Kind.Ravager && e.kind !== Kind.Prism) return false;
     const dx = e.x - MAP * 0.5;
     const dz = e.z - MAP * 0.52;
-    return dx * dx + dz * dz < 72;
+    return dx * dx + dz * dz < 110;
   }
 
   private strikeRange(e: Ent, st: (typeof STATS)[number], t: Ent): number {
@@ -361,17 +369,12 @@ export class World {
   }
 
   private revealOpeningVision(cx: number, cz: number): void {
-    const r = 11;
-    const r2 = r * r;
     const icx = cx | 0;
     const icz = cz | 0;
-    for (let z = icz - r; z <= icz + r; z++) {
+    for (let z = icz - 10; z <= icz + 10; z++) {
       if (z < 0 || z >= MAP) continue;
-      for (let x = icx - r; x <= icx + r; x++) {
+      for (let x = icx - 14; x <= icx + 14; x++) {
         if (x < 0 || x >= MAP) continue;
-        const dx = x + 0.5 - cx;
-        const dz = z + 0.5 - cz;
-        if (dx * dx + dz * dz > r2) continue;
         const idx = x + z * MAP;
         this.visible[0][idx] = 1;
         this.explored[0][idx] = 1;
@@ -386,7 +389,7 @@ export class World {
       if ((cx < 18 && cz < 18) || (cx > MAP - 18 && cz > MAP - 18)) continue;
       const mdx = cx + 0.5 - MAP * 0.5;
       const mdz = cz + 0.5 - MAP * 0.52;
-      if (mdx * mdx + mdz * mdz < 14 * 14) continue;
+      if (mdx * mdx + mdz * mdz < 16 * 16) continue;
       const r = kind === Tile.Ore ? 2 : 1.6;
       this.placePatch(kind, cx, cz, r);
     }
@@ -431,43 +434,52 @@ export class World {
     this.spawn(Kind.Scout, a, 0, 16, 14);
     this.spawn(Kind.Scout, b, 1, MAP - 16, MAP - 14);
 
-    // Opening clash — two parallel ranks ~3.8 tiles apart, Attack in place until tick 160.
+    // Opening clash — 12v12 Fighters + uniques in a 10×6 tile box, crossing AttackMove.
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
-    const zSlots = [-4.0, -1.35, 1.35, 4.0];
-    const front0 = cx - 2.15;
-    const front1 = cx + 2.15;
-    const rankDx = 1.15;
-    for (let i = 0; i < 8; i++) {
-      const col = i % 4;
-      const row = (i / 4) | 0;
-      const z = cz + zSlots[col];
-      const x0 = front0 - row * rankDx;
-      const x1 = front1 + row * rankDx;
-      const f0 = this.spawn(Kind.Fighter, a, 0, x0, z);
-      const f1 = this.spawn(Kind.Fighter, b, 1, x1, z);
-      if (f0) {
-        f0.order = Ord.Attack;
-        f0.tx = x0;
-        f0.tz = z;
-      }
-      if (f1) {
-        f1.order = Ord.Attack;
-        f1.tx = x1;
-        f1.tz = z;
+    const gap = 2.2;
+    const front0 = cx - gap * 0.5;
+    const front1 = cx + gap * 0.5;
+    const zCols = [-2.0, 0, 2.0];
+    const xDepth = [0, -0.85, -1.7, -2.55];
+    let slot = 0;
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 3; col++) {
+        const jx = (slot % 5) * 0.07 - 0.14;
+        const jz = ((slot * 3) % 5) * 0.06 - 0.12;
+        const z = cz + zCols[col] + jz;
+        const x0 = front0 + xDepth[row] + jx;
+        const x1 = front1 - xDepth[row] - jx;
+        const f0 = this.spawn(Kind.Fighter, a, 0, x0, z);
+        const f1 = this.spawn(Kind.Fighter, b, 1, x1, z);
+        if (f0) {
+          f0.order = Ord.AttackMove;
+          f0.tx = cx + 5.5;
+          f0.tz = cz + (col - 1) * 0.4;
+          f0.cooldown = -0.12 * (slot % 6);
+        }
+        if (f1) {
+          f1.order = Ord.AttackMove;
+          f1.tx = cx - 5.5;
+          f1.tz = cz + (col - 1) * 0.4;
+          f1.cooldown = -0.1 * ((slot + 2) % 6);
+        }
+        slot++;
       }
     }
-    const rv = this.spawn(uniqueUnit(a), a, 0, front0 - rankDx * 1.35, cz);
+    const rv = this.spawn(uniqueUnit(a), a, 0, front0 - 3.0, cz);
     if (rv) {
-      rv.order = Ord.Attack;
-      rv.tx = rv.x;
-      rv.tz = rv.z;
+      rv.order = Ord.AttackMove;
+      rv.tx = cx + 6;
+      rv.tz = cz;
+      rv.cooldown = -0.2;
     }
-    const pr = this.spawn(uniqueUnit(b), b, 1, front1 + rankDx * 1.35, cz);
+    const pr = this.spawn(uniqueUnit(b), b, 1, front1 + 3.0, cz);
     if (pr) {
-      pr.order = Ord.Attack;
-      pr.tx = pr.x;
-      pr.tz = pr.z;
+      pr.order = Ord.AttackMove;
+      pr.tx = cx - 6;
+      pr.tz = cz;
+      pr.cooldown = -0.15;
     }
   }
 
@@ -499,12 +511,6 @@ export class World {
             e.vx = e.vz = 0;
             e.path = null;
             this.tryStrike(e, target, st);
-            continue;
-          }
-          if (this.tick < 160 && this.openingClashEnt(e)) {
-            e.vx *= 0.72;
-            e.vz *= 0.72;
-            e.path = null;
             continue;
           }
           if (e.order === Ord.Idle && d < st.los) {
@@ -647,14 +653,25 @@ export class World {
     if (e.cooldown > 0) return;
     const dmg = st.atk * (1 + e.frenzy * 0.12) * (e.civ === 'aurion' && isBuilding(e.kind) === false ? 1 : 1);
     const bonus = t.civ === 'aurion' ? 0.85 : 1; // compact armor
-    const applied = dmg * (isBuilding(t.kind) && e.kind === Kind.Siege ? 1.8 : 1) * (e.civ === 'aurion' ? 0.92 : 1);
+    const applied =
+      dmg *
+      (isBuilding(t.kind) && e.kind === Kind.Siege ? 1.8 : 1) *
+      (e.civ === 'aurion' ? 0.92 : 1) *
+      (this.tick < 120 && this.openingClashEnt(e) ? 0.62 : 1);
     if (st.melee) {
       t.hp -= applied * bonus;
       e.cooldown = e.kind === Kind.Ravager ? 0.72 : 0.85;
       if (e.kind === Kind.Ravager && t.hp <= 0) e.frenzy = Math.min(6, e.frenzy + 1);
     } else {
       this.spawnBolt(e, t, applied * bonus, e.kind === Kind.Prism ? 11 : e.kind === Kind.Siege ? 6.5 : 8.5);
-      e.cooldown = e.kind === Kind.Prism ? 1.15 : 0.95;
+      const opening = this.tick < 120 && this.openingClashEnt(e);
+      e.cooldown = opening
+        ? e.kind === Kind.Prism
+          ? 0.62
+          : 0.48
+        : e.kind === Kind.Prism
+          ? 1.15
+          : 0.95;
     }
     if (t.hp <= 0) this.kill(t);
   }
@@ -896,6 +913,19 @@ export class World {
         }
       }
     }
+    if (this.tick < 200) {
+      const ocx = (MAP * 0.5) | 0;
+      const ocz = (MAP * 0.52) | 0;
+      for (let z = ocz - 10; z <= ocz + 10; z++) {
+        if (z < 0 || z >= MAP) continue;
+        for (let x = ocx - 14; x <= ocx + 14; x++) {
+          if (x < 0 || x >= MAP) continue;
+          const idx = x + z * MAP;
+          this.visible[0][idx] = 1;
+          this.explored[0][idx] = 1;
+        }
+      }
+    }
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive) continue;
@@ -906,26 +936,12 @@ export class World {
       const idx = tileAt(e.x, e.z);
       e.vis = this.visible[0][idx] === 1 && !(e.kind === Kind.Shade && e.stealth > 0.55);
     }
-    if (this.tick < 80) {
+    if (this.tick < 120) {
       for (let i = 0; i < MAX_ENTS; i++) {
         const e = this.ents[i];
         if (!e.alive) continue;
         if (this.openingClashEnt(e)) e.vis = true;
       }
-    }
-  }
-
-  private stepOpeningClash(): void {
-    if (this.tick !== 160) return;
-    const cx = MAP * 0.5;
-    const cz = MAP * 0.52;
-    for (let i = 0; i < MAX_ENTS; i++) {
-      const e = this.ents[i];
-      if (!this.openingClashEnt(e)) continue;
-      e.order = Ord.AttackMove;
-      e.tx = e.team === 0 ? cx + 2.5 : cx - 2.5;
-      e.tz = cz;
-      e.path = null;
     }
   }
 

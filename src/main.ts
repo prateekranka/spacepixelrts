@@ -24,7 +24,7 @@ const sfx = new Sfx();
 const input = new Input(host, world, view, sfx);
 input.pan.x = MAP * 0.5;
 input.pan.z = MAP * 0.52;
-input.halfH = 5.0;
+input.halfH = 4.6;
 
 const hud = new Hud(host);
 hud.bind(world, input, view);
