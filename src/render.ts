@@ -255,7 +255,8 @@ export class GameRenderer {
           const dz = e.z - MAP * 0.52;
           return dx * dx + dz * dz < 110;
         })();
-      flashArr[drawn] = e.cooldown > 0.2 && e.kind !== Kind.Resource ? (clash ? 0.1 : 0.55) : 0;
+      flashArr[drawn] =
+        e.cooldown > 0.26 && e.kind !== Kind.Resource ? (clash ? 0.04 : 0.55) : 0;
       this.drawnEntIds.add(e.id);
       drawn++;
     }
@@ -268,7 +269,7 @@ export class GameRenderer {
       const rgb = TEAM_RGB[b.team];
       this.dummy.position.set(b.x, 0.85, b.z);
       this.dummy.quaternion.copy(this.lastCamQ);
-      this.dummy.scale.set(1.28, 1.28, 1);
+      this.dummy.scale.set(0.95, 0.95, 1);
       this.dummy.updateMatrix();
       this.mesh.setMatrixAt(drawn, this.dummy.matrix);
       this.dummy.position.set(b.x, 0.03, b.z);
@@ -520,17 +521,12 @@ export class GameRenderer {
       if (!e.alive || !e.vis) continue;
       if (e.kind === Kind.Resource) continue;
       if (!this.drawnEntIds.has(e.id)) continue;
-      const damaged = e.hp < e.maxHp * 0.92;
       const sel = selected.has(e.id);
-      if (!sel && !damaged) continue;
-      if (
-        !sel &&
-        world.tick < 240 &&
-        (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism)
-      ) {
-        const dx = e.x - MAP * 0.5;
-        const dz = e.z - MAP * 0.52;
-        if (dx * dx + dz * dz < 110) continue;
+      if (world.tick < 240) {
+        if (!sel) continue;
+      } else {
+        const damaged = e.hp < e.maxHp * 0.92;
+        if (!sel && !damaged) continue;
       }
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
