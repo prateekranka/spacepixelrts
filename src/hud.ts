@@ -237,6 +237,8 @@ function viewAspect(): number {
 
 const HUD_CSS = `
 #hud{position:fixed;inset:0;pointer-events:none;color:#f4efe4;font-family:"Trebuchet MS","Segoe UI",sans-serif;z-index:5}
+#game,#overlay{position:absolute;inset:0;width:100%;height:100%;display:block}
+#overlay{pointer-events:none;z-index:2}
 #topbar,#bottom,button{pointer-events:auto}
 #topbar{position:absolute;left:0;right:0;top:0;height:56px;display:flex;align-items:stretch;background:linear-gradient(#1a1428ee,#120e1cf2);border-bottom:2px solid #c9a227;box-shadow:0 8px 24px #0008}
 #brand{display:flex;gap:10px;align-items:center;padding:0 14px;min-width:210px}
