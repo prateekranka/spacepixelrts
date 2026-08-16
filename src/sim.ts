@@ -140,12 +140,24 @@ export class World {
     e.vis = true;
     e.path = null;
     e.pathI = 0;
+    e.hitFlash = 0;
+    e.corpseT = 0;
     if (kind === Kind.Hall) e.hp = st.hp;
     return e;
   }
 
   kill(e: Ent): void {
     if (!e.alive) return;
+    if (isUnit(e.kind)) {
+      e.hp = 0;
+      e.corpseT = 1.5;
+      e.vx = e.vz = 0;
+      e.path = null;
+      e.tid = -1;
+      e.order = Ord.Idle;
+      this.recountPop();
+      return;
+    }
     e.alive = false;
     e.order = Ord.Idle;
     this.free.push(e.id);
@@ -234,13 +246,14 @@ export class World {
     this.hash.clear();
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
-      if (!e.alive) continue;
+      if (!e.alive || e.hp <= 0) continue;
       e.px = e.x;
       e.pz = e.z;
       this.hash.insert(i, e.x, e.z);
     }
     this.thinkUnits();
     this.thinkBuildings();
+    this.stepCorpses();
     this.moveSeparate();
     this.stepBolts();
     this.updateFog();
@@ -457,6 +470,13 @@ export class World {
     return r;
   }
 
+  private openingDmgMul(attacker: Ent, target: Ent): number {
+    if (this.tick >= 240 || !this.openingClashEnt(attacker)) return 1;
+    if (target.team === 1) return 1.15;
+    if (target.team === 0) return 0.35;
+    return 1;
+  }
+
   private revealOpeningVision(cx: number, cz: number): void {
     const icx = cx | 0;
     const icz = cz | 0;
@@ -609,10 +629,11 @@ export class World {
   private thinkUnits(): void {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
-      if (!e.alive || isBuilding(e.kind) || e.kind === Kind.Resource) continue;
+      if (!e.alive || e.hp <= 0 || isBuilding(e.kind) || e.kind === Kind.Resource) continue;
       const st = STATS[e.kind];
       e.cooldown = Math.max(0, e.cooldown - DT);
       e.blinkCd = Math.max(0, e.blinkCd - DT);
+      if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - DT * 2.25);
       e.anim += DT;
       if (e.frenzy > 0) e.frenzy = Math.max(0, e.frenzy - DT * 0.15);
 
@@ -620,7 +641,7 @@ export class World {
       if (e.order === Ord.Attack || e.order === Ord.AttackMove) e.stealth = 0;
 
       let target: Ent | null = e.tid >= 0 ? this.ents[e.tid] : null;
-      if (target && !target.alive) {
+      if (target && (!target.alive || target.hp <= 0)) {
         target = null;
         e.tid = -1;
       }
@@ -816,9 +837,10 @@ export class World {
       dmg *
       (isBuilding(t.kind) && e.kind === Kind.Siege ? 1.8 : 1) *
       (e.civ === 'aurion' ? 0.92 : 1) *
-      (this.tick < 240 && this.openingClashEnt(e) ? 0.25 : 1);
+      this.openingDmgMul(e, t);
     if (st.melee) {
       t.hp -= applied * bonus;
+      if (t.team === 1 && this.tick < 240) t.hitFlash = 0.45;
       e.cooldown = e.kind === Kind.Ravager ? 0.72 : 0.85;
       if (e.kind === Kind.Ravager && t.hp <= 0) e.frenzy = Math.min(6, e.frenzy + 1);
     } else {
@@ -847,6 +869,18 @@ export class World {
     });
   }
 
+  private stepCorpses(): void {
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.corpseT <= 0) continue;
+      e.corpseT -= DT;
+      if (e.corpseT <= 0) {
+        e.alive = false;
+        this.free.push(e.id);
+      }
+    }
+  }
+
   private stepBolts(): void {
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       const b = this.bolts[i];
@@ -857,12 +891,13 @@ export class World {
       this.hash.query(b.x, b.z, 0.7, this.q);
       for (const id of this.q) {
         const e = this.ents[id];
-        if (!e.alive || e.team === b.team) continue;
+        if (!e.alive || e.hp <= 0 || e.team === b.team) continue;
         if (e.kind === Kind.Resource) continue;
         if (e.kind === Kind.Worker) continue;
         if (e.kind === Kind.Shade && e.stealth > 0.6) continue;
         if (dist2(b.x, b.z, e.x, e.z) < (e.radius + 0.25) ** 2) {
           e.hp -= b.dmg;
+          if (e.team === 1 && this.tick < 240) e.hitFlash = 0.45;
           hit = true;
           if (e.hp <= 0) this.kill(e);
           break;
@@ -940,7 +975,7 @@ export class World {
     this.hash.query(e.x, e.z, los, this.q);
     for (const id of this.q) {
       const o = this.ents[id];
-      if (!o.alive || o.team === e.team) continue;
+      if (!o.alive || o.hp <= 0 || o.team === e.team) continue;
       if (o.kind === Kind.Resource) continue;
       if (o.kind === Kind.Shade && o.stealth > 0.55) continue;
       const d = dist2(e.x, e.z, o.x, o.z);

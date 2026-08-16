@@ -80,6 +80,8 @@ export interface Ent {
   vis: boolean;
   path: number[] | null;
   pathI: number;
+  hitFlash: number;
+  corpseT: number;
 }
 
 export interface TeamEco {
@@ -138,6 +140,8 @@ export function makeEnt(): Ent {
     vis: true,
     path: null,
     pathI: 0,
+    hitFlash: 0,
+    corpseT: 0,
   };
 }
 

@@ -263,8 +263,9 @@ export class GameRenderer {
           const dz = e.z - MAP * 0.52;
           return dx * dx + dz * dz < 110;
         })();
-      flashArr[drawn] =
+      const shootFlash =
         e.cooldown > 0.26 && e.kind !== Kind.Resource ? (clash ? 0.04 : 0.55) : 0;
+      flashArr[drawn] = Math.max(e.hitFlash, shootFlash);
       this.drawnEntIds.add(e.id);
       drawn++;
     }
@@ -505,6 +506,24 @@ export class GameRenderer {
       ctx.fillStyle = 'rgba(240, 210, 96, 0.12)';
       ctx.fillRect(x, y, bw, bh);
       ctx.strokeRect(x, y, bw, bh);
+    }
+
+    if (world.tick < 240) {
+      for (let i = 0; i < MAX_ENTS; i++) {
+        const e = world.ents[i];
+        if (!e.alive || !e.vis || e.kind !== Kind.Worker) continue;
+        const x = e.px + (e.x - e.px) * alpha;
+        const z = e.pz + (e.z - e.pz) * alpha;
+        const p = this.project(x, 0.05, z);
+        ctx.fillStyle = '#ffe848';
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - 2);
+        ctx.lineTo(p.x + 2, p.y);
+        ctx.lineTo(p.x, p.y + 2);
+        ctx.lineTo(p.x - 2, p.y);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
 
     for (const f of world.flags) {
