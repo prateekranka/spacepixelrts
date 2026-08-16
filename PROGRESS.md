@@ -5,9 +5,11 @@
 
 ## Now
 
-**Wave 2 P45 building** — P44 critic **PASS** (`5b3467d`). Live **`0.3.1-wave2`**. Spark→Orbit works; Yard Fighter unlocks.
+**Wave 2 P45 critic** — win/lose shipped. Live **`0.3.2-wave2`**.
 
-**Next:** win/lose banners when a Nexus falls + HUD buttons that stay attached (P44 click flake).
+P44 age-up **PASS**. P45: VICTORY/DEFEAT banners when a Nexus falls; command deck no longer rebuilds every frame.
+
+**Next:** fresh critic on banners + clickable HUD. Then P46 enemy pressure.
 
 ## Biggest gap
 
@@ -19,5 +21,5 @@
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P44 **PASS**; P45 win/lose in flight |
+| 2 gameplay depth | P45 live `0.3.2-wave2`; critic next |
 | 3–5 polish / iPad / coherence | queued |
