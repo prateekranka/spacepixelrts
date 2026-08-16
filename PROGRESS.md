@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 4 P63 critic** — P62 shipped **`0.5.2-wave4`** (screen-space attack pick). Live deployed.
+**Wave 4 P64** — iPad HUD safe-area. P63 **PASS** (`228140f`) Attack-lock peel. Live **`0.5.2-wave4`**.
 
-Opening still P41. Later: HUD safe-area, `MAX_ENTS`.
+Opening still P41. P63 leftover (Kryos Idle as wrecks form) is **not** a restage — leave it.
 
-**Next:** fresh critic — ground right-click is Move; hull click is Attack.
+**Next:** P64 builder, then critic.
 
 ## Biggest gap
 
-**P62 in critic.** Opening Attack-lock must be gone without breaking hull Attack.
+**HUD has no `safe-area-inset`** — iPad home indicator can cover the command deck.
 
 ## Tracker
 
@@ -23,5 +23,5 @@ Opening still P41. Later: HUD safe-area, `MAX_ENTS`.
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
 | 3 feel / VFX / command | **PASS** (P58 critic) |
-| 4 performance / iPad / bugs | P61 cull **PASS**; P62 shipped; P63 critic |
+| 4 performance / iPad / bugs | P61–P63 **PASS**; P64 safe-area |
 | 5 full 1v1 coherence | queued |
