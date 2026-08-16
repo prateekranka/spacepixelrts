@@ -16,10 +16,10 @@ export interface Atlas {
 const PAL = {
   ink: [18, 14, 30, 255],
   void: [24, 20, 44, 255],
-  dust: [52, 46, 72, 255],
+  dust: [64, 58, 88, 255],
   rock: [78, 68, 88, 255],
-  rockH: [108, 96, 118, 255],
-  dustE: [68, 60, 92, 255],
+  rockH: [118, 108, 128, 255],
+  dustE: [82, 74, 108, 255],
   ore: [198, 154, 72, 255],
   oreH: [240, 214, 120, 255],
   gas: [92, 168, 210, 255],
@@ -170,15 +170,17 @@ function hiveBody(p: Pix, ox: number, oy: number, frame: number): void {
   p.fill(ox - 3, y + 7, 8, 4, PAL.hiveD);
 }
 
-/** Kryos Conclave — squat diamond, vertical spire, bright core. */
+/** Kryos Conclave — squat diamond, vertical spire, bright ice core. */
 function cryBody(p: Pix, ox: number, oy: number, frame: number): void {
   const bob = frame & 1;
   const y = oy + bob;
-  p.diam(ox, y, 13, PAL.cryD);
-  p.diam(ox, y - 1, 11, PAL.cry);
-  p.diam(ox, y - 3, 7, PAL.cryH);
+  p.diam(ox, y, 14, PAL.ink);
+  p.diam(ox, y - 1, 12, PAL.cryD);
+  p.diam(ox, y - 2, 10, PAL.cry);
+  p.diam(ox, y - 4, 7, PAL.cryH);
+  p.diam(ox, y - 5, 4, PAL.white);
   magBanner(p, ox - 3, y - 3, 7, 7);
-  p.fill(ox - 2, y - 2, 5, 3, PAL.white);
+  p.fill(ox - 2, y - 2, 5, 4, PAL.white);
   p.line(ox, y - 9, ox, y - 19, PAL.cryH);
   p.fill(ox - 1, y - 19, 3, 3, PAL.white);
   p.fill(ox - 12, y + 3, 7, 4, PAL.cryD);
@@ -231,7 +233,11 @@ function drawUnit(civ: 'vespari' | 'aurion' | 'voidmarked', role: string, frame:
     p.line(ox + 4, oy - 6, ox + 16, oy - 13, PAL.white);
     magBanner(p, ox + 14, oy - 14, 3, 3);
     magBanner(p, ox - 5, oy - 7, 5, 6);
-    p.fill(ox - 7, oy - 3, 5, 7, PAL.hiveD);
+    if (civ === 'vespari') p.fill(ox - 7, oy - 3, 5, 7, PAL.hiveD);
+    else if (civ === 'aurion') {
+      p.fill(ox - 7, oy - 3, 5, 7, PAL.cryD);
+      p.diam(ox - 4, oy, 4, PAL.white);
+    } else p.fill(ox - 7, oy - 3, 5, 7, PAL.voidD);
   } else if (role === 'siege') {
     p.fill(ox - 14, oy + 1, 28, 8, PAL.rock);
     p.fill(ox - 12, oy + 2, 24, 5, PAL.rockH);

@@ -244,6 +244,7 @@ export class World {
     this.moveSeparate();
     this.stepBolts();
     this.updateFog();
+    this.stepOpeningClash();
     this.stepFlags();
     this.stepAi();
     if ((this.tick & 7) === 0) this.recountPop();
@@ -296,8 +297,8 @@ export class World {
     const cz = MAP * 0.52;
     const icx = cx | 0;
     const icz = cz | 0;
-    for (let z = -4; z <= 4; z++) {
-      for (let x = -6; x <= 6; x++) {
+    for (let z = -6; z <= 6; z++) {
+      for (let x = -10; x <= 10; x++) {
         const xx = icx + x;
         const zz = icz + z;
         if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
@@ -345,8 +346,22 @@ export class World {
     }
   }
 
+  private openingClashEnt(e: Ent): boolean {
+    if (!e.alive || e.team > 1) return false;
+    if (e.kind !== Kind.Fighter && e.kind !== Kind.Ravager && e.kind !== Kind.Prism) return false;
+    const dx = e.x - MAP * 0.5;
+    const dz = e.z - MAP * 0.52;
+    return dx * dx + dz * dz < 72;
+  }
+
+  private strikeRange(e: Ent, st: (typeof STATS)[number], t: Ent): number {
+    let r = st.range + t.radius;
+    if (this.tick < 160 && this.openingClashEnt(e) && !st.melee) r += 0.95;
+    return r;
+  }
+
   private revealOpeningVision(cx: number, cz: number): void {
-    const r = 9;
+    const r = 11;
     const r2 = r * r;
     const icx = cx | 0;
     const icz = cz | 0;
@@ -416,36 +431,43 @@ export class World {
     this.spawn(Kind.Scout, a, 0, 16, 14);
     this.spawn(Kind.Scout, b, 1, MAP - 16, MAP - 14);
 
-    // Opening clash — packed 8×6 brawl centered on default camera look-at.
+    // Opening clash — two parallel ranks ~3.8 tiles apart, Attack in place until tick 160.
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
+    const zSlots = [-4.0, -1.35, 1.35, 4.0];
+    const front0 = cx - 2.15;
+    const front1 = cx + 2.15;
+    const rankDx = 1.15;
     for (let i = 0; i < 8; i++) {
       const col = i % 4;
       const row = (i / 4) | 0;
-      const f0 = this.spawn(Kind.Fighter, a, 0, cx - 3.8 + col * 1.15, cz - 1.2 + row * 1.25);
-      const f1 = this.spawn(Kind.Fighter, b, 1, cx + 2.2 + col * 1.15, cz - 0.8 + row * 1.25);
+      const z = cz + zSlots[col];
+      const x0 = front0 - row * rankDx;
+      const x1 = front1 + row * rankDx;
+      const f0 = this.spawn(Kind.Fighter, a, 0, x0, z);
+      const f1 = this.spawn(Kind.Fighter, b, 1, x1, z);
       if (f0) {
-        f0.order = Ord.AttackMove;
-        f0.tx = cx + 4;
-        f0.tz = cz + 1;
+        f0.order = Ord.Attack;
+        f0.tx = x0;
+        f0.tz = z;
       }
       if (f1) {
-        f1.order = Ord.AttackMove;
-        f1.tx = cx - 4;
-        f1.tz = cz - 1;
+        f1.order = Ord.Attack;
+        f1.tx = x1;
+        f1.tz = z;
       }
     }
-    const rv = this.spawn(uniqueUnit(a), a, 0, cx - 2.4, cz + 1.8);
+    const rv = this.spawn(uniqueUnit(a), a, 0, front0 - rankDx * 1.35, cz);
     if (rv) {
-      rv.order = Ord.AttackMove;
-      rv.tx = cx + 3.5;
-      rv.tz = cz + 1.2;
+      rv.order = Ord.Attack;
+      rv.tx = rv.x;
+      rv.tz = rv.z;
     }
-    const pr = this.spawn(uniqueUnit(b), b, 1, cx + 3.6, cz + 1.6);
+    const pr = this.spawn(uniqueUnit(b), b, 1, front1 + rankDx * 1.35, cz);
     if (pr) {
-      pr.order = Ord.AttackMove;
-      pr.tx = cx - 3.5;
-      pr.tz = cz;
+      pr.order = Ord.Attack;
+      pr.tx = pr.x;
+      pr.tz = pr.z;
     }
   }
 
@@ -473,10 +495,16 @@ export class World {
         if (target) {
           e.tid = target.id;
           const d = Math.sqrt(dist2(e.x, e.z, target.x, target.z));
-          if (d <= st.range + target.radius) {
+          if (d <= this.strikeRange(e, st, target)) {
             e.vx = e.vz = 0;
             e.path = null;
             this.tryStrike(e, target, st);
+            continue;
+          }
+          if (this.tick < 160 && this.openingClashEnt(e)) {
+            e.vx *= 0.72;
+            e.vz *= 0.72;
+            e.path = null;
             continue;
           }
           if (e.order === Ord.Idle && d < st.los) {
@@ -877,6 +905,27 @@ export class World {
       }
       const idx = tileAt(e.x, e.z);
       e.vis = this.visible[0][idx] === 1 && !(e.kind === Kind.Shade && e.stealth > 0.55);
+    }
+    if (this.tick < 80) {
+      for (let i = 0; i < MAX_ENTS; i++) {
+        const e = this.ents[i];
+        if (!e.alive) continue;
+        if (this.openingClashEnt(e)) e.vis = true;
+      }
+    }
+  }
+
+  private stepOpeningClash(): void {
+    if (this.tick !== 160) return;
+    const cx = MAP * 0.5;
+    const cz = MAP * 0.52;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!this.openingClashEnt(e)) continue;
+      e.order = Ord.AttackMove;
+      e.tx = e.team === 0 ? cx + 2.5 : cx - 2.5;
+      e.tz = cz;
+      e.path = null;
     }
   }
 
