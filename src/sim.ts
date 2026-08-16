@@ -338,11 +338,11 @@ export class World {
       [1, 6],
     ];
     for (const [dx, dz] of rockOffsets) placeRock(icx + dx, icz + dz);
-    stampCampPad(icx, icz - 5);
-    stampCampPad(icx, icz + 5);
-    // Gems beside the rank wings — central playfield, not HUD corners.
-    this.placeOpeningNodeAt(Tile.Ore, cx - 0.2, cz - 5.85);
-    this.placeOpeningNodeAt(Tile.Gas, cx + 0.2, cz + 5.85);
+    stampCampPad(icx, icz - 6);
+    stampCampPad(icx, icz + 6);
+    // Gems beside the rank wings — workers in front, house behind.
+    this.placeOpeningNodeAt(Tile.Ore, cx + 0.9, cz - 4.75);
+    this.placeOpeningNodeAt(Tile.Gas, cx + 0.9, cz + 4.75);
     this.placeOpeningNodeAt(Tile.Solar, cx + 1.0, cz - 5.5);
     const propSlots: [number, number, Tile][] = [
       [icx - 1, icz - 5, Tile.PropWreck],
@@ -420,7 +420,7 @@ export class World {
     const mdz = e.z - cz;
     if (Math.abs(mdx) > 1.2) return false;
     const adz = Math.abs(mdz);
-    if (adz < 4.8 || adz > 6.5) return false;
+    if (adz < 4.4 || adz > 6.4) return false;
     if (e.kind === Kind.House || e.kind === Kind.Worker) return true;
     if (e.kind !== Kind.Resource) return false;
     return e.cargoType !== Tile.PropWreck && e.cargoType !== Tile.PropVent;
@@ -541,23 +541,23 @@ export class World {
       pr.cooldown = -0.12;
     }
 
-    // Forward camps beside the rank wings — central playfield, not HUD corners.
-    const oreX = cx - 0.2;
-    const oreZ = cz - 5.85;
-    const gasX = cx + 0.2;
-    const gasZ = cz + 5.85;
-    this.spawn(Kind.House, a, 0, cx + 0.2, cz - 5.15);
-    this.spawn(Kind.House, b, 1, cx - 0.2, cz + 5.15);
+    // Forward camps — workers + gem in front of house (away from the clash).
+    const oreX = cx + 0.9;
+    const oreZ = cz - 4.75;
+    const gasX = cx + 0.9;
+    const gasZ = cz + 4.75;
+    this.spawn(Kind.House, a, 0, cx, cz - 6.05);
+    this.spawn(Kind.House, b, 1, cx, cz + 6.05);
     for (let i = 0; i < 3; i++) {
-      const w = this.spawn(Kind.Worker, a, 0, cx - 0.7 + i * 0.55, cz - 5.45);
+      const w = this.spawn(Kind.Worker, a, 0, cx - 0.9 + i * 0.7, cz - 4.75);
       if (w) {
         w.order = Ord.Gather;
         w.tx = oreX;
         w.tz = oreZ;
       }
     }
-    for (let i = 0; i < 2; i++) {
-      const wk = this.spawn(Kind.Worker, b, 1, cx - 0.4 + i * 0.55, cz + 5.45);
+    for (let i = 0; i < 3; i++) {
+      const wk = this.spawn(Kind.Worker, b, 1, cx - 0.9 + i * 0.7, cz + 4.75);
       if (wk) {
         wk.order = Ord.Gather;
         wk.tx = gasX;
@@ -661,7 +661,9 @@ export class World {
 
   private thinkGather(e: Ent): void {
     const st = STATS[e.kind];
-    if (e.cargo >= GATHER_MAX || e.order === Ord.Return) {
+    const openingCampWorker =
+      this.tick < 240 && e.kind === Kind.Worker && this.openingFlankCampEnt(e);
+    if (!openingCampWorker && (e.cargo >= GATHER_MAX || e.order === Ord.Return)) {
       const hall = this.nearestHall(e.team, e.x, e.z);
       if (!hall) {
         e.order = Ord.Idle;
@@ -685,8 +687,10 @@ export class World {
       return;
     }
     e.tid = node.id;
-    if (dist2(e.x, e.z, node.x, node.z) < (node.radius + 0.45) ** 2) {
+    const gatherR = openingCampWorker ? 2.05 : node.radius + 0.45;
+    if (dist2(e.x, e.z, node.x, node.z) < gatherR * gatherR) {
       e.vx = e.vz = 0;
+      e.path = null;
       if (e.cooldown <= 0) {
         e.cargo += 1;
         e.cargoType = node.cargoType;
@@ -694,7 +698,11 @@ export class World {
         e.cooldown = 0.55;
         if (node.hp <= 0) this.kill(node);
       }
-    } else this.steer(e, node.x, node.z, st.spd);
+    } else if (!openingCampWorker) this.steer(e, node.x, node.z, st.spd);
+    else {
+      e.vx = e.vz = 0;
+      e.path = null;
+    }
   }
 
   private thinkBuild(e: Ent): void {
@@ -866,6 +874,7 @@ export class World {
       const e = this.ents[i];
       if (!e.alive || !isUnit(e.kind)) continue;
       if (this.tick < 240 && this.openingClashEnt(e) && e.order === Ord.Attack) continue;
+      if (this.tick < 240 && e.kind === Kind.Worker && this.openingFlankCampEnt(e)) continue;
       this.hash.query(e.x, e.z, 1.1, this.q);
       let sx = 0;
       let sz = 0;

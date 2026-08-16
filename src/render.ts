@@ -214,9 +214,9 @@ export class GameRenderer {
         scaleX = cellsW * mul;
         scaleY = cellsH * mul;
       } else {
-        const unitMul = e.kind === Kind.Worker ? 1.22 : 1.08;
+        const unitMul = e.kind === Kind.Worker ? 1.55 : 1.08;
         scaleX = cellsW * unitMul * e.facing;
-        scaleY = cellsH * (e.kind === Kind.Worker ? 1.22 : 1.14);
+        scaleY = cellsH * (e.kind === Kind.Worker ? 1.55 : 1.14);
       }
       const lift = e.kind === Kind.Resource ? 0.38 : isBuilding(e.kind) ? 1.15 : 0.9;
       this.dummy.position.set(x, lift, z);

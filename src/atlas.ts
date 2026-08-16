@@ -219,9 +219,12 @@ function drawUnit(civ: 'vespari' | 'aurion' | 'voidmarked', role: string, frame:
   if (role === 'worker') {
     p.fill(ox + 4, oy - 10, 9, 11, PAL.ore);
     p.fill(ox + 5, oy - 9, 7, 4, PAL.oreH);
+    p.fill(ox + 6, oy - 8, 3, 8, PAL.white);
+    p.fill(ox + 5, oy - 7, 5, 2, PAL.bone);
     p.line(ox - 9, oy - 3, ox - 14, oy + 5, PAL.bone);
     p.fill(ox - 14, oy + 3, 4, 4, PAL.oreH);
-    p.fill(ox - 4, oy + 8, 10, 4, PAL.hiveD);
+    p.circ(ox - 2, oy - 8, 2, PAL.white);
+    p.fill(ox - 4, oy + 8, 10, 4, civ === 'vespari' ? PAL.bone : PAL.hiveD);
   } else if (role === 'scout') {
     p.fill(ox - 15, oy - 5, 8, 4, PAL.white);
     p.fill(ox - 16, oy - 4, 3, 2, PAL.hiveH);
