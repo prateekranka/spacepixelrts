@@ -5,6 +5,8 @@ export const DT = 1 / TICK_HZ;
 /** Two sim ticks of dissolve before corpse stain (DESIGN §5.4 #6). */
 export const DISSOLVE_DUR = DT * 2;
 export const STAIN_DUR = 1.5;
+/** HP bar linger after last strike (DESIGN §5.4 #3). */
+export const COMBAT_BAR_DUR = 1.2;
 export const MAP = 72;
 export const MAX_ENTS = 384;
 export const CELL = 1;
@@ -84,6 +86,8 @@ export interface Ent {
   path: number[] | null;
   pathI: number;
   hitFlash: number;
+  /** Seconds since last combat; HP bar shows while > 0 (DESIGN §5.4 #3). */
+  combatT: number;
   /** Seconds left in 2-frame dissolve; 0 = stain or decor wreck. */
   dissolveT: number;
   corpseT: number;
@@ -165,6 +169,7 @@ export function makeEnt(): Ent {
     path: null,
     pathI: 0,
     hitFlash: 0,
+    combatT: 0,
     dissolveT: 0,
     corpseT: 0,
   };

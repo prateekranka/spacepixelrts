@@ -574,47 +574,49 @@ export class GameRenderer {
       ctx.globalAlpha = 1;
     }
 
+    const opening = world.tick < 240;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = world.ents[i];
       if (!e.alive || !e.vis) continue;
       if (e.kind === Kind.Resource) continue;
       if (!this.drawnEntIds.has(e.id)) continue;
       const sel = selected.has(e.id);
-      if (world.tick < 240) {
-        if (!sel) continue;
-      } else {
-        const damaged = e.hp < e.maxHp * 0.92;
-        if (!sel && !damaged) continue;
-      }
+      const isPlayer = e.team === 0;
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
-      const p = this.project(x, isBuilding(e.kind) ? 2.4 : 1.65, z);
+      const foot = this.project(x, 0.05, z);
+
+      if (sel) {
+        const rx = isBuilding(e.kind) ? e.radius * 38 + 10 : e.radius * 44 + 12;
+        const ry = isBuilding(e.kind) ? e.radius * 14 + 4 : e.radius * 16 + 5;
+        ctx.strokeStyle = isPlayer ? '#48f048' : '#f04848';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(foot.x, foot.y, rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (e.hp <= 0) continue;
+      const damaged = e.hp < e.maxHp;
+      const inCombat = e.combatT > 0;
+      const showHp = opening ? sel : sel || damaged || inCombat;
+      if (!showHp) continue;
+
+      const head = this.project(x, isBuilding(e.kind) ? 2.4 : 1.65, z);
       const bw = isBuilding(e.kind) ? 36 : 18;
       const bh = 3;
       const ratio = Math.max(0, e.hp / e.maxHp);
-      const barY = p.y - 16;
-      const isPlayer = e.team === 0;
-      if (sel) {
-        const ringR = isBuilding(e.kind) ? 34 : 22;
-        ctx.strokeStyle = isPlayer ? '#48f048' : '#f04848';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y + 6, ringR, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+      const barY = head.y - 16;
+      const outline = isPlayer ? '#48f048' : '#f04848';
+      const fill = isPlayer ? '#40e840' : '#e83838';
+
       ctx.fillStyle = 'rgba(0,0,0,0.85)';
-      ctx.fillRect(p.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
-      if (isPlayer) {
-        ctx.fillStyle = ratio > 0.55 ? '#40e840' : ratio > 0.3 ? '#e8c838' : '#e83838';
-      } else {
-        ctx.fillStyle = ratio > 0.55 ? '#e83838' : ratio > 0.3 ? '#e87828' : '#a02020';
-      }
-      ctx.fillRect(p.x - bw / 2, barY, bw * ratio, bh);
-      if (sel) {
-        ctx.strokeStyle = '#ffe848';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(p.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
-      }
+      ctx.fillRect(head.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
+      ctx.fillStyle = fill;
+      ctx.fillRect(head.x - bw / 2, barY, bw * ratio, bh);
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(head.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
     }
   }
 }

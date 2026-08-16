@@ -4,6 +4,7 @@ import {
   DT,
   DISSOLVE_DUR,
   STAIN_DUR,
+  COMBAT_BAR_DUR,
   Heap,
   Kind,
   MAP,
@@ -179,10 +180,17 @@ export class World {
     e.path = null;
     e.pathI = 0;
     e.hitFlash = 0;
+    e.combatT = 0;
     e.dissolveT = 0;
     e.corpseT = 0;
     if (kind === Kind.Hall) e.hp = st.hp;
     return e;
+  }
+
+  private markCombat(...ents: Ent[]): void {
+    for (const e of ents) {
+      if (e.alive && e.hp > 0) e.combatT = COMBAT_BAR_DUR;
+    }
   }
 
   kill(e: Ent): void {
@@ -724,6 +732,7 @@ export class World {
       e.cooldown = Math.max(0, e.cooldown - DT);
       e.blinkCd = Math.max(0, e.blinkCd - DT);
       if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - DT * 2.25);
+      if (e.combatT > 0) e.combatT = Math.max(0, e.combatT - DT);
       e.anim += DT;
       if (e.frenzy > 0) e.frenzy = Math.max(0, e.frenzy - DT * 0.15);
 
@@ -949,6 +958,7 @@ export class World {
       t.hp -= applied * bonus;
       if (t.team === 1 && this.tick < 240) t.hitFlash = 0.45;
       this.spawnSpark(t.x, t.z, 1, e.civ);
+      this.markCombat(e, t);
       e.cooldown = e.kind === Kind.Ravager ? 0.72 : 0.85;
       if (e.kind === Kind.Ravager && t.hp <= 0) e.frenzy = Math.min(6, e.frenzy + 1);
     } else {
@@ -956,6 +966,7 @@ export class World {
       const spd = opening ? 6.0 : e.kind === Kind.Prism ? 11 : e.kind === Kind.Siege ? 6.5 : 8.5;
       const life = opening ? 1.4 : 1.1;
       this.spawnBolt(e, t, applied * bonus, spd, life);
+      this.markCombat(e, t);
       e.cooldown = opening ? 0.32 : e.kind === Kind.Prism ? 1.15 : 0.95;
     }
     if (t.hp <= 0) this.kill(t);
@@ -1036,6 +1047,7 @@ export class World {
         if (dist2(b.x, b.z, e.x, e.z) < (e.radius + 0.25) ** 2) {
           e.hp -= b.dmg;
           if (e.team === 1 && this.tick < 240) e.hitFlash = 0.45;
+          this.markCombat(e);
           this.spawnSpark(b.x, b.z, 1, b.civ);
           hit = true;
           if (e.hp <= 0) this.kill(e);
