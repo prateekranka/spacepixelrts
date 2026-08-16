@@ -5,15 +5,13 @@
 
 ## Now
 
-**Wave 3 P56 critic** — formation shipped. Live **`0.4.4-wave3`**.
+**Wave 3 P57 building** — P56 critic **PASS** (`67170eb`). Live **`0.4.4-wave3`**. Multi-unit Move spreads; min pairwise 0.64.
 
-Multi-unit Move/AttackMove hex offsets; pairwise distance > 0.5. Opening ranks unchanged.
-
-**Next:** fresh critic. Then combat SFX (last P54 command-feel item).
+**Next:** combat hit SFX (last P54 command-feel item). Then Wave 3 critic.
 
 ## Biggest gap
 
-**Orders feel like dragging sprites** (P54 / §9 #2). P55: idle-worker pulse. Then formation spread and combat SFX.
+**Combat is silent** (P54). P57: rate-limited hit SFX.
 
 ## Tracker
 
@@ -22,4 +20,4 @@ Multi-unit Move/AttackMove hex offsets; pairwise distance > 0.5. Opening ranks u
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
 | 2 gameplay depth | **PASS** (P49 mixed-arms) |
-| 3–5 polish / iPad / coherence | P56 live `0.4.4-wave3`; critic next |
+| 3–5 polish / iPad / coherence | P56 **PASS**; P57 combat SFX |

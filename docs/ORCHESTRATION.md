@@ -117,7 +117,8 @@ HUD/minimap/VFX already exist from Wave 1 chrome. Live Wave 3 starts with an int
 | P53 | Foot ellipses + combat-only HP bars | P52 | done | **PASS** `ba0a111` live 0.4.2-wave3 |
 | P54 | Wave 3 integrator (feel vs AoE2:DE) | P53 | done | §9 #2 fail — blob/silent/no idle pulse |
 | P55 | Idle-worker HUD pulse | P54 | done | **PASS** `595346c` live 0.4.3-wave3 |
-| P56 | Multi-unit formation spread | P55 | critic | builder `b104f6a` live 0.4.4-wave3 |
+| P56 | Multi-unit formation spread | P55 | done | **PASS** `67170eb` live 0.4.4-wave3 |
+| P57 | Combat hit SFX | P56 | building | |
 
 Original P30–P35 chrome mostly shipped in the vertical slice; critic will say what still fails vs AoE2:DE.
 
@@ -145,4 +146,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P55 PASS.** **P56** formation spread in flight. Then combat SFX.
+**P56 PASS.** **P57** combat hit SFX in flight.
