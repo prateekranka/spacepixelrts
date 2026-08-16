@@ -5,17 +5,17 @@
 
 ## Now
 
-**Wave 1 PASS** — fresh Composer critic `dafd7e7` / `tasks/P41-critic.md`. Live **`0.2.16-wave1`**.
+**Wave 2 P43 building** — P42 integrator named the gap. Live still **`0.2.16-wave1`** until P43 deploys.
 
-Opening shot: Helion rank intact vs broken Kryos wreck line, round sparks, mid gem + workers, quiet dust, AoE2 HUD, p99 **4.2 ms**. Critic would keep playing vs AoE2:DE.
+Opening shot still Wave 1 PASS. P42 playtest: move/attack-move/fog/HUD work; **train blocked at pop 22/20**.
 
-**Next:** Wave 2 integrator (P42) playing the skirmish (train, gather, fog, command feel) and naming the next single gap.
+**Next:** P43 unblocks training (pop < cap, extra home habitats, corpse pop, hall pick). Then P44 epochs.
 
-**DIRECTIVE 1–3 (2026-08-16 18:17):** reaped leftover Wave 1 vite previews (4180/4181); no leftover `pNN` tmux or `composer-2.5` for this repo (Cursor ACP left intact). Spawn wrapper now traps/kills the process group. P42 re-spawned with 600s timeout → `tasks/P42.md`.
+**DIRECTIVE 1–3 (2026-08-16 18:17):** reaped leftover Wave 1 vite previews; no leftover `pNN` tmux/`composer-2.5` for this repo. Wrapper traps process groups. P42 finished EXIT:0 in 212s (`2dacc95`).
 
 ## Biggest gap
 
-None blocking Wave 1. Marginal: Kryos is a pre-broken wreck rank — live combat should keep thinning it so it does not freeze as a diorama.
+**No playable match arc** (P42): tableau has RTS verbs but you cannot grow an empire. Immediate blocker: pop **22/20** so `tryTrain` refuses. Then epochs, win/lose, enemy pressure.
 
 ## Tracker
 
@@ -23,5 +23,5 @@ None blocking Wave 1. Marginal: Kryos is a pre-broken wreck rank — live combat
 |---|---|
 | 0 docs/harness/deploy | done |
 | 1 opening wow vs AoE2:DE | **PASS** (P41 critic) |
-| 2 gameplay depth | P42 integrator running (600s cap) |
+| 2 gameplay depth | P42 notes done; **P43** training/pop in flight |
 | 3–5 polish / iPad / coherence | queued |

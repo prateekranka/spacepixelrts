@@ -80,17 +80,28 @@ Independently judgeable. P10 ∥ P11 after P01/P02. P12 after P11. P13/P14 after
 
 Wave 1 wow bar: a critic watching the live canvas sees a pixel-crisp isometric battlefield, can select and move units, they path around rocks, 60 fps, palette coherent. Not full civs yet — but it must already look like a game, not a grid demo.
 
-### Wave 2 — gameplay
+### Wave 2 — gameplay (live numbering after Wave 1 visual pass P27–P41)
+
+Opening tableau is locked (P41). P20–P26 in the original plan were largely absorbed into the vertical slice. Live Wave 2 pieces:
 
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
-| P20 | Content tables (stats, costs, civ bonuses) wired | P15 | queued | |
-| P21 | Economy: gather, return, pop, epoch research | P20 | queued | |
-| P22 | Buildings: place, construct, train, rally | P21 | queued | |
-| P23 | Combat + battle clarity (HP, bolts, death, bonuses) | P20 | queued | |
-| P24 | Fog of war | P14 | queued | |
-| P25 | Unique units/buildings + AI marshal | P22 P23 | queued | |
-| P26 | Wave 2 integrator | P20–P25 | queued | |
+| P42 | Integrator: play the skirmish, name the gap | P41 | done | no playable match arc; pop 22/20 blocks train |
+| P43 | Unblock training: pop < cap, home habitats, corpse pop, hall pick | P42 | building | |
+| P44 | Epochs / AgeUp in sim + HUD (Orbit unlock) | P43 | queued | |
+| P45 | Win/lose: destroy Nexus, banners | P43 | queued | |
+| P46 | Enemy marshal threatens player Nexus during macro | P43 | queued | |
+| P47 | Wave 2 critic: match arc vs AoE2:DE | P44–P46 | queued | |
+
+| ID | Piece | Depends | Status | Latest critic |
+|---|---|---|---|---|
+| P20 | Content tables (stats, costs, civ bonuses) wired | P15 | done (in slice) | |
+| P21 | Economy: gather, return, pop, epoch research | P20 | iterate — pop/epochs | |
+| P22 | Buildings: place, construct, train, rally | P21 | iterate — train blocked | |
+| P23 | Combat + battle clarity (HP, bolts, death, bonuses) | P20 | done (Wave 1) | |
+| P24 | Fog of war | P14 | done (in slice) | |
+| P25 | Unique units/buildings + AI marshal | P22 P23 | iterate — AI delayed | |
+| P26 | Wave 2 integrator | P20–P25 | done as P42 | |
 
 ### Wave 3 — feel
 
@@ -127,4 +138,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**Wave 1 PASS** (P41 critic, `0.2.16-wave1`). Opening tableau wowed vs AoE2:DE. **P42** Wave 2 integrator in flight (bounded 600s spawn). Marginal: keep Kryos wrecks looking like a fight, not a diorama.
+**Wave 1 PASS** (P41, `0.2.16-wave1`). **P42** named Wave 2 gap: no match arc / pop 22/20. **P43** unblocks training.

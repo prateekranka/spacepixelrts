@@ -3,8 +3,9 @@
 # Usage: spawn-composer.sh <brief.md> <log-path> [timeout-seconds]
 #
 # Always kills the agent process group on EXIT/INT/TERM or when the timeout
-# fires. macOS has no GNU `timeout` / `setsid(1)`; this uses python os.setsid
-# plus a watchdog. The wrapper itself always terminates.
+# fires. macOS has no GNU `timeout` / `setsid(1)`. Uses python os.setsid +
+# pty.fork so Node --print actually streams (file redirects stay block-buffered).
+# The wrapper itself always terminates and writes EXIT:<code> to the log.
 set -euo pipefail
 cd /Users/prateekranka/Cowork/spacepixelrts
 
@@ -47,20 +48,41 @@ trap cleanup EXIT INT TERM HUP
 
 : > "$LOG"
 
-# New session so kill -- -PGID reaps cursor-agent + node workers (macOS: no setsid(1)).
+# New session + PTY so kill -- -PGID reaps cursor-agent + MCP children, and
+# Node flushes --print incrementally (stdbuf does not unbuffer Node).
 python3 -c '
-import os, sys
-os.setsid()
+import os, sys, pty, time
+
 brief_path, log_path = sys.argv[1], sys.argv[2]
 brief = open(brief_path).read()
+os.setsid()
 log = open(log_path, "ab", buffering=0)
-os.dup2(log.fileno(), 1)
-os.dup2(log.fileno(), 2)
-os.execvp("stdbuf", [
-    "stdbuf", "-oL",
-    "cursor-agent", "--trust", "--yolo", "--print",
-    "--model", "composer-2.5", "-p", brief,
-])
+
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvp("cursor-agent", [
+        "cursor-agent",
+        "--trust", "--yolo", "--print", "--approve-mcps",
+        "--model", "composer-2.5",
+        "-p", brief,
+    ])
+
+while True:
+    try:
+        data = os.read(fd, 4096)
+    except OSError:
+        break
+    if not data:
+        break
+    log.write(data)
+    try:
+        os.write(1, data)
+    except OSError:
+        pass
+
+_dead, status = os.waitpid(pid, 0)
+code = os.waitstatus_to_exitcode(status) if hasattr(os, "waitstatus_to_exitcode") else (status >> 8)
+sys.exit(code)
 ' "$BRIEF" "$LOG" &
 AGENT_PID=$!
 PGID=$(ps -o pgid= -p "$AGENT_PID" | tr -d " ")
