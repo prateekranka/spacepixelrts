@@ -146,7 +146,8 @@ Original plan ID P50/P70 collide with live IDs. Live IDs win.
 |---|---|---|---|---|
 | P67 | Wave 5 integrator: play full 1v1, name the gap | P66 | done | Nihiline never spawns; need civ picker |
 | P68 | Civ picker so Nihiline appears | P67 | done | shipped `0.6.0-wave5` `cb32bfb` |
-| P69 | P68 critic | P68 | critic | |
+| P69 | P68 critic | P68 | done | **PASS** `dbf6140` live 0.6.0-wave5 |
+| P70 | Wave 5 wrap critic | P69 | critic | |
 
 ---
 
@@ -158,4 +159,4 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ## Current biggest gap (live)
 
-**P68 shipped `0.6.0-wave5`.** **P69** Nihiline critic in flight. Default boot stays Helion vs Kryos.
+**P69 Nihiline PASS.** **P70** Wave 5 wrap critic in flight.
