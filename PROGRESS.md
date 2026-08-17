@@ -5,15 +5,13 @@
 
 ## Now
 
-**P91 GAP 1 PASS** (`f8cfbf8`). **P92 GAP 2 PASS** (`da5decd`, critic `tasks/P92-critic.md`). Halls/houses read as roof + wall + door + windows. Live deploying **`0.8.1-art`**.
+**Art gaps locked.** P91 quiet ground **PASS**, P92 buildings as places **PASS**, P93 full character roster **PASS** (`9899046`). Live deploying **`0.8.2-art`**.
 
-**P93 GAP 3 — full character roster — BUILDING.** Opening still has tiny orbs and floating gold diamonds without weapons.
-
-Play: https://spacepixelrts.pages.dev
+Play: https://spacepixelrts.pages.dev — Helion vs Kryos opening. Ground recedes; halls have roof/wall/door/windows; fighters read as rifle infantry.
 
 ## Biggest gap
 
-**Unit roster.** Every living role × 3 civs must be a connected character/vehicle with a dominant weapon — no orbs, no unarmed diamonds.
+**None on the three named art gaps.** Marginals: doors/windows go sub-pixel at default opening zoom; corpse frames are still orbs; mid gem is a gold diamond (resource node, not a unit).
 
 ## Tracker
 
@@ -28,4 +26,4 @@ Play: https://spacepixelrts.pages.dev
 | 6 procedural-first | **PASS** (P80–P82) |
 | Art GAP 1 quiet ground | **PASS** (P91) |
 | Art GAP 2 real buildings | **PASS** (P92) |
-| Art GAP 3 full character roster | **P93 building** |
+| Art GAP 3 full character roster | **PASS** (P93) |

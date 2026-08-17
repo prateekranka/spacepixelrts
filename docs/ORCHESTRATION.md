@@ -173,8 +173,8 @@ Technique locked in `src/art-reference.ts`. Close gaps in order. One Composer at
 |---|---|---|---|---|
 | P91 | Quiet the ground (kill zigzag stamp) | P90-v3 | done | **PASS** `tasks/P91-critic.md` |
 | P92 | Buildings: roof + wall + door + windows in `sprites.ts` | P91 | done | **PASS** `tasks/P92-critic.md` |
-| P93 | Full roster: every role a connected character + weapon | P92 | building | pending |
+| P93 | Full roster: every role a connected character + weapon | P92 | done | **PASS** `tasks/P93-critic.md` |
 
 ## Current biggest gap (live)
 
-**GAP 3 — full character roster.** Ground quiet, buildings are places. Opening still has tiny orbs and floating gold diamonds. P93 Composer next. Live `0.8.1-art`.
+**Art gaps 1–3 PASS.** Live `0.8.2-art`. Ground recedes; buildings are places; living roster is connected characters with weapons. No Composer in flight.
