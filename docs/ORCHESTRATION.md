@@ -177,7 +177,7 @@ Technique locked in `src/art-reference.ts`. Close gaps in order. One Composer at
 
 ## Current biggest gap (live)
 
-**P94+P95 PASS.** Next: procedural mountains + valleys (P96). Sim/design frozen.
+**Wave A critic-PASS** (P94+P95+P96). User visual sign-off still required (plan decision 9). Wave B (8-dir sprites) not started. Sim/design frozen.
 
 ### Wave A — isometric rewrite (look only)
 
@@ -187,4 +187,4 @@ Sequencer: P94 projection → P95 team color → P96 elevation. One Composer at 
 |---|---|---|---|---|
 | P94 | Iso 3/4 projection (2:1 camera, depth-sort, iso building boxes) | P93 | done | **PASS** `tasks/P94-critic.md` |
 | P95 | Emissive team color (kill MAG facade banner) | P94 | done | **PASS** `tasks/P95-critic.md` |
-| P96 | Procedural terrain elevation (mountains + valleys) | P95 | building | — |
+| P96 | Procedural terrain elevation (mountains + valleys) | P95 | done | **PASS** `tasks/P96-critic.md` |

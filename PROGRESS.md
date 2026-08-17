@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave A P94 + P95 PASS.** Iso 2:1 place (`d9c5ff8`) and MAG banners gone (`a48d73c`, critic `tasks/P95-critic.md`). Team color is a mint/crimson lamp, not a pink sticker.
+**Wave A critic-PASS** (P94 + P95 + P96). Iso 2:1 place, MAG banners gone, procedural mountains/valleys with blocking cliffs and walkable ramps. Opening clash stays a flat readable valley; pan to the ridge for terrace walls.
 
-**P96 building** — procedural mountains + valleys (heightmap, cliffs, ramps) as battle-changers. Opening clash pad stays flat. Sim combat/economy frozen.
+Locked plan decision 9: critic PASS **and** user visual sign-off. Wave A is waiting on that sign-off. Do not start Wave B (8-dir sprites) until then.
 
-Play: https://spacepixelrts.pages.dev — deploying **`0.9.1-iso`**.
+Play: https://spacepixelrts.pages.dev — deploying **`0.9.3-iso`**.
 
 ## Biggest gap
 
-Flat pancake map. Need readable elevation (chokepoints, high ground, ramps) in iso.
+User visual sign-off on Wave A. Then Wave B: 8-direction unit/building sprites on this projection.
 
 ## Tracker
 
@@ -23,4 +23,4 @@ Flat pancake map. Need readable elevation (chokepoints, high ground, ramps) in i
 | 1–6 + art gaps | **PASS** |
 | Wave A P94 iso projection | **PASS** |
 | Wave A P95 emissive team color | **PASS** |
-| Wave A P96 terrain elevation | **building** |
+| Wave A P96 terrain elevation | **PASS** `tasks/P96-critic.md` |
