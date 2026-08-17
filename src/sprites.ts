@@ -118,10 +118,6 @@ function drawWindows(p: Pix, slots: readonly (readonly [number, number])[]): voi
   }
 }
 
-function drawBanner(p: Pix, cx: number, y: number): void {
-  p.fillRect(cx - 2, y, 4, 2, MAG);
-}
-
 type IsoVerts = {
   footN: [number, number];
   footW: [number, number];
@@ -409,6 +405,10 @@ function drawFighterPix(civ: number, frame: number): Pix {
     p.circ(26, 8, 3, WHITE);
     p.circ(27, 8, 2, SOL_H);
   }
+
+  // Team emissive — visor slit.
+  p.set(cx - 1, 5, MAG);
+  p.set(cx, 5, MAG);
   return p;
 }
 
@@ -487,6 +487,15 @@ function drawWorkerPix(civ: number, frame: number): Pix {
     p.set(cx - 5, 9, VOID_H);
     p.set(cx - 4, 8, VOID_H);
   }
+
+  // Team emissive — crate lamp or visor slit.
+  if (drill) {
+    p.set(cx + 24, 11, MAG);
+    p.set(cx + 25, 11, MAG);
+  } else {
+    p.set(cx - 1, 5, MAG);
+    p.set(cx, 5, MAG);
+  }
   return p;
 }
 
@@ -537,6 +546,10 @@ function drawScoutPix(civ: number): Pix {
     p.fillRect(18, 19, 6, 3, VOID_D);
     p.set(20, 18, VOID_H);
   }
+
+  // Team emissive — engine glow.
+  p.set(27, 19, MAG);
+  p.set(28, 20, MAG);
   return p;
 }
 
@@ -584,6 +597,10 @@ function drawSiegePix(civ: number): Pix {
     p.fillRect(14, 13, 4, 4, VOID_H);
     p.set(15, 14, VOID_D);
   }
+
+  // Team emissive — muzzle crystal.
+  p.set(30, 7, MAG);
+  p.set(31, 8, MAG);
   return p;
 }
 
@@ -642,6 +659,10 @@ function drawRavagerPix(civ: number, frame: number): Pix {
     p.set(10, 12, VOID_H);
     p.set(20, 12, VOID_H);
   }
+
+  // Team emissive — predator eye.
+  p.set(15, 6, MAG);
+  p.set(16, 5, MAG);
   return p;
 }
 
@@ -670,17 +691,18 @@ function drawPrismPix(civ: number, frame: number): Pix {
   for (let y = y0 + 10; y < y0 + 22; y++) {
     for (let x = 8; x < 24; x++) p.set(x, y, x < 13 ? md : dk);
   }
-  p.set(14, y0 + 3, WHITE);
-  p.set(15, y0 + 4, CRY_H);
+  // Focus lens — team emissive MAG facet.
+  p.set(14, y0 + 3, MAG);
+  p.set(15, y0 + 4, MAG);
+  p.set(16, y0 + 4, MAG);
 
-  // Focus lens (rect facet, not orb) + beam extending right.
+  // Beam extending right (civ palette, not team lamp).
   shadeRect(p, 20, y0 + 4, 6, 5, CRY_H, WHITE, CRY);
-  for (let x = 24; x <= 31; x++) {
+  for (let x = 24; x <= 30; x++) {
     const c = x > 28 ? CRY_H : x > 26 ? hi : md;
     p.set(x, y0 + 5, c);
     if (x > 26) p.set(x, y0 + 6, c);
   }
-  p.set(31, y0 + 5, WHITE);
 
   // Stabilizer pods on stems (connected, not floating orbs).
   p.fillRect(10, y0 + 16, 2, 6, dk);
@@ -717,8 +739,9 @@ function drawShadePix(civ: number): Pix {
     p.set(16, y, md);
     p.set(17, y, dk);
   }
-  p.set(15, 5, WHITE);
-  p.set(16, 5, VOID_H);
+  // Team emissive — glowing eye in hood.
+  p.set(15, 5, MAG);
+  p.set(16, 5, MAG);
 
   for (let y = 18; y < 30; y++) {
     p.set(11, y, y < 23 ? md : dk);
@@ -794,7 +817,10 @@ function drawHallPix(civ: number): Pix {
     p.circ(cx + 7, v.roofN[1] + 6, 2, VOID_H);
     p.circ(cx - 9, v.roofN[1] + 9, 2, VOID_H);
   }
-  drawBanner(p, cx, v.roofS[1] + 2);
+  // Team emissive — spire orb on roof peak.
+  p.set(cx, v.roofN[1], MAG);
+  p.set(cx - 1, v.roofN[1] + 1, MAG);
+  p.set(cx + 1, v.roofN[1] + 1, MAG);
   return p;
 }
 
@@ -816,7 +842,9 @@ function drawHousePix(civ: number): Pix {
   if (civ < 0.5) p.circ(v.roofN[0], v.roofN[1] + 2, 2, pal.hi);
   else if (civ < 1.5) p.set(cx, v.roofN[1] + 1, CRY_H);
   else p.set(cx - 1, v.roofN[1] + 2, VOID_D);
-  drawBanner(p, cx, v.roofS[1] + 1);
+  // Team emissive — porch lantern beside door.
+  p.set(cx - 5, v.footS[1] - 4, MAG);
+  p.set(cx - 4, v.footS[1] - 4, MAG);
   return p;
 }
 
@@ -846,7 +874,10 @@ function drawBarracksPix(civ: number): Pix {
     p.fillRect(v.roofW[0] + 1, v.roofW[1] + 2, 2, 4, VOID_H);
     p.fillRect(v.roofE[0] - 3, v.roofE[1] + 2, 2, 4, VOID_H);
   }
-  drawBanner(p, cx, v.roofS[1] + 1);
+  // Team emissive — gate lamp above door.
+  p.set(cx - 1, v.footS[1] - 5, MAG);
+  p.set(cx, v.footS[1] - 5, MAG);
+  p.set(cx + 1, v.footS[1] - 4, MAG);
   return p;
 }
 
@@ -881,7 +912,10 @@ function drawUniquePix(civ: number): Pix {
     p.circ(v.roofW[0] - 5, v.roofW[1] + 6, 2, VOID_H);
     p.circ(v.roofE[0] + 5, v.roofE[1] + 5, 2, VOID_H);
   }
-  drawBanner(p, cx, v.roofS[1] + 1);
+  // Team emissive — staff orb / focus lens on roof peak.
+  p.set(cx, v.roofN[1], MAG);
+  p.set(cx - 1, v.roofN[1] + 1, MAG);
+  p.set(cx + 1, v.roofN[1] + 1, MAG);
   return p;
 }
 
