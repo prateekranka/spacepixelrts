@@ -5,15 +5,15 @@
 
 ## Now
 
-**Wave 6 locked.** P82 **PASS** (`6e1c959`). Live **`0.7.2-proc`**.
+**P91 GAP 1 PASS** (`f8cfbf8`, critic `tasks/P91-critic.md`). Ground is a calm mauve dust field; zigzag stamp is gone; sprites pop. Live deploying **`0.8.0-art`**.
 
-Play: https://spacepixelrts.pages.dev — Helion vs Kryos opening, Nihiline via `?civ=voidmarked` or HUD picker. GPU particles, procedural terrain, SDF sprites.
+**P92 GAP 2 — real buildings — BUILDING.** Halls still read as black slabs / gold stickers. Composer 2.5 next.
 
-**Next:** no queued procedural piece. Original waves 1–5 and P80–P82 all have fresh critic PASS.
+Play: https://spacepixelrts.pages.dev
 
 ## Biggest gap
 
-**None blocking ship** on the scored waves. Marginals: opening screen-pick saturation, Kryos Idle late in the wreck belt, palette quantization, Shade small beside the rank.
+**Buildings as places.** Roof + wall + inset door + lit windows must read at opening zoom. After that: some roles still orbs/diamonds (GAP 3).
 
 ## Tracker
 
@@ -26,3 +26,6 @@ Play: https://spacepixelrts.pages.dev — Helion vs Kryos opening, Nihiline via 
 | 4 performance / iPad / bugs | **PASS** (P66) |
 | 5 full 1v1 coherence | **PASS** (P70) |
 | 6 procedural-first | **PASS** (P80–P82) |
+| Art GAP 1 quiet ground | **PASS** (P91) |
+| Art GAP 2 real buildings | **P92 building** |
+| Art GAP 3 full character roster | queued (P93) |

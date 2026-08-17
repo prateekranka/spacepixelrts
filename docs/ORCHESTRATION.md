@@ -165,6 +165,16 @@ Max **two** Composer builders at once (orchestrator must read every diff). Criti
 
 ---
 
+### Wave 7 — art quality (3 named gaps from Grok-vision on the real P90-v3 build)
+
+Technique locked in `src/art-reference.ts`. Close gaps in order. One Composer at a time.
+
+| ID | Piece | Depends | Status | Latest critic |
+|---|---|---|---|---|
+| P91 | Quiet the ground (kill zigzag stamp) | P90-v3 | done | **PASS** `tasks/P91-critic.md` |
+| P92 | Buildings: roof + wall + door + windows in `sprites.ts` | P91 | building | pending |
+| P93 | Full roster: every role a connected character + weapon | P92 | queued | |
+
 ## Current biggest gap (live)
 
-**Waves 1–6 PASS.** Live `0.7.2-proc`. No Composer sub-agent in flight.
+**GAP 2 — buildings as places.** Ground is quiet (P91 PASS). Halls still read as black slabs / gold stickers. P92 Composer next. Live `0.8.0-art`.
