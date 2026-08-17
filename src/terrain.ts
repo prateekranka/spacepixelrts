@@ -1,4 +1,4 @@
-/** P81 — procedural GLSL terrain (value weather, dune banding, sun rims). */
+/** P91 — procedural GLSL terrain (quiet dust field, large-scale value weather). */
 
 import * as THREE from 'three';
 import { MAP } from './engine';
@@ -48,19 +48,15 @@ float decalRock(vec2 world) {
 }
 
 float qElev(vec2 w) {
-  float ln = valueNoise(w * 0.14 + vec2(3.7, 1.2));
-  float sn = valueNoise(w * 0.42 + vec2(17.3, 8.1));
-  float dunes = ln * 0.62 + sn * 0.38;
-  float rippleL = sin(dot(w, vec2(0.78, 0.14)) * 6.28318 + ln * 3.8) * 0.5 + 0.5;
-  float rippleS = sin(dot(w, vec2(-0.18, 0.92)) * 12.56636 + sn * 2.6) * 0.5 + 0.5;
-  float bands = dunes * 0.55 + rippleL * 0.28 + rippleS * 0.17;
-  return floor(bands * 5.0) / 5.0;
+  float broad = valueNoise(w * 0.04 + vec2(3.7, 1.2));
+  float detail = valueNoise(w * 0.07 + vec2(17.3, 8.1));
+  return broad * 0.62 + detail * 0.38;
 }
 
-float sunRim(vec2 snap) {
-  float e0 = qElev(snap);
-  float eLit = qElev(snap + vec2(-0.03125, -0.03125));
-  return clamp((eLit - e0) * 6.0, 0.0, 1.0);
+float sunRim(vec2 w) {
+  float e0 = qElev(w);
+  float eLit = qElev(w + vec2(-1.2, -0.9));
+  return clamp((eLit - e0) * 1.8, 0.0, 1.0);
 }
 
 float boulderMask(vec2 local) {
@@ -72,16 +68,14 @@ float boulderMask(vec2 local) {
 }
 
 vec3 dustColor(vec2 world, float elev, float rim) {
-  vec3 base = vec3(0.416, 0.353, 0.439);
-  vec3 dark = vec3(0.345, 0.298, 0.369);
-  vec3 deep = vec3(0.282, 0.243, 0.314);
-  vec3 hi = vec3(0.580, 0.518, 0.659);
-  vec3 col = mix(dark, base, elev * 0.85 + 0.15);
-  col = mix(col, deep, (1.0 - elev) * 0.35);
-  col = mix(col, hi, elev * 0.22);
-  float peb = step(0.82, hash21(floor(world * 32.0)));
-  col = mix(col, deep, peb * 0.25);
-  col += vec3(0.72, 0.66, 0.82) * rim * 0.55;
+  vec3 base = vec3(0.400, 0.345, 0.425);
+  vec3 dark = vec3(0.378, 0.325, 0.400);
+  vec3 deep = vec3(0.362, 0.312, 0.388);
+  vec3 hi = vec3(0.428, 0.372, 0.448);
+  vec3 col = mix(deep, base, elev * 0.45 + 0.55);
+  col = mix(col, dark, (1.0 - elev) * 0.12);
+  col = mix(col, hi, elev * 0.06);
+  col += vec3(0.46, 0.42, 0.50) * rim * 0.10;
   return col;
 }
 
@@ -95,7 +89,7 @@ vec3 rockColor(vec2 world, float rim) {
   col = mix(col, rockH, mask * 0.55 * (1.0 - local.y));
   col = mix(col, ink, (1.0 - mask) * 0.08);
   float edge = smoothstep(0.45, 0.72, mask);
-  col += vec3(0.78, 0.72, 0.88) * rim * edge * 0.65;
+  col += vec3(0.52, 0.48, 0.58) * rim * edge * 0.18;
   float shadow = smoothstep(0.82, 0.98, local.y) * (1.0 - mask);
   col = mix(col, vec3(0.188, 0.165, 0.243), shadow * 0.45);
   return col;
@@ -108,9 +102,8 @@ vec3 voidColor(vec2 world) {
 
 void main() {
   vec2 world = vWorld;
-  vec2 snap = floor(world * 32.0) / 32.0 + vec2(0.015625);
-  float elev = qElev(snap);
-  float rim = sunRim(snap);
+  float elev = qElev(world);
+  float rim = sunRim(world);
 
   float t = tileType(world);
   float decal = decalRock(world);

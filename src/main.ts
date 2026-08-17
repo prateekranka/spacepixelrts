@@ -9,7 +9,7 @@ import { Hud } from './hud';
 import { Sfx } from './audio';
 import { enemyCiv, parseBootCiv } from './content';
 
-const VERSION = '0.7.2-proc';
+const VERSION = '0.8.0-art';
 const SEED = 0x5eed;
 const OPENING_PAN = { x: MAP * 0.5, z: MAP * 0.52, halfH: 5.8 };
 
