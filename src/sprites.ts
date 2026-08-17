@@ -196,8 +196,10 @@ function drawFighterPix(civ: number, frame: number): Pix {
   for (let x = cx - 5; x < cx - 2; x++) p.set(x, 9, dk);
   p.set(cx - 6, 9, SKIN_D);
 
-  if (civ < 0.5) p.circ(cx - 2, 11, 2, hi);
-  else if (civ < 1.5) {
+  if (civ < 0.5) {
+    p.set(cx - 4, 10, hi);
+    p.set(cx - 3, 9, hi);
+  } else if (civ < 1.5) {
     p.set(cx - 5, 10, hi);
     p.set(cx - 4, 9, hi);
     p.set(cx - 3, 10, hi);
@@ -221,53 +223,72 @@ function drawWorkerPix(civ: number, frame: number): Pix {
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
   const drill = civ >= 1.5 && frame >= 1;
 
-  dark(cx - 3, 18, 6, 11);
-  dark(cx + 2, 18, 5, 10);
-  dark(cx - 7, 8, 14, 12);
-  dark(cx - 3, 4, 8, 6);
+  // Connected hunched silhouette — legs, torso, head, load tool overlapping thighs.
+  dark(cx - 4, 18, 6, 12);
+  dark(cx + 1, 18, 6, 12);
+  dark(cx - 7, 8, 15, 12);
+  dark(cx - 3, 3, 9, 7);
 
   if (drill) {
-    dark(cx + 4, 10, 14, 3);
-    dark(cx + 17, 9, 4, 5);
-    shadeRect(p, cx + 4, 10, 14, 3, ROCK, ROCK_H, ROCK);
-    p.fillRect(cx + 17, 9, 4, 5, ROCK_H);
-    p.set(cx + 20, 10, WHITE);
+    dark(cx + 2, 10, 4, 4);
+    dark(cx + 5, 11, 16, 3);
+    dark(cx + 20, 10, 5, 5);
+    shadeRect(p, cx + 5, 11, 16, 3, ROCK, ROCK_H, ROCK);
+    shadeRect(p, cx + 20, 10, 5, 5, ROCK, ROCK_H, ROCK);
+    p.set(cx + 24, 11, WHITE);
+    p.set(cx + 3, 11, SKIN);
+    p.set(cx + 4, 12, SKIN);
   } else {
-    dark(cx + 6, 11, 13, 13);
-    for (let y = 11; y < 24; y++) {
-      for (let x = cx + 6; x < cx + 19; x++) {
-        p.set(x, y, x < cx + 10 && y < 15 ? ORE_H : ORE);
+    dark(cx + 5, 10, 15, 14);
+    for (let y = 10; y < 24; y++) {
+      for (let x = cx + 5; x < cx + 20; x++) {
+        const edge = x === cx + 5 || x === cx + 19 || y === 10 || y === 23;
+        const band = (y - 10) % 4 === 0;
+        const c = edge || band ? INK : x < cx + 10 && y < 14 ? ORE_H : ORE;
+        p.set(x, y, c);
       }
     }
-    p.set(cx + 8, 12, WHITE);
-    p.fillRect(cx + 1, 11, 6, 2, md);
-    p.fillRect(cx + 1, 20, 6, 2, dk);
-    p.set(cx + 7, 12, SKIN);
-    p.set(cx + 7, 21, SKIN_D);
+    p.set(cx + 8, 11, WHITE);
+    p.set(cx + 9, 12, ORE_H);
+    dark(cx + 1, 10, 5, 3);
+    dark(cx + 1, 19, 5, 3);
+    p.fillRect(cx + 1, 10, 5, 3, md);
+    p.fillRect(cx + 1, 19, 5, 3, dk);
+    p.set(cx + 6, 11, SKIN);
+    p.set(cx + 6, 20, SKIN_D);
   }
 
-  shadeRect(p, cx - 6, 8, 12, 12, md, hi, dk);
-  for (let y = 4; y < 10; y++) {
+  shadeRect(p, cx - 6, 8, 13, 12, md, hi, dk);
+  for (let y = 3; y < 10; y++) {
     const c = y < 6 ? hi : md;
     p.set(cx - 2, y, c);
     p.set(cx - 1, y, c);
     p.set(cx, y, c);
+    p.set(cx + 1, y, y < 6 ? md : dk);
   }
-  p.set(cx, 3, ORE_H);
-  p.set(cx, 2, WHITE);
+  p.set(cx, 2, ORE_H);
+  p.set(cx - 1, 1, WHITE);
 
-  for (let y = 20; y < 29; y++) {
-    p.set(cx - 2, y, md);
-    p.set(cx - 1, y, y < 23 ? md : dk);
+  for (let y = 18; y < 30; y++) {
+    const lit = y < 23;
+    p.set(cx - 3, y, lit ? md : dk);
+    p.set(cx - 4, y, dk);
+    p.set(cx + 2, y, lit ? hi : md);
     p.set(cx + 3, y, dk);
   }
-  p.fillRect(cx - 3, 28, 3, 2, dk);
-  p.fillRect(cx + 2, 28, 3, 2, dk);
+  p.fillRect(cx - 5, 29, 5, 2, dk);
+  p.fillRect(cx + 1, 29, 5, 2, dk);
 
-  if (civ < 0.5) p.circ(cx - 4, 10, 3, hi);
-  else if (civ < 1.5) {
+  if (civ < 0.5) {
+    p.set(cx - 5, 9, hi);
+    p.set(cx - 4, 8, hi);
+  } else if (civ < 1.5) {
     p.set(cx - 6, 9, hi);
     p.set(cx - 5, 8, hi);
+    p.set(cx - 4, 9, hi);
+  } else {
+    p.set(cx - 5, 9, VOID_H);
+    p.set(cx - 4, 8, VOID_H);
   }
   return p;
 }
@@ -278,29 +299,46 @@ function drawScoutPix(civ: number): Pix {
   const { md, hi, dk } = civPal(civ);
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
 
-  dark(4, 20, 20, 8);
-  dark(6, 18, 16, 4);
-  dark(2, 8, 6, 6);
-  dark(1, 4, 14, 12);
-  dark(22, 20, 6, 5);
+  // Low hull on ground + sensor mast/dish + rear exhaust — one connected vehicle.
+  dark(2, 22, 26, 8);
+  dark(4, 18, 22, 6);
+  dark(0, 10, 8, 10);
+  dark(0, 4, 12, 8);
+  dark(24, 20, 6, 8);
 
-  shadeRect(p, 6, 18, 16, 10, dk, md, dk);
-  shadeRect(p, 1, 4, 14, 12, WHITE, WHITE, ROCK);
-  p.circ(6, 9, 5, hi);
-  p.circ(6, 9, 3, md);
-  p.set(3, 7, WHITE);
+  shadeRect(p, 2, 22, 26, 8, dk, md, dk);
+  shadeRect(p, 4, 18, 22, 6, md, hi, dk);
+  p.fillRect(2, 28, 26, 2, dk);
 
-  shadeRect(p, 22, 20, 6, 5, SOL, SOL_H, ORE);
-  p.set(24, 21, SOL_H);
+  // Sensor dish (trapezoid on mast, not a floating orb).
+  shadeRect(p, 0, 10, 8, 10, ROCK, ROCK_H, ROCK);
+  for (let y = 4; y < 12; y++) {
+    const half = 5 - Math.floor((y - 4) / 2);
+    for (let x = 1; x <= 1 + half * 2; x++) {
+      const c = x < 4 ? hi : x > 8 ? dk : md;
+      p.set(x, y, c);
+    }
+  }
+  p.set(2, 5, WHITE);
+  p.set(3, 6, WHITE);
+  dark(6, 12, 3, 4);
+
+  // Exhaust stack connected to hull rear.
+  shadeRect(p, 24, 20, 6, 8, SOL, SOL_H, ORE);
+  p.fillRect(26, 18, 4, 4, ROCK);
+  p.set(27, 19, SOL_H);
+  p.set(28, 20, WHITE);
 
   if (civ < 0.5) {
-    p.fillRect(8, 19, 10, 2, hi);
-  } else if (civ < 1.5) {
+    p.fillRect(8, 19, 12, 2, hi);
     p.set(10, 18, hi);
-    p.set(12, 19, hi);
-    p.set(14, 18, CRY_H);
+  } else if (civ < 1.5) {
+    p.fillRect(8, 19, 10, 2, hi);
+    p.set(12, 18, CRY_H);
+    p.set(14, 19, hi);
   } else {
-    p.fillRect(20, 19, 4, 3, VOID_D);
+    p.fillRect(18, 19, 6, 3, VOID_D);
+    p.set(20, 18, VOID_H);
   }
   return p;
 }
@@ -311,28 +349,44 @@ function drawSiegePix(civ: number): Pix {
   const { md, hi, dk } = civPal(civ);
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
 
-  dark(2, 22, 28, 8);
-  dark(4, 12, 24, 12);
-  dark(8, 6, 16, 8);
-  dark(20, 2, 10, 6);
+  // Tread base + turret + raised cannon barrel (stock → receiver → barrel → muzzle).
+  dark(1, 24, 30, 6);
+  dark(3, 20, 26, 6);
+  dark(6, 12, 20, 10);
+  dark(18, 8, 8, 6);
+  dark(24, 6, 7, 4);
 
-  shadeRect(p, 2, 22, 28, 8, ROCK, ROCK_H, ROCK);
-  p.circ(8, 26, 3, ROCK);
-  p.circ(24, 26, 3, ROCK);
-  shadeRect(p, 4, 12, 24, 12, md, hi, dk);
-  shadeRect(p, 8, 6, 16, 8, dk, md, dk);
-  shadeRect(p, 20, 2, 10, 6, ROCK, ROCK_H, ROCK);
-  p.fillRect(28, 3, 3, 4, ROCK_H);
-  p.set(29, 4, WHITE);
+  shadeRect(p, 1, 24, 30, 6, ROCK, ROCK_H, ROCK);
+  p.fillRect(4, 26, 8, 4, dk);
+  p.fillRect(20, 26, 8, 4, dk);
+  shadeRect(p, 3, 20, 26, 6, ROCK, ROCK_H, ROCK);
+  shadeRect(p, 6, 12, 20, 10, md, hi, dk);
 
-  if (civ < 0.5) p.circ(16, 16, 3, hi);
-  else if (civ < 1.5) {
+  dark(14, 10, 6, 4);
+  dark(18, 8, 6, 5);
+  dark(22, 7, 9, 3);
+  shadeRect(p, 14, 10, 6, 4, GUN, GUN_H, GUN);
+  shadeRect(p, 18, 8, 6, 5, GUN, GUN_H, GUN);
+  for (let x = 22; x <= 30; x++) {
+    p.set(x, 7, x > 27 ? GUN_H : GUN);
+    p.set(x, 8, GUN);
+    p.set(x, 9, GUN);
+  }
+  p.set(30, 7, WHITE);
+  p.set(31, 8, WHITE);
+
+  if (civ < 0.5) {
+    p.set(14, 14, hi);
+    p.set(16, 13, hi);
+    p.set(18, 14, md);
+  } else if (civ < 1.5) {
     p.set(14, 14, hi);
     p.set(16, 13, CRY_H);
     p.set(18, 14, hi);
-  } else p.fillRect(14, 14, 4, 4, VOID_H);
-
-  p.fillRect(10, 10, 4, 4, MAG);
+  } else {
+    p.fillRect(14, 13, 4, 4, VOID_H);
+    p.set(15, 14, VOID_D);
+  }
   return p;
 }
 
@@ -340,96 +394,156 @@ function drawSiegePix(civ: number): Pix {
 function drawRavagerPix(civ: number, frame: number): Pix {
   const p = Pix.alloc(32, 32);
   const lunge = frame % 2 === 1 ? 2 : 0;
+  const { md, hi, dk } = civPal(civ);
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
 
-  dark(8, 14, 16, 12);
-  dark(10, 6, 12, 10);
-  dark(4 - lunge, 2, 4, 10);
-  dark(24 + lunge, 2, 4, 10);
-  dark(10, 20, 5, 10);
-  dark(18, 20, 5, 10);
+  // Hunched predator — torso, head, legs on ground, scythe claws from shoulders.
+  dark(9, 18, 6, 12);
+  dark(17, 18, 6, 12);
+  dark(8, 10, 16, 10);
+  dark(11, 4, 10, 8);
+  dark(3 - lunge, 8, 5, 12);
+  dark(24 + lunge, 8, 5, 12);
+  dark(2 - lunge, 4, 4, 6);
+  dark(26 + lunge, 4, 4, 6);
 
-  shadeRect(p, 8, 14, 16, 12, HIVE_D, HIVE, HIVE_D);
-  shadeRect(p, 10, 6, 12, 10, HIVE_D, HIVE, HIVE_D);
-  p.set(14, 8, BLOOD);
-  p.set(15, 8, BLOOD);
-  p.set(16, 7, WHITE);
-
-  p.fillRect(4 - lunge, 2, 3, 8, BONE);
-  p.fillRect(24 + lunge, 2, 3, 8, BONE);
-  p.set(2 - lunge, 1, SOL_H);
-  p.set(28 + lunge, 1, SOL_H);
-
-  for (let y = 20; y < 30; y++) {
-    p.set(11, y, HIVE_D);
-    p.set(12, y, y < 24 ? HIVE : HIVE_D);
-    p.set(19, y, HIVE_D);
-    p.set(20, y, y < 24 ? HIVE : HIVE_D);
+  shadeRect(p, 8, 10, 16, 10, md, hi, dk);
+  for (let y = 4; y < 12; y++) {
+    p.set(14, y, y < 7 ? hi : md);
+    p.set(15, y, y < 7 ? hi : md);
+    p.set(16, y, md);
+    p.set(17, y, dk);
   }
+  p.set(14, 6, BLOOD);
+  p.set(15, 6, BLOOD);
+  p.set(16, 5, WHITE);
 
-  if (civ >= 1.5) {
-    p.set(12, 10, VOID_H);
-    p.set(18, 10, VOID_H);
+  for (let y = 18; y < 30; y++) {
+    const lit = y < 23;
+    p.set(11, y, lit ? md : dk);
+    p.set(12, y, dk);
+    p.set(19, y, lit ? hi : md);
+    p.set(20, y, dk);
+  }
+  p.fillRect(9, 29, 5, 2, dk);
+  p.fillRect(18, 29, 5, 2, dk);
+
+  // Scythe claws — bone shaft + curved blade (not gold orbs).
+  shadeRect(p, 3 - lunge, 8, 4, 10, BONE, WHITE, SKIN_D);
+  shadeRect(p, 24 + lunge, 8, 4, 10, BONE, WHITE, SKIN_D);
+  p.fillRect(1 - lunge, 4, 4, 5, GUN_H);
+  p.fillRect(27 + lunge, 4, 4, 5, GUN_H);
+  p.set(0 - lunge, 3, WHITE);
+  p.set(31 + lunge, 3, WHITE);
+
+  if (civ < 0.5) {
+    p.set(10, 12, hi);
+  } else if (civ < 1.5) {
+    p.set(10, 12, CRY_H);
+    p.set(20, 12, CRY_H);
+  } else {
+    p.set(10, 12, VOID_H);
+    p.set(20, 12, VOID_H);
   }
   return p;
 }
 
 // ── Prism ───────────────────────────────────────────────────────────────────
-function drawPrismPix(_civ: number, frame: number): Pix {
+function drawPrismPix(civ: number, frame: number): Pix {
   const p = Pix.alloc(32, 32);
   const hover = frame % 2 === 1 ? -1 : 0;
-  const y0 = 8 + hover;
+  const y0 = 4 + hover;
+  const { md, hi, dk } = civPal(1);
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
 
-  dark(10, y0 + 6, 12, 10);
-  dark(12, y0, 8, 8);
-  dark(18, y0 + 2, 10, 4);
-  dark(4, y0 + 14, 4, 4);
-  dark(24, y0 + 14, 4, 4);
+  // Floating crystal body + focus lens + beam weapon + stabilizer pods on stems.
+  dark(8, y0 + 10, 16, 12);
+  dark(10, y0 + 2, 12, 10);
+  dark(6, y0 + 8, 4, 6);
+  dark(22, y0 + 8, 4, 6);
+  dark(20, y0 + 4, 10, 5);
+  dark(28, y0 + 3, 3, 4);
 
-  for (let y = y0; y < y0 + 8; y++) {
-    for (let x = 12; x < 20; x++) {
-      const c = x < 15 && y < y0 + 4 ? CRY_H : x > 17 ? CRY_D : CRY;
+  for (let y = y0 + 2; y < y0 + 12; y++) {
+    for (let x = 10; x < 22; x++) {
+      const c = x < 14 && y < y0 + 6 ? hi : x > 18 || y > y0 + 8 ? dk : md;
       p.set(x, y, c);
     }
   }
-  for (let y = y0 + 6; y < y0 + 16; y++) {
-    for (let x = 10; x < 22; x++) p.set(x, y, x < 14 ? CRY : CRY_D);
+  for (let y = y0 + 10; y < y0 + 22; y++) {
+    for (let x = 8; x < 24; x++) p.set(x, y, x < 13 ? md : dk);
   }
-  p.set(14, y0 + 2, WHITE);
-  p.circ(22, y0 + 4, 3, CRY_H);
-  p.set(24, y0 + 3, WHITE);
-  for (let x = 18; x < 28; x++) p.set(x, y0 + 4, x > 24 ? CRY_H : CRY);
-  p.fillRect(4, y0 + 14, 4, 4, CRY_D);
-  p.fillRect(24, y0 + 14, 4, 4, CRY_D);
-  p.fillRect(12, y0 + 4, 8, 4, MAG);
+  p.set(14, y0 + 3, WHITE);
+  p.set(15, y0 + 4, CRY_H);
+
+  // Focus lens (rect facet, not orb) + beam extending right.
+  shadeRect(p, 20, y0 + 4, 6, 5, CRY_H, WHITE, CRY);
+  for (let x = 24; x <= 31; x++) {
+    const c = x > 28 ? CRY_H : x > 26 ? hi : md;
+    p.set(x, y0 + 5, c);
+    if (x > 26) p.set(x, y0 + 6, c);
+  }
+  p.set(31, y0 + 5, WHITE);
+
+  // Stabilizer pods on stems (connected, not floating orbs).
+  p.fillRect(10, y0 + 16, 2, 6, dk);
+  p.fillRect(20, y0 + 16, 2, 6, dk);
+  shadeRect(p, 6, y0 + 20, 6, 4, md, hi, dk);
+  shadeRect(p, 20, y0 + 20, 6, 4, md, hi, dk);
+
+  if (civ < 0.5) p.set(12, y0 + 8, HIVE_H);
+  else if (civ >= 1.5) {
+    p.set(16, y0 + 8, VOID_H);
+    p.set(17, y0 + 9, VOID_H);
+  }
   return p;
 }
 
 // ── Shade ───────────────────────────────────────────────────────────────────
 function drawShadePix(civ: number): Pix {
   const p = Pix.alloc(32, 32);
+  const { md, hi, dk } = civPal(civ);
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
 
-  dark(10, 4, 12, 24);
-  dark(8, 22, 4, 6);
-  dark(22, 20, 4, 6);
-  dark(6, 2, 6, 4);
-  dark(20, 2, 6, 4);
+  // Cloaked figure — hood, cloak body, feet on ground, dagger with skin grip.
+  dark(9, 18, 5, 12);
+  dark(18, 18, 5, 12);
+  dark(8, 6, 16, 14);
+  dark(10, 2, 12, 6);
+  dark(18, 12, 12, 3);
+  dark(28, 11, 3, 5);
 
-  shadeRect(p, 10, 4, 12, 24, VOID_D, VOID, VOID_D);
-  shadeRect(p, 11, 6, 10, 20, VOID, VOID_H, VOID_D);
-  p.set(16, 10, WHITE);
-  p.set(17, 10, VOID_H);
-  p.fillRect(14, 14, 4, 4, MAG);
+  shadeRect(p, 8, 6, 16, 14, md, hi, dk);
+  for (let y = 2; y < 8; y++) {
+    p.set(14, y, y < 5 ? hi : md);
+    p.set(15, y, y < 5 ? hi : md);
+    p.set(16, y, md);
+    p.set(17, y, dk);
+  }
+  p.set(15, 5, WHITE);
+  p.set(16, 5, VOID_H);
 
-  p.fillRect(18, 14, 10, 2, BONE);
-  p.set(27, 13, INK);
-  p.set(26, 14, SKIN_D);
+  for (let y = 18; y < 30; y++) {
+    p.set(11, y, y < 23 ? md : dk);
+    p.set(12, y, dk);
+    p.set(19, y, y < 23 ? hi : md);
+    p.set(20, y, dk);
+  }
+  p.fillRect(9, 29, 5, 2, dk);
+  p.fillRect(18, 29, 5, 2, dk);
 
-  if (civ < 1.5) {
-    p.set(8, 24, VOID_D);
-    p.set(22, 22, VOID_D);
+  // Dagger — blade + hilt with skin-tone grip touching cloak hand.
+  shadeRect(p, 18, 12, 10, 3, GUN, GUN_H, GUN);
+  p.fillRect(28, 11, 3, 5, BONE);
+  p.set(30, 12, WHITE);
+  p.set(17, 13, SKIN);
+  p.set(17, 14, SKIN_D);
+
+  if (civ < 0.5) {
+    p.set(10, 10, HIVE_H);
+  } else if (civ < 1.5) {
+    p.set(10, 10, CRY_H);
+    p.set(20, 10, CRY_H);
   }
   return p;
 }
