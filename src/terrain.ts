@@ -19,11 +19,11 @@ float sampleH(vec2 w) {
 }
 
 void main() {
-  vec2 world = position.xy + uMapHalf;
-  vWorld = world;
-  float hC = sampleH(world);
-  float hX = sampleH(world + vec2(1.0, 0.0)) - hC;
-  float hZ = sampleH(world + vec2(0.0, 1.0)) - hC;
+  vec4 baseWp = modelMatrix * vec4(position, 1.0);
+  vec2 worldXZ = baseWp.xz;
+  float hC = sampleH(worldXZ);
+  float hX = sampleH(worldXZ + vec2(1.0, 0.0)) - hC;
+  float hZ = sampleH(worldXZ + vec2(0.0, 1.0)) - hC;
   vElev = hC / 3.0;
   vSlope = clamp(length(vec2(hX, hZ)) * 1.35, 0.0, 1.0);
 
@@ -163,8 +163,8 @@ float sampleH(vec2 w) {
 }
 
 void main() {
-  vec2 world = position.xy + uMapHalf;
-  float h = sampleH(world) * uHeightScale + uYOffset;
+  vec4 baseWp = modelMatrix * vec4(position, 1.0);
+  float h = sampleH(baseWp.xz) * uHeightScale + uYOffset;
   vec3 pos = vec3(position.x, position.y, h);
   vec4 wp = modelMatrix * vec4(pos, 1.0);
   vUv = uv;

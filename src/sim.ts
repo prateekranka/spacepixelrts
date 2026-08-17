@@ -410,7 +410,6 @@ export class World {
       }
     }
     this.generateHeightmap();
-    this.applyHeightCliffs();
     this.stampPatch(Tile.Ore, 9, rng);
     this.stampPatch(Tile.Gas, 6, rng);
     this.stampPatch(Tile.Solar, 5, rng);
@@ -418,6 +417,8 @@ export class World {
     this.clearBase(10, 10);
     this.clearBase(MAP - 11, MAP - 11);
     this.flattenHeightPads();
+    this.skirtRampsAroundPads();
+    this.applyHeightCliffs();
   }
 
   /** Low-frequency fbm + ridge/valley along the base-to-base diagonal. */
@@ -437,11 +438,14 @@ export class World {
         const qx = x - ax - t * dx;
         const qz = z - az - t * dz;
         const perp = Math.hypot(qx, qz);
-        // Valley corridor on the clash approach (readable opening + choke lane).
+        // Valley corridor on the clash approach (mid-map, outside opening pad after flatten).
         if (t > 0.34 && t < 0.56 && perp < 5.5) h *= 0.28;
-        // Ridge wall northeast of the valley — forces a ramp detour mid-map.
-        if (t > 0.6 && t < 0.8 && perp < 4.2) h = h * 0.35 + 0.82;
-        if (t > 0.6 && t < 0.8 && perp >= 4.2 && perp < 7.5) h = h * 0.55 + 0.42;
+        // Ridge near enemy approach — ramp gap at perp 4–6 stays walkable level 1.
+        if (t > 0.78 && t < 0.92) {
+          if (perp >= 4 && perp < 6) h = 0.375;
+          else if (perp < 4.2) h = h * 0.35 + 0.82;
+          else if (perp >= 6 && perp < 8) h = h * 0.55 + 0.42;
+        }
         this.height[x + z * MAP] = terraceStore(h);
       }
     }
@@ -464,28 +468,58 @@ export class World {
     }
   }
 
-  /** Steep ±2 level steps become blocking cliff rock (ramps stay walkable dust). */
+  /** 2-tile ring outside pads — clamp steep rim to level 1 so exits stay walkable. */
+  private skirtRampsAroundPads(): void {
+    const icx = (MAP * 0.5) | 0;
+    const icz = (MAP * 0.52) | 0;
+    const regions = [
+      { x0: icx - 14, x1: icx + 13, z0: icz - 10, z1: icz + 9 },
+      { x0: 4, x1: 16, z0: 4, z1: 16 },
+      { x0: MAP - 17, x1: MAP - 5, z0: MAP - 17, z1: MAP - 5 },
+    ];
+    for (const r of regions) {
+      const x0 = Math.max(0, r.x0 - 2);
+      const x1 = Math.min(MAP - 1, r.x1 + 2);
+      const z0 = Math.max(0, r.z0 - 2);
+      const z1 = Math.min(MAP - 1, r.z1 + 2);
+      for (let z = z0; z <= z1; z++) {
+        for (let x = x0; x <= x1; x++) {
+          if (x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) continue;
+          const i = x + z * MAP;
+          if (this.height[i] >= 2) this.height[i] = 1;
+        }
+      }
+    }
+  }
+
+  private cliffableTile(tile: number): boolean {
+    return tile !== Tile.Void;
+  }
+
+  private markCliffTile(x: number, z: number): void {
+    if (this.isHeightPad(x, z)) return;
+    const i = x + z * MAP;
+    if (!this.cliffableTile(this.tiles[i])) return;
+    this.tiles[i] = Tile.Rock;
+    this.block[i] = 1;
+  }
+
+  /** Steep ±2 level steps become blocking cliff rock on the high tile (ramps stay walkable dust). */
   private applyHeightCliffs(): void {
     for (let z = 1; z < MAP - 1; z++) {
       for (let x = 1; x < MAP - 1; x++) {
         const i = x + z * MAP;
-        if (this.tiles[i] === Tile.Void) continue;
+        if (!this.cliffableTile(this.tiles[i])) continue;
         const hi = this.height[i];
         for (let k = 0; k < 4; k++) {
           const nx = x + DX[k];
           const nz = z + DZ[k];
           if (nx < 0 || nz < 0 || nx >= MAP || nz >= MAP) continue;
           const ni = nx + nz * MAP;
-          if (this.tiles[ni] === Tile.Void) continue;
-          if (Math.abs(hi - this.height[ni]) < 2) continue;
-          if (!this.isHeightPad(x, z)) {
-            this.tiles[i] = Tile.Rock;
-            this.block[i] = 1;
-          }
-          if (!this.isHeightPad(nx, nz)) {
-            this.tiles[ni] = Tile.Rock;
-            this.block[ni] = 1;
-          }
+          const nh = this.height[ni];
+          if (Math.abs(hi - nh) < 2) continue;
+          if (hi > nh) this.markCliffTile(x, z);
+          else if (nh > hi) this.markCliffTile(nx, nz);
         }
       }
     }

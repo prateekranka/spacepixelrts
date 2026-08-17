@@ -2,7 +2,7 @@
 
 import { MAP, clamp } from './engine';
 
-export const HEIGHT_SCALE = 0.9;
+export const HEIGHT_SCALE = 1.1;
 
 function hash21(x: number, z: number, seed: number): number {
   const n = Math.sin((x + seed * 0.013) * 127.1 + (z + seed * 0.029) * 311.7) * 43758.5453;
@@ -39,12 +39,12 @@ export function fbm(x: number, z: number, seed: number): number {
 
 /** Terrace raw 0–1 noise into stored levels 0–3. */
 export function terraceStore(h: number): number {
-  const band = h * 4;
+  const band = Math.min(1, h) * 4;
   const level = Math.floor(band);
   const fract = band - level;
   const ramp = Math.min(2 * fract, 1);
   const ht = (level + ramp) / 4;
-  return Math.round(ht * 3) | 0;
+  return Math.min(3, Math.round(ht * 3) | 0);
 }
 
 export function heightWorld(level: number): number {
