@@ -104,18 +104,6 @@ function shadeRect(
   }
 }
 
-function shadeDome(p: Pix, cx: number, yTop: number, yBot: number, pal: CivPal): void {
-  const span = Math.max(1, yBot - yTop);
-  for (let y = yTop; y <= yBot; y++) {
-    const t = (y - yTop) / span;
-    const half = Math.round(3 + t * (span + 6));
-    for (let x = cx - half; x <= cx + half; x++) {
-      const c = x < cx - half / 2 ? pal.hi : x > cx + half / 2 ? pal.dk : pal.md;
-      p.set(x, y, c);
-    }
-  }
-}
-
 function drawDoor(p: Pix, cx: number, bottomY: number, w: number, h: number): void {
   const x0 = cx - Math.floor(w / 2);
   p.fillRect(x0, bottomY - h + 1, w, h, INK);
@@ -132,6 +120,215 @@ function drawWindows(p: Pix, slots: readonly (readonly [number, number])[]): voi
 
 function drawBanner(p: Pix, cx: number, y: number): void {
   p.fillRect(cx - 2, y, 4, 2, MAG);
+}
+
+type IsoVerts = {
+  footN: [number, number];
+  footW: [number, number];
+  footE: [number, number];
+  footS: [number, number];
+  roofN: [number, number];
+  roofW: [number, number];
+  roofE: [number, number];
+  roofS: [number, number];
+};
+
+function isoVerts(cx: number, footY: number, footW: number, wallH: number, roofW: number): IsoVerts {
+  const fh = footW / 4;
+  const rw = roofW / 2;
+  const rise = wallH;
+  return {
+    footN: [cx, footY - fh],
+    footW: [cx - footW / 2, footY],
+    footE: [cx + footW / 2, footY],
+    footS: [cx, footY + fh],
+    roofN: [cx, footY - fh - rise],
+    roofW: [cx - rw, footY - fh - rise * 0.52],
+    roofE: [cx + rw, footY - fh - rise * 0.52],
+    roofS: [cx, footY - fh - rise * 0.08],
+  };
+}
+
+function linePix(p: Pix, x0: number, y0: number, x1: number, y1: number, c: Rgba): void {
+  x0 = Math.round(x0);
+  y0 = Math.round(y0);
+  x1 = Math.round(x1);
+  y1 = Math.round(y1);
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+  let x = x0;
+  let y = y0;
+  const cap = dx + dy + 2;
+  for (let n = 0; n < cap; n++) {
+    p.set(x, y, c);
+    if (x === x1 && y === y1) break;
+    const e2 = err * 2;
+    if (e2 > -dy) {
+      err -= dy;
+      x += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y += sy;
+    }
+  }
+}
+
+function fillQuad(
+  p: Pix,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  x3: number,
+  y3: number,
+  c: Rgba,
+): void {
+  const verts = [
+    { x: x0, y: y0 },
+    { x: x1, y: y1 },
+    { x: x2, y: y2 },
+    { x: x3, y: y3 },
+  ];
+  const minY = Math.max(0, Math.ceil(Math.min(y0, y1, y2, y3)));
+  const maxY = Math.min(p.h - 1, Math.floor(Math.max(y0, y1, y2, y3)));
+  for (let y = minY; y <= maxY; y++) {
+    const scan: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % 4];
+      if (a.y === b.y) continue;
+      if ((a.y <= y && b.y > y) || (b.y <= y && a.y > y)) {
+        const t = (y - a.y) / (b.y - a.y);
+        scan.push(a.x + t * (b.x - a.x));
+      }
+    }
+    if (scan.length >= 2) {
+      scan.sort((a, b) => a - b);
+      const xA = Math.round(scan[0]);
+      const xB = Math.round(scan[scan.length - 1]);
+      for (let x = xA; x <= xB; x++) p.set(x, y, c);
+    }
+  }
+}
+
+function fillSouthWall(p: Pix, v: IsoVerts): void {
+  const [x0, y0] = v.footW;
+  const [x1, y1] = v.roofW;
+  const [x2, y2] = v.roofS;
+  const x3 = v.footS[0] - (v.footS[0] - v.footW[0]) * 0.42;
+  const y3 = v.footS[1];
+  const minY = Math.max(0, Math.ceil(Math.min(y0, y1, y2, y3)));
+  const maxY = Math.min(p.h - 1, Math.floor(Math.max(y0, y1, y2, y3)));
+  const verts = [
+    { x: x0, y: y0 },
+    { x: x1, y: y1 },
+    { x: x2, y: y2 },
+    { x: x3, y: y3 },
+  ];
+  for (let y = minY; y <= maxY; y++) {
+    const scan: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % 4];
+      if (a.y === b.y) continue;
+      if ((a.y <= y && b.y > y) || (b.y <= y && a.y > y)) {
+        const t = (y - a.y) / (b.y - a.y);
+        scan.push(a.x + t * (b.x - a.x));
+      }
+    }
+    if (scan.length >= 2) {
+      scan.sort((a, b) => a - b);
+      const xA = Math.round(scan[0]);
+      const xB = Math.round(scan[scan.length - 1]);
+      const span = Math.max(1, xB - xA);
+      for (let x = xA; x <= xB; x++) {
+        const t = (x - xA) / span;
+        const u = (y - minY) / Math.max(1, maxY - minY);
+        const c = u < 0.35 && t < 0.5 ? WALL_H : t > 0.72 ? WALL_D : WALL;
+        p.set(x, y, c);
+      }
+    }
+  }
+}
+
+function fillEastWall(p: Pix, v: IsoVerts): void {
+  const [x0, y0] = v.footE;
+  const [x1, y1] = v.roofE;
+  const [x2, y2] = v.roofS;
+  const x3 = v.footS[0] + (v.footE[0] - v.footS[0]) * 0.42;
+  const y3 = v.footS[1];
+  fillQuad(p, x0, y0, x1, y1, x2, y2, x3, y3, WALL_D);
+}
+
+function fillRoof3(p: Pix, v: IsoVerts, pal: CivPal): void {
+  const cx = v.roofN[0];
+  const w = v.roofE[0] - v.roofW[0];
+  const yTop = v.roofN[1];
+  const yBot = v.roofS[1];
+  const halfH = (yBot - yTop) / 2;
+  const cy = (yTop + yBot) / 2;
+  for (let dy = -halfH; dy <= halfH; dy++) {
+    const y = Math.round(cy + dy);
+    const t = 1 - Math.abs(dy) / Math.max(1, halfH);
+    const halfW = Math.round((w / 2) * t);
+    for (let dx = -halfW; dx <= halfW; dx++) {
+      const c = dy < -halfH * 0.25 ? pal.hi : dy > halfH * 0.25 ? pal.dk : pal.md;
+      p.set(cx + dx, y, c);
+    }
+  }
+}
+
+function strokeIsoBox(p: Pix, v: IsoVerts): void {
+  const { footN, footW, footE, footS, roofN, roofW, roofE, roofS } = v;
+  linePix(p, footW[0], footW[1], footN[0], footN[1], INK);
+  linePix(p, footN[0], footN[1], footE[0], footE[1], INK);
+  linePix(p, footE[0], footE[1], footS[0], footS[1], INK);
+  linePix(p, footS[0], footS[1], footW[0], footW[1], INK);
+  linePix(p, footW[0], footW[1], roofW[0], roofW[1], INK);
+  linePix(p, roofW[0], roofW[1], roofN[0], roofN[1], INK);
+  linePix(p, roofN[0], roofN[1], roofE[0], roofE[1], INK);
+  linePix(p, roofE[0], roofE[1], roofS[0], roofS[1], INK);
+  linePix(p, roofS[0], roofS[1], footS[0], footS[1], INK);
+  linePix(p, roofS[0], roofS[1], footW[0] + (footS[0] - footW[0]) * 0.42, footS[1], INK);
+  linePix(p, roofS[0], roofS[1], footE[0] - (footE[0] - footS[0]) * 0.42, footS[1], INK);
+}
+
+function drawDoorOnSouth(p: Pix, v: IsoVerts, w: number, h: number): void {
+  const cx = Math.round(v.footW[0] + (v.footS[0] - v.footW[0]) * 0.38);
+  const bottomY = Math.round(v.footS[1] - 1);
+  drawDoor(p, cx, bottomY, w, h);
+}
+
+function windowSlotsSouth(v: IsoVerts, count: number): [number, number][] {
+  const slots: [number, number][] = [];
+  const x0 = v.footW[0] + 2;
+  const x1 = v.roofW[0] + 1;
+  const y0 = v.roofW[1] + 2;
+  const y1 = v.footW[1] - 2;
+  for (let i = 0; i < count; i++) {
+    const t = count === 1 ? 0.5 : i / (count - 1);
+    slots.push([Math.round(x0 + (x1 - x0) * t * 0.55), Math.round(y0 + (y1 - y0) * (0.25 + t * 0.5))]);
+  }
+  return slots;
+}
+
+function windowSlotsEast(v: IsoVerts, count: number): [number, number][] {
+  const slots: [number, number][] = [];
+  const x0 = v.roofE[0] - 3;
+  const x1 = v.footE[0] - 3;
+  const y0 = v.roofE[1] + 2;
+  const y1 = v.footE[1] - 2;
+  for (let i = 0; i < count; i++) {
+    const t = count === 1 ? 0.5 : i / (count - 1);
+    slots.push([Math.round(x0 + (x1 - x0) * t * 0.4), Math.round(y0 + (y1 - y0) * (0.3 + t * 0.4))]);
+  }
+  return slots;
 }
 
 // ── Fighter (reference technique) ───────────────────────────────────────────
@@ -571,45 +768,33 @@ function applyDissolve(pix: Pix, frame: number): void {
   }
 }
 
-// ── Buildings (y-down canvas, 64px hall) ────────────────────────────────────
+// ── Buildings (iso 3/4 box: south + east walls + 2:1 roof diamond) ───────────
 
 function drawHallPix(civ: number): Pix {
   const p = Pix.alloc(64, 64);
   const pal = civPal(civ);
   const cx = 32;
+  const v = isoVerts(cx, 46, 50, 26, 42);
 
-  p.fillRect(8, 40, 48, 20, INK);
-  p.fillRect(12, 18, 40, 22, INK);
-  for (let y = 8; y <= 22; y++) {
-    const half = Math.round(3 + ((y - 8) / 14) * 25);
-    p.fillRect(cx - half, y, half * 2, 1, INK);
-  }
+  strokeIsoBox(p, v);
+  fillEastWall(p, v);
+  fillSouthWall(p, v);
+  fillRoof3(p, v, pal);
+  strokeIsoBox(p, v);
 
-  shadeRect(p, 10, 40, 45, 20, WALL, WALL_H, WALL_D);
-  shadeRect(p, 14, 18, 37, 22, WALL, WALL_H, WALL_D);
-  shadeDome(p, cx, 8, 22, pal);
-  p.set(cx - 6, 9, WHITE);
+  drawDoorOnSouth(p, v, 13, 7);
+  drawWindows(p, [...windowSlotsSouth(v, 3), ...windowSlotsEast(v, 3)]);
 
-  drawDoor(p, cx, 59, 13, 6);
-  drawWindows(p, [
-    [18, 24],
-    [44, 24],
-    [18, 30],
-    [44, 30],
-    [18, 36],
-    [44, 36],
-  ]);
-
-  if (civ < 0.5) p.circ(cx, 15, 4, pal.hi);
+  if (civ < 0.5) p.circ(v.roofN[0], v.roofN[1] + 4, 4, pal.hi);
   else if (civ < 1.5) {
-    p.fillRect(cx - 1, 11, 2, 8, CRY_H);
-    p.set(cx, 10, WHITE);
+    p.fillRect(cx - 1, v.roofN[1] + 2, 2, 8, CRY_H);
+    p.set(cx, v.roofN[1] + 1, WHITE);
   } else {
-    p.fillRect(cx - 2, 10, 4, 10, VOID_D);
-    p.circ(cx + 7, 14, 2, VOID_H);
-    p.circ(cx - 9, 17, 2, VOID_H);
+    p.fillRect(cx - 2, v.roofN[1] + 2, 4, 10, VOID_D);
+    p.circ(cx + 7, v.roofN[1] + 6, 2, VOID_H);
+    p.circ(cx - 9, v.roofN[1] + 9, 2, VOID_H);
   }
-  drawBanner(p, cx, 32);
+  drawBanner(p, cx, v.roofS[1] + 2);
   return p;
 }
 
@@ -617,29 +802,21 @@ function drawHousePix(civ: number): Pix {
   const p = Pix.alloc(32, 32);
   const pal = civPal(civ);
   const cx = 16;
+  const v = isoVerts(cx, 23, 24, 13, 20);
 
-  p.fillRect(4, 18, 24, 12, INK);
-  for (let y = 6; y <= 18; y++) {
-    const half = Math.round(2 + ((y - 6) / 12) * 12);
-    p.fillRect(cx - half, y, half * 2, 1, INK);
-  }
+  strokeIsoBox(p, v);
+  fillEastWall(p, v);
+  fillSouthWall(p, v);
+  fillRoof3(p, v, pal);
+  strokeIsoBox(p, v);
 
-  shadeRect(p, 5, 18, 22, 12, WALL, WALL_H, WALL_D);
-  shadeDome(p, cx, 6, 18, pal);
-  p.set(cx - 4, 7, WHITE);
+  drawDoorOnSouth(p, v, 9, 5);
+  drawWindows(p, [...windowSlotsSouth(v, 2), ...windowSlotsEast(v, 2)]);
 
-  drawDoor(p, cx, 29, 9, 5);
-  drawWindows(p, [
-    [8, 20],
-    [22, 20],
-    [8, 24],
-    [22, 24],
-  ]);
-
-  if (civ < 0.5) p.circ(cx, 13, 2, pal.hi);
-  else if (civ < 1.5) p.set(cx, 8, CRY_H);
-  else p.set(cx - 1, 9, VOID_D);
-  drawBanner(p, cx, 21);
+  if (civ < 0.5) p.circ(v.roofN[0], v.roofN[1] + 2, 2, pal.hi);
+  else if (civ < 1.5) p.set(cx, v.roofN[1] + 1, CRY_H);
+  else p.set(cx - 1, v.roofN[1] + 2, VOID_D);
+  drawBanner(p, cx, v.roofS[1] + 1);
   return p;
 }
 
@@ -647,37 +824,29 @@ function drawBarracksPix(civ: number): Pix {
   const p = Pix.alloc(32, 32);
   const pal = civPal(civ);
   const cx = 16;
+  const v = isoVerts(cx, 22, 26, 12, 22);
 
-  p.fillRect(2, 16, 28, 14, INK);
-  p.fillRect(4, 10, 24, 8, INK);
-  for (let y = 10; y <= 16; y++) {
-    const half = Math.round(2 + ((y - 10) / 6) * 12);
-    p.fillRect(cx - half, y, half * 2, 1, INK);
-  }
+  strokeIsoBox(p, v);
+  fillEastWall(p, v);
+  fillSouthWall(p, v);
+  fillRoof3(p, v, pal);
+  strokeIsoBox(p, v);
 
-  shadeRect(p, 4, 16, 24, 14, WALL, WALL_H, WALL_D);
-  shadeDome(p, cx, 10, 16, pal);
-
-  drawDoor(p, cx, 29, 11, 5);
-  drawWindows(p, [
-    [6, 18],
-    [24, 18],
-    [6, 22],
-    [24, 22],
-  ]);
+  drawDoorOnSouth(p, v, 11, 5);
+  drawWindows(p, [...windowSlotsSouth(v, 2), ...windowSlotsEast(v, 2)]);
 
   if (civ < 0.5) {
-    p.fillRect(6, 14, 2, 6, BONE);
-    p.fillRect(24, 14, 2, 6, BONE);
+    p.fillRect(v.roofW[0] + 1, v.roofW[1] + 2, 2, 5, BONE);
+    p.fillRect(v.roofE[0] - 3, v.roofE[1] + 2, 2, 5, BONE);
   } else if (civ < 1.5) {
-    p.set(7, 14, CRY_H);
-    p.set(25, 14, CRY_H);
-    p.set(cx, 7, WHITE);
+    p.set(v.roofW[0] + 2, v.roofW[1] + 2, CRY_H);
+    p.set(v.roofE[0] - 2, v.roofE[1] + 2, CRY_H);
+    p.set(cx, v.roofN[1] + 1, WHITE);
   } else {
-    p.fillRect(6, 14, 2, 5, VOID_H);
-    p.fillRect(24, 14, 2, 5, VOID_H);
+    p.fillRect(v.roofW[0] + 1, v.roofW[1] + 2, 2, 4, VOID_H);
+    p.fillRect(v.roofE[0] - 3, v.roofE[1] + 2, 2, 4, VOID_H);
   }
-  drawBanner(p, cx, 19);
+  drawBanner(p, cx, v.roofS[1] + 1);
   return p;
 }
 
@@ -685,41 +854,34 @@ function drawUniquePix(civ: number): Pix {
   const p = Pix.alloc(32, 32);
   const pal = civPal(civ);
   const cx = 16;
+  const v = isoVerts(cx, 23, 24, 14, 21);
 
-  p.fillRect(4, 20, 24, 10, INK);
-  for (let y = 6; y <= 20; y++) {
-    const half = Math.round(2 + ((y - 6) / 14) * 11);
-    p.fillRect(cx - half, y, half * 2, 1, INK);
-  }
+  strokeIsoBox(p, v);
+  fillEastWall(p, v);
+  fillSouthWall(p, v);
+  fillRoof3(p, v, pal);
+  strokeIsoBox(p, v);
 
-  shadeRect(p, 5, 20, 22, 10, WALL, WALL_H, WALL_D);
-  shadeDome(p, cx, 6, 20, pal);
-
-  drawDoor(p, cx, 29, 9, 5);
-  drawWindows(p, [
-    [8, 22],
-    [22, 22],
-    [8, 26],
-    [22, 26],
-  ]);
+  drawDoorOnSouth(p, v, 9, 5);
+  drawWindows(p, [...windowSlotsSouth(v, 2), ...windowSlotsEast(v, 2)]);
 
   if (civ < 0.5) {
-    p.circ(cx, 10, 3, pal.hi);
-    p.set(cx, 6, SOL_H);
-    p.circ(cx, 5, 2, SOL_H);
+    p.circ(v.roofN[0], v.roofN[1] + 3, 3, pal.hi);
+    p.set(cx, v.roofN[1], SOL_H);
+    p.circ(cx, v.roofN[1] - 1, 2, SOL_H);
   } else if (civ < 1.5) {
-    p.fillRect(cx - 1, 7, 2, 6, CRY_H);
-    p.set(cx, 6, WHITE);
-    p.fillRect(cx - 7, 12, 3, 6, CRY_D);
-    p.fillRect(cx + 5, 12, 3, 6, CRY_D);
+    p.fillRect(cx - 1, v.roofN[1] + 1, 2, 6, CRY_H);
+    p.set(cx, v.roofN[1], WHITE);
+    p.fillRect(v.roofW[0] - 1, v.roofW[1] + 3, 3, 5, CRY_D);
+    p.fillRect(v.roofE[0] - 2, v.roofE[1] + 3, 3, 5, CRY_D);
   } else {
-    p.fillRect(cx - 1, 8, 2, 8, VOID_D);
-    p.circ(cx, 6, 4, VOID_H);
-    p.set(cx + 1, 5, WHITE);
-    p.circ(cx - 9, 14, 2, VOID_H);
-    p.circ(cx + 9, 13, 2, VOID_H);
+    p.fillRect(cx - 1, v.roofN[1] + 2, 2, 8, VOID_D);
+    p.circ(cx, v.roofN[1] + 1, 4, VOID_H);
+    p.set(cx + 1, v.roofN[1], WHITE);
+    p.circ(v.roofW[0] - 5, v.roofW[1] + 6, 2, VOID_H);
+    p.circ(v.roofE[0] + 5, v.roofE[1] + 5, 2, VOID_H);
   }
-  drawBanner(p, cx, 18);
+  drawBanner(p, cx, v.roofS[1] + 1);
   return p;
 }
 

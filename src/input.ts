@@ -137,13 +137,11 @@ export class Input {
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       if (this.pinch0 > 1) this.zoom(this.pinch0 / Math.max(8, dist));
       this.pinch0 = dist;
-      this.pan.x -= (dx / this.host.clientWidth) * this.halfH * 2.4;
-      this.pan.z -= (dy / this.host.clientHeight) * this.halfH * 2.4;
+      this.panByScreenDelta(dx, dy);
       return;
     }
     if (this.panning) {
-      this.pan.x -= (dx / this.host.clientWidth) * this.halfH * 2.8;
-      this.pan.z -= (dy / this.host.clientHeight) * this.halfH * 2.8;
+      this.panByScreenDelta(dx, dy);
       return;
     }
     if (this.dragging && this.box) {
@@ -313,6 +311,15 @@ export class Input {
   private pickWorld(cx: number, cy: number) {
     const r = this.host.getBoundingClientRect();
     return this.view.pick((cx - r.left) / r.width, (cy - r.top) / r.height);
+  }
+
+  /** Screen drag → ground-plane delta (iso-correct under 45° yaw). */
+  private panByScreenDelta(dx: number, dy: number): void {
+    const r = this.host.getBoundingClientRect();
+    const p0 = this.view.pick(0.5, 0.5);
+    const p1 = this.view.pick(0.5 + dx / r.width, 0.5 + dy / r.height);
+    this.pan.x -= p1.x - p0.x;
+    this.pan.z -= p1.z - p0.z;
   }
 
   private zoom(f: number): void {

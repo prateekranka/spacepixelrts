@@ -9,9 +9,9 @@ import { Hud } from './hud';
 import { Sfx } from './audio';
 import { enemyCiv, parseBootCiv } from './content';
 
-const VERSION = '0.8.2-art';
+const VERSION = '0.9.0-iso';
 const SEED = 0x5eed;
-const OPENING_PAN = { x: MAP * 0.5, z: MAP * 0.52, halfH: 5.8 };
+const OPENING_PAN = { x: MAP * 0.5, z: MAP * 0.52, halfH: 7.2 };
 
 const host = document.getElementById('app');
 if (!host) throw new Error('Starhold boot: #app host missing');

@@ -9,6 +9,10 @@ import { VfxRenderer } from './vfx';
 import { buildTerrainMesh } from './terrain';
 import { SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
 
+export const ISO_YAW = Math.PI / 4;
+export const ISO_PITCH = Math.atan(0.5);
+export const ISO_DIST = 40;
+
 const VERT = /* glsl */ `
 attribute vec4 iUv;
 attribute vec3 iTeam;
@@ -68,6 +72,7 @@ export class GameRenderer {
   private readonly viewBounds = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
   private readonly lookTarget = new THREE.Vector3();
   private readonly lookDir = new THREE.Vector3();
+  private readonly drawOrder: { i: number; depth: number; prop: boolean }[] = [];
 
   constructor(host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({
@@ -91,8 +96,13 @@ export class GameRenderer {
     const h = 16;
     const w = h * aspect;
     this.camera = new THREE.OrthographicCamera(-w, w, h, -h, 0.1, 200);
-    this.camera.position.set(18, 22, 28);
-    this.camera.lookAt(18, 0, 22);
+    const ix = 18;
+    const iz = 22;
+    const cx = ix + ISO_DIST * Math.sin(ISO_YAW) * Math.cos(ISO_PITCH);
+    const cy = ISO_DIST * Math.sin(ISO_PITCH);
+    const cz = iz + ISO_DIST * Math.cos(ISO_YAW) * Math.cos(ISO_PITCH);
+    this.camera.position.set(cx, cy, cz);
+    this.camera.lookAt(ix, 0, iz);
     this.scene.background = new THREE.Color(0x07060f);
   }
 
@@ -225,8 +235,10 @@ export class GameRenderer {
   }
 
   lookAt(x: number, z: number): void {
-    const y = this.camera.position.y;
-    this.camera.position.set(x + 8, y, z + 10);
+    const cx = x + ISO_DIST * Math.sin(ISO_YAW) * Math.cos(ISO_PITCH);
+    const cy = ISO_DIST * Math.sin(ISO_PITCH);
+    const cz = z + ISO_DIST * Math.cos(ISO_YAW) * Math.cos(ISO_PITCH);
+    this.camera.position.set(cx, cy, cz);
     this.camera.lookAt(x, 0, z);
   }
 
@@ -253,6 +265,8 @@ export class GameRenderer {
     const propTeamArr = this.iPropTeam.array as Float32Array;
     const propFlashArr = this.iPropFlash.array as Float32Array;
 
+    const order = this.drawOrder;
+    order.length = 0;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = world.ents[i];
       if (!e.alive || !e.vis) continue;
@@ -260,6 +274,15 @@ export class GameRenderer {
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
       if (x < vb.minX || x > vb.maxX || z < vb.minZ || z > vb.maxZ) continue;
+      order.push({ i, depth: x + z, prop: e.kind === Kind.Resource });
+    }
+    order.sort((a, b) => a.depth - b.depth);
+
+    for (const item of order) {
+      const i = item.i;
+      const e = world.ents[i];
+      const x = e.px + (e.x - e.px) * alpha;
+      const z = e.pz + (e.z - e.pz) * alpha;
 
       const rgb = TEAM_RGB[e.team] ?? TEAM_RGB[0];
       const clash =
