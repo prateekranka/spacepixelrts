@@ -42,3 +42,10 @@ Starhaven concept sheets: `067B6054` (magitech unit, 8-dir walk, emissive cyan, 
 `B0F72E79` (unit-evolution "age = material change" rosters), `44D4BCEE`/`B0592688`/`C6F98685`
 (isometric maps: quiet terrain + bright POI lamps, territory-blob minimap, dotted order path).
 Plus `widelands.png` (RTS logistics) and the terrain-*.jpg (elevation banding).
+
+## Scope guardrail (locked)
+
+**PRESERVE game design, rewrite ONLY the look.** Win condition, 3 civs, 3 resources, building/
+unit roster, mechanics, and all critic-passed gameplay (Waves 2-5) stay untouched. This is a
+pure visual/projection rewrite. Do not drift into redesigning economies/units/tech — if a
+builder is tempted, it is out of scope and should stop.

@@ -1,0 +1,24 @@
+<!doctype html><html><body style="background:#222;margin:0;font-family:monospace">
+<div style="color:#ccc;padding:8px">Spacepixel — building sprites (2x). Cols: Hall, House, Barracks, Unique. Rows: Helion, Kryos, Nihiline.</div>
+<canvas id="c"></canvas>
+<script type="module">
+import { drawBuildingSprite } from '/src/sprites.ts';
+const civs = ['vespari','aurion','voidmarked'];
+const kinds = [10,11,12,13]; // Hall, House, Barracks, UniqueB
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const W = 64, S = 2, GAP = 14;
+c.width = (W*S+GAP)*4 + GAP;
+c.height = (W*S+GAP)*3 + GAP;
+ctx.fillStyle = '#160f24'; ctx.fillRect(0,0,c.width,c.height);
+kinds.forEach((k, di) => {
+  civs.forEach((civ, ri) => {
+    const pix = drawBuildingSprite(k, civ);
+    const off = document.createElement('canvas');
+    off.width = pix.w; off.height = pix.h;
+    off.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(pix.d), pix.w, pix.h), 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(off, GAP + di*(W*S+GAP), GAP + ri*(W*S+GAP), pix.w*S, pix.h*S);
+  });
+});
+</script></body></html>
