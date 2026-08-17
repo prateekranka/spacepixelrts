@@ -6,7 +6,8 @@ import { Kind, MAP, MAX_ENTS, Tile, DISSOLVE_DUR, type Ent } from './engine';
 import { TEAM_RGB, isBuilding } from './content';
 import type { World } from './sim';
 import { VfxRenderer } from './vfx';
-import { buildTerrainMesh } from './terrain';
+import { buildTerrainMesh, buildFogMesh, buildHeightTexture } from './terrain';
+import { sampleHeightBilinear } from './height';
 import { SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
 
 export const ISO_YAW = Math.PI / 4;
@@ -61,6 +62,8 @@ export class GameRenderer {
   private iPropFlash!: THREE.InstancedBufferAttribute;
   private fogTex!: THREE.DataTexture;
   private fogData = new Uint8Array(MAP * MAP * 4);
+  private fogMesh!: THREE.Mesh;
+  private heightData!: Uint8Array;
   private mapMesh!: THREE.Mesh;
   private lastCamQ = new THREE.Quaternion();
   private stars!: THREE.Points;
@@ -202,15 +205,10 @@ export class GameRenderer {
     this.fogTex.minFilter = THREE.NearestFilter;
     this.fogTex.wrapS = this.fogTex.wrapT = THREE.ClampToEdgeWrapping;
     this.fogTex.needsUpdate = true;
-    const fogMat = new THREE.MeshBasicMaterial({
-      map: this.fogTex,
-      transparent: true,
-      depthWrite: false,
-    });
-    const fogPlane = new THREE.Mesh(new THREE.PlaneGeometry(MAP, MAP), fogMat);
-    fogPlane.rotation.x = -Math.PI / 2;
-    fogPlane.position.set(MAP / 2, 0.04, MAP / 2);
-    this.scene.add(fogPlane);
+    this.fogMesh = buildFogMesh(buildHeightTexture(world));
+    const fogMat = this.fogMesh.material as THREE.ShaderMaterial;
+    fogMat.uniforms.uFog.value = this.fogTex;
+    this.scene.add(this.fogMesh);
   }
 
   resize(w: number, h: number): void {
@@ -284,6 +282,7 @@ export class GameRenderer {
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
 
+      const groundY = this.groundY(x, z);
       const rgb = TEAM_RGB[e.team] ?? TEAM_RGB[0];
       const clash =
         world.tick < 240 &&
@@ -315,7 +314,7 @@ export class GameRenderer {
         const mul = targetH / cellsH;
         const scaleX = cellsW * mul;
         const scaleY = cellsH * mul;
-        this.dummy.position.set(x, 0.38, z);
+        this.dummy.position.set(x, groundY + 0.38, z);
         this.dummy.quaternion.copy(this.lastCamQ);
         this.dummy.scale.set(scaleX, scaleY, 1);
         this.dummy.updateMatrix();
@@ -346,7 +345,7 @@ export class GameRenderer {
           scaleY = cellsH * (e.kind === Kind.Worker ? 1.55 : 1.14);
         }
         const lift = isBuilding(e.kind) ? 1.15 : 0.9;
-        this.dummy.position.set(x, lift, z);
+        this.dummy.position.set(x, groundY + lift, z);
         this.dummy.quaternion.copy(this.lastCamQ);
         this.dummy.scale.set(scaleX, scaleY, 1);
         this.dummy.updateMatrix();
@@ -363,13 +362,13 @@ export class GameRenderer {
       }
 
       if (e.kind === Kind.Resource) {
-        this.dummy.position.set(x, 0.03, z);
+        this.dummy.position.set(x, groundY + 0.03, z);
         this.dummy.quaternion.identity();
         this.dummy.scale.set(e.radius * 1.1, 1, e.radius * 0.85);
         this.dummy.updateMatrix();
         this.shadows.setMatrixAt(shadowDrawn, this.dummy.matrix);
       } else {
-        this.dummy.position.set(x, 0.03, z);
+        this.dummy.position.set(x, groundY + 0.03, z);
         this.dummy.quaternion.identity();
         this.dummy.scale.set(e.radius * 2.2, 1, e.radius * 1.6);
         this.dummy.updateMatrix();
@@ -402,9 +401,27 @@ export class GameRenderer {
   pick(nx: number, ny: number): THREE.Vector3 {
     const v = new THREE.Vector3(nx * 2 - 1, -(ny * 2 - 1), 0.5);
     v.unproject(this.camera);
+    const origin = this.camera.position;
     const dir = v.sub(this.camera.position).normalize();
-    const dist = -this.camera.position.y / dir.y;
-    return this.camera.position.clone().addScaledVector(dir, dist);
+    let t = 0;
+    let lastY = origin.y;
+    for (let i = 0; i < 96; i++) {
+      const x = origin.x + dir.x * t;
+      const z = origin.z + dir.z * t;
+      const y = origin.y + dir.y * t;
+      if (x < -1 || z < -1 || x > MAP + 1 || z > MAP + 1) break;
+      const gy = this.groundY(x, z);
+      if (y <= gy + 0.08 && dir.y < 0) return new THREE.Vector3(x, gy, z);
+      if (y < lastY && y <= gy + 0.2) return new THREE.Vector3(x, gy, z);
+      lastY = y;
+      t += 0.45;
+    }
+    const dist = -origin.y / dir.y;
+    return origin.clone().addScaledVector(dir, dist);
+  }
+
+  groundY(x: number, z: number): number {
+    return sampleHeightBilinear(this.heightData, x, z);
   }
 
   project(x: number, y: number, z: number): { x: number; y: number } {
@@ -462,6 +479,7 @@ export class GameRenderer {
   }
 
   private buildMap(world: World): void {
+    this.heightData = world.height;
     this.mapMesh = buildTerrainMesh(world);
     this.scene.add(this.mapMesh);
   }
@@ -572,7 +590,7 @@ export class GameRenderer {
         if (!e.alive || !e.vis || e.kind !== Kind.Worker) continue;
         const x = e.px + (e.x - e.px) * alpha;
         const z = e.pz + (e.z - e.pz) * alpha;
-        const p = this.project(x, 0.05, z);
+        const p = this.project(x, this.groundY(x, z) + 0.05, z);
         ctx.fillStyle = '#ffe848';
         ctx.beginPath();
         ctx.moveTo(p.x, p.y - 2);
@@ -585,7 +603,7 @@ export class GameRenderer {
     }
 
     for (const f of world.flags) {
-      const p = this.project(f.x, 0.05, f.z);
+      const p = this.project(f.x, this.groundY(f.x, f.z) + 0.05, f.z);
       ctx.globalAlpha = Math.max(0, f.t);
       ctx.strokeStyle = '#ffe848';
       ctx.lineWidth = 3.5;
@@ -611,7 +629,8 @@ export class GameRenderer {
       const isPlayer = e.team === 0;
       const x = e.px + (e.x - e.px) * alpha;
       const z = e.pz + (e.z - e.pz) * alpha;
-      const foot = this.project(x, 0.05, z);
+      const gy = this.groundY(x, z);
+      const foot = this.project(x, gy + 0.05, z);
 
       if (sel) {
         const rx = isBuilding(e.kind) ? e.radius * 38 + 10 : e.radius * 44 + 12;
@@ -629,7 +648,7 @@ export class GameRenderer {
       const showHp = opening ? sel : sel || damaged || inCombat;
       if (!showHp) continue;
 
-      const head = this.project(x, isBuilding(e.kind) ? 2.4 : 1.65, z);
+      const head = this.project(x, gy + (isBuilding(e.kind) ? 2.4 : 1.65), z);
       const bw = isBuilding(e.kind) ? 36 : 18;
       const bh = 3;
       const ratio = Math.max(0, e.hp / e.maxHp);

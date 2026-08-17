@@ -1,13 +1,34 @@
-/** P91 — procedural GLSL terrain (quiet dust field, large-scale value weather). */
+/** P91/P96 — procedural GLSL terrain (quiet dust + terraced height displacement). */
 
 import * as THREE from 'three';
 import { MAP } from './engine';
+import { HEIGHT_SCALE } from './height';
 import type { World } from './sim';
 
 const TERRAIN_VERT = /* glsl */ `
+uniform sampler2D uHeight;
+uniform float uHeightScale;
+uniform vec2 uMapHalf;
 varying vec2 vWorld;
+varying float vElev;
+varying float vSlope;
+
+float sampleH(vec2 w) {
+  vec2 uv = clamp(w, vec2(0.0), uMapHalf * 2.0 - vec2(1.0)) / (uMapHalf * 2.0);
+  return texture2D(uHeight, uv).r * 3.0;
+}
+
 void main() {
-  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vec2 world = position.xy + uMapHalf;
+  vWorld = world;
+  float hC = sampleH(world);
+  float hX = sampleH(world + vec2(1.0, 0.0)) - hC;
+  float hZ = sampleH(world + vec2(0.0, 1.0)) - hC;
+  vElev = hC / 3.0;
+  vSlope = clamp(length(vec2(hX, hZ)) * 1.35, 0.0, 1.0);
+
+  vec3 pos = vec3(position.x, position.y, hC * uHeightScale);
+  vec4 wp = modelMatrix * vec4(pos, 1.0);
   vWorld = wp.xz;
   gl_Position = projectionMatrix * viewMatrix * wp;
 }
@@ -17,8 +38,9 @@ const TERRAIN_FRAG = /* glsl */ `
 uniform sampler2D uTiles;
 uniform sampler2D uDecals;
 uniform vec2 uMapSize;
-uniform vec2 uOpenCenter;
 varying vec2 vWorld;
+varying float vElev;
+varying float vSlope;
 
 float hash21(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -79,7 +101,7 @@ vec3 dustColor(vec2 world, float elev, float rim) {
   return col;
 }
 
-vec3 rockColor(vec2 world, float rim) {
+vec3 rockColor(vec2 world, float rim, float cliff) {
   vec2 local = fract(world);
   float mask = boulderMask(local);
   vec3 rock = vec3(0.361, 0.322, 0.424);
@@ -92,6 +114,7 @@ vec3 rockColor(vec2 world, float rim) {
   col += vec3(0.52, 0.48, 0.58) * rim * edge * 0.18;
   float shadow = smoothstep(0.82, 0.98, local.y) * (1.0 - mask);
   col = mix(col, vec3(0.188, 0.165, 0.243), shadow * 0.45);
+  col = mix(col, vec3(0.165, 0.138, 0.215), cliff * 0.55);
   return col;
 }
 
@@ -102,8 +125,9 @@ vec3 voidColor(vec2 world) {
 
 void main() {
   vec2 world = vWorld;
-  float elev = qElev(world);
+  float elev = mix(qElev(world), vElev, 0.72);
   float rim = sunRim(world);
+  float cliff = smoothstep(0.22, 0.62, vSlope);
 
   float t = tileType(world);
   float decal = decalRock(world);
@@ -113,9 +137,10 @@ void main() {
   if (t < 0.5) {
     col = voidColor(world);
   } else if (isRock) {
-    col = rockColor(world, rim);
+    col = rockColor(world, rim, cliff);
   } else {
     col = dustColor(world, elev, rim);
+    col = mix(col, vec3(0.318, 0.288, 0.348), cliff * 0.22);
     if (t > 2.5 && t < 3.5) col = mix(col, vec3(0.776, 0.604, 0.282), 0.12);
     else if (t > 3.5 && t < 4.5) col = mix(col, vec3(0.361, 0.659, 0.824), 0.10);
     else if (t > 4.5 && t < 5.5) col = mix(col, vec3(0.941, 0.769, 0.282), 0.10);
@@ -125,9 +150,52 @@ void main() {
 }
 `;
 
+const FOG_VERT = /* glsl */ `
+uniform sampler2D uHeight;
+uniform float uHeightScale;
+uniform float uYOffset;
+uniform vec2 uMapHalf;
+varying vec2 vUv;
+
+float sampleH(vec2 w) {
+  vec2 uv = clamp(w, vec2(0.0), uMapHalf * 2.0 - vec2(1.0)) / (uMapHalf * 2.0);
+  return texture2D(uHeight, uv).r * 3.0;
+}
+
+void main() {
+  vec2 world = position.xy + uMapHalf;
+  float h = sampleH(world) * uHeightScale + uYOffset;
+  vec3 pos = vec3(position.x, position.y, h);
+  vec4 wp = modelMatrix * vec4(pos, 1.0);
+  vUv = uv;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`;
+
+const FOG_FRAG = /* glsl */ `
+uniform sampler2D uFog;
+varying vec2 vUv;
+void main() {
+  gl_FragColor = texture2D(uFog, vUv);
+}
+`;
+
 function buildTileTexture(world: World): THREE.DataTexture {
   const data = new Uint8Array(MAP * MAP);
   for (let i = 0; i < MAP * MAP; i++) data[i] = world.tiles[i];
+  const tex = new THREE.DataTexture(data, MAP, MAP, THREE.RedFormat, THREE.UnsignedByteType);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+export function buildHeightTexture(world: World): THREE.DataTexture {
+  const data = new Uint8Array(MAP * MAP);
+  for (let i = 0; i < MAP * MAP; i++) data[i] = Math.round((world.height[i] / 3) * 255);
   const tex = new THREE.DataTexture(data, MAP, MAP, THREE.RedFormat, THREE.UnsignedByteType);
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
@@ -170,19 +238,46 @@ function buildDecalTexture(): THREE.DataTexture {
 
 export function buildTerrainMesh(world: World): THREE.Mesh {
   const tileTex = buildTileTexture(world);
+  const heightTex = buildHeightTexture(world);
   const decalTex = buildDecalTexture();
+  const half = new THREE.Vector2(MAP / 2, MAP / 2);
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTiles: { value: tileTex },
       uDecals: { value: decalTex },
+      uHeight: { value: heightTex },
+      uHeightScale: { value: HEIGHT_SCALE },
+      uMapHalf: { value: half },
       uMapSize: { value: new THREE.Vector2(MAP, MAP) },
-      uOpenCenter: { value: new THREE.Vector2(MAP * 0.5, MAP * 0.52) },
     },
     vertexShader: TERRAIN_VERT,
     fragmentShader: TERRAIN_FRAG,
   });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(MAP, MAP), mat);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(MAP, MAP, MAP, MAP), mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(MAP / 2, 0, MAP / 2);
   return mesh;
 }
+
+export function buildFogMesh(heightTex: THREE.DataTexture): THREE.Mesh {
+  const half = new THREE.Vector2(MAP / 2, MAP / 2);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uHeight: { value: heightTex },
+      uHeightScale: { value: HEIGHT_SCALE },
+      uYOffset: { value: 0.06 },
+      uMapHalf: { value: half },
+      uFog: { value: null as unknown as THREE.Texture },
+    },
+    vertexShader: FOG_VERT,
+    fragmentShader: FOG_FRAG,
+    transparent: true,
+    depthWrite: false,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(MAP, MAP, MAP, MAP), mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(MAP / 2, 0, MAP / 2);
+  return mesh;
+}
+
+export { HEIGHT_SCALE };

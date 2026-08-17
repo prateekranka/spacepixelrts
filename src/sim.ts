@@ -32,6 +32,7 @@ import {
   minTrainEpoch,
   uniqueUnit,
 } from './content';
+import { fbm, terraceStore } from './height';
 
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
@@ -47,6 +48,8 @@ const MARSHAL_FORWARD_Z = MAP - 16;
 export class World {
   readonly ents: Ent[] = Array.from({ length: MAX_ENTS }, makeEnt);
   readonly tiles = new Uint8Array(MAP * MAP);
+  /** P96 — terraced elevation levels 0–3 per tile. */
+  readonly height = new Uint8Array(MAP * MAP);
   readonly block = new Uint8Array(MAP * MAP);
   readonly explored = [new Uint8Array(MAP * MAP), new Uint8Array(MAP * MAP)];
   readonly visible = [new Uint8Array(MAP * MAP), new Uint8Array(MAP * MAP)];
@@ -396,42 +399,96 @@ export class World {
   private genMap(): void {
     const rng = mulberry32(this.seed);
     this.tiles.fill(Tile.Void);
+    this.height.fill(0);
     this.block.fill(0);
     for (let z = 0; z < MAP; z++) {
       for (let x = 0; x < MAP; x++) {
         const n = hash2(x, z, this.seed);
-        const n2 = hash2(x + 40, z + 11, this.seed ^ 9);
         let t = Tile.Void;
         if (n > 0.46) t = Tile.Dust;
-        if (n2 > 0.84) {
-          t = Tile.Rock;
-          this.block[x + z * MAP] = 1;
-        }
         this.tiles[x + z * MAP] = t;
       }
     }
-    const blobs = 18;
-    for (let i = 0; i < blobs; i++) {
-      const cx = 6 + (rng() * (MAP - 12)) | 0;
-      const cz = 6 + (rng() * (MAP - 12)) | 0;
-      const rad = 1.6 + rng() * 2.4;
-      for (let z = -4; z <= 4; z++) {
-        for (let x = -4; x <= 4; x++) {
-          if (x * x + z * z > rad * rad) continue;
-          const xx = cx + x;
-          const zz = cz + z;
-          if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
-          this.tiles[xx + zz * MAP] = Tile.Rock;
-          this.block[xx + zz * MAP] = 1;
-        }
-      }
-    }
+    this.generateHeightmap();
+    this.applyHeightCliffs();
     this.stampPatch(Tile.Ore, 9, rng);
     this.stampPatch(Tile.Gas, 6, rng);
     this.stampPatch(Tile.Solar, 5, rng);
     this.stampOpeningGround();
     this.clearBase(10, 10);
     this.clearBase(MAP - 11, MAP - 11);
+    this.flattenHeightPads();
+  }
+
+  /** Low-frequency fbm + ridge/valley along the base-to-base diagonal. */
+  private generateHeightmap(): void {
+    const ax = 10;
+    const az = 10;
+    const bx = MAP - 11;
+    const bz = MAP - 11;
+    const dx = bx - ax;
+    const dz = bz - az;
+    const len2 = dx * dx + dz * dz;
+    for (let z = 0; z < MAP; z++) {
+      for (let x = 0; x < MAP; x++) {
+        if (this.tiles[x + z * MAP] === Tile.Void) continue;
+        let h = fbm(x, z, this.seed);
+        const t = ((x - ax) * dx + (z - az) * dz) / len2;
+        const qx = x - ax - t * dx;
+        const qz = z - az - t * dz;
+        const perp = Math.hypot(qx, qz);
+        // Valley corridor on the clash approach (readable opening + choke lane).
+        if (t > 0.34 && t < 0.56 && perp < 5.5) h *= 0.28;
+        // Ridge wall northeast of the valley — forces a ramp detour mid-map.
+        if (t > 0.6 && t < 0.8 && perp < 4.2) h = h * 0.35 + 0.82;
+        if (t > 0.6 && t < 0.8 && perp >= 4.2 && perp < 7.5) h = h * 0.55 + 0.42;
+        this.height[x + z * MAP] = terraceStore(h);
+      }
+    }
+  }
+
+  private isHeightPad(x: number, z: number): boolean {
+    const icx = (MAP * 0.5) | 0;
+    const icz = (MAP * 0.52) | 0;
+    if (x >= icx - 14 && x <= icx + 13 && z >= icz - 10 && z <= icz + 9) return true;
+    if (x >= 4 && x <= 16 && z >= 4 && z <= 16) return true;
+    if (x >= MAP - 17 && x <= MAP - 5 && z >= MAP - 17 && z <= MAP - 5) return true;
+    return false;
+  }
+
+  private flattenHeightPads(): void {
+    for (let z = 0; z < MAP; z++) {
+      for (let x = 0; x < MAP; x++) {
+        if (this.isHeightPad(x, z)) this.height[x + z * MAP] = 0;
+      }
+    }
+  }
+
+  /** Steep ±2 level steps become blocking cliff rock (ramps stay walkable dust). */
+  private applyHeightCliffs(): void {
+    for (let z = 1; z < MAP - 1; z++) {
+      for (let x = 1; x < MAP - 1; x++) {
+        const i = x + z * MAP;
+        if (this.tiles[i] === Tile.Void) continue;
+        const hi = this.height[i];
+        for (let k = 0; k < 4; k++) {
+          const nx = x + DX[k];
+          const nz = z + DZ[k];
+          if (nx < 0 || nz < 0 || nx >= MAP || nz >= MAP) continue;
+          const ni = nx + nz * MAP;
+          if (this.tiles[ni] === Tile.Void) continue;
+          if (Math.abs(hi - this.height[ni]) < 2) continue;
+          if (!this.isHeightPad(x, z)) {
+            this.tiles[i] = Tile.Rock;
+            this.block[i] = 1;
+          }
+          if (!this.isHeightPad(nx, nz)) {
+            this.tiles[ni] = Tile.Rock;
+            this.block[ni] = 1;
+          }
+        }
+      }
+    }
   }
 
   /** Dust pad + interior rocks + gem nodes + props under the opening camera frustum. */
