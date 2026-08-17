@@ -5,13 +5,15 @@
 
 ## Now
 
-**Art gaps locked.** P91 quiet ground **PASS**, P92 buildings as places **PASS**, P93 full character roster **PASS** (`9899046`). Live deploying **`0.8.2-art`**.
+**Wave A P94 PASS** (`d9c5ff8`, critic `tasks/P94-critic.md`). Live deploying **`0.9.0-iso`**. Camera is 2:1 dimetric; halls are boxes (two walls + roof); units stand upright.
 
-Play: https://spacepixelrts.pages.dev — Helion vs Kryos opening. Ground recedes; halls have roof/wall/door/windows; fighters read as rifle infantry.
+**P95 next** — kill the MAG facade banner; one small emissive glow (lamp/visor/engine) tinted to team.
+
+Play: https://spacepixelrts.pages.dev
 
 ## Biggest gap
 
-**None on the three named art gaps.** Marginals: doors/windows go sub-pixel at default opening zoom; corpse frames are still orbs; mid gem is a gold diamond (resource node, not a unit).
+Loud magenta facade banners on buildings. Then mountains/valleys (P96).
 
 ## Tracker
 
@@ -24,6 +26,7 @@ Play: https://spacepixelrts.pages.dev — Helion vs Kryos opening. Ground recede
 | 4 performance / iPad / bugs | **PASS** (P66) |
 | 5 full 1v1 coherence | **PASS** (P70) |
 | 6 procedural-first | **PASS** (P80–P82) |
-| Art GAP 1 quiet ground | **PASS** (P91) |
-| Art GAP 2 real buildings | **PASS** (P92) |
-| Art GAP 3 full character roster | **PASS** (P93) |
+| Art GAP 1–3 | **PASS** (P91–P93) |
+| Wave A P94 iso projection | **PASS** |
+| Wave A P95 emissive team color | **building** |
+| Wave A P96 terrain elevation | queued |

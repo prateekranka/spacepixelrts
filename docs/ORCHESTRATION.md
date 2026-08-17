@@ -177,4 +177,14 @@ Technique locked in `src/art-reference.ts`. Close gaps in order. One Composer at
 
 ## Current biggest gap (live)
 
-**Art gaps 1–3 PASS.** Live `0.8.2-art`. Ground recedes; buildings are places; living roster is connected characters with weapons. No Composer in flight.
+**P94 PASS.** Next: MAG facade banner → one emissive team glow (P95), then mountains/valleys (P96). Sim/design frozen.
+
+### Wave A — isometric rewrite (look only)
+
+Sequencer: P94 projection → P95 team color → P96 elevation. One Composer at a time. Critic = fresh Grok-vision on the running build.
+
+| ID | Piece | Depends | Status | Latest critic |
+|---|---|---|---|---|
+| P94 | Iso 3/4 projection (2:1 camera, depth-sort, iso building boxes) | P93 | done | **PASS** `tasks/P94-critic.md` |
+| P95 | Emissive team color (kill MAG facade banner) | P94 | building | — |
+| P96 | Procedural terrain elevation (mountains + valleys) | P95 | queued | — |
