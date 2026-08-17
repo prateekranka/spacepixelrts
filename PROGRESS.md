@@ -5,28 +5,22 @@
 
 ## Now
 
-**Wave A P94 PASS** (`d9c5ff8`, critic `tasks/P94-critic.md`). Live deploying **`0.9.0-iso`**. Camera is 2:1 dimetric; halls are boxes (two walls + roof); units stand upright.
+**Wave A P94 + P95 PASS.** Iso 2:1 place (`d9c5ff8`) and MAG banners gone (`a48d73c`, critic `tasks/P95-critic.md`). Team color is a mint/crimson lamp, not a pink sticker.
 
-**P95 next** — kill the MAG facade banner; one small emissive glow (lamp/visor/engine) tinted to team.
+**P96 building** — procedural mountains + valleys (heightmap, cliffs, ramps) as battle-changers. Opening clash pad stays flat. Sim combat/economy frozen.
 
-Play: https://spacepixelrts.pages.dev
+Play: https://spacepixelrts.pages.dev — deploying **`0.9.1-iso`**.
 
 ## Biggest gap
 
-Loud magenta facade banners on buildings. Then mountains/valleys (P96).
+Flat pancake map. Need readable elevation (chokepoints, high ground, ramps) in iso.
 
 ## Tracker
 
 | Wave | Status |
 |---|---|
 | 0 docs/harness/deploy | done |
-| 1 opening wow vs AoE2:DE | **PASS** (P41) |
-| 2 gameplay depth | **PASS** (P49) |
-| 3 feel / VFX / command | **PASS** (P58) |
-| 4 performance / iPad / bugs | **PASS** (P66) |
-| 5 full 1v1 coherence | **PASS** (P70) |
-| 6 procedural-first | **PASS** (P80–P82) |
-| Art GAP 1–3 | **PASS** (P91–P93) |
+| 1–6 + art gaps | **PASS** |
 | Wave A P94 iso projection | **PASS** |
-| Wave A P95 emissive team color | **building** |
-| Wave A P96 terrain elevation | queued |
+| Wave A P95 emissive team color | **PASS** |
+| Wave A P96 terrain elevation | **building** |
