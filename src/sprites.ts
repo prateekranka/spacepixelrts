@@ -33,10 +33,12 @@ const VOID: Rgba = [72, 42, 140, 255];
 const VOID_H: Rgba = [186, 140, 255, 255];
 const VOID_D: Rgba = [28, 14, 48, 255];
 
-const WALL: Rgba = [58, 48, 62, 255];
-const WALL_H: Rgba = [96, 84, 100, 255];
-const WALL_D: Rgba = [40, 32, 44, 255];
-const WIN: Rgba = [200, 220, 255, 255];
+// Wall tones sit above quiet-dust terrain (~102,88,108) so edges read at RTS zoom.
+const WALL: Rgba = [118, 106, 124, 255];
+const WALL_H: Rgba = [156, 146, 164, 255];
+const WALL_D: Rgba = [82, 72, 92, 255];
+const WIN: Rgba = [210, 228, 255, 255];
+const DOOR: Rgba = [20, 14, 26, 255];
 
 export class Pix {
   constructor(readonly w: number, readonly h: number, readonly d: Uint8ClampedArray) {}
@@ -103,13 +105,33 @@ function shadeRect(
 }
 
 function shadeDome(p: Pix, cx: number, yTop: number, yBot: number, pal: CivPal): void {
+  const span = Math.max(1, yBot - yTop);
   for (let y = yTop; y <= yBot; y++) {
-    const half = Math.round(4 + ((y - yTop) / Math.max(1, yBot - yTop)) * (yBot - yTop + 8));
+    const t = (y - yTop) / span;
+    const half = Math.round(3 + t * (span + 6));
     for (let x = cx - half; x <= cx + half; x++) {
       const c = x < cx - half / 2 ? pal.hi : x > cx + half / 2 ? pal.dk : pal.md;
       p.set(x, y, c);
     }
   }
+}
+
+function drawDoor(p: Pix, cx: number, bottomY: number, w: number, h: number): void {
+  const x0 = cx - Math.floor(w / 2);
+  p.fillRect(x0, bottomY - h + 1, w, h, INK);
+  p.fillRect(x0 + 1, bottomY - h + 2, w - 2, h - 2, DOOR);
+  p.set(cx - 1, bottomY, WALL_D);
+}
+
+function drawWindows(p: Pix, slots: readonly (readonly [number, number])[]): void {
+  for (const [x, y] of slots) {
+    p.fillRect(x, y, 2, 2, WIN);
+    p.set(x, y, [236, 244, 255, 255]);
+  }
+}
+
+function drawBanner(p: Pix, cx: number, y: number): void {
+  p.fillRect(cx - 2, y, 4, 2, MAG);
 }
 
 // ── Fighter (reference technique) ───────────────────────────────────────────
@@ -441,10 +463,11 @@ function drawHallPix(civ: number): Pix {
   const p = Pix.alloc(64, 64);
   const pal = civPal(civ);
   const cx = 32;
+
   p.fillRect(8, 40, 48, 20, INK);
   p.fillRect(12, 18, 40, 22, INK);
   for (let y = 8; y <= 22; y++) {
-    const half = Math.round(4 + ((y - 8) / 14) * 22);
+    const half = Math.round(3 + ((y - 8) / 14) * 25);
     p.fillRect(cx - half, y, half * 2, 1, INK);
   }
 
@@ -453,28 +476,26 @@ function drawHallPix(civ: number): Pix {
   shadeDome(p, cx, 8, 22, pal);
   p.set(cx - 6, 9, WHITE);
 
-  p.fillRect(cx - 6, 55, 13, 5, INK);
-  p.fillRect(cx - 5, 56, 11, 3, [20, 14, 26, 255]);
-  p.set(cx - 4, 59, WALL_D);
+  drawDoor(p, cx, 59, 13, 6);
+  drawWindows(p, [
+    [18, 24],
+    [44, 24],
+    [18, 30],
+    [44, 30],
+    [18, 36],
+    [44, 36],
+  ]);
 
-  for (let i = 0; i < 3; i++) {
-    const wy = 24 + i * 4;
-    p.set(20, wy, WIN);
-    p.set(44, wy, WIN);
-  }
-
-  if (civ < 0.5) {
-    p.circ(cx, 16, 5, pal.hi);
-    p.circ(cx, 58, 2, SOL_H);
-  } else if (civ < 1.5) {
-    p.fillRect(cx - 2, 12, 4, 10, CRY_H);
+  if (civ < 0.5) p.circ(cx, 15, 4, pal.hi);
+  else if (civ < 1.5) {
+    p.fillRect(cx - 1, 11, 2, 8, CRY_H);
     p.set(cx, 10, WHITE);
   } else {
-    p.fillRect(cx - 3, 10, 6, 14, VOID_D);
-    p.circ(cx + 8, 14, 3, VOID_H);
-    p.circ(cx - 10, 18, 3, VOID_H);
+    p.fillRect(cx - 2, 10, 4, 10, VOID_D);
+    p.circ(cx + 7, 14, 2, VOID_H);
+    p.circ(cx - 9, 17, 2, VOID_H);
   }
-  p.fillRect(cx - 4, 28, 8, 6, MAG);
+  drawBanner(p, cx, 32);
   return p;
 }
 
@@ -482,6 +503,7 @@ function drawHousePix(civ: number): Pix {
   const p = Pix.alloc(32, 32);
   const pal = civPal(civ);
   const cx = 16;
+
   p.fillRect(4, 18, 24, 12, INK);
   for (let y = 6; y <= 18; y++) {
     const half = Math.round(2 + ((y - 6) / 12) * 12);
@@ -490,16 +512,20 @@ function drawHousePix(civ: number): Pix {
 
   shadeRect(p, 5, 18, 22, 12, WALL, WALL_H, WALL_D);
   shadeDome(p, cx, 6, 18, pal);
+  p.set(cx - 4, 7, WHITE);
 
-  p.fillRect(cx - 5, 26, 11, 4, INK);
-  p.fillRect(cx - 4, 27, 9, 2, [20, 14, 26, 255]);
-  p.set(10, 22, WIN);
-  p.set(22, 22, WIN);
+  drawDoor(p, cx, 29, 9, 5);
+  drawWindows(p, [
+    [8, 20],
+    [22, 20],
+    [8, 24],
+    [22, 24],
+  ]);
 
-  if (civ < 0.5) p.circ(cx, 14, 3, pal.hi);
+  if (civ < 0.5) p.circ(cx, 13, 2, pal.hi);
   else if (civ < 1.5) p.set(cx, 8, CRY_H);
-  else p.set(cx - 2, 10, VOID_D);
-  p.fillRect(cx - 3, 20, 6, 4, MAG);
+  else p.set(cx - 1, 9, VOID_D);
+  drawBanner(p, cx, 21);
   return p;
 }
 
@@ -507,36 +533,37 @@ function drawBarracksPix(civ: number): Pix {
   const p = Pix.alloc(32, 32);
   const pal = civPal(civ);
   const cx = 16;
+
   p.fillRect(2, 16, 28, 14, INK);
-  p.fillRect(4, 12, 24, 6, INK);
-  p.fillRect(2, 20, 6, 6, INK);
-  p.fillRect(10, 20, 4, 6, INK);
-  p.fillRect(18, 20, 4, 6, INK);
-  p.fillRect(24, 20, 4, 6, INK);
+  p.fillRect(4, 10, 24, 8, INK);
+  for (let y = 10; y <= 16; y++) {
+    const half = Math.round(2 + ((y - 10) / 6) * 12);
+    p.fillRect(cx - half, y, half * 2, 1, INK);
+  }
 
   shadeRect(p, 4, 16, 24, 14, WALL, WALL_H, WALL_D);
-  shadeRect(p, 6, 12, 20, 6, pal.dk, pal.md, pal.dk);
+  shadeDome(p, cx, 10, 16, pal);
 
-  p.fillRect(cx - 5, 24, 11, 5, INK);
-  p.fillRect(cx - 4, 25, 9, 3, [20, 14, 26, 255]);
-  p.set(8, 18, WIN);
-  p.set(24, 18, WIN);
-
-  p.fillRect(cx - 1, 8, 2, 8, BONE);
-  p.fillRect(cx + 2, 10, 5, 4, pal.hi);
+  drawDoor(p, cx, 29, 11, 5);
+  drawWindows(p, [
+    [6, 18],
+    [24, 18],
+    [6, 22],
+    [24, 22],
+  ]);
 
   if (civ < 0.5) {
-    p.fillRect(6, 14, 2, 8, BONE);
-    p.fillRect(24, 14, 2, 8, BONE);
+    p.fillRect(6, 14, 2, 6, BONE);
+    p.fillRect(24, 14, 2, 6, BONE);
   } else if (civ < 1.5) {
-    p.set(8, 14, CRY_H);
-    p.set(24, 14, CRY_H);
-    p.set(cx, 6, WHITE);
+    p.set(7, 14, CRY_H);
+    p.set(25, 14, CRY_H);
+    p.set(cx, 7, WHITE);
   } else {
-    p.fillRect(6, 14, 2, 6, VOID_H);
-    p.fillRect(24, 14, 2, 6, VOID_H);
+    p.fillRect(6, 14, 2, 5, VOID_H);
+    p.fillRect(24, 14, 2, 5, VOID_H);
   }
-  p.fillRect(cx - 3, 18, 6, 4, MAG);
+  drawBanner(p, cx, 19);
   return p;
 }
 
@@ -545,53 +572,40 @@ function drawUniquePix(civ: number): Pix {
   const pal = civPal(civ);
   const cx = 16;
 
-  if (civ < 0.5) {
-    p.fillRect(4, 20, 24, 10, INK);
-    p.circ(10, 14, 7, INK);
-    p.circ(22, 15, 6, INK);
-    p.circ(cx, 10, 8, INK);
-    shadeRect(p, 4, 20, 24, 10, pal.dk, pal.md, pal.dk);
-    p.circ(10, 14, 5, SOL);
-    p.circ(22, 15, 4, SOL);
-    p.circ(cx, 10, 5, pal.hi);
-    p.set(cx, 6, SOL_H);
-    p.fillRect(cx - 1, 2, 2, 6, pal.hi);
-    p.circ(cx, 2, 2, SOL_H);
-  } else if (civ < 1.5) {
-    p.fillRect(6, 22, 20, 8, INK);
-    for (let y = 4; y <= 22; y++) {
-      const half = Math.max(1, Math.round(3 + (22 - y) * 0.25));
-      p.fillRect(cx - half, y, half * 2, 1, INK);
-    }
-    shadeRect(p, 6, 22, 20, 8, CRY_D, CRY, CRY_D);
-    for (let y = 4; y <= 22; y++) {
-      const half = Math.max(1, Math.round(3 + (22 - y) * 0.25));
-      for (let x = cx - half; x <= cx + half; x++) {
-        p.set(x, y, x < cx ? CRY_H : CRY);
-      }
-    }
-    p.set(cx, 6, WHITE);
-    p.fillRect(cx - 8, 12, 4, 8, CRY_D);
-    p.fillRect(cx + 6, 12, 4, 8, CRY_D);
-  } else {
-    p.fillRect(6, 22, 20, 8, INK);
-    p.fillRect(cx - 2, 8, 4, 16, INK);
-    p.circ(cx, 6, 9, INK);
-    shadeRect(p, 6, 22, 20, 8, VOID_D, VOID, VOID_D);
-    shadeRect(p, cx - 2, 8, 4, 16, VOID_D, VOID, VOID_D);
-    p.circ(cx, 6, 6, VOID_H);
-    p.set(cx + 2, 5, WHITE);
-    p.fillRect(cx - 14, 14, 10, 2, VOID_D);
-    p.fillRect(cx + 6, 12, 10, 2, VOID_D);
-    p.circ(cx - 14, 14, 2, VOID_H);
-    p.circ(cx + 14, 12, 2, VOID_H);
+  p.fillRect(4, 20, 24, 10, INK);
+  for (let y = 6; y <= 20; y++) {
+    const half = Math.round(2 + ((y - 6) / 14) * 11);
+    p.fillRect(cx - half, y, half * 2, 1, INK);
   }
 
-  p.fillRect(cx - 4, 24, 9, 4, INK);
-  p.fillRect(cx - 3, 25, 7, 2, [20, 14, 26, 255]);
-  p.set(12, 20, WIN);
-  p.set(20, 20, WIN);
-  p.fillRect(cx - 3, 16, 6, 4, MAG);
+  shadeRect(p, 5, 20, 22, 10, WALL, WALL_H, WALL_D);
+  shadeDome(p, cx, 6, 20, pal);
+
+  drawDoor(p, cx, 29, 9, 5);
+  drawWindows(p, [
+    [8, 22],
+    [22, 22],
+    [8, 26],
+    [22, 26],
+  ]);
+
+  if (civ < 0.5) {
+    p.circ(cx, 10, 3, pal.hi);
+    p.set(cx, 6, SOL_H);
+    p.circ(cx, 5, 2, SOL_H);
+  } else if (civ < 1.5) {
+    p.fillRect(cx - 1, 7, 2, 6, CRY_H);
+    p.set(cx, 6, WHITE);
+    p.fillRect(cx - 7, 12, 3, 6, CRY_D);
+    p.fillRect(cx + 5, 12, 3, 6, CRY_D);
+  } else {
+    p.fillRect(cx - 1, 8, 2, 8, VOID_D);
+    p.circ(cx, 6, 4, VOID_H);
+    p.set(cx + 1, 5, WHITE);
+    p.circ(cx - 9, 14, 2, VOID_H);
+    p.circ(cx + 9, 13, 2, VOID_H);
+  }
+  drawBanner(p, cx, 18);
   return p;
 }
 
@@ -701,16 +715,16 @@ export function buildSpriteAtlas(): SpriteAtlas {
     for (let civ = 0; civ < CIVS; civ++) {
       const pix = drawBuildingSprite(bk, civs[civ]);
       const col = civ;
-      const row = buildingRow + (bk - Kind.Hall);
       const cell = bk === Kind.Hall ? HALL_CELL : ATLAS_CELL;
+      const buildingBaseY = unitRows * ATLAS_CELL;
+      const dy = buildingBaseY + (bk - Kind.Hall) * HALL_CELL + (cell - pix.h);
       const img = ctx.createImageData(pix.w, pix.h);
       img.data.set(pix.d);
       const off = document.createElement('canvas');
       off.width = pix.w;
       off.height = pix.h;
       off.getContext('2d')!.putImageData(img, 0, 0);
-      const dx = col * ATLAS_CELL + (ATLAS_CELL - pix.w) / 2;
-      const dy = row * HALL_CELL + (cell - pix.h);
+      const dx = bk === Kind.Hall ? col * HALL_CELL : col * ATLAS_CELL + (ATLAS_CELL - pix.w) / 2;
       ctx.drawImage(off, dx, dy);
     }
   }

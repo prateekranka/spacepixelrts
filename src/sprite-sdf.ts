@@ -83,9 +83,19 @@ void main() {
   if (kind < 9.5) bob = mod(floor(frame), 2.0);
 
   float padX = (cellSz - spr) * 0.5;
-  float rowY = row * rowStride;
+  float rowY;
+  if (kind >= 9.5) {
+    rowY = uUnitRows * uCell + (kind - 10.0) * uHallCell;
+  } else {
+    rowY = row * rowStride;
+  }
   float spriteTop = rowY + (cellSz - pixH) - bob;
-  float canvasX = col * uCell + padX + vUv.x * spr;
+  float canvasX;
+  if (kind >= 9.5 && kind < 10.5) {
+    canvasX = col * uHallCell + vUv.x * spr;
+  } else {
+    canvasX = col * uCell + padX + vUv.x * spr;
+  }
   float canvasY = spriteTop + (1.0 - vUv.y) * (pixH - 1.0);
 
   vec2 atlasUV = vec2((canvasX + 0.5) / uAtlasSize.x, 1.0 - (canvasY + 0.5) / uAtlasSize.y);
