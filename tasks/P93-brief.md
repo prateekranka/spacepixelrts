@@ -36,7 +36,8 @@ Bump `VERSION` in `src/main.ts` to `0.8.2-art`.
 ## Verify
 
 - `npx tsc --noEmit`; `npm run build`.
-- Screenshot `http://localhost:5173` → `critic/out/p93.png`. Opening Helion rank must read as rifle infantry, not marbles. If scouts/prisms appear in the shot, they must not be orbs/diamonds.
+- Dev is already on `http://localhost:5173`. **Do NOT run `npm run dev` as a blocking child** (it never exits and leaks). Screenshot with `node scripts/screenshot.mjs --url http://localhost:5173 --out critic/out/p93.png`.
+- Opening Helion rank must read as rifle infantry, not marbles. If scouts/prisms appear in the shot, they must not be orbs/diamonds. The gold diamonds and tiny orbs in the opening tableau are THIS gap.
 - Optionally screenshot `http://localhost:5173/reference.html` only as a technique check — the **game** shot is what counts.
 
 ## Commit + report

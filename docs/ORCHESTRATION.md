@@ -172,9 +172,9 @@ Technique locked in `src/art-reference.ts`. Close gaps in order. One Composer at
 | ID | Piece | Depends | Status | Latest critic |
 |---|---|---|---|---|
 | P91 | Quiet the ground (kill zigzag stamp) | P90-v3 | done | **PASS** `tasks/P91-critic.md` |
-| P92 | Buildings: roof + wall + door + windows in `sprites.ts` | P91 | building | pending |
-| P93 | Full roster: every role a connected character + weapon | P92 | queued | |
+| P92 | Buildings: roof + wall + door + windows in `sprites.ts` | P91 | done | **PASS** `tasks/P92-critic.md` |
+| P93 | Full roster: every role a connected character + weapon | P92 | building | pending |
 
 ## Current biggest gap (live)
 
-**GAP 2 — buildings as places.** Ground is quiet (P91 PASS). Halls still read as black slabs / gold stickers. P92 Composer next. Live `0.8.0-art`.
+**GAP 3 — full character roster.** Ground quiet, buildings are places. Opening still has tiny orbs and floating gold diamonds. P93 Composer next. Live `0.8.1-art`.
