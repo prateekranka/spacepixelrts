@@ -33,7 +33,6 @@ import {
   minTrainEpoch,
   uniqueUnit,
 } from './content';
-import { fbm, terraceStore } from './height';
 
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
@@ -410,7 +409,7 @@ export class World {
         this.tiles[x + z * MAP] = t;
       }
     }
-    this.generateHeightmap();
+    this.generateHeightmap(rng);
     this.stampPatch(Tile.Ore, 9, rng);
     this.stampPatch(Tile.Gas, 6, rng);
     this.stampPatch(Tile.Solar, 5, rng);
@@ -420,34 +419,118 @@ export class World {
     this.flattenHeightPads();
     this.skirtRampsAroundPads();
     this.applyHeightCliffs();
+    if (!this.pathfind(10.5, 10.5, MAP - 10.5, MAP - 10.5)) {
+      this.carveBentPath(10, 10, MAP - 11, MAP - 11, rng);
+    }
   }
 
-  /** Low-frequency fbm + ridge/valley along the base-to-base diagonal. */
-  private generateHeightmap(): void {
-    const ax = 10;
-    const az = 10;
-    const bx = MAP - 11;
-    const bz = MAP - 11;
-    const dx = bx - ax;
-    const dz = bz - az;
-    const len2 = dx * dx + dz * dz;
-    for (let z = 0; z < MAP; z++) {
-      for (let x = 0; x < MAP; x++) {
-        if (this.tiles[x + z * MAP] === Tile.Void) continue;
-        let h = fbm(x, z, this.seed);
-        const t = ((x - ax) * dx + (z - az) * dz) / len2;
-        const qx = x - ax - t * dx;
-        const qz = z - az - t * dz;
-        const perp = Math.hypot(qx, qz);
-        // Valley corridor on the clash approach (mid-map, outside opening pad after flatten).
-        if (t > 0.34 && t < 0.56 && perp < 5.5) h *= 0.28;
-        // Ridge near enemy approach — ramp gap at perp 4–6 stays walkable level 1.
-        if (t > 0.78 && t < 0.92) {
-          if (perp >= 4 && perp < 6) h = 0.375;
-          else if (perp < 4.2) h = h * 0.35 + 0.82;
-          else if (perp >= 6 && perp < 8) h = h * 0.55 + 0.42;
+  /**
+   * Playable RTS height: mostly plains, a few seeded mesas.
+   * Positions/shapes come from the map RNG — not a diagonal mirror pair.
+   */
+  private generateHeightmap(rng: () => number): void {
+    const placed: { x: number; z: number; r: number }[] = [];
+    const want = 3 + ((rng() * 3) | 0);
+    for (let attempt = 0; attempt < 90 && placed.length < want; attempt++) {
+      const plateauR = 3.6 + rng() * 3.2;
+      const peak = rng() < 0.38 ? 3 : 2;
+      const margin = plateauR + 5;
+      const cx = margin + rng() * (MAP - 2 * margin);
+      const cz = margin + rng() * (MAP - 2 * margin);
+      if (this.mesaBlocked(cx, cz, plateauR, placed)) continue;
+      this.stampMesa(cx, cz, plateauR, peak, rng() * Math.PI * 2, rng() * Math.PI, 0.62 + rng() * 0.7);
+      placed.push({ x: cx, z: cz, r: plateauR });
+    }
+  }
+
+  private mesaBlocked(
+    cx: number,
+    cz: number,
+    r: number,
+    placed: { x: number; z: number; r: number }[],
+  ): boolean {
+    if (Math.hypot(cx - 10, cz - 10) < 13 + r) return true;
+    if (Math.hypot(cx - (MAP - 11), cz - (MAP - 11)) < 13 + r) return true;
+    if (Math.hypot(cx - MAP * 0.5, cz - MAP * 0.52) < 15 + r) return true;
+    for (const p of placed) {
+      if (Math.hypot(cx - p.x, cz - p.z) < p.r + r + 7) return true;
+      // Don't place a diagonal reflection of an existing mesa.
+      if (Math.hypot(cx - (MAP - 1 - p.x), cz - (MAP - 1 - p.z)) < p.r + r + 8) return true;
+    }
+    return false;
+  }
+
+  /** Elliptical mesa: walkable plateau, cliff rim, ramp wedge at a seeded angle. */
+  private stampMesa(
+    cx: number,
+    cz: number,
+    plateauR: number,
+    peak: number,
+    rampAng: number,
+    rot: number,
+    aspect: number,
+  ): void {
+    const rampR = plateauR + 3;
+    const rampHalf = 0.55 + aspect * 0.2;
+    const reach = rampR * Math.max(1, aspect) + 2;
+    const x0 = Math.max(1, Math.floor(cx - reach));
+    const x1 = Math.min(MAP - 2, Math.ceil(cx + reach));
+    const z0 = Math.max(1, Math.floor(cz - reach));
+    const z1 = Math.min(MAP - 2, Math.ceil(cz + reach));
+    const cr = Math.cos(-rot);
+    const sr = Math.sin(-rot);
+    for (let z = z0; z <= z1; z++) {
+      for (let x = x0; x <= x1; x++) {
+        const dx = x + 0.5 - cx;
+        const dz = z + 0.5 - cz;
+        const lx = dx * cr - dz * sr;
+        const lz = dx * sr + dz * cr;
+        const d = Math.hypot(lx, lz / aspect);
+        if (d > rampR) continue;
+        const i = x + z * MAP;
+        if (this.tiles[i] === Tile.Void) this.tiles[i] = Tile.Dust;
+        const ang = Math.atan2(dz, dx);
+        let dang = Math.abs(ang - rampAng);
+        if (dang > Math.PI) dang = Math.PI * 2 - dang;
+        const onRamp = dang < rampHalf;
+        let level = 0;
+        if (d <= plateauR) {
+          const u = d / Math.max(1, plateauR);
+          if (peak >= 3 && u < 0.5) level = 3;
+          else level = Math.min(peak, 2);
+        } else if (onRamp) {
+          level = 1;
         }
-        this.height[x + z * MAP] = terraceStore(h);
+        if (level > this.height[i]) this.height[i] = level;
+      }
+    }
+  }
+
+  /** Off-diagonal polyline so a wall of mesas cannot soft-lock the 1v1. */
+  private carveBentPath(ax: number, az: number, bx: number, bz: number, rng: () => number): void {
+    let wx = 10 + rng() * (MAP - 20);
+    let wz = 10 + rng() * (MAP - 20);
+    if (Math.abs(wx - wz) < 12) wz = clamp(wz + (rng() < 0.5 ? 16 : -16), 10, MAP - 11);
+    this.carveSegment(ax, az, wx, wz);
+    this.carveSegment(wx, wz, bx, bz);
+  }
+
+  private carveSegment(x0: number, z0: number, x1: number, z1: number): void {
+    const steps = Math.max(1, (Math.hypot(x1 - x0, z1 - z0) * 2) | 0);
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const x = (x0 + (x1 - x0) * t) | 0;
+      const z = (z0 + (z1 - z0) * t) | 0;
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          const zz = z + dz;
+          if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
+          const i = xx + zz * MAP;
+          this.height[i] = 0;
+          if (this.tiles[i] === Tile.Void || this.tiles[i] === Tile.Rock) this.tiles[i] = Tile.Dust;
+          this.block[i] = 0;
+        }
       }
     }
   }
