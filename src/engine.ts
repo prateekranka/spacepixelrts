@@ -192,6 +192,15 @@ export function hash2(x: number, z: number, s: number): number {
   return (n >>> 0) / 4294967296;
 }
 
+/** World 8-dir: 0=E 1=NE 2=N 3=NW 4=W 5=SW 6=S 7=SE.
+ *  Iso camera looks from +X+Z, so +Z is south (toward the viewer). */
+export function dir8(vx: number, vz: number): number {
+  const a = Math.atan2(-vz, vx);
+  let d = Math.round(a / (Math.PI / 4));
+  if (d < 0) d += 8;
+  return d & 7;
+}
+
 export function clamp(v: number, a: number, b: number): number {
   return v < a ? a : v > b ? b : v;
 }

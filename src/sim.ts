@@ -17,6 +17,7 @@ import {
   hash2,
   makeEnt,
   mulberry32,
+  dir8,
   tileAt,
   MAX_SPARKS,
 } from './engine';
@@ -171,7 +172,7 @@ export class World {
     e.cargo = 0;
     e.cooldown = 0;
     e.anim = 0;
-    e.facing = 1;
+    e.facing = kind === Kind.Worker ? 6 : 1;
     e.stealth = kind === Kind.Shade ? 1 : 0;
     e.frenzy = 0;
     e.blinkCd = 0;
@@ -1227,7 +1228,11 @@ export class World {
     }
     e.x = clamp(e.x, 0.6, MAP - 0.6);
     e.z = clamp(e.z, 0.6, MAP - 0.6);
-    if (Math.abs(e.vx) > 0.05) e.facing = e.vx >= 0 ? 1 : -1;
+    if (e.kind === Kind.Worker) {
+      if (Math.abs(e.vx) + Math.abs(e.vz) > 0.05) e.facing = dir8(e.vx, e.vz);
+    } else if (Math.abs(e.vx) > 0.05) {
+      e.facing = e.vx >= 0 ? 1 : -1;
+    }
   }
 
   private moveSeparate(): void {

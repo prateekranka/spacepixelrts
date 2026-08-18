@@ -2,13 +2,20 @@
 
 import * as THREE from 'three';
 import { Atlas, CELL, buildAtlas } from './atlas';
-import { Kind, MAP, MAX_ENTS, Tile, DISSOLVE_DUR, type Ent } from './engine';
+import { Kind, MAP, MAX_ENTS, Ord, Tile, DISSOLVE_DUR, type Ent } from './engine';
 import { TEAM_RGB, isBuilding } from './content';
 import type { World } from './sim';
 import { VfxRenderer } from './vfx';
 import { buildTerrainMesh, buildFogMesh, buildHeightTexture } from './terrain';
 import { sampleHeightBilinear } from './height';
 import { SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
+import {
+  WORKER_ACTION_ATTACK,
+  WORKER_ACTION_BUILD,
+  WORKER_ACTION_CRYSTAL,
+  WORKER_ACTION_FOOD,
+  type SpriteAtlas,
+} from './sprites';
 
 export const ISO_YAW = Math.PI / 4;
 export const ISO_PITCH = Math.atan(0.5);
@@ -50,11 +57,13 @@ export class GameRenderer {
   readonly overlay: HTMLCanvasElement;
   readonly octx: CanvasRenderingContext2D;
   atlas!: Atlas;
+  spriteAtlas!: SpriteAtlas;
   private sdfMesh!: THREE.InstancedMesh;
   private propMesh!: THREE.InstancedMesh;
   private shadows!: THREE.InstancedMesh;
   private dummy = new THREE.Object3D();
   private iMeta!: THREE.InstancedBufferAttribute;
+  private iDir!: THREE.InstancedBufferAttribute;
   private iSdfTeam!: THREE.InstancedBufferAttribute;
   private iSdfFlash!: THREE.InstancedBufferAttribute;
   private iUv!: THREE.InstancedBufferAttribute;
@@ -121,16 +130,20 @@ export class GameRenderer {
 
     const sdfGeo = new THREE.PlaneGeometry(1, 1);
     const meta = new Float32Array(MAX_ENTS * 4);
+    const dir = new Float32Array(MAX_ENTS);
     const sdfTeam = new Float32Array(MAX_ENTS * 3);
     const sdfFlash = new Float32Array(MAX_ENTS);
     this.iMeta = new THREE.InstancedBufferAttribute(meta, 4);
+    this.iDir = new THREE.InstancedBufferAttribute(dir, 1);
     this.iSdfTeam = new THREE.InstancedBufferAttribute(sdfTeam, 3);
     this.iSdfFlash = new THREE.InstancedBufferAttribute(sdfFlash, 1);
     sdfGeo.setAttribute('iMeta', this.iMeta);
+    sdfGeo.setAttribute('iDir', this.iDir);
     sdfGeo.setAttribute('iTeam', this.iSdfTeam);
     sdfGeo.setAttribute('iFlash', this.iSdfFlash);
 
     const spriteAtlas = buildSprites();
+    this.spriteAtlas = spriteAtlas;
     const spriteTex = new THREE.CanvasTexture(spriteAtlas.canvas);
     spriteTex.magFilter = THREE.NearestFilter;
     spriteTex.minFilter = THREE.NearestFilter;
@@ -152,6 +165,12 @@ export class GameRenderer {
         uHallCell: { value: spriteAtlas.hallCell },
         uUnitRows: { value: spriteAtlas.unitRows },
         uBuildingRow: { value: spriteAtlas.buildingRow },
+        uWorker8Y: { value: spriteAtlas.worker8Y },
+        uWorker8H: { value: spriteAtlas.worker8H },
+        uWorker8ActionY: { value: spriteAtlas.worker8ActionY },
+        uWorker8ActionH: { value: spriteAtlas.worker8ActionH },
+        uWorker8ActionBase: { value: spriteAtlas.worker8ActionBase },
+        uWorker8ActionRows: { value: spriteAtlas.worker8ActionRows },
       },
       transparent: true,
       depthWrite: false,
@@ -257,6 +276,7 @@ export class GameRenderer {
     let propDrawn = 0;
     let shadowDrawn = 0;
     const metaArr = this.iMeta.array as Float32Array;
+    const dirArr = this.iDir.array as Float32Array;
     const sdfTeamArr = this.iSdfTeam.array as Float32Array;
     const sdfFlashArr = this.iSdfFlash.array as Float32Array;
     const uvArr = this.iUv.array as Float32Array;
@@ -339,9 +359,12 @@ export class GameRenderer {
           const mul = targetH / cellsH;
           scaleX = cellsW * mul * e.facing;
           scaleY = cellsH * mul;
+        } else if (e.kind === Kind.Worker && e.hp > 0) {
+          scaleX = cellsW * 1.55;
+          scaleY = cellsH * 2.32;
         } else {
           const unitMul = e.kind === Kind.Worker ? 1.55 : 1.08;
-          scaleX = cellsW * unitMul * e.facing;
+          scaleX = cellsW * unitMul * (e.kind === Kind.Worker ? 1 : e.facing);
           scaleY = cellsH * (e.kind === Kind.Worker ? 1.55 : 1.14);
         }
         const lift = isBuilding(e.kind) ? 1.15 : 0.9;
@@ -354,6 +377,7 @@ export class GameRenderer {
         metaArr[sdfDrawn * 4 + 1] = civIndex(e.civ);
         metaArr[sdfDrawn * 4 + 2] = this.frameFor(e);
         metaArr[sdfDrawn * 4 + 3] = spr;
+        dirArr[sdfDrawn] = e.kind === Kind.Worker ? e.facing : 0;
         sdfTeamArr[sdfDrawn * 3] = rgb[0];
         sdfTeamArr[sdfDrawn * 3 + 1] = rgb[1];
         sdfTeamArr[sdfDrawn * 3 + 2] = rgb[2];
@@ -387,6 +411,7 @@ export class GameRenderer {
     this.propMesh.instanceMatrix.needsUpdate = true;
     this.shadows.instanceMatrix.needsUpdate = true;
     this.iMeta.needsUpdate = true;
+    this.iDir.needsUpdate = true;
     this.iSdfTeam.needsUpdate = true;
     this.iSdfFlash.needsUpdate = true;
     this.iUv.needsUpdate = true;
@@ -464,6 +489,17 @@ export class GameRenderer {
     if (e.hp <= 0) {
       if (e.dissolveT > 0) return e.dissolveT > DISSOLVE_DUR * 0.5 ? 5 : 6;
       return 4;
+    }
+    if (e.kind === Kind.Worker) {
+      if (e.civ === 'vespari') {
+        if (e.order === Ord.Build) return WORKER_ACTION_BUILD;
+        if (e.order === Ord.Attack) return WORKER_ACTION_ATTACK;
+        if (e.order === Ord.Gather || e.order === Ord.Return) {
+          return e.cargoType === Tile.Solar ? WORKER_ACTION_FOOD : WORKER_ACTION_CRYSTAL;
+        }
+      }
+      if (Math.abs(e.vx) + Math.abs(e.vz) > 0.08) return 1 + ((e.anim * 6) | 0) % 2;
+      return 0;
     }
     if (e.order === 2 /* attack */) return 3;
     if (Math.abs(e.vx) + Math.abs(e.vz) > 0.08) return 1 + ((e.anim * 6) | 0) % 2;
