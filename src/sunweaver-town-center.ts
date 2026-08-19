@@ -56,9 +56,13 @@ type AnimatedState = {
 
 const UP = new THREE.Vector3(0, 1, 0);
 const MODEL_CENTER = new THREE.Vector3(0, 2.75, 0);
-const GOLD = '#C99132';
-const CREAM = '#F0E8D6';
+const IVORY_STONE = '#F0E0B6';
+const GOLD = '#D9B26E';
+const GOLD_DARK = '#8B602B';
+const FOLIAGE_HIGHLIGHT = '#7AB591';
+const FOLIAGE_SHADE = '#4D7A62';
 const CYAN = '#36C9FF';
+const CYAN_EMISSIVE = '#0C5BAE';
 const BLUE = '#1E3A6D';
 
 function seededRandom(seed: number): () => number {
@@ -132,7 +136,7 @@ function makeBannerTexture(teamColor: THREE.ColorRepresentation): THREE.CanvasTe
   context.strokeStyle = GOLD;
   context.lineWidth = 18;
   context.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
-  context.strokeStyle = '#8B632C';
+  context.strokeStyle = GOLD_DARK;
   context.lineWidth = 4;
   context.strokeRect(31, 31, canvas.width - 62, canvas.height - 62);
 
@@ -184,7 +188,7 @@ function makeMaterials(
   crystalColor: THREE.ColorRepresentation,
   teamColor: THREE.ColorRepresentation,
 ): MaterialSet {
-  const stoneAlbedo = makeNoiseTexture(CREAM, 0.035, 0x51a7);
+  const stoneAlbedo = makeNoiseTexture(IVORY_STONE, 0.035, 0x51a7);
   const stoneRoughness = makeNoiseTexture('#A9A9A9', 0.13, 0x5ea1, true);
   const foundationAlbedo = makeNoiseTexture('#7A8591', 0.06, 0xa771);
   const foundationRoughness = makeNoiseTexture('#D0D0D0', 0.08, 0x0f17, true);
@@ -192,21 +196,21 @@ function makeMaterials(
 
   return {
     stone: new THREE.MeshStandardMaterial({
-      color: '#C8BBA3',
+      color: IVORY_STONE,
       map: stoneAlbedo,
       roughness: 0.57,
       roughnessMap: stoneRoughness,
       metalness: 0,
     }),
     stoneLight: new THREE.MeshStandardMaterial({
-      color: '#E6D8BD',
+      color: '#F7EAC8',
       map: stoneAlbedo,
       roughness: 0.52,
       roughnessMap: stoneRoughness,
       metalness: 0,
     }),
     stoneShadow: new THREE.MeshStandardMaterial({
-      color: '#8E806B',
+      color: '#D4C49A',
       map: stoneAlbedo,
       roughness: 0.66,
       roughnessMap: stoneRoughness,
@@ -228,7 +232,7 @@ function makeMaterials(
       clearcoatRoughness: 0.16,
       envMapIntensity: 1.25,
     }),
-    goldDark: new THREE.MeshStandardMaterial({ color: '#70491C', metalness: 0.88, roughness: 0.38 }),
+    goldDark: new THREE.MeshStandardMaterial({ color: GOLD_DARK, metalness: 0.88, roughness: 0.38 }),
     blueRoof: new THREE.MeshPhysicalMaterial({
       color: BLUE,
       metalness: 0.42,
@@ -246,7 +250,7 @@ function makeMaterials(
     }),
     crystal: new THREE.MeshPhysicalMaterial({
       color: crystalColor,
-      emissive: '#0B6FB8',
+      emissive: CYAN_EMISSIVE,
       emissiveIntensity: 0.65,
       metalness: 0,
       roughness: 0.09,
@@ -267,7 +271,7 @@ function makeMaterials(
       metalness: 0,
     }),
     mandorla: new THREE.MeshBasicMaterial({
-      color: '#19BFEA',
+      color: CYAN,
       toneMapped: false,
       side: THREE.DoubleSide,
     }),
@@ -279,8 +283,8 @@ function makeMaterials(
       metalness: 0,
     }),
     cavity: new THREE.MeshStandardMaterial({ color: '#101824', roughness: 0.94, metalness: 0 }),
-    foliage: new THREE.MeshStandardMaterial({ color: '#294A35', roughness: 0.95, metalness: 0, flatShading: true }),
-    foliageLight: new THREE.MeshStandardMaterial({ color: '#58733A', roughness: 0.92, metalness: 0, flatShading: true }),
+    foliage: new THREE.MeshStandardMaterial({ color: FOLIAGE_SHADE, roughness: 0.95, metalness: 0, flatShading: true }),
+    foliageLight: new THREE.MeshStandardMaterial({ color: FOLIAGE_HIGHLIGHT, roughness: 0.92, metalness: 0, flatShading: true }),
   };
 }
 
