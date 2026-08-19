@@ -7,11 +7,60 @@ import { mkdirSync } from 'node:fs';
 
 const URL = 'http://127.0.0.1:5174/town-center-structural-viewer.html?ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1';
 const LUMINANCE_CAPTURE = 'critic/out/town-center-structural-v01/beauty-front-ortho-mandorla-gate.png';
+const VAULT_LUMINANCE_CAPTURE = 'critic/out/town-center-structural-v01/beauty-front-ortho-vault-luminance-gate.png';
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await browser.newPage({ viewport: { width: 1180, height: 820 } });
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.__SUNWEAVER_STRUCTURAL__?.ready === true);
+mkdirSync('critic/out/town-center-structural-v01', { recursive: true });
+
+// The structural viewer's fixed front-ortho camera is centred at world Y3.6
+// with an orthographic half-height of 4.4. Sample the middle of the filled
+// vault (Y5.6-6.9) in a narrow center column, then compare it with the gray
+// canvas outside the building in the same screen band.
+const vaultBand = { minY: 5.6, maxY: 6.9 };
+const vaultImageBuffer = await page.screenshot({ path: VAULT_LUMINANCE_CAPTURE });
+const vaultPng = PNG.sync.read(vaultImageBuffer);
+const vaultScreenY = (worldY) => vaultPng.height / 2 - (worldY - 3.6) * vaultPng.height / (2 * 4.4);
+const vaultTopPx = Math.max(0, Math.floor(vaultScreenY(vaultBand.maxY)));
+const vaultBottomPx = Math.min(vaultPng.height - 1, Math.ceil(vaultScreenY(vaultBand.minY)));
+const vaultCenterX = vaultPng.width / 2;
+const vaultPxPerWorldX = vaultPng.width / (2 * 4.4 * (vaultPng.width / vaultPng.height));
+const vaultHalfColumnWorldWidth = 0.3;
+const vaultHalfColumnPx = Math.max(2, Math.round(vaultHalfColumnWorldWidth * vaultPxPerWorldX));
+const vaultLuma = (offset) => 0.299 * vaultPng.data[offset] + 0.587 * vaultPng.data[offset + 1] + 0.114 * vaultPng.data[offset + 2];
+const meanLumaRect = (left, right, top, bottom) => {
+  let sum = 0;
+  let count = 0;
+  for (let y = top; y <= bottom; y++) {
+    for (let x = left; x <= right; x++) {
+      sum += vaultLuma((y * vaultPng.width + x) * 4);
+      count++;
+    }
+  }
+  return { mean: sum / count, count };
+};
+const vaultCenterMean = meanLumaRect(
+  Math.max(0, Math.round(vaultCenterX - vaultHalfColumnPx)),
+  Math.min(vaultPng.width - 1, Math.round(vaultCenterX + vaultHalfColumnPx)),
+  vaultTopPx,
+  vaultBottomPx,
+);
+// The left canvas strip is outside the 7-unit footprint for the fixed front view.
+const vaultBackgroundMean = meanLumaRect(24, Math.round(vaultPng.width * 0.12), vaultTopPx, vaultBottomPx);
+const vaultLuminance = {
+  image: VAULT_LUMINANCE_CAPTURE,
+  worldBand: vaultBand,
+  screenBand: { top: vaultTopPx, bottom: vaultBottomPx },
+  centerColumnHalfWorldWidth: vaultHalfColumnWorldWidth,
+  centerMean: Math.round(vaultCenterMean.mean * 100) / 100,
+  backgroundMean: Math.round(vaultBackgroundMean.mean * 100) / 100,
+  delta: Math.round((vaultCenterMean.mean - vaultBackgroundMean.mean) * 100) / 100,
+  samples: { center: vaultCenterMean.count, background: vaultBackgroundMean.count },
+  pass: vaultCenterMean.mean >= 100 && vaultCenterMean.mean - vaultBackgroundMean.mean >= 8,
+  method: 'fixed front-ortho center-column band versus left canvas background strip',
+};
 
 const report = await page.evaluate(() => {
   const scene = window.__SUNWEAVER_STRUCTURAL__.model;
@@ -257,6 +306,11 @@ for (const sample of luminance.samples ?? []) {
 }
 console.log(`  luminance gate: ${luminance.pass ? 'PASS' : 'FAIL'} (${luminance.image})`);
 if (!luminance.pass) process.exitCode = 1;
+
+console.log('\n-- vault luminance gate --');
+console.log(`  world band Y${vaultLuminance.worldBand.minY}-${vaultLuminance.worldBand.maxY}  center mean ${vaultLuminance.centerMean}  background mean ${vaultLuminance.backgroundMean}  delta +${vaultLuminance.delta}`);
+console.log(`  vault luminance gate: ${vaultLuminance.pass ? 'PASS' : 'FAIL'} (${vaultLuminance.image})`);
+if (!vaultLuminance.pass) process.exitCode = 1;
 
 // Screen-space crossing check: at what y bands does any rib's x-range overlap the mandorla's x-range?
 if (mandorla.length && arches.length) {

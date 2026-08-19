@@ -74,21 +74,22 @@ const ENERGY_VAULT_FRAME_DEPTH = 0.4;
 const ENERGY_VAULT_FRAME_THICKNESS = 0.4;
 const ENERGY_VAULT_OPENING_WIDTH = 1.8;
 const ENERGY_VAULT_OPENING_HEIGHT = 2.6;
-const ENERGY_VAULT_RECESS_DEPTH = 0.45;
 const ENERGY_VAULT_CENTER_Z = 2.25;
-const ENERGY_VAULT_RECESS_CENTER_Z = 1.775;
-const ENERGY_VAULT_JEWEL_CENTER_Z = 2.15;
-const ENERGY_VAULT_JEWEL_BASE_Y = 4.65;
-const ENERGY_VAULT_JEWEL_HEIGHT = 1.7;
-const ENERGY_VAULT_JEWEL_WIDTH = 1.1;
-const ENERGY_VAULT_SEAM_BASE_Y = 6.65;
-const ENERGY_VAULT_SEAM_HEIGHT = 0.55;
-const ENERGY_VAULT_SEAM_WIDTH = 0.4;
+const ENERGY_VAULT_JEWEL_CENTER_Z = 2.46;
+const ENERGY_VAULT_JEWEL_BASE_Y = 4.45;
+const ENERGY_VAULT_JEWEL_HEIGHT = 2.55;
+const ENERGY_VAULT_JEWEL_WIDTH = 1.8;
+const ENERGY_VAULT_JEWEL_FRONT_BULGE = 0.22;
+const ENERGY_VAULT_JEWEL_REAR_DEPTH = 0.24;
+const ENERGY_VAULT_SEAM_BASE_Y = 6.7;
+const ENERGY_VAULT_SEAM_HEIGHT = 0.34;
+const ENERGY_VAULT_SEAM_WIDTH = 0.26;
 const ENERGY_VAULT_ENTRANCE_WIDTH = 1.0;
-const ENERGY_VAULT_ENTRANCE_HEIGHT = 0.8;
-const ENERGY_VAULT_ENTRANCE_BOTTOM_Y = 3.3;
+const ENERGY_VAULT_ENTRANCE_HEIGHT = 0.65;
+const ENERGY_VAULT_ENTRANCE_BOTTOM_Y = 4.58;
 const ENERGY_VAULT_ENTRANCE_FRAME_DEPTH = 0.28;
-const ENERGY_VAULT_ENTRANCE_RECESS_DEPTH = 0.45;
+const ENERGY_VAULT_ENTRANCE_RECESS_DEPTH = 0.14;
+const ENERGY_VAULT_ENTRANCE_RECESS_CENTER_Z = 2.6;
 const CROWN_COLLAR_SPRINGLINE_Y = 7.6;
 const CROWN_COLLAR_Y_OFFSET = 4.4;
 const CROWN_SOURCE_BASE_Y = 3.5;
@@ -662,28 +663,28 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return crystal;
   }
 
-  /** Small clay almond used inside the front energy-vault opening. */
+  /** Solid convex faceted almond that fills the front energy-vault frame. */
   function makeVaultMandorla(): THREE.Group {
     const jewel = group('energy_vault_mandorla');
     const profile: readonly [number, number][] = [
       [0, ENERGY_VAULT_JEWEL_BASE_Y],
-      [0.34, ENERGY_VAULT_JEWEL_BASE_Y + 0.08],
-      [ENERGY_VAULT_JEWEL_WIDTH * 0.5, ENERGY_VAULT_JEWEL_BASE_Y + 0.38],
-      [ENERGY_VAULT_JEWEL_WIDTH * 0.46, ENERGY_VAULT_JEWEL_BASE_Y + 0.74],
-      [ENERGY_VAULT_JEWEL_WIDTH * 0.36, ENERGY_VAULT_JEWEL_BASE_Y + 1.12],
-      [0.22, ENERGY_VAULT_JEWEL_BASE_Y + 1.48],
+      [0.38, ENERGY_VAULT_JEWEL_BASE_Y + 0.08],
+      [ENERGY_VAULT_JEWEL_WIDTH * 0.39, ENERGY_VAULT_JEWEL_BASE_Y + 0.32],
+      [ENERGY_VAULT_JEWEL_WIDTH * 0.5, ENERGY_VAULT_JEWEL_BASE_Y + 0.68],
+      [ENERGY_VAULT_JEWEL_WIDTH * 0.5, ENERGY_VAULT_JEWEL_BASE_Y + 1.08],
+      [ENERGY_VAULT_JEWEL_WIDTH * 0.44, ENERGY_VAULT_JEWEL_BASE_Y + 1.48],
+      [ENERGY_VAULT_JEWEL_WIDTH * 0.33, ENERGY_VAULT_JEWEL_BASE_Y + 1.9],
+      [0.24, ENERGY_VAULT_JEWEL_BASE_Y + 2.25],
       [0, ENERGY_VAULT_JEWEL_BASE_Y + ENERGY_VAULT_JEWEL_HEIGHT],
     ];
-    jewel.add(lathe('energy_vault_mandorla_jewel', profile, 8));
-    const spineProfile: readonly [number, number][] = [
-      [0.28, ENERGY_VAULT_JEWEL_BASE_Y + 0.08],
-      [0.46, ENERGY_VAULT_JEWEL_BASE_Y + 0.4],
-      [0.43, ENERGY_VAULT_JEWEL_BASE_Y + 0.78],
-      [0.33, ENERGY_VAULT_JEWEL_BASE_Y + 1.15],
-      [0.18, ENERGY_VAULT_JEWEL_BASE_Y + 1.48],
-      [0.04, ENERGY_VAULT_JEWEL_BASE_Y + 1.64],
-    ];
-    jewel.add(frontSpine('energy_vault_mandorla_spine', spineProfile, 0.08, 0.07));
+    const body = convexMandorla(
+      'energy_vault_solid_jewel',
+      profile,
+      8,
+      ENERGY_VAULT_JEWEL_FRONT_BULGE,
+      ENERGY_VAULT_JEWEL_REAR_DEPTH,
+    );
+    jewel.add(body);
     jewel.position.z = ENERGY_VAULT_JEWEL_CENTER_Z;
     return jewel;
   }
@@ -694,11 +695,11 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     const profile: readonly [number, number][] = [
       [0, ENERGY_VAULT_SEAM_BASE_Y],
       [ENERGY_VAULT_SEAM_WIDTH * 0.5, ENERGY_VAULT_SEAM_BASE_Y + 0.12],
-      [ENERGY_VAULT_SEAM_WIDTH * 0.42, ENERGY_VAULT_SEAM_BASE_Y + 0.3],
+      [ENERGY_VAULT_SEAM_WIDTH * 0.42, ENERGY_VAULT_SEAM_BASE_Y + 0.22],
       [0, ENERGY_VAULT_SEAM_BASE_Y + ENERGY_VAULT_SEAM_HEIGHT],
     ];
     jewel.add(lathe('energy_vault_seam_jewel_mesh', profile, 8));
-    jewel.position.z = ENERGY_VAULT_JEWEL_CENTER_Z + 0.03;
+    jewel.position.z = ENERGY_VAULT_JEWEL_CENTER_Z + 0.12;
     return jewel;
   }
 
@@ -824,14 +825,6 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   );
   vaultOuterFrame.position.set(0, ENERGY_VAULT_OUTER_BOTTOM_Y, ENERGY_VAULT_CENTER_Z);
   vaultFrame.add(vaultOuterFrame);
-  const vaultRecess = solidArchPanel(
-    'energy_vault_recessed_opening',
-    ENERGY_VAULT_OPENING_WIDTH,
-    ENERGY_VAULT_OPENING_HEIGHT,
-    ENERGY_VAULT_RECESS_DEPTH,
-  );
-  vaultRecess.position.set(0, ENERGY_VAULT_OUTER_BOTTOM_Y, ENERGY_VAULT_RECESS_CENTER_Z);
-  vaultFrame.add(vaultRecess);
   const vaultEntranceFrame = archFrame(
     'energy_vault_small_entrance_frame',
     ENERGY_VAULT_ENTRANCE_WIDTH,
@@ -839,7 +832,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     ENERGY_VAULT_ENTRANCE_FRAME_DEPTH,
     0.2,
   );
-  vaultEntranceFrame.position.set(0, ENERGY_VAULT_ENTRANCE_BOTTOM_Y, ENERGY_VAULT_CENTER_Z);
+  vaultEntranceFrame.position.set(0, ENERGY_VAULT_ENTRANCE_BOTTOM_Y, ENERGY_VAULT_JEWEL_CENTER_Z + 0.24);
   vaultFrame.add(vaultEntranceFrame);
   const vaultEntranceRecess = solidArchPanel(
     'energy_vault_small_entrance_recess',
@@ -847,12 +840,11 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     ENERGY_VAULT_ENTRANCE_HEIGHT - 0.2,
     ENERGY_VAULT_ENTRANCE_RECESS_DEPTH,
   );
-  vaultEntranceRecess.position.set(0, ENERGY_VAULT_ENTRANCE_BOTTOM_Y, ENERGY_VAULT_RECESS_CENTER_Z);
+  vaultEntranceRecess.position.set(0, ENERGY_VAULT_ENTRANCE_BOTTOM_Y, ENERGY_VAULT_ENTRANCE_RECESS_CENTER_Z);
   vaultFrame.add(vaultEntranceRecess);
   stage3.add(vaultFrame);
   parts.energy_vault_frame = vaultFrame;
   parts.energy_vault_outer_punched_frame = vaultOuterFrame;
-  parts.energy_vault_recessed_opening = vaultRecess;
   parts.energy_vault_small_entrance_frame = vaultEntranceFrame;
   parts.energy_vault_small_entrance_recess = vaultEntranceRecess;
 
@@ -1021,13 +1013,20 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       energyVaultFrameDepth: ENERGY_VAULT_FRAME_DEPTH / D,
       energyVaultOpeningWidth: ENERGY_VAULT_OPENING_WIDTH / D,
       energyVaultOpeningHeight: ENERGY_VAULT_OPENING_HEIGHT / D,
-      energyVaultRecessDepth: ENERGY_VAULT_RECESS_DEPTH / D,
+      energyVaultSolidJewelWidth: ENERGY_VAULT_JEWEL_WIDTH / D,
+      energyVaultSolidJewelHeight: ENERGY_VAULT_JEWEL_HEIGHT / D,
+      energyVaultSolidJewelFrontBulge: ENERGY_VAULT_JEWEL_FRONT_BULGE / D,
+      energyVaultSolidJewelRearDepth: ENERGY_VAULT_JEWEL_REAR_DEPTH / D,
+      energyVaultSolidJewelBaseY: ENERGY_VAULT_JEWEL_BASE_Y / D,
+      energyVaultSolidJewelTopY: (ENERGY_VAULT_JEWEL_BASE_Y + ENERGY_VAULT_JEWEL_HEIGHT) / D,
       energyVaultMandorlaWidth: ENERGY_VAULT_JEWEL_WIDTH / D,
       energyVaultMandorlaHeight: ENERGY_VAULT_JEWEL_HEIGHT / D,
       energyVaultSeamWidth: ENERGY_VAULT_SEAM_WIDTH / D,
       energyVaultSeamHeight: ENERGY_VAULT_SEAM_HEIGHT / D,
       energyVaultEntranceWidth: ENERGY_VAULT_ENTRANCE_WIDTH / D,
       energyVaultEntranceHeight: ENERGY_VAULT_ENTRANCE_HEIGHT / D,
+      energyVaultEntranceBottomY: ENERGY_VAULT_ENTRANCE_BOTTOM_Y / D,
+      energyVaultEntranceRecessDepth: ENERGY_VAULT_ENTRANCE_RECESS_DEPTH / D,
       centralCrownRadius: CENTRAL_CRYSTAL_BASE_HALF_WIDTH * CROWN_SCALE / D,
       crownCollarOuterRadius: 2.02 / D,
       crownCollarInnerRadius: 1.55 / D,
@@ -1092,7 +1091,6 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       side_crystal_tower_source: 4,
       energy_vault_frame: 1,
       energy_vault_outer_punched_frame: 1,
-      energy_vault_recessed_opening: 1,
       energy_vault_small_entrance_frame: 1,
       energy_vault_small_entrance_recess: 1,
       energy_vault_jewels: 1,
@@ -1134,7 +1132,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       side_crystal_towers: [0, SIDE_TOWER_MOUNT_Y + SIDE_TOWER_SOURCE_TOP_Y * SIDE_TOWER_VERTICAL_SCALE * 0.5, 0],
       secondary_buttresses: [0, 6.6, 0],
       energy_vault_frame: [0, 5.9, ENERGY_VAULT_CENTER_Z],
-      energy_vault_jewels: [0, 5.6, ENERGY_VAULT_JEWEL_CENTER_Z],
+      energy_vault_jewels: [0, ENERGY_VAULT_JEWEL_BASE_Y + ENERGY_VAULT_JEWEL_HEIGHT * 0.5, ENERGY_VAULT_JEWEL_CENTER_Z],
       crown_assembly: [0, CROWN_TARGET_APEX_Y * 0.5 + CROWN_MOUNT_Y * 0.5, 0],
       crown_collar: [0, 7.67, 0],
       crown_collar_body: [0, 7.63, 0],
