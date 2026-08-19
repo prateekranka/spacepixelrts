@@ -26,6 +26,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 4096,
@@ -48,6 +49,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 4096,
@@ -70,6 +72,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 4096,
@@ -92,6 +95,7 @@
       },
       "status": "mirrored",
       "sourceObserved": false,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": "Mirrored from admitted right-side crop; left side is not directly observed.",
       "dimensions": {
         "width": 4096,
@@ -114,6 +118,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 4096,
@@ -136,6 +141,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 4096,
@@ -153,11 +159,12 @@
       "sourceCrop": {
         "x": 1087,
         "y": 76,
-        "width": 226,
+        "width": 218,
         "height": 289
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 4096,
@@ -180,6 +187,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,
@@ -202,6 +210,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,
@@ -224,6 +233,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,
@@ -246,6 +256,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,
@@ -276,15 +287,16 @@
     },
     {
       "file": "13_scale_and_dimensions_2048.png",
-      "role": "scale and footprint dimensions",
+      "role": "in-game scale reference",
       "sourceCrop": {
-        "x": 1120,
-        "y": 760,
-        "width": 195,
-        "height": 140
+        "x": 790,
+        "y": 730,
+        "width": 290,
+        "height": 215
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": true,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,
@@ -307,6 +319,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,
@@ -329,6 +342,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,
@@ -351,6 +365,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,
@@ -373,6 +388,7 @@
       },
       "status": "direct",
       "sourceObserved": true,
+      "humanFigureDirectlyObserved": false,
       "inferenceNote": null,
       "dimensions": {
         "width": 2048,

@@ -218,7 +218,7 @@
         "height": 4096
       },
       "exists": true,
-      "nonTransparentCoverage": 0.34227585792541504,
+      "nonTransparentCoverage": 0.33616262674331665,
       "acceptedCoverageRange": {
         "min": 0.2,
         "max": 0.95
@@ -363,7 +363,7 @@
         "height": 2048
       },
       "exists": true,
-      "nonTransparentCoverage": 0.49980711936950684,
+      "nonTransparentCoverage": 0.2625560760498047,
       "acceptedCoverageRange": {
         "min": 0.2,
         "max": 0.95
@@ -521,7 +521,7 @@
       "max": 0.95
     },
     "observedRange": {
-      "min": 0.30294013023376465,
+      "min": 0.2625560760498047,
       "max": 0.7325196266174316
     },
     "byFile": {
@@ -531,12 +531,12 @@
       "04_left_ortho_4096_alpha.png": 0.3398090600967407,
       "05_top_ortho_4096_alpha.png": 0.5081577301025391,
       "06_front_three_quarter_4096_alpha.png": 0.3631276488304138,
-      "07_rear_three_quarter_4096_alpha.png": 0.34227585792541504,
+      "07_rear_three_quarter_4096_alpha.png": 0.33616262674331665,
       "08_entrance_detail_2048_alpha.png": 0.7037343978881836,
       "09_crystal_crown_detail_2048_alpha.png": 0.3538031578063965,
       "10_buttress_tower_detail_2048_alpha.png": 0.7325196266174316,
       "11_banner_and_sigil_detail_2048_alpha.png": 0.6538972854614258,
-      "13_scale_and_dimensions_2048_alpha.png": 0.49980711936950684,
+      "13_scale_and_dimensions_2048_alpha.png": 0.2625560760498047,
       "14_stage_1_2048_alpha.png": 0.4223449230194092,
       "15_stage_2_2048_alpha.png": 0.47032618522644043,
       "16_stage_3_2048_alpha.png": 0.5388808250427246,
