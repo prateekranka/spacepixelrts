@@ -797,35 +797,35 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   const archWidth = 1.96;
   const archHeight = 2.34;
   const darkRecess = new THREE.Mesh(pointedArchFill(archWidth * 0.68, archHeight * 0.82), materials.cavity);
-  darkRecess.position.z = -0.62;
+  darkRecess.position.z = -0.96;
   group.add(darkRecess);
   const innerCavity = new THREE.Mesh(pointedArchFill(archWidth * 0.54, archHeight * 0.68), materials.foundationDark);
-  innerCavity.position.set(0, 0.02, -0.48);
+  innerCavity.position.set(0, 0.02, -0.82);
   group.add(innerCavity);
-  const deepStoneFrame = pointedArchFrame(archWidth, archHeight, 0.32, 0.28);
+  const deepStoneFrame = pointedArchFrame(archWidth, archHeight, 0.36, 0.28);
   deepStoneFrame.material = materials.stoneShadow;
-  deepStoneFrame.position.z = -0.28;
+  deepStoneFrame.position.z = -0.48;
   group.add(deepStoneFrame);
   const stoneFrame = pointedArchFrame(archWidth, archHeight, 0.48, 0.28);
   stoneFrame.material = materials.stoneLight;
-  stoneFrame.position.z = 0.01;
+  stoneFrame.position.z = -0.12;
   group.add(stoneFrame);
 
   const almond = new THREE.Group();
   almond.name = 'front-almond-jewel';
   const almondCenterY = 1.04;
   const almondFrame = new THREE.Mesh(almondFrameGeometry(1.50, 2.02, 0.18, 0.16), materials.gold);
-  almondFrame.position.set(0, almondCenterY, 0.18);
+  almondFrame.position.set(0, almondCenterY, 0.04);
   almond.add(almondFrame);
   const backplate = new THREE.Mesh(almondExtrudedGeometry(1.30, 1.82, 0.07, 0.025), materials.mandorla);
   backplate.name = 'front-almond-backplate';
-  backplate.position.set(0, almondCenterY, -0.06);
+  backplate.position.set(0, almondCenterY, -0.10);
   almond.add(backplate);
   const shell = new THREE.Mesh(almondExtrudedGeometry(1.34, 1.86, 0.16, 0.045), materials.crystal);
-  shell.position.set(0, almondCenterY, 0.02);
+  shell.position.set(0, almondCenterY, -0.02);
   almond.add(shell);
   const core = new THREE.Mesh(almondExtrudedGeometry(1.10, 1.58, 0.10, 0.035), materials.mandorla);
-  core.position.set(0, almondCenterY, 0.12);
+  core.position.set(0, almondCenterY, 0.02);
   almond.add(core);
   group.add(almond);
 
@@ -839,34 +839,30 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   group.add(tube(lipPoints(-1), 0.22, materials.gold, 36));
   group.add(tube(lipPoints(1), 0.22, materials.gold, 36));
 
-  // Woven ribs stay in the narrow side zones. The almond remains a clean,
-  // uninterrupted cyan silhouette.
-  const ribZ = 0.43;
+  // One interlaced zig-zag tube path per side, outside the cyan almond silhouette.
+  const ribZ = 0.44;
+  const weaveRadius = 0.095;
   for (const side of [-1, 1]) {
-    const inner = side * 0.86;
-    const outer = side * 1.02;
-    group.add(tube([
-      new THREE.Vector3(inner, 0.18, ribZ),
-      new THREE.Vector3(inner + side * 0.05, 0.78, ribZ + 0.01),
-      new THREE.Vector3(inner - side * 0.02, 1.38, ribZ + 0.015),
-      new THREE.Vector3(inner + side * 0.04, 1.92, ribZ),
-    ], 0.06, materials.goldDark, 28));
-    group.add(tube([
-      new THREE.Vector3(outer, 0.22, ribZ + 0.02),
-      new THREE.Vector3(outer - side * 0.04, 0.82, ribZ + 0.035),
-      new THREE.Vector3(outer + side * 0.02, 1.42, ribZ + 0.04),
-      new THREE.Vector3(outer - side * 0.05, 1.88, ribZ + 0.02),
-    ], 0.06, materials.gold, 28));
-    for (const [index, y] of [0.50, 0.90, 1.30, 1.70].entries()) {
-      const laceMaterial = index % 2 === 0 ? materials.gold : materials.goldDark;
-      const lower = y - 0.15;
-      const upper = y + 0.15;
-      group.add(beam(
-        new THREE.Vector3(inner, lower, ribZ + 0.035),
-        new THREE.Vector3(outer, upper, ribZ + 0.055),
-        0.048,
-        laceMaterial,
-        7,
+    const innerX = side * 0.88;
+    const outerX = side * 1.08;
+    const crossingHeights = [0.44, 0.86, 1.28, 1.70, 2.12];
+    const weavePoints: THREE.Vector3[] = [
+      new THREE.Vector3(outerX, 0.22, ribZ),
+    ];
+    for (const [index, y] of crossingHeights.entries()) {
+      const towardInner = index % 2 === 0;
+      weavePoints.push(new THREE.Vector3(towardInner ? innerX : outerX, y, ribZ + 0.018 + index * 0.007));
+      weavePoints.push(new THREE.Vector3(towardInner ? outerX : innerX, y + 0.20, ribZ + 0.024 + index * 0.007));
+    }
+    weavePoints.push(new THREE.Vector3(innerX, 2.04, ribZ + 0.05));
+    for (let index = 0; index < crossingHeights.length; index++) {
+      const start = index * 2;
+      const end = index === crossingHeights.length - 1 ? weavePoints.length : start + 3;
+      group.add(tube(
+        weavePoints.slice(start, end),
+        weaveRadius,
+        index % 2 === 0 ? materials.gold : materials.goldDark,
+        24,
       ));
     }
   }
@@ -937,7 +933,7 @@ function createTurret(materials: MaterialSet, angle: number, index: number): THR
   inset.position.set(0, 0.91, 0.54);
   group.add(inset);
 
-  const radius = 2.73;
+  const radius = 3.05;
   group.position.set(Math.sin(angle) * radius, 0.4, Math.cos(angle) * radius);
   group.rotation.y = angle;
   return group;
@@ -946,8 +942,8 @@ function createTurret(materials: MaterialSet, angle: number, index: number): THR
 function createGallery(materials: MaterialSet, angle: number, index: number): THREE.Group {
   const group = new THREE.Group();
   group.name = ['spoke-south', 'spoke-east', 'spoke-north', 'spoke-west'][index] ?? `spoke-${index + 1}`;
-  const shell = new THREE.Mesh(new RoundedBoxGeometry(1.18, 1.18, 1.58, 4, 0.2), materials.stone);
-  const shellRadius = 1.88;
+  const shell = new THREE.Mesh(new RoundedBoxGeometry(1.28, 1.18, 1.72, 4, 0.2), materials.stone);
+  const shellRadius = 2.34;
   shell.position.set(Math.sin(angle) * shellRadius, 2.0, Math.cos(angle) * shellRadius);
   shell.rotation.y = angle;
   group.add(shell);
@@ -966,18 +962,18 @@ function createGallery(materials: MaterialSet, angle: number, index: number): TH
   const jewel = new THREE.Mesh(crystalGeometry(0.09, 0.3, 6), materials.energy);
   jewel.position.set(0, 1.26, 0.13);
   facade.add(jewel);
-  const facadeRadius = 2.7;
+  const facadeRadius = 2.96;
   facade.position.set(Math.sin(angle) * facadeRadius, 1.45, Math.cos(angle) * facadeRadius);
   facade.rotation.y = angle;
   group.add(facade);
 
   const roof = new THREE.Mesh(
-    annularWedgeGeometry(1.42, 2.48, angle - 0.29, angle + 0.29, 2.92, 2.4, 0.18, 10),
+    annularWedgeGeometry(2.05, 3.04, angle - 0.29, angle + 0.29, 2.92, 2.4, 0.18, 10),
     materials.stoneLight,
   );
   group.add(roof);
   const roofOuter = new THREE.Mesh(
-    annularWedgeGeometry(2.38, 2.54, angle - 0.31, angle + 0.31, 2.44, 2.35, 0.1, 8),
+    annularWedgeGeometry(2.98, 3.10, angle - 0.31, angle + 0.31, 2.44, 2.35, 0.1, 8),
     materials.gold,
   );
   group.add(roofOuter);
