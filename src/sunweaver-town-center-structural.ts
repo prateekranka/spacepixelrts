@@ -7,6 +7,7 @@ export interface StructuralManifest {
   canonicalCivilization: string;
   footprintDiameter: number;
   entranceAxis: 'south';
+  cageArchProfile: 'solid-rib';
   normalizedDimensions: Record<string, number>;
   moduleCounts: Record<string, number>;
   sourceIds: Record<string, string>;
@@ -36,6 +37,12 @@ const R = D / 2;
 const CAGE_ARCH_BASE_Y = 3.48;
 const CAGE_ARCH_ORBIT_RADIUS = 1.56;
 const CAGE_ARCH_APEX_Y = 6.8;
+const CAGE_ARCH_WIDTH = 0.98;
+const CAGE_ARCH_DEPTH = 0.26;
+const CAGE_ARCH_FLANK_ORBIT_RADIUS = 1.16;
+const CAGE_ARCH_FLANK_FOOT_FLARE_WIDTH = 0.72;
+const CAGE_ARCH_FLANK_FOOT_FLARE_DEPTH = 0.48;
+const CAGE_ARCH_FLANK_FOOT_FLARE_HEIGHT = 0.18;
 const CAGE_ARCH_CANT_DEGREES = 30;
 const CAGE_ARCH_CANT_RADIANS = THREE.MathUtils.degToRad(CAGE_ARCH_CANT_DEGREES);
 const CAGE_ARCH_HEIGHT = (CAGE_ARCH_APEX_Y - CAGE_ARCH_BASE_Y) / Math.cos(CAGE_ARCH_CANT_RADIANS);
@@ -55,6 +62,20 @@ function archShape(width: number, height: number): THREE.Shape {
   shape.lineTo(half, spring);
   shape.quadraticCurveTo(half * 0.78, height * 0.78, 0, height);
   shape.quadraticCurveTo(-half * 0.78, height * 0.78, -half, spring);
+  shape.closePath();
+  return shape;
+}
+
+function solidTalonShape(width: number, height: number): THREE.Shape {
+  const half = width / 2;
+  const spring = height * 0.48;
+  const shoulderHalf = width * 0.29;
+  const shape = new THREE.Shape();
+  shape.moveTo(-half, 0);
+  shape.lineTo(half, 0);
+  shape.lineTo(shoulderHalf, spring);
+  shape.quadraticCurveTo(shoulderHalf * 0.78, height * 0.78, 0, height);
+  shape.quadraticCurveTo(-shoulderHalf * 0.78, height * 0.78, -shoulderHalf, spring);
   shape.closePath();
   return shape;
 }
@@ -113,6 +134,13 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     const inner = archShape(width - thickness * 2, height - thickness * 1.35);
     outer.holes.push(new THREE.Path(inner.getPoints(20).reverse()));
     const geometry = new THREE.ExtrudeGeometry(outer, { depth, bevelEnabled: true, bevelSize: 0.055, bevelThickness: 0.045, bevelSegments: 2, curveSegments: 10 });
+    geometry.translate(0, 0, -depth / 2);
+    return mesh(geometry, name);
+  }
+
+  function solidArchPanel(name: string, width: number, height: number, depth: number): THREE.Mesh {
+    const profile = solidTalonShape(width, height);
+    const geometry = new THREE.ExtrudeGeometry(profile, { depth, bevelEnabled: true, bevelSize: 0.055, bevelThickness: 0.045, bevelSegments: 2, curveSegments: 10 });
     geometry.translate(0, 0, -depth / 2);
     return mesh(geometry, name);
   }
@@ -303,11 +331,11 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return source;
   }
 
-  /** Thick pointed arch with a deep opening for the four-prong crown cage. */
+  /** Filled pointed talon rib for the four-prong crown cage. */
   function makeCageArchSource(): THREE.Group {
     const source = group('crystal_cage_arch_source');
-    const frame = archFrame('cage_arch', 0.98, CAGE_ARCH_HEIGHT, 0.26, 0.26);
-    source.add(frame);
+    const rib = solidArchPanel('cage_arch', CAGE_ARCH_WIDTH, CAGE_ARCH_HEIGHT, CAGE_ARCH_DEPTH);
+    source.add(rib);
     return source;
   }
 
@@ -489,12 +517,21 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   for (let i = 0; i < 4; i++) {
     const clone = cageSource.clone(true); clone.name = `crystal_cage_arch_${i}`;
     const angle = i * Math.PI / 2;
-    clone.position.copy(radialPosition(CAGE_ARCH_ORBIT_RADIUS, angle, CAGE_ARCH_BASE_Y));
+    const orbitRadius = (i === 1 || i === 3) ? CAGE_ARCH_FLANK_ORBIT_RADIUS : CAGE_ARCH_ORBIT_RADIUS;
+    clone.position.copy(radialPosition(orbitRadius, angle, CAGE_ARCH_BASE_Y));
     clone.rotation.y = THREE.MathUtils.degToRad(CAGE_ARCH_YAWS_DEGREES[i]);
     const tangent = new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle));
     clone.rotateOnWorldAxis(tangent, -CAGE_ARCH_CANT_RADIANS);
     const frame = clone.getObjectByName('cage_arch');
     if (frame instanceof THREE.Mesh) clampRadialExtent(frame, clone.position, 1.9, clone.quaternion);
+    if (i === 1 || i === 3) {
+      const footFlare = radialWedge(`cage_arch_foot_flare_${i}`, CAGE_ARCH_FLANK_FOOT_FLARE_WIDTH, CAGE_ARCH_FLANK_FOOT_FLARE_DEPTH, CAGE_ARCH_FLANK_FOOT_FLARE_HEIGHT);
+      const radialOrientation = new THREE.Object3D();
+      radialOrientation.rotation.y = angle;
+      radialOrientation.rotateOnWorldAxis(tangent, -CAGE_ARCH_CANT_RADIANS);
+      footFlare.quaternion.copy(clone.quaternion.clone().invert().multiply(radialOrientation.quaternion));
+      clone.add(footFlare);
+    }
     cageGroup.add(clone);
   }
   stage4.add(cageGroup); parts.crystal_cage_arch_source = cageGroup;
@@ -527,6 +564,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     canonicalCivilization: 'Sunweaver',
     footprintDiameter: D,
     entranceAxis: 'south',
+    cageArchProfile: 'solid-rib',
     normalizedDimensions: {
       footprintDiameter: 1,
       lowerDrumHeight: 0.2,
@@ -552,10 +590,14 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       centralCrystalFacetSegments: 8,
       centralCrystalSpineWidth: 0.12 / D,
       centralCrystalSpineProud: 0.1 / D,
-      cageArchOuterWidth: 0.98 / D,
+      cageArchOuterWidth: CAGE_ARCH_WIDTH / D,
       cageArchHeight: CAGE_ARCH_HEIGHT / D,
-      cageArchThickness: 0.26 / D,
+      cageArchDepth: CAGE_ARCH_DEPTH / D,
       cageArchOrbitRadius: CAGE_ARCH_ORBIT_RADIUS / D,
+      cageArchFlankOrbitRadius: CAGE_ARCH_FLANK_ORBIT_RADIUS / D,
+      cageArchFlankFootFlareWidth: CAGE_ARCH_FLANK_FOOT_FLARE_WIDTH / D,
+      cageArchFlankFootFlareDepth: CAGE_ARCH_FLANK_FOOT_FLARE_DEPTH / D,
+      cageArchFlankFootFlareHeight: CAGE_ARCH_FLANK_FOOT_FLARE_HEIGHT / D,
       cageArchMaxRadius: 1.9 / D,
       cageArchBaseY: CAGE_ARCH_BASE_Y / D,
       cageArchApexY: CAGE_ARCH_APEX_Y / D,
