@@ -217,10 +217,10 @@
       "file": "10_buttress_tower_detail_2048.png",
       "role": "buttress and tower detail",
       "sourceCrop": {
-        "x": 320,
-        "y": 735,
-        "width": 135,
-        "height": 143
+        "x": 478,
+        "y": 730,
+        "width": 140,
+        "height": 148
       },
       "status": "direct",
       "sourceObserved": true,
@@ -239,10 +239,10 @@
       "file": "11_banner_and_sigil_detail_2048.png",
       "role": "banner and sigil detail",
       "sourceCrop": {
-        "x": 485,
-        "y": 735,
-        "width": 120,
-        "height": 143
+        "x": 333,
+        "y": 730,
+        "width": 125,
+        "height": 148
       },
       "status": "direct",
       "sourceObserved": true,
@@ -271,7 +271,7 @@
       "variants": {
         "baseEqualsNeutral": true,
         "neutralOpaque": true,
-        "alphaHasTransparency": false
+        "alphaHasTransparency": true
       }
     },
     {

@@ -11,7 +11,7 @@ import hashlib
 import json
 from collections import deque
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, cast
 
 from PIL import Image, ImageDraw, ImageFilter
 
@@ -32,8 +32,10 @@ CROPS = [
     ("07_rear_three_quarter_4096.png", (1087, 76, 1313, 365), "rear three-quarter", "direct"),
     ("08_entrance_detail_2048.png", (170, 735, 300, 878), "entrance detail", "direct"),
     ("09_crystal_crown_detail_2048.png", (35, 735, 150, 878), "crystal crown detail", "direct"),
-    ("10_buttress_tower_detail_2048.png", (320, 735, 455, 878), "buttress and tower detail", "direct"),
-    ("11_banner_and_sigil_detail_2048.png", (485, 735, 605, 878), "banner and sigil detail", "direct"),
+    # Architectural-details row. These boxes stay inside the admitted panels and
+    # stop above the captions and panel borders.
+    ("10_buttress_tower_detail_2048.png", (478, 730, 618, 878), "buttress and tower detail", "direct"),
+    ("11_banner_and_sigil_detail_2048.png", (333, 730, 458, 878), "banner and sigil detail", "direct"),
     ("13_scale_and_dimensions_2048.png", (1120, 760, 1315, 900), "scale and footprint dimensions", "direct"),
     ("14_stage_1_2048.png", (585, 500, 790, 681), "construction stage 1", "direct"),
     ("15_stage_2_2048.png", (825, 500, 1020, 681), "construction stage 2", "direct"),
@@ -59,10 +61,17 @@ def flood_background_mask(image: Image.Image) -> Image.Image:
     border = [px[x, 0] for x in range(w)] + [px[x, h - 1] for x in range(w)]
     border += [px[0, y] for y in range(h)] + [px[w - 1, y] for y in range(h)]
     bg = tuple(sorted(c[i] for c in border)[len(border) // 2] for i in range(3))
-    threshold = 78 if w < 200 else 112
+    # The paper is bright and low-chroma. Use a deliberately tight flood rule:
+    # a pixel must be close to the sampled border tone AND be bright/neutral.
+    # This prevents pale ivory stone from being classified as paper. The flood
+    # remains border-connected, so enclosed dark material is always retained.
+    threshold = 40
     def close_to_bg(x: int, y: int) -> bool:
-        p = px[x, y]
-        return sum((p[i] - bg[i]) ** 2 for i in range(3)) ** 0.5 <= threshold
+        p = cast(tuple[int, int, int], px[x, y])
+        distance = sum((p[i] - bg[i]) ** 2 for i in range(3)) ** 0.5
+        luminance = sum(p) / 3
+        chroma = max(p) - min(p)
+        return distance <= threshold and luminance >= 225 and chroma <= 22
     seen = bytearray(w * h)
     q: deque[tuple[int, int]] = deque()
     for x in range(w):
@@ -171,6 +180,7 @@ def verify_pack() -> dict:
     required = [name for name, *_ in CROPS] + ["12_materials_2048.png"]
     files = []
     failures = []
+    coverage_by_file = {}
     for name in required:
         size = 4096 if "4096" in name else 2048
         for variant in ("", "_neutral", "_alpha"):
@@ -186,16 +196,38 @@ def verify_pack() -> dict:
                 has_transparency = alpha is not None and alpha.getextrema()[0] < 255
                 if variant == "_alpha" and not has_transparency:
                     failures.append(f"alpha-opaque:{path.name}")
+                coverage = None
+                if variant == "_alpha":
+                    histogram = alpha.histogram()
+                    opaque = sum(histogram[9:])
+                    coverage = opaque / (size * size)
+                    coverage_by_file[path.name] = coverage
+                    # Every isolated detail must retain a substantial target,
+                    # but must not become an opaque square. The materials board
+                    # is a constructed swatch board and uses the same bounds.
+                    if not 0.20 <= coverage <= 0.95:
+                        failures.append(f"coverage-range:{path.name}:{coverage:.6f}")
                 if variant != "_alpha" and im.mode in ("RGBA", "LA"):
                     failures.append(f"unexpected-alpha:{path.name}")
-            files.append({"file": path.name, "dimensions": {"width": size, "height": size}, "exists": True})
+            entry = {"file": path.name, "dimensions": {"width": size, "height": size}, "exists": True}
+            if variant == "_alpha":
+                entry["nonTransparentCoverage"] = coverage
+                entry["acceptedCoverageRange"] = {"min": 0.20, "max": 0.95}
+            files.append(entry)
         base = Image.open(PACK / name.replace(".png", ".png"))
         neutral = Image.open(PACK / name.replace(".png", "_neutral.png"))
         if base.tobytes() != neutral.tobytes():
             failures.append(f"base-not-neutral:{name}")
         base.close(); neutral.close()
-    return {"schemaVersion": 1, "passed": not failures, "requiredBaseFiles": required,
-            "checkedFiles": files, "failures": failures}
+    alpha_values = list(coverage_by_file.values())
+    return {"schemaVersion": 2, "passed": not failures, "requiredBaseFiles": required,
+            "checkedFiles": files,
+            "nonTransparentCoverage": {
+                "acceptedRange": {"min": 0.20, "max": 0.95},
+                "observedRange": {"min": min(alpha_values), "max": max(alpha_values)} if alpha_values else None,
+                "byFile": coverage_by_file,
+            },
+            "failures": failures}
 
 
 def main() -> None:
@@ -232,7 +264,7 @@ def main() -> None:
         "sourceCrop": None, "status": "constructed-from-approved-palette", "sourceObserved": False,
         "inferenceNote": "Clean board generated from exact palette in 00_spec.json; no source text or candidate art used.",
         "dimensions": {"width": 2048, "height": 2048},
-        "variants": {"baseEqualsNeutral": True, "neutralOpaque": True, "alphaHasTransparency": False},
+        "variants": {"baseEqualsNeutral": True, "neutralOpaque": True, "alphaHasTransparency": True},
     })
     provenance["outputs"].sort(key=lambda item: item["file"])
     (PACK / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")

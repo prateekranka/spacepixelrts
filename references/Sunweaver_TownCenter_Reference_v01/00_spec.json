@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "assetId": "SunweaverTownCenter_Structural_v01",
+  "canonicalCivilization": "Sunweaver",
+  "currentBlockout": "SunweaverTownCenter_Blockout_v00",
+  "phase": "clay-geometry",
+  "materialPassBlocked": true,
+  "sourceSheet": "../sunweaver-town-center-reference.png",
+  "structural": {
+    "footprintTiles": 7,
+    "entranceAxis": "south",
+    "primarySymmetry": 4,
+    "secondarySymmetry": 8,
+    "entrances": 1,
+    "primarySideTowers": 4,
+    "centralCrystals": 1,
+    "mainLevels": 3,
+    "constructionStages": 4
+  },
+  "normalizedDimensions": {
+    "footprintDiameter": 1.0,
+    "lowerDrumHeight": 0.2,
+    "upperDrumHeight": 0.18,
+    "crownHeight": 0.34,
+    "entranceProjection": 0.13,
+    "sideTowerRadius": 0.09,
+    "primaryWingOuterReach": 0.48,
+    "secondaryButtressOuterReach": 0.45,
+    "entranceWidth": 0.22,
+    "centralCrownRadius": 0.16
+  },
+  "modules": [
+    {"id": "foundation_disc", "count": 1},
+    {"id": "lower_drum", "count": 1},
+    {"id": "upper_drum", "count": 1},
+    {"id": "entrance_bay", "count": 1},
+    {"id": "primary_wing_source", "count": 4, "sharedSource": true},
+    {"id": "secondary_buttress_source", "count": 4, "sharedSource": true},
+    {"id": "side_crystal_tower_source", "count": 4, "sharedSource": true},
+    {"id": "central_crystal", "count": 1},
+    {"id": "crystal_cage_arch_source", "count": 4, "sharedSource": true},
+    {"id": "banner_mount_source", "count": 4, "sharedSource": true},
+    {"id": "stage_2_crown", "count": 1},
+    {"id": "stage_3_crown", "count": 1},
+    {"id": "stage_4_crown", "count": 1}
+  ],
+  "qaGates": {
+    "topRadialSymmetryErrorMax": 0.03,
+    "entranceAxisDeviationDegreesMax": 1.0,
+    "footprintDiameterDeviationMax": 0.05,
+    "alignedSilhouetteOverlapMin": 0.88,
+    "consoleErrorsMax": 0,
+    "p99FrameMsMax": 8.0,
+    "rearStairs": 0,
+    "disconnectedVisibleGeometry": 0
+  },
+  "referencePackQa": {
+    "alphaCoverageMeasurement": "fraction of pixels with alpha > 8",
+    "alphaCoverageMin": 0.2,
+    "alphaCoverageMax": 0.95,
+    "mask": "4-connected border flood; RGB distance <= 40, mean channel >= 225, chroma <= 22"
+  },
+  "requiredReferenceFiles": [
+    "01_front_ortho_4096.png",
+    "02_right_ortho_4096.png",
+    "03_back_ortho_4096.png",
+    "04_left_ortho_4096.png",
+    "05_top_ortho_4096.png",
+    "06_front_three_quarter_4096.png",
+    "07_rear_three_quarter_4096.png",
+    "08_entrance_detail_2048.png",
+    "09_crystal_crown_detail_2048.png",
+    "10_buttress_tower_detail_2048.png",
+    "11_banner_and_sigil_detail_2048.png",
+    "12_materials_2048.png",
+    "13_scale_and_dimensions_2048.png",
+    "14_stage_1_2048.png",
+    "15_stage_2_2048.png",
+    "16_stage_3_2048.png",
+    "17_stage_4_2048.png"
+  ]
+}
