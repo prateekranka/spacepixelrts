@@ -8,86 +8,86 @@
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 131.9,
-      "variance": 377.68
+      "mean": 132.25,
+      "variance": 363.99
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 121.88,
-      "variance": 234.27
+      "mean": 122,
+      "variance": 223.78
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 121.25,
-      "variance": 255.7
+      "mean": 121.38,
+      "variance": 244.33
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 130.5,
-      "variance": 401.96
+      "mean": 130.89,
+      "variance": 378.45
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-top-ortho.png",
       "query": "ui=0&view=top-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 126.45,
-      "variance": 460.13
+      "mean": 126.62,
+      "variance": 471.69
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 125.59,
-      "variance": 345.13
+      "mean": 125.85,
+      "variance": 341.46
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-rear-3q.png",
       "query": "ui=0&view=rear-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 122.81,
-      "variance": 339.83
+      "mean": 122.97,
+      "variance": 335.16
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-close.png",
       "query": "ui=0&view=gameplay-close&stage=4&pass=beauty&freeze=1",
-      "mean": 121.89,
-      "variance": 516.66
+      "mean": 121.95,
+      "variance": 518.25
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-normal.png",
       "query": "ui=0&view=gameplay-normal&stage=4&pass=beauty&freeze=1",
-      "mean": 123.55,
-      "variance": 409.15
+      "mean": 124.1,
+      "variance": 414.23
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-far.png",
       "query": "ui=0&view=gameplay-far&stage=4&pass=beauty&freeze=1",
-      "mean": 126.26,
-      "variance": 298.36
+      "mean": 126.56,
+      "variance": 292.94
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 155.85,
-      "variance": 13711.66
+      "mean": 155.9,
+      "variance": 13710.13
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 153.98,
-      "variance": 13787.63
+      "mean": 154.03,
+      "variance": 13786.01
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 155.85,
-      "variance": 13711.66
+      "mean": 155.9,
+      "variance": 13710.13
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 153.97,
-      "variance": 13787.85
+      "mean": 154,
+      "variance": 13787.25
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-top-ortho.png",
@@ -98,26 +98,26 @@
     {
       "file": "critic/out/town-center-structural-v01/front-wireframe.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=wireframe&freeze=1",
-      "mean": 119.63,
-      "variance": 869.78
+      "mean": 119.79,
+      "variance": 856.94
     },
     {
       "file": "critic/out/town-center-structural-v01/front-normal.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=normal&freeze=1",
-      "mean": 147.21,
-      "variance": 511.1
+      "mean": 147.29,
+      "variance": 508.32
     },
     {
       "file": "critic/out/town-center-structural-v01/front-depth.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=depth&freeze=1",
-      "mean": 170.79,
-      "variance": 1997.22
+      "mean": 170.76,
+      "variance": 1995.27
     },
     {
       "file": "critic/out/town-center-structural-v01/front-material-id.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=material-id&freeze=1",
-      "mean": 148.95,
-      "variance": 376.33
+      "mean": 148.96,
+      "variance": 375.77
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-1-front-3q.png",
@@ -140,14 +140,14 @@
     {
       "file": "critic/out/town-center-structural-v01/stage-4-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 125.59,
-      "variance": 345.13
+      "mean": 125.85,
+      "variance": 341.46
     }
   ],
   "runtime": {
     "ready": true,
-    "draws": 111,
-    "triangles": 11124,
+    "draws": 109,
+    "triangles": 11164,
     "stage": 4,
     "manifest": {
       "assetId": "SunweaverTownCenter_Structural_v01",
@@ -169,7 +169,7 @@
         "lowerDrumHeight": 0.38571428571428573,
         "upperDrumRadius": 0.23142857142857146,
         "upperDrumHeight": 0.2285714285714286,
-        "crownHeight": 0.6138571428571427,
+        "crownHeight": 0.6124285714285713,
         "entranceProjection": 0.03571428571428571,
         "sideTowerRadius": 0.07857142857142858,
         "sideTowerOuterReach": 0.42857142857142855,
@@ -195,33 +195,30 @@
         "energyVaultFrameDepth": 0.05714285714285715,
         "energyVaultOpeningWidth": 0.2571428571428572,
         "energyVaultOpeningHeight": 0.37142857142857144,
-        "energyVaultSolidJewelWidth": 0.2571428571428572,
-        "energyVaultSolidJewelHeight": 0.36428571428571427,
-        "energyVaultSolidJewelFrontBulge": 0.03142857142857143,
-        "energyVaultSolidJewelRearDepth": 0.03428571428571429,
-        "energyVaultSolidJewelBaseY": 0.6357142857142858,
-        "energyVaultSolidJewelTopY": 1,
-        "energyVaultMandorlaWidth": 0.2571428571428572,
-        "energyVaultMandorlaHeight": 0.36428571428571427,
-        "energyVaultSeamWidth": 0.037142857142857144,
-        "energyVaultSeamHeight": 0.04857142857142858,
+        "centralJewelColumnBaseY": 0.6357142857142858,
+        "centralJewelColumnApexY": 1.6738571428571427,
+        "centralJewelColumnMaxHalfWidth": 0.1542857142857143,
+        "centralJewelColumnFrontBulge": 0.027000000000000003,
+        "centralJewelColumnRearDepth": 0.038571428571428576,
+        "centralJewelColumnRidgeLowerWidth": 0.06714285714285714,
+        "centralJewelColumnRidgeProud": 0.029892857142857145,
         "energyVaultEntranceWidth": 0.14285714285714285,
         "energyVaultEntranceHeight": 0.09285714285714286,
         "energyVaultEntranceBottomY": 0.6542857142857142,
         "energyVaultEntranceRecessDepth": 0.02,
-        "centralCrownRadius": 0.13885714285714285,
-        "crownCollarOuterRadius": 0.2885714285714286,
-        "crownCollarInnerRadius": 0.22142857142857145,
-        "crownCollarHeight": 0.07142857142857142,
-        "crownCollarUpperLipHeight": 0.017142857142857144,
-        "crownCollarLowerLipHeight": 0.02142857142857143,
+        "centralCrownRadius": 0.12921428571428573,
+        "crownCollarOuterRadius": 0.13999999999999999,
+        "crownCollarInnerRadius": 0.12,
+        "crownCollarHeight": 0.05000000000000008,
+        "crownCollarUpperLipHeight": 0.01,
+        "crownCollarLowerLipHeight": 0.015714285714285715,
         "crownCollarSpringlineY": 1.0857142857142856,
         "crownRadialScale": 1.35,
         "crownVerticalScale": 1.15,
-        "centralCrystalBaseHalfWidth": 0.13885714285714285,
-        "centralCrystalMaxHalfWidth": 0.16392857142857142,
+        "centralCrystalBaseHalfWidth": 0.12921428571428573,
+        "centralCrystalMaxHalfWidth": 0.1542857142857143,
         "centralCrystalFrontBulge": 0.027000000000000003,
-        "centralCrystalBaseY": 1.0857142857142856,
+        "centralCrystalBaseY": 0.6357142857142858,
         "centralCrystalApexY": 1.6738571428571427,
         "centralCrystalFacetSegments": 8,
         "centralCrystalSpineWidth": 0.06557142857142859,
@@ -275,9 +272,7 @@
         "energy_vault_outer_punched_frame": 1,
         "energy_vault_small_entrance_frame": 1,
         "energy_vault_small_entrance_recess": 1,
-        "energy_vault_jewels": 1,
-        "energy_vault_mandorla": 1,
-        "energy_vault_seam_jewel": 1,
+        "central_jewel_column": 1,
         "central_crystal": 1,
         "crystal_mandorla": 1,
         "crystal_front_center_spine": 1,
@@ -291,6 +286,11 @@
         "crown_lower_socket": 1,
         "stage_4_crown": 1
       },
+      "moduleAliases": {
+        "energy_vault_jewels": "central_jewel_column",
+        "energy_vault_mandorla": "central_jewel_column",
+        "energy_vault_seam_jewel": "crystal_front_center_spine"
+      },
       "sourceIds": {
         "primary_wing_source": "primary_wing_source",
         "primary_wing_base_source": "primary_wing_base_source",
@@ -298,7 +298,10 @@
         "secondary_buttress_source": "secondary_buttress_source",
         "side_crystal_tower_source": "side_crystal_tower_source",
         "energy_vault_frame": "energy_vault_frame",
-        "energy_vault_jewels": "energy_vault_jewels",
+        "central_jewel_column": "unified-convex-faceted-jewel-column",
+        "energy_vault_jewels": "central_jewel_column",
+        "energy_vault_mandorla": "central_jewel_column",
+        "energy_vault_seam_jewel": "crystal_front_center_spine",
         "crown_collar": "crown_collar",
         "crown_assembly": "accepted_crown_assembly",
         "crystal_mandorla": "convex-faceted-shell",
@@ -412,10 +415,10 @@
           5.9,
           2.25
         ],
-        "energy_vault_jewels": [
+        "central_jewel_column": [
           0,
-          5.725,
-          2.46
+          8.083499999999999,
+          0
         ],
         "crown_assembly": [
           0,
@@ -424,38 +427,38 @@
         ],
         "crown_collar": [
           0,
-          7.67,
+          7.605,
           0
         ],
         "crown_collar_body": [
           0,
-          7.63,
+          7.605,
           0
         ],
         "crown_collar_upper_lip": [
           0,
-          7.86,
+          7.715,
           0
         ],
         "crown_collar_lower_lip": [
           0,
-          7.51,
+          7.485,
           0
         ],
         "central_crystal": [
           0,
-          9.66,
+          8.083499999999999,
           0
         ],
         "crystal_mandorla": [
           0,
-          9.66,
+          8.083499999999999,
           0
         ],
         "crystal_front_center_spine": [
           0,
-          9.66,
-          0.2936250000000001
+          8.083499999999999,
+          0
         ],
         "crystal_cage_arches": [
           0,

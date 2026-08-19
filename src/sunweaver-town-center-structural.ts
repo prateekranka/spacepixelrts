@@ -10,6 +10,7 @@ export interface StructuralManifest {
   cageArchProfile: 'solid-rib';
   normalizedDimensions: Record<string, number>;
   moduleCounts: Record<string, number>;
+  moduleAliases?: Record<string, string>;
   sourceIds: Record<string, string>;
   worldSpaceModuleCenters: Record<string, [number, number, number]>;
 }
@@ -77,13 +78,6 @@ const ENERGY_VAULT_OPENING_HEIGHT = 2.6;
 const ENERGY_VAULT_CENTER_Z = 2.25;
 const ENERGY_VAULT_JEWEL_CENTER_Z = 2.46;
 const ENERGY_VAULT_JEWEL_BASE_Y = 4.45;
-const ENERGY_VAULT_JEWEL_HEIGHT = 2.55;
-const ENERGY_VAULT_JEWEL_WIDTH = 1.8;
-const ENERGY_VAULT_JEWEL_FRONT_BULGE = 0.22;
-const ENERGY_VAULT_JEWEL_REAR_DEPTH = 0.24;
-const ENERGY_VAULT_SEAM_BASE_Y = 6.7;
-const ENERGY_VAULT_SEAM_HEIGHT = 0.34;
-const ENERGY_VAULT_SEAM_WIDTH = 0.26;
 const ENERGY_VAULT_ENTRANCE_WIDTH = 1.0;
 const ENERGY_VAULT_ENTRANCE_HEIGHT = 0.65;
 const ENERGY_VAULT_ENTRANCE_BOTTOM_Y = 4.58;
@@ -91,7 +85,10 @@ const ENERGY_VAULT_ENTRANCE_FRAME_DEPTH = 0.28;
 const ENERGY_VAULT_ENTRANCE_RECESS_DEPTH = 0.14;
 const ENERGY_VAULT_ENTRANCE_RECESS_CENTER_Z = 2.6;
 const CROWN_COLLAR_SPRINGLINE_Y = 7.6;
-const CROWN_COLLAR_Y_OFFSET = 4.4;
+const CROWN_COLLAR_RIB_BASE_RADIUS = 0.84;
+const CROWN_COLLAR_RIB_OUTER_RADIUS = 0.98;
+const CROWN_COLLAR_RIB_BOTTOM_Y = 7.43;
+const CROWN_COLLAR_RIB_TOP_Y = 7.78;
 const CROWN_SOURCE_BASE_Y = 3.5;
 const CROWN_SCALE = 1.35;
 // The approved crown is widened by 1.35 while its vertical span is fitted to
@@ -99,15 +96,19 @@ const CROWN_SCALE = 1.35;
 const CROWN_VERTICAL_SCALE = 1.15;
 const CROWN_MOUNT_Y = CROWN_COLLAR_SPRINGLINE_Y;
 const CROWN_TARGET_APEX_Y = CROWN_MOUNT_Y + (7.08 - CROWN_SOURCE_BASE_Y) * CROWN_VERTICAL_SCALE;
-// Source-space widths become 0.972 base / 1.1475 peak after the accepted 1.35 radial scale.
-const CENTRAL_CRYSTAL_BASE_HALF_WIDTH = 0.72;
-const CENTRAL_CRYSTAL_MAX_HALF_WIDTH = 0.85;
+// The unified body uses the accepted crown scale, so source-space widths below
+// become approximately 0.90 at the collar and 1.08 at the lower-column peak.
+const CENTRAL_CRYSTAL_BASE_HALF_WIDTH = 0.67;
+const CENTRAL_CRYSTAL_MAX_HALF_WIDTH = 0.80;
 const CENTRAL_CRYSTAL_FACET_SEGMENTS = 8;
 // Source-space dimensions become ~0.46 wide and ~0.21 proud after the accepted
 // 1.35 radial crown scale. The broad rib must remain visible through the flat clay.
 const CENTRAL_CRYSTAL_SPINE_WIDTH = 0.34;
 const CENTRAL_CRYSTAL_SPINE_PROUD = 0.155;
 const CENTRAL_CRYSTAL_FRONT_BULGE = 0.14;
+const CENTRAL_CRYSTAL_REAR_DEPTH = 0.20;
+const CENTRAL_COLUMN_BASE_Y = ENERGY_VAULT_JEWEL_BASE_Y;
+const CENTRAL_COLUMN_MAX_HALF_WIDTH_WORLD = CENTRAL_CRYSTAL_MAX_HALF_WIDTH * CROWN_SCALE;
 const CAGE_ARCH_BASE_Y = 3.48;
 // The inward orbit keeps the ribs over the broad vault; the separate body radius
 // remains equal to the crystal peak and the feet still reach the collar rim.
@@ -250,7 +251,14 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
    * The front is divided into eight planar strips so the center stays broad and lit;
    * the rear plane and side/cap faces keep the shell watertight from every view.
    */
-  function convexMandorla(name: string, profile: readonly [number, number][], segments: number, frontBulge: number, rearDepth: number): THREE.Mesh {
+  function convexMandorla(
+    name: string,
+    profile: readonly [number, number][],
+    segments: number,
+    frontBulge: number,
+    rearDepth: number,
+    centerZProfile?: readonly number[],
+  ): THREE.Mesh {
     const rowCount = profile.length;
     const columns = segments + 1;
     const maxHalfWidth = Math.max(...profile.map(([radius]) => radius));
@@ -261,12 +269,13 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       const [halfWidth, y] = profile[row];
       const widthRatio = maxHalfWidth > 0 ? halfWidth / maxHalfWidth : 0;
       const rowBulge = frontBulge * (0.16 + 0.84 * widthRatio);
-      const rearZ = -rearDepth * (0.78 + 0.22 * widthRatio);
+      const centerZ = centerZProfile?.[row] ?? 0;
+      const rearZ = centerZ - rearDepth * (0.78 + 0.22 * widthRatio);
       for (let column = 0; column < columns; column++) {
         const u = column / segments * 2 - 1;
         const x = halfWidth * u;
         // A parabola gives positive curvature toward +Z at every non-degenerate row.
-        const frontZ = rowBulge * (1 - u * u);
+        const frontZ = centerZ + rowBulge * (1 - u * u);
         const frontOffset = frontIndex(row, column) * 3;
         vertices[frontOffset] = x;
         vertices[frontOffset + 1] = y;
@@ -323,14 +332,22 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   }
 
   /** Narrow front-facing ridge with a controlled proud depth over the crystal surface. */
-  function frontSpine(name: string, profile: readonly [number, number][], width: number, proud: number, widthProfile?: readonly number[]): THREE.Mesh {
+  function frontSpine(
+    name: string,
+    profile: readonly [number, number][],
+    width: number,
+    proud: number,
+    widthProfile?: readonly number[],
+    centerZProfile?: readonly number[],
+  ): THREE.Mesh {
     const rowCount = profile.length;
     const vertices = new Float32Array(rowCount * 4 * 3);
     for (let row = 0; row < rowCount; row++) {
       const [radius, y] = profile[row];
       const halfWidth = (widthProfile?.[row] ?? width) * 0.5;
-      const backZ = radius + 0.008;
-      const frontZ = radius + proud;
+      const centerZ = centerZProfile?.[row] ?? 0;
+      const backZ = centerZ + radius + 0.008;
+      const frontZ = centerZ + radius + proud;
       const offset = row * 12;
       vertices[offset] = -halfWidth;
       vertices[offset + 1] = y;
@@ -602,105 +619,83 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return source;
   }
 
-  /** Broad convex faceted almond/mandorla with a continuous proud front spine (stage 4 only). */
+  /** One convex faceted jewel-column spanning the lower vault, collar, and crown. */
   function makeCentralCrystal(): THREE.Group {
     const crystal = group('central_crystal');
-    // The base is already broad at the collar; the max width sits around 40% of
-    // the source height, then tapers monotonically to the pointed apex.
-    const mandorlaProfile: readonly [number, number][] = [
-      [CENTRAL_CRYSTAL_BASE_HALF_WIDTH, 3.5],
-      [0.74, 3.62],
-      [0.78, 3.92],
-      [0.83, 4.38],
-      [CENTRAL_CRYSTAL_MAX_HALF_WIDTH, 4.68],
-      [CENTRAL_CRYSTAL_MAX_HALF_WIDTH, 4.94],
-      [0.82, 5.26],
-      [0.73, 5.62],
-      [0.63, 5.98],
-      [0.52, 6.30],
-      [0.40, 6.56],
-      [0.27, 6.78],
-      [0.13, 6.98],
-      [0.001, 7.08],
+    // Widths are authored in world space so the no-shelf profile remains easy
+    // to audit. The crown assembly transform converts them to source space.
+    const columnWorldProfile: readonly [number, number][] = [
+      [0.001, CENTRAL_COLUMN_BASE_Y],
+      [0.36, 4.55],
+      [0.62, 4.78],
+      [0.86, 5.05],
+      [1.00, 5.35],
+      [1.06, 5.65],
+      [1.08, 5.95],
+      [1.07, 6.20],
+      [1.04, 6.50],
+      [1.00, 6.80],
+      [0.96, 7.10],
+      [0.92, 7.40],
+      [0.90, 7.60],
+      [0.86, 7.85],
+      [0.82, 8.15],
+      [0.78, 8.50],
+      [0.72, 8.90],
+      [0.64, 9.35],
+      [0.55, 9.80],
+      [0.45, 10.25],
+      [0.35, 10.65],
+      [0.25, 11.00],
+      [0.15, 11.35],
+      [0.001, CROWN_TARGET_APEX_Y],
     ];
+    const crownAssemblyY = CROWN_MOUNT_Y - CROWN_VERTICAL_SCALE * CROWN_SOURCE_BASE_Y;
+    const sourceY = (worldY: number) => (worldY - crownAssemblyY) / CROWN_VERTICAL_SCALE;
+    const sourceProfile: readonly [number, number][] = columnWorldProfile.map(([halfWidth, worldY]) => [
+      halfWidth / CROWN_SCALE,
+      sourceY(worldY),
+    ]);
+    // The lower vault retains its accepted front depth. It eases into the
+    // crown depth through the collar, while remaining one watertight mesh.
+    const centerZWorldProfile = columnWorldProfile.map(([, worldY]) => {
+      if (worldY <= 6.7) return ENERGY_VAULT_JEWEL_CENTER_Z;
+      if (worldY >= CROWN_COLLAR_SPRINGLINE_Y) return 0;
+      const t = (worldY - 6.7) / (CROWN_COLLAR_SPRINGLINE_Y - 6.7);
+      return ENERGY_VAULT_JEWEL_CENTER_Z * (1 - t);
+    });
+    const centerZSourceProfile = centerZWorldProfile.map((centerZ) => centerZ / CROWN_SCALE);
     const body = convexMandorla(
       'crystal_mandorla',
-      mandorlaProfile,
+      sourceProfile,
       CENTRAL_CRYSTAL_FACET_SEGMENTS,
       CENTRAL_CRYSTAL_FRONT_BULGE,
-      0.20,
+      CENTRAL_CRYSTAL_REAR_DEPTH,
+      centerZSourceProfile,
     );
     crystal.add(body);
 
-    const spineProfile: readonly [number, number][] = [
-      [0.15, 3.5],
-      [0.15, 3.62],
-      [0.15, 3.92],
-      [0.15, 4.38],
-      [0.15, 4.68],
-      [0.15, 4.94],
-      [0.14, 5.26],
-      [0.13, 5.62],
-      [0.11, 5.98],
-      [0.09, 6.30],
-      [0.07, 6.56],
-      [0.05, 6.78],
-      [0.03, 6.98],
-      [0.001, 7.08],
+    const ridgeWorldWidths: readonly number[] = [
+      0.18, 0.26, 0.36, 0.42, 0.46, 0.47, 0.46, 0.44,
+      0.42, 0.40, 0.39, 0.38, 0.37, 0.36, 0.34, 0.32,
+      0.29, 0.25, 0.21, 0.17, 0.12, 0.08, 0.04, 0.002,
     ];
-    const spineWidthProfile: readonly number[] = [
-      0.29, 0.30, 0.32, 0.34, 0.34, 0.34, 0.32,
-      0.29, 0.25, 0.20, 0.15, 0.10, 0.05, 0.005,
-    ];
+    const maxSourceWidth = Math.max(...sourceProfile.map(([halfWidth]) => halfWidth));
+    const spineProfile: readonly [number, number][] = sourceProfile.map(([halfWidth, worldY]) => [
+      CENTRAL_CRYSTAL_FRONT_BULGE * (0.16 + 0.84 * halfWidth / maxSourceWidth),
+      worldY,
+    ]);
+    const spineWidthProfile: readonly number[] = ridgeWorldWidths.map((width) => width / CROWN_SCALE);
     const spine = frontSpine(
       'crystal_front_center_spine',
       spineProfile,
       CENTRAL_CRYSTAL_SPINE_WIDTH,
       CENTRAL_CRYSTAL_SPINE_PROUD,
       spineWidthProfile,
+      centerZSourceProfile,
     );
     crystal.add(spine);
     return crystal;
-  }
-
-  /** Solid convex faceted almond that fills the front energy-vault frame. */
-  function makeVaultMandorla(): THREE.Group {
-    const jewel = group('energy_vault_mandorla');
-    const profile: readonly [number, number][] = [
-      [0, ENERGY_VAULT_JEWEL_BASE_Y],
-      [0.38, ENERGY_VAULT_JEWEL_BASE_Y + 0.08],
-      [ENERGY_VAULT_JEWEL_WIDTH * 0.39, ENERGY_VAULT_JEWEL_BASE_Y + 0.32],
-      [ENERGY_VAULT_JEWEL_WIDTH * 0.5, ENERGY_VAULT_JEWEL_BASE_Y + 0.68],
-      [ENERGY_VAULT_JEWEL_WIDTH * 0.5, ENERGY_VAULT_JEWEL_BASE_Y + 1.08],
-      [ENERGY_VAULT_JEWEL_WIDTH * 0.44, ENERGY_VAULT_JEWEL_BASE_Y + 1.48],
-      [ENERGY_VAULT_JEWEL_WIDTH * 0.33, ENERGY_VAULT_JEWEL_BASE_Y + 1.9],
-      [0.24, ENERGY_VAULT_JEWEL_BASE_Y + 2.25],
-      [0, ENERGY_VAULT_JEWEL_BASE_Y + ENERGY_VAULT_JEWEL_HEIGHT],
-    ];
-    const body = convexMandorla(
-      'energy_vault_solid_jewel',
-      profile,
-      8,
-      ENERGY_VAULT_JEWEL_FRONT_BULGE,
-      ENERGY_VAULT_JEWEL_REAR_DEPTH,
-    );
-    jewel.add(body);
-    jewel.position.z = ENERGY_VAULT_JEWEL_CENTER_Z;
-    return jewel;
-  }
-
-  /** Small seam jewel above the energy-vault mandorla. */
-  function makeVaultSeamJewel(): THREE.Group {
-    const jewel = group('energy_vault_seam_jewel');
-    const profile: readonly [number, number][] = [
-      [0, ENERGY_VAULT_SEAM_BASE_Y],
-      [ENERGY_VAULT_SEAM_WIDTH * 0.5, ENERGY_VAULT_SEAM_BASE_Y + 0.12],
-      [ENERGY_VAULT_SEAM_WIDTH * 0.42, ENERGY_VAULT_SEAM_BASE_Y + 0.22],
-      [0, ENERGY_VAULT_SEAM_BASE_Y + ENERGY_VAULT_SEAM_HEIGHT],
-    ];
-    jewel.add(lathe('energy_vault_seam_jewel_mesh', profile, 8));
-    jewel.position.z = ENERGY_VAULT_JEWEL_CENTER_Z + 0.12;
-    return jewel;
   }
 
   const root = group('SunweaverTownCenter_Structural_v01') as StructuralTownCenter;
@@ -850,32 +845,31 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
 
   const crownCollar = group('crown_collar');
   const collarBody = lathe('crown_collar_body', [
-    [1.55, 3.02 + CROWN_COLLAR_Y_OFFSET],
-    [1.76, 3.02 + CROWN_COLLAR_Y_OFFSET],
-    [1.96, 3.09 + CROWN_COLLAR_Y_OFFSET],
-    [2.02, 3.18 + CROWN_COLLAR_Y_OFFSET],
-    [2.02, 3.34 + CROWN_COLLAR_Y_OFFSET],
-    [1.96, 3.44 + CROWN_COLLAR_Y_OFFSET],
-    [1.55, 3.44 + CROWN_COLLAR_Y_OFFSET],
-    [1.55, 3.02 + CROWN_COLLAR_Y_OFFSET],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, CROWN_COLLAR_RIB_BOTTOM_Y],
+    [0.90, 7.46],
+    [CROWN_COLLAR_RIB_OUTER_RADIUS, 7.51],
+    [CROWN_COLLAR_RIB_OUTER_RADIUS, 7.68],
+    [0.93, 7.74],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, CROWN_COLLAR_RIB_TOP_Y],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, CROWN_COLLAR_RIB_BOTTOM_Y],
   ], 16);
   const upperLip = lathe('crown_collar_upper_lip', [
-    [1.55, 3.4 + CROWN_COLLAR_Y_OFFSET],
-    [1.88, 3.4 + CROWN_COLLAR_Y_OFFSET],
-    [2.0, 3.43 + CROWN_COLLAR_Y_OFFSET],
-    [2.02, 3.47 + CROWN_COLLAR_Y_OFFSET],
-    [2.02, 3.52 + CROWN_COLLAR_Y_OFFSET],
-    [1.55, 3.52 + CROWN_COLLAR_Y_OFFSET],
-    [1.55, 3.4 + CROWN_COLLAR_Y_OFFSET],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, 7.68],
+    [0.92, 7.68],
+    [0.97, 7.70],
+    [CROWN_COLLAR_RIB_OUTER_RADIUS, 7.72],
+    [CROWN_COLLAR_RIB_OUTER_RADIUS, 7.75],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, 7.75],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, 7.68],
   ], 16);
   const lowerLip = lathe('crown_collar_lower_lip', [
-    [1.55, 3.02 + CROWN_COLLAR_Y_OFFSET],
-    [1.78, 3.02 + CROWN_COLLAR_Y_OFFSET],
-    [1.88, 3.06 + CROWN_COLLAR_Y_OFFSET],
-    [1.88, 3.17 + CROWN_COLLAR_Y_OFFSET],
-    [1.78, 3.17 + CROWN_COLLAR_Y_OFFSET],
-    [1.55, 3.17 + CROWN_COLLAR_Y_OFFSET],
-    [1.55, 3.02 + CROWN_COLLAR_Y_OFFSET],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, 7.43],
+    [0.90, 7.43],
+    [0.95, 7.46],
+    [0.95, 7.51],
+    [0.89, 7.54],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, 7.54],
+    [CROWN_COLLAR_RIB_BASE_RADIUS, 7.43],
   ], 16);
   crownCollar.add(collarBody, upperLip, lowerLip);
   stage4.add(crownCollar);
@@ -933,14 +927,12 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   }
   parts.crown_assembly = crownAssembly;
 
-  const vaultJewels = group('energy_vault_jewels');
-  const vaultMandorla = makeVaultMandorla();
-  const vaultSeamJewel = makeVaultSeamJewel();
-  vaultJewels.add(vaultMandorla, vaultSeamJewel);
-  stage4.add(vaultJewels);
-  parts.energy_vault_jewels = vaultJewels;
-  parts.energy_vault_mandorla = vaultMandorla;
-  parts.energy_vault_seam_jewel = vaultSeamJewel;
+  // The lower vault and crown now share the same body. Keep the old handles as
+  // aliases so existing stage/runtime consumers remain source-compatible.
+  const centralBody = central.getObjectByName('crystal_mandorla');
+  parts.energy_vault_jewels = central;
+  if (centralBody) parts.energy_vault_mandorla = centralBody;
+  if (centralSpine) parts.energy_vault_seam_jewel = centralSpine;
 
   const bannerSource = group('banner_mount_source');
   bannerSource.add(beam('banner_mount', new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0.55, 0), 0.12));
@@ -959,7 +951,10 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     secondary_buttress_source: 'secondary_buttress_source',
     side_crystal_tower_source: 'side_crystal_tower_source',
     energy_vault_frame: 'energy_vault_frame',
-    energy_vault_jewels: 'energy_vault_jewels',
+    central_jewel_column: 'unified-convex-faceted-jewel-column',
+    energy_vault_jewels: 'central_jewel_column',
+    energy_vault_mandorla: 'central_jewel_column',
+    energy_vault_seam_jewel: 'crystal_front_center_spine',
     crown_collar: 'crown_collar',
     crown_assembly: 'accepted_crown_assembly',
     crystal_mandorla: 'convex-faceted-shell',
@@ -987,7 +982,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       lowerDrumHeight: LOWER_DRUM_HEIGHT / D,
       upperDrumRadius: UPPER_DRUM_RADIUS / D,
       upperDrumHeight: UPPER_DRUM_HEIGHT / D,
-      crownHeight: (CROWN_TARGET_APEX_Y - (3.02 + CROWN_COLLAR_Y_OFFSET)) / D,
+      crownHeight: (CROWN_TARGET_APEX_Y - CROWN_COLLAR_RIB_BOTTOM_Y) / D,
       entranceProjection: 0.25 / D,
       sideTowerRadius: 0.55 / D,
       sideTowerOuterReach: (2.45 + 0.55) / D,
@@ -1013,33 +1008,30 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       energyVaultFrameDepth: ENERGY_VAULT_FRAME_DEPTH / D,
       energyVaultOpeningWidth: ENERGY_VAULT_OPENING_WIDTH / D,
       energyVaultOpeningHeight: ENERGY_VAULT_OPENING_HEIGHT / D,
-      energyVaultSolidJewelWidth: ENERGY_VAULT_JEWEL_WIDTH / D,
-      energyVaultSolidJewelHeight: ENERGY_VAULT_JEWEL_HEIGHT / D,
-      energyVaultSolidJewelFrontBulge: ENERGY_VAULT_JEWEL_FRONT_BULGE / D,
-      energyVaultSolidJewelRearDepth: ENERGY_VAULT_JEWEL_REAR_DEPTH / D,
-      energyVaultSolidJewelBaseY: ENERGY_VAULT_JEWEL_BASE_Y / D,
-      energyVaultSolidJewelTopY: (ENERGY_VAULT_JEWEL_BASE_Y + ENERGY_VAULT_JEWEL_HEIGHT) / D,
-      energyVaultMandorlaWidth: ENERGY_VAULT_JEWEL_WIDTH / D,
-      energyVaultMandorlaHeight: ENERGY_VAULT_JEWEL_HEIGHT / D,
-      energyVaultSeamWidth: ENERGY_VAULT_SEAM_WIDTH / D,
-      energyVaultSeamHeight: ENERGY_VAULT_SEAM_HEIGHT / D,
+      centralJewelColumnBaseY: CENTRAL_COLUMN_BASE_Y / D,
+      centralJewelColumnApexY: CROWN_TARGET_APEX_Y / D,
+      centralJewelColumnMaxHalfWidth: CENTRAL_COLUMN_MAX_HALF_WIDTH_WORLD / D,
+      centralJewelColumnFrontBulge: CENTRAL_CRYSTAL_FRONT_BULGE * CROWN_SCALE / D,
+      centralJewelColumnRearDepth: CENTRAL_CRYSTAL_REAR_DEPTH * CROWN_SCALE / D,
+      centralJewelColumnRidgeLowerWidth: 0.47 / D,
+      centralJewelColumnRidgeProud: CENTRAL_CRYSTAL_SPINE_PROUD * CROWN_SCALE / D,
       energyVaultEntranceWidth: ENERGY_VAULT_ENTRANCE_WIDTH / D,
       energyVaultEntranceHeight: ENERGY_VAULT_ENTRANCE_HEIGHT / D,
       energyVaultEntranceBottomY: ENERGY_VAULT_ENTRANCE_BOTTOM_Y / D,
       energyVaultEntranceRecessDepth: ENERGY_VAULT_ENTRANCE_RECESS_DEPTH / D,
       centralCrownRadius: CENTRAL_CRYSTAL_BASE_HALF_WIDTH * CROWN_SCALE / D,
-      crownCollarOuterRadius: 2.02 / D,
-      crownCollarInnerRadius: 1.55 / D,
-      crownCollarHeight: 0.5 / D,
-      crownCollarUpperLipHeight: 0.12 / D,
-      crownCollarLowerLipHeight: 0.15 / D,
+      crownCollarOuterRadius: CROWN_COLLAR_RIB_OUTER_RADIUS / D,
+      crownCollarInnerRadius: CROWN_COLLAR_RIB_BASE_RADIUS / D,
+      crownCollarHeight: (CROWN_COLLAR_RIB_TOP_Y - CROWN_COLLAR_RIB_BOTTOM_Y) / D,
+      crownCollarUpperLipHeight: 0.07 / D,
+      crownCollarLowerLipHeight: 0.11 / D,
       crownCollarSpringlineY: CROWN_COLLAR_SPRINGLINE_Y / D,
       crownRadialScale: CROWN_SCALE,
       crownVerticalScale: CROWN_VERTICAL_SCALE,
       centralCrystalBaseHalfWidth: CENTRAL_CRYSTAL_BASE_HALF_WIDTH * CROWN_SCALE / D,
-      centralCrystalMaxHalfWidth: CENTRAL_CRYSTAL_MAX_HALF_WIDTH * CROWN_SCALE / D,
+      centralCrystalMaxHalfWidth: CENTRAL_COLUMN_MAX_HALF_WIDTH_WORLD / D,
       centralCrystalFrontBulge: CENTRAL_CRYSTAL_FRONT_BULGE * CROWN_SCALE / D,
-      centralCrystalBaseY: CROWN_MOUNT_Y / D,
+      centralCrystalBaseY: CENTRAL_COLUMN_BASE_Y / D,
       centralCrystalApexY: CROWN_TARGET_APEX_Y / D,
       centralCrystalFacetSegments: CENTRAL_CRYSTAL_FACET_SEGMENTS,
       centralCrystalSpineWidth: CENTRAL_CRYSTAL_SPINE_WIDTH * CROWN_SCALE / D,
@@ -1093,9 +1085,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       energy_vault_outer_punched_frame: 1,
       energy_vault_small_entrance_frame: 1,
       energy_vault_small_entrance_recess: 1,
-      energy_vault_jewels: 1,
-      energy_vault_mandorla: 1,
-      energy_vault_seam_jewel: 1,
+      central_jewel_column: 1,
       central_crystal: 1,
       crystal_mandorla: 1,
       crystal_front_center_spine: 1,
@@ -1108,6 +1098,11 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       crown_collar_lower_lip: 1,
       crown_lower_socket: 1,
       stage_4_crown: 1,
+    },
+    moduleAliases: {
+      energy_vault_jewels: 'central_jewel_column',
+      energy_vault_mandorla: 'central_jewel_column',
+      energy_vault_seam_jewel: 'crystal_front_center_spine',
     },
     sourceIds,
     worldSpaceModuleCenters: {
@@ -1132,15 +1127,15 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       side_crystal_towers: [0, SIDE_TOWER_MOUNT_Y + SIDE_TOWER_SOURCE_TOP_Y * SIDE_TOWER_VERTICAL_SCALE * 0.5, 0],
       secondary_buttresses: [0, 6.6, 0],
       energy_vault_frame: [0, 5.9, ENERGY_VAULT_CENTER_Z],
-      energy_vault_jewels: [0, ENERGY_VAULT_JEWEL_BASE_Y + ENERGY_VAULT_JEWEL_HEIGHT * 0.5, ENERGY_VAULT_JEWEL_CENTER_Z],
+      central_jewel_column: [0, (CENTRAL_COLUMN_BASE_Y + CROWN_TARGET_APEX_Y) * 0.5, 0],
       crown_assembly: [0, CROWN_TARGET_APEX_Y * 0.5 + CROWN_MOUNT_Y * 0.5, 0],
-      crown_collar: [0, 7.67, 0],
-      crown_collar_body: [0, 7.63, 0],
-      crown_collar_upper_lip: [0, 7.86, 0],
-      crown_collar_lower_lip: [0, 7.51, 0],
-      central_crystal: [0, 9.66, 0],
-      crystal_mandorla: [0, 9.66, 0],
-      crystal_front_center_spine: [0, 9.66, (CENTRAL_CRYSTAL_FRONT_BULGE + CENTRAL_CRYSTAL_SPINE_PROUD * 0.5) * CROWN_SCALE],
+      crown_collar: [0, 7.605, 0],
+      crown_collar_body: [0, 7.605, 0],
+      crown_collar_upper_lip: [0, 7.715, 0],
+      crown_collar_lower_lip: [0, 7.485, 0],
+      central_crystal: [0, (CENTRAL_COLUMN_BASE_Y + CROWN_TARGET_APEX_Y) * 0.5, 0],
+      crystal_mandorla: [0, (CENTRAL_COLUMN_BASE_Y + CROWN_TARGET_APEX_Y) * 0.5, 0],
+      crystal_front_center_spine: [0, (CENTRAL_COLUMN_BASE_Y + CROWN_TARGET_APEX_Y) * 0.5, 0],
       crystal_cage_arches: [0, 9.47, 0],
       banner_mounts: [0, 3.575, 0],
       crown_lower_socket: [0, 7.715, 0],

@@ -174,7 +174,64 @@ const report = await page.evaluate(() => {
       normal: surface.normal.map((v) => Math.round(v * 10000) / 10000),
     };
   });
-  return { boxes, meshNames: meshes.map((m) => m.name), objectiveTalons };
+
+  // Front-ortho silhouette check for the unified jewel body. The camera maps
+  // screen X directly to world X, so intersect each body triangle with a
+  // horizontal world-Y plane and report the largest absolute X value.
+  const sampleHalfWidthAtY = (meshName, y) => {
+    const mesh = meshes.find((item) => item.name === meshName);
+    if (!mesh?.geometry) return null;
+    mesh.updateWorldMatrix(true, false);
+    const position = mesh.geometry.getAttribute('position');
+    if (!position) return null;
+    const worldPositions = Array.from({ length: position.count }, (_, i) => transformPoint(
+      mesh.matrixWorld,
+      position.getX(i),
+      position.getY(i),
+      position.getZ(i),
+    ));
+    const index = mesh.geometry.index;
+    const indices = index ? Array.from(index.array) : Array.from({ length: position.count }, (_, i) => i);
+    const xs = [];
+    const addEdge = (ia, ib) => {
+      const a = worldPositions[ia];
+      const b = worldPositions[ib];
+      const da = a[1] - y;
+      const db = b[1] - y;
+      if (Math.abs(da) <= 1e-6 && Math.abs(db) <= 1e-6) {
+        xs.push(a[0], b[0]);
+      } else if (da * db <= 0 && Math.abs(a[1] - b[1]) > 1e-8) {
+        const t = (y - a[1]) / (b[1] - a[1]);
+        if (t >= -1e-8 && t <= 1 + 1e-8) xs.push(a[0] + (b[0] - a[0]) * t);
+      }
+    };
+    for (let i = 0; i < indices.length; i += 3) {
+      addEdge(indices[i], indices[i + 1]);
+      addEdge(indices[i + 1], indices[i + 2]);
+      addEdge(indices[i + 2], indices[i]);
+    }
+    return xs.length ? Math.max(...xs.map((value) => Math.abs(value))) : null;
+  };
+  const noShelfYs = [6.5, 7.0, 7.6, 8.2, 8.8];
+  const noShelfSamples = noShelfYs.map((y) => ({
+    y,
+    halfWidth: sampleHalfWidthAtY('crystal_mandorla', y),
+  }));
+  const noShelfPass = noShelfSamples.every((sample, i) => sample.halfWidth !== null
+    && (i === 0
+      || (noShelfSamples[i - 1].halfWidth !== null
+        && sample.halfWidth <= noShelfSamples[i - 1].halfWidth + 0.02)));
+  const noShelf = {
+    mesh: 'crystal_mandorla',
+    tolerancePerStep: 0.02,
+    samples: noShelfSamples.map((sample) => ({
+      y: sample.y,
+      halfWidth: sample.halfWidth === null ? null : Math.round(sample.halfWidth * 10000) / 10000,
+    })),
+    pass: noShelfPass,
+    method: 'front-ortho world-X triangle intersections on the unified jewel body',
+  };
+  return { boxes, meshNames: meshes.map((m) => m.name), objectiveTalons, noShelf };
 });
 
 // The fixed front-ortho QA camera is centred on the lower building and clips the
@@ -299,6 +356,14 @@ console.log(`  geometry limits: ${report.objectiveTalons.length} talons, max rad
 const objectivePass = report.objectiveTalons.length === 4 && overlapPassCount >= 2 && facePassCount === 4 && maxTalonRadius <= 1.9 && maxApexBandRadius <= 0.4;
 console.log(`  objective checks: ${objectivePass ? 'PASS' : 'FAIL'}`);
 if (!objectivePass) process.exitCode = 1;
+
+console.log('\n-- unified column no-shelf check --');
+for (const sample of report.noShelf.samples) {
+  console.log(`  Y${sample.y.toFixed(1)}: half-width ${sample.halfWidth ?? 'unavailable'}`);
+}
+console.log(`  tolerance per step: +${report.noShelf.tolerancePerStep}`);
+console.log(`  no-shelf gate: ${report.noShelf.pass ? 'PASS' : 'FAIL'} (${report.noShelf.method})`);
+if (!report.noShelf.pass) process.exitCode = 1;
 
 console.log('\n-- mandorla luminance gate --');
 for (const sample of luminance.samples ?? []) {
