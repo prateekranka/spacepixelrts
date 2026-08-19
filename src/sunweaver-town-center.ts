@@ -38,6 +38,7 @@ type MaterialSet = {
   banner: THREE.MeshStandardMaterial;
   crystal: THREE.MeshPhysicalMaterial;
   crystalCore: THREE.MeshStandardMaterial;
+  mandorla: THREE.MeshBasicMaterial;
   energy: THREE.MeshStandardMaterial;
   cavity: THREE.MeshStandardMaterial;
   foliage: THREE.MeshStandardMaterial;
@@ -264,6 +265,11 @@ function makeMaterials(
       emissiveIntensity: 2.8,
       roughness: 0.18,
       metalness: 0,
+    }),
+    mandorla: new THREE.MeshBasicMaterial({
+      color: '#19BFEA',
+      toneMapped: false,
+      side: THREE.DoubleSide,
     }),
     energy: new THREE.MeshStandardMaterial({
       color: crystalColor,
@@ -641,13 +647,19 @@ function createConstructionCore(materials: MaterialSet, stage: 1 | 2 | 3): THREE
   group.add(socketRing);
 
   if (stage >= 2) {
-    const crystalHeight = stage === 2 ? 0.52 : 0.86;
-    const crystalRadius = stage === 2 ? 0.18 : 0.32;
-    const crystal = new THREE.Mesh(crystalGeometry(crystalRadius, crystalHeight, 7), stage === 2 ? materials.energy : materials.crystal);
-    crystal.position.y = baseY + socketHeight + crystalHeight * 0.48;
-    group.add(crystal);
+    // Stage 3 is the closed construction cage. The pointed crystal belongs to
+    // the final Stage 4 spire and must not appear inside this temporary cage.
+    const crystalHeight = 0.52;
+    const crystalRadius = 0.18;
+    if (stage === 2) {
+      const crystal = new THREE.Mesh(crystalGeometry(crystalRadius, crystalHeight, 7), materials.energy);
+      crystal.position.y = baseY + socketHeight + crystalHeight * 0.48;
+      group.add(crystal);
+    }
 
-    const scaffoldTop = baseY + socketHeight + crystalHeight + (stage === 2 ? 0.18 : 0.26);
+    const scaffoldTop = stage === 2
+      ? baseY + socketHeight + crystalHeight + 0.18
+      : baseY + 1.12;
     const poleTop = stage === 2 ? scaffoldTop : scaffoldTop + 0.12;
     for (let index = 0; index < 4; index++) {
       const angle = (index / 4) * Math.PI * 2 + Math.PI * 0.25;
@@ -717,10 +729,10 @@ function createStair(materials: MaterialSet): THREE.Group {
 function createEntrance(materials: MaterialSet, rear = false): THREE.Group {
   const group = new THREE.Group();
   group.name = rear ? 'rear-portal' : 'front-entrance';
-  const width = rear ? 0.96 : 1.45;
-  const height = rear ? 1.28 : 1.82;
+  const width = rear ? 0.96 : 1.06;
+  const height = rear ? 1.28 : 1.02;
   const z = rear ? -2.69 : 2.69;
-  group.position.set(0, rear ? 0.54 : 0.62, z);
+  group.position.set(0, rear ? 0.54 : 0.04, z);
   group.rotation.y = rear ? Math.PI : 0;
 
   const cavity = new THREE.Mesh(pointedArchFill(width * 0.72, height * 0.82), materials.cavity);
@@ -736,16 +748,8 @@ function createEntrance(materials: MaterialSet, rear = false): THREE.Group {
   goldFrame.position.z = 0.025;
   group.add(goldFrame);
 
-  if (!rear) {
-    const jewel = new THREE.Mesh(crystalGeometry(0.22, 0.58, 8), materials.energy);
-    jewel.position.set(0, height + 0.28, 0.19);
-    group.add(jewel);
-    const jewelRim = pointedArchFrame(0.5, 0.7, 0.08, 0.08);
-    jewelRim.material = materials.gold;
-    jewelRim.position.set(0, height - 0.03, 0.12);
-    jewelRim.scale.set(0.62, 0.62, 0.62);
-    group.add(jewelRim);
-  }
+  // The front doorway is deliberately plain and low. Its removed jewel and
+  // rim previously hung into the mandorla. The rear portal remains unchanged.
   return group;
 }
 
@@ -821,14 +825,14 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   const almondFrame = new THREE.Mesh(almondFrameGeometry(1.50, 2.02, 0.18, 0.16), materials.gold);
   almondFrame.position.set(0, almondCenterY, 0.18);
   almond.add(almondFrame);
-  const backplate = new THREE.Mesh(almondExtrudedGeometry(1.30, 1.82, 0.07, 0.025), materials.energy);
+  const backplate = new THREE.Mesh(almondExtrudedGeometry(1.30, 1.82, 0.07, 0.025), materials.mandorla);
   backplate.name = 'front-almond-backplate';
   backplate.position.set(0, almondCenterY, -0.06);
   almond.add(backplate);
   const shell = new THREE.Mesh(almondExtrudedGeometry(1.34, 1.86, 0.16, 0.045), materials.crystal);
   shell.position.set(0, almondCenterY, 0.02);
   almond.add(shell);
-  const core = new THREE.Mesh(almondExtrudedGeometry(1.10, 1.58, 0.10, 0.035), materials.crystalCore);
+  const core = new THREE.Mesh(almondExtrudedGeometry(1.10, 1.58, 0.10, 0.035), materials.mandorla);
   core.position.set(0, almondCenterY, 0.12);
   almond.add(core);
   group.add(almond);
@@ -845,7 +849,7 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
 
   // Woven ribs stay in the narrow side zones. The almond remains a clean,
   // uninterrupted cyan silhouette.
-  const ribZ = 0.34;
+  const ribZ = 0.43;
   for (const side of [-1, 1]) {
     const inner = side * 0.86;
     const outer = side * 1.02;
@@ -854,19 +858,22 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
       new THREE.Vector3(inner + side * 0.05, 0.78, ribZ + 0.01),
       new THREE.Vector3(inner - side * 0.02, 1.38, ribZ + 0.015),
       new THREE.Vector3(inner + side * 0.04, 1.92, ribZ),
-    ], 0.052, materials.goldDark, 28));
+    ], 0.06, materials.goldDark, 28));
     group.add(tube([
       new THREE.Vector3(outer, 0.22, ribZ + 0.02),
       new THREE.Vector3(outer - side * 0.04, 0.82, ribZ + 0.035),
       new THREE.Vector3(outer + side * 0.02, 1.42, ribZ + 0.04),
       new THREE.Vector3(outer - side * 0.05, 1.88, ribZ + 0.02),
-    ], 0.052, materials.gold, 28));
-    for (const y of [0.58, 1.02, 1.46]) {
+    ], 0.06, materials.gold, 28));
+    for (const [index, y] of [0.50, 0.90, 1.30, 1.70].entries()) {
+      const laceMaterial = index % 2 === 0 ? materials.gold : materials.goldDark;
+      const lower = y - 0.15;
+      const upper = y + 0.15;
       group.add(beam(
-        new THREE.Vector3(inner, y, ribZ + 0.01),
-        new THREE.Vector3(outer, y + 0.10, ribZ + 0.025),
-        0.035,
-        materials.gold,
+        new THREE.Vector3(inner, lower, ribZ + 0.035),
+        new THREE.Vector3(outer, upper, ribZ + 0.055),
+        0.048,
+        laceMaterial,
         7,
       ));
     }
