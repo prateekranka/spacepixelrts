@@ -110,6 +110,64 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return mesh(geometry, name);
   }
 
+  /** Low radial trapezoid/plinth with a tapered plan and a shallow sloped top. */
+  function radialWedge(name: string, tangentWidth: number, radialDepth: number, height: number): THREE.Mesh {
+    const innerHalf = tangentWidth * 0.40;
+    const outerHalf = tangentWidth * 0.5;
+    const topInnerHalf = innerHalf * 0.92;
+    const topOuterHalf = outerHalf * 0.92;
+    const outerTop = height * 0.84;
+    const positions = new Float32Array([
+      -innerHalf, 0, 0,
+      innerHalf, 0, 0,
+      outerHalf, 0, radialDepth,
+      -outerHalf, 0, radialDepth,
+      -topInnerHalf, height, 0.04,
+      topInnerHalf, height, 0.04,
+      topOuterHalf, outerTop, radialDepth - 0.02,
+      -topOuterHalf, outerTop, radialDepth - 0.02,
+    ]);
+    const indices = [
+      0, 3, 2, 0, 2, 1,
+      4, 5, 6, 4, 6, 7,
+      0, 1, 5, 0, 5, 4,
+      1, 2, 6, 1, 6, 5,
+      2, 3, 7, 2, 7, 6,
+      3, 0, 4, 3, 4, 7,
+    ];
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return mesh(geometry, name);
+  }
+
+  /** Shallow two-plane roof with one radial ridge, never a square pyramid. */
+  function gabledRoof(name: string, halfWidth: number, radialDepth: number, eaveY: number, ridgeY: number): THREE.Mesh {
+    const front = 0.04;
+    const back = front + radialDepth;
+    const positions = new Float32Array([
+      -halfWidth, eaveY, front,
+      0, ridgeY, front,
+      halfWidth, eaveY, front,
+      -halfWidth, eaveY, back,
+      0, ridgeY, back,
+      halfWidth, eaveY, back,
+    ]);
+    const indices = [
+      0, 3, 4, 0, 4, 1,
+      1, 4, 5, 1, 5, 2,
+      0, 1, 2,
+      3, 5, 4,
+      0, 2, 5, 0, 5, 3,
+    ];
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return mesh(geometry, name);
+  }
+
   function group(name: string): THREE.Group {
     const item = new THREE.Group();
     item.name = name;
@@ -117,22 +175,32 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return item;
   }
 
+  /** One low radial plinth. The source remains local and is cloned at 90° intervals. */
+  function makeWingBaseSource(): THREE.Group {
+    const source = group('primary_wing_base_source');
+    source.add(radialWedge('wing_base_radial_plinth', 1.48, 1.5, 0.66));
+    return source;
+  }
+
   /**
-   * Wing shell: stepped plinth, two thick side masses, a real pointed facade
-   * opening/frame, and a pagoda roof. The opening stays hollow so the south
-   * copy leaves the deep entrance bay visible.
+   * Integrated gallery upper: thick shoulder masses, a hollow outward arch,
+   * a recessed rear shell, and one shallow gabled roof.
    */
-  function makeWingSource(): THREE.Group {
-    const source = group('primary_wing_source');
-    source.add(box('wing_plinth', [1.4, 0.5, 0.6], [0, 0.35, 0]));
-    source.add(box('wing_side_mass_l', [0.34, 1.5, 0.55], [-0.7, 1.6, 0.1]));
-    source.add(box('wing_side_mass_r', [0.34, 1.5, 0.55], [0.7, 1.6, 0.1]));
-    const frame = archFrame('wing_pointed_frame', 1.3, 1.1, 0.3, 0.15);
-    frame.position.set(0, 1.5, 0.15);
+  function makeWingUpperSource(): THREE.Group {
+    const source = group('primary_wing_upper_source');
+    source.add(box('wing_upper_shoulder_l', [0.30, 1.32, 0.94], [-0.58, 1.18, 0.48]));
+    source.add(box('wing_upper_shoulder_r', [0.30, 1.32, 0.94], [0.58, 1.18, 0.48]));
+
+    const shell = group('wing_recessed_rear_shell');
+    shell.add(box('wing_recessed_back', [0.84, 1.08, 0.46], [0, 1.08, -0.05]));
+    shell.add(box('wing_recessed_floor', [0.86, 0.12, 0.72], [0, 0.56, 0.5]));
+    source.add(shell);
+
+    const frame = archFrame('wing_hollow_pointed_arch', 1.08, 1.32, 0.22, 0.15);
+    frame.position.set(0, 0.62, 0.52);
     source.add(frame);
-    source.add(tapered('wing_roof_low', 0.7, 1.32, 0.3, [0, 2.5, 0], 4, Math.PI / 4));
-    source.add(tapered('wing_roof_high', 0.18, 0.7, 0.4, [0, 2.85, 0], 4, Math.PI / 4));
-    source.add(tapered('wing_finial', 0.04, 0.2, 0.25, [0, 3.18, 0], 4, Math.PI / 4));
+
+    source.add(gabledRoof('wing_shallow_gabled_roof', 0.64, 1.32, 1.90, 2.30));
     return source;
   }
 
@@ -209,15 +277,32 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   }
   stage2.add(stair); parts.broad_front_stair = stair;
 
-  const wingSource = makeWingSource();
+  const wingBaseSource = makeWingBaseSource();
+  const wingUpperSource = makeWingUpperSource();
   const wingGroup = group('primary_wings');
+  const wingBaseGroup = group('primary_wing_bases');
+  const wingUpperGroup = group('primary_wing_uppers');
+  const wingOriginRadius = 1.48;
+  const wingBaseBottom = 0.42;
   for (let i = 0; i < 4; i++) {
-    const clone = wingSource.clone(true); clone.name = `primary_wing_${i}`;
-    clone.position.copy(radialPosition(2.55, i * Math.PI / 2, 0));
-    clone.rotation.y = i * Math.PI / 2;
-    wingGroup.add(clone);
+    const angle = i * Math.PI / 2;
+    const baseClone = wingBaseSource.clone(true); baseClone.name = `primary_wing_base_${i}`;
+    baseClone.position.copy(radialPosition(wingOriginRadius, angle, wingBaseBottom));
+    baseClone.rotation.y = angle;
+    wingBaseGroup.add(baseClone);
+
+    const upperClone = wingUpperSource.clone(true); upperClone.name = `primary_wing_upper_${i}`;
+    upperClone.position.copy(radialPosition(wingOriginRadius, angle, wingBaseBottom));
+    upperClone.rotation.y = angle;
+    wingUpperGroup.add(upperClone);
+
+    parts[`primary_wing_base_${i}`] = baseClone;
+    parts[`primary_wing_upper_${i}`] = upperClone;
   }
+  wingGroup.add(wingBaseGroup);
   stage2.add(wingGroup); parts.primary_wing_source = wingGroup;
+  parts.primary_wing_base_source = wingBaseGroup;
+  stage3.add(wingUpperGroup); parts.primary_wing_upper_source = wingUpperGroup;
 
   const crown2 = tapered('stage_2_crown', 0.56, 0.9, 0.42, [0, 2.01, 0], 8);
   stage2.add(crown2); parts.stage_2_crown = crown2;
@@ -281,6 +366,8 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
 
   const sourceIds: Record<string, string> = {
     primary_wing_source: 'primary_wing_source',
+    primary_wing_base_source: 'primary_wing_base_source',
+    primary_wing_upper_source: 'primary_wing_upper_source',
     secondary_buttress_source: 'secondary_buttress_source',
     side_crystal_tower_source: 'side_crystal_tower_source',
     crystal_cage_arch_source: 'crystal_cage_arch_source',
@@ -298,7 +385,10 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       crownHeight: 0.34,
       entranceProjection: 0.13,
       sideTowerRadius: 0.09,
-      primaryWingOuterReach: 0.497,
+      primaryWingOuterReach: (wingOriginRadius + 1.5) / D,
+      primaryWingTangentialWidth: 1.48 / D,
+      primaryWingRadialDepth: 1.5 / D,
+      primaryWingBaseHeight: 0.66 / D,
       secondaryButtressOuterReach: 0.45,
       entranceWidth: 0.22,
       centralCrownRadius: 0.16,
@@ -310,6 +400,8 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       entrance_bay: 1,
       broad_front_stair: 5,
       primary_wing_source: 4,
+      primary_wing_base_source: 4,
+      primary_wing_upper_source: 4,
       secondary_buttress_source: 4,
       side_crystal_tower_source: 4,
       central_crystal: 1,
@@ -326,7 +418,17 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       upper_drum: [0, 2.38, 0],
       entrance_bay: [0, 1.35, 2.1],
       broad_front_stair: [0, 0.35, 3.2],
-      primary_wings: [0, 1.3, 0],
+      primary_wings: [0, 0.75, 0],
+      primary_wing_bases: [0, 0.75, 0],
+      primary_wing_uppers: [0, 1.83, 0],
+      primary_wing_base_0: [0, 0.75, 2.23],
+      primary_wing_base_1: [2.23, 0.75, 0],
+      primary_wing_base_2: [0, 0.75, -2.23],
+      primary_wing_base_3: [-2.23, 0.75, 0],
+      primary_wing_upper_0: [0, 1.82, 2.02],
+      primary_wing_upper_1: [2.02, 1.82, 0],
+      primary_wing_upper_2: [0, 1.82, -2.02],
+      primary_wing_upper_3: [-2.02, 1.82, 0],
       side_crystal_towers: [0, 1.6, 0],
       secondary_buttresses: [0, 1.2, 0],
       cage_base: [0, 3.15, 0],
