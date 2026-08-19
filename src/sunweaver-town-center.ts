@@ -711,18 +711,6 @@ function createStair(materials: MaterialSet): THREE.Group {
     nosing.position.set(0, y + 0.08, z + 0.115);
     stairCaps.add(nosing);
   }
-
-  for (const side of [-1, 1]) {
-    for (let index = 0; index < steps; index += 2) {
-      const t = index / (steps - 1);
-      const width = THREE.MathUtils.lerp(2.88, 1.52, t);
-      const y = 0.43 + t * 0.83;
-      const z = THREE.MathUtils.lerp(3.48, 2.53, t);
-      const nosing = new THREE.Mesh(new RoundedBoxGeometry(width + 0.04, 0.028, 0.06, 2, 0.012), materials.goldDark);
-      nosing.position.set(side * (width * 0.5 + 0.04), y + 0.07, z + 0.11);
-      stairCaps.add(nosing);
-    }
-  }
   return group;
 }
 
