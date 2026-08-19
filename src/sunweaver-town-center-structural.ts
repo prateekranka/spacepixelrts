@@ -34,6 +34,68 @@ export interface StructuralTownCenter extends THREE.Group {
 
 const D = 7;
 const R = D / 2;
+const PLINTH_TIER_1_BOTTOM_Y = 0.4;
+const PLINTH_TIER_1_TOP_Y = 1.8;
+const PLINTH_TIER_1_BOTTOM_RADIUS = 3.5;
+const PLINTH_TIER_1_TOP_RADIUS = 3.3;
+const PLINTH_TIER_2_BOTTOM_Y = 1.8;
+const PLINTH_TIER_2_TOP_Y = 3.3;
+const PLINTH_TIER_2_BOTTOM_RADIUS = 3.35;
+const PLINTH_TIER_2_TOP_RADIUS = 2.9;
+const LOWER_DRUM_RADIUS = 1.95;
+const LOWER_DRUM_HEIGHT = 2.7;
+const LOWER_DRUM_CENTER_Y = 4.65;
+const UPPER_DRUM_RADIUS = 1.62;
+const UPPER_DRUM_HEIGHT = 1.6;
+const UPPER_DRUM_CENTER_Y = 6.8;
+const SIDE_TOWER_VERTICAL_SCALE = 0.44;
+const SECONDARY_BUTTRESS_VERTICAL_SCALE = 0.62;
+const PRIMARY_WING_BASE_ORBIT_RADIUS = 2.23;
+const PRIMARY_WING_UPPER_ORBIT_RADIUS = 2.02;
+const PRIMARY_WING_OUTER_REACH = 3.48;
+const PRIMARY_WING_BASE_RADIAL_DEPTH = 1.17;
+const PRIMARY_WING_BASE_SOURCE_RADIAL_DEPTH = 1.5;
+const PRIMARY_WING_BASE_RADIAL_SCALE = PRIMARY_WING_BASE_RADIAL_DEPTH / PRIMARY_WING_BASE_SOURCE_RADIAL_DEPTH;
+const PRIMARY_WING_BASE_CENTER_Y = 3.9;
+const PRIMARY_WING_UPPER_CENTER_Y = 5.2;
+const STAIR_TOP_Y = 3.3;
+const STAIR_TREAD_COUNT = 20;
+const STAIR_TREAD_WIDTH = 2.8;
+const STAIR_TREAD_HEIGHT = STAIR_TOP_Y / STAIR_TREAD_COUNT;
+const STAIR_TREAD_DEPTH = 0.17;
+const STAIR_FRONT_Z = 3.1;
+const STAIR_LAST_Z = 2.0;
+const ENERGY_VAULT_OUTER_WIDTH = 3.0;
+const ENERGY_VAULT_OUTER_HEIGHT = 3.0;
+const ENERGY_VAULT_OUTER_BOTTOM_Y = 4.4;
+const ENERGY_VAULT_FRAME_DEPTH = 0.4;
+const ENERGY_VAULT_FRAME_THICKNESS = 0.4;
+const ENERGY_VAULT_OPENING_WIDTH = 1.8;
+const ENERGY_VAULT_OPENING_HEIGHT = 2.6;
+const ENERGY_VAULT_RECESS_DEPTH = 0.45;
+const ENERGY_VAULT_CENTER_Z = 2.25;
+const ENERGY_VAULT_RECESS_CENTER_Z = 1.775;
+const ENERGY_VAULT_JEWEL_CENTER_Z = 2.15;
+const ENERGY_VAULT_JEWEL_BASE_Y = 4.65;
+const ENERGY_VAULT_JEWEL_HEIGHT = 1.7;
+const ENERGY_VAULT_JEWEL_WIDTH = 1.1;
+const ENERGY_VAULT_SEAM_BASE_Y = 6.65;
+const ENERGY_VAULT_SEAM_HEIGHT = 0.55;
+const ENERGY_VAULT_SEAM_WIDTH = 0.4;
+const ENERGY_VAULT_ENTRANCE_WIDTH = 1.0;
+const ENERGY_VAULT_ENTRANCE_HEIGHT = 0.8;
+const ENERGY_VAULT_ENTRANCE_BOTTOM_Y = 3.3;
+const ENERGY_VAULT_ENTRANCE_FRAME_DEPTH = 0.28;
+const ENERGY_VAULT_ENTRANCE_RECESS_DEPTH = 0.45;
+const CROWN_COLLAR_SPRINGLINE_Y = 7.6;
+const CROWN_COLLAR_Y_OFFSET = 4.4;
+const CROWN_SOURCE_BASE_Y = 3.5;
+const CROWN_SCALE = 1.35;
+// The approved crown is widened by 1.35 while its vertical span is fitted to
+// the requested ~11.7 apex and the hard 12.2 upper bound.
+const CROWN_VERTICAL_SCALE = 1.15;
+const CROWN_MOUNT_Y = CROWN_COLLAR_SPRINGLINE_Y;
+const CROWN_TARGET_APEX_Y = CROWN_MOUNT_Y + (7.08 - CROWN_SOURCE_BASE_Y) * CROWN_VERTICAL_SCALE;
 const CAGE_ARCH_BASE_Y = 3.48;
 const CAGE_ARCH_ORBIT_RADIUS = 1.35;
 const CAGE_ARCH_ORBIT_RADII = [1.3, 1.4, 1.4, 1.3] as const;
@@ -234,6 +296,43 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     item.geometry = geometry;
   }
 
+  /** Clamp a deformed crown mesh after its parent scale has been applied. */
+  function clampWorldRadialExtent(item: THREE.Mesh, limit: number, apexLimit?: number): void {
+    item.updateWorldMatrix(true, false);
+    const geometry = item.geometry.clone();
+    uniqueGeometries.add(geometry);
+    const position = geometry.getAttribute('position');
+    const worldMatrix = item.matrixWorld.clone();
+    const inverse = worldMatrix.clone().invert();
+    const world = new THREE.Vector3();
+    const local = new THREE.Vector3();
+    let maxY = -Infinity;
+    if (apexLimit !== undefined) {
+      for (let i = 0; i < position.count; i++) {
+        world.set(position.getX(i), position.getY(i), position.getZ(i)).applyMatrix4(worldMatrix);
+        maxY = Math.max(maxY, world.y);
+      }
+    }
+    for (let i = 0; i < position.count; i++) {
+      local.set(position.getX(i), position.getY(i), position.getZ(i));
+      world.copy(local).applyMatrix4(worldMatrix);
+      const radial = Math.hypot(world.x, world.z);
+      const radialLimit = apexLimit !== undefined && world.y >= maxY - 0.025 ? apexLimit : limit;
+      if (radial > radialLimit) {
+        const scale = radialLimit / radial;
+        world.x *= scale;
+        world.z *= scale;
+        local.copy(world).applyMatrix4(inverse);
+        position.setX(i, local.x);
+        position.setY(i, local.y);
+        position.setZ(i, local.z);
+      }
+    }
+    position.needsUpdate = true;
+    geometry.computeVertexNormals();
+    item.geometry = geometry;
+  }
+
   /** Re-center the upper talon after the strong mid-body cant while keeping its feet fixed. */
   function bendCageTalonToApex(item: THREE.Mesh, angle: number, orbitRadius: number, bodyTangentialOffset: number, tangentialOffset: number, frontDepthOffset: number, crossStart: number, crossPeak: number, crossEnd: number, orientation: THREE.Quaternion): void {
     const geometry = item.geometry.clone();
@@ -348,7 +447,12 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   /** One low radial plinth. The source remains local and is cloned at 90° intervals. */
   function makeWingBaseSource(): THREE.Group {
     const source = group('primary_wing_base_source');
-    source.add(radialWedge('wing_base_radial_plinth', 1.48, 1.5, 0.66));
+    source.add(radialWedge(
+      'wing_base_radial_plinth',
+      1.48,
+      PRIMARY_WING_BASE_SOURCE_RADIAL_DEPTH,
+      0.66,
+    ));
     return source;
   }
 
@@ -438,6 +542,46 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return crystal;
   }
 
+  /** Small clay almond used inside the front energy-vault opening. */
+  function makeVaultMandorla(): THREE.Group {
+    const jewel = group('energy_vault_mandorla');
+    const profile: readonly [number, number][] = [
+      [0, ENERGY_VAULT_JEWEL_BASE_Y],
+      [0.34, ENERGY_VAULT_JEWEL_BASE_Y + 0.08],
+      [ENERGY_VAULT_JEWEL_WIDTH * 0.5, ENERGY_VAULT_JEWEL_BASE_Y + 0.38],
+      [ENERGY_VAULT_JEWEL_WIDTH * 0.46, ENERGY_VAULT_JEWEL_BASE_Y + 0.74],
+      [ENERGY_VAULT_JEWEL_WIDTH * 0.36, ENERGY_VAULT_JEWEL_BASE_Y + 1.12],
+      [0.22, ENERGY_VAULT_JEWEL_BASE_Y + 1.48],
+      [0, ENERGY_VAULT_JEWEL_BASE_Y + ENERGY_VAULT_JEWEL_HEIGHT],
+    ];
+    jewel.add(lathe('energy_vault_mandorla_jewel', profile, 8));
+    const spineProfile: readonly [number, number][] = [
+      [0.28, ENERGY_VAULT_JEWEL_BASE_Y + 0.08],
+      [0.46, ENERGY_VAULT_JEWEL_BASE_Y + 0.4],
+      [0.43, ENERGY_VAULT_JEWEL_BASE_Y + 0.78],
+      [0.33, ENERGY_VAULT_JEWEL_BASE_Y + 1.15],
+      [0.18, ENERGY_VAULT_JEWEL_BASE_Y + 1.48],
+      [0.04, ENERGY_VAULT_JEWEL_BASE_Y + 1.64],
+    ];
+    jewel.add(frontSpine('energy_vault_mandorla_spine', spineProfile, 0.08, 0.07));
+    jewel.position.z = ENERGY_VAULT_JEWEL_CENTER_Z;
+    return jewel;
+  }
+
+  /** Small seam jewel above the energy-vault mandorla. */
+  function makeVaultSeamJewel(): THREE.Group {
+    const jewel = group('energy_vault_seam_jewel');
+    const profile: readonly [number, number][] = [
+      [0, ENERGY_VAULT_SEAM_BASE_Y],
+      [ENERGY_VAULT_SEAM_WIDTH * 0.5, ENERGY_VAULT_SEAM_BASE_Y + 0.12],
+      [ENERGY_VAULT_SEAM_WIDTH * 0.42, ENERGY_VAULT_SEAM_BASE_Y + 0.3],
+      [0, ENERGY_VAULT_SEAM_BASE_Y + ENERGY_VAULT_SEAM_HEIGHT],
+    ];
+    jewel.add(lathe('energy_vault_seam_jewel_mesh', profile, 8));
+    jewel.position.z = ENERGY_VAULT_JEWEL_CENTER_Z + 0.03;
+    return jewel;
+  }
+
   const root = group('SunweaverTownCenter_Structural_v01') as StructuralTownCenter;
   const stage1 = group('stage-1');
   const stage2 = group('stage-2');
@@ -453,8 +597,27 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const socket = tapered('central_socket', 1.0, 1.18, 0.28, [0, 0.38, 0], 12);
   stage1.add(socket); parts.central_socket = socket;
 
-  // ---- Stage 2: reduced lower drum, entrance bay, broad front stair, wing lobes ----
-  const lower = cylinder('lower_drum', 1.55, 1.4, [0, 1.08, 0], 48);
+  // ---- Stage 2: stepped plinth, lower drum, entrance bay, stair, wing lobes ----
+  const plinthTier1 = tapered(
+    'plinth_tier_1',
+    PLINTH_TIER_1_TOP_RADIUS,
+    PLINTH_TIER_1_BOTTOM_RADIUS,
+    PLINTH_TIER_1_TOP_Y - PLINTH_TIER_1_BOTTOM_Y,
+    [0, (PLINTH_TIER_1_BOTTOM_Y + PLINTH_TIER_1_TOP_Y) * 0.5, 0],
+    64,
+  );
+  stage2.add(plinthTier1); parts.plinth_tier_1 = plinthTier1;
+  const plinthTier2 = tapered(
+    'plinth_tier_2',
+    PLINTH_TIER_2_TOP_RADIUS,
+    PLINTH_TIER_2_BOTTOM_RADIUS,
+    PLINTH_TIER_2_TOP_Y - PLINTH_TIER_2_BOTTOM_Y,
+    [0, (PLINTH_TIER_2_BOTTOM_Y + PLINTH_TIER_2_TOP_Y) * 0.5, 0],
+    64,
+  );
+  stage2.add(plinthTier2); parts.plinth_tier_2 = plinthTier2;
+
+  const lower = cylinder('lower_drum', LOWER_DRUM_RADIUS, LOWER_DRUM_HEIGHT, [0, LOWER_DRUM_CENTER_Y, 0], 48);
   stage2.add(lower); parts.lower_drum = lower;
 
   const entrance = group('entrance_bay');
@@ -463,14 +626,16 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   entrance.add(box('entrance_pylon_r', [0.5, 2.7, 1.05], [1.2, 1.35, 2.15]));
   const entranceArch = archFrame('entrance_pointed_arch', 1.6, 2.5, 0.4, 0.22);
   entranceArch.position.set(0, 0.5, 2.0);
+  entrance.position.y = PLINTH_TIER_2_TOP_Y;
   entrance.add(entranceArch);
   stage2.add(entrance); parts.entrance_bay = entrance;
 
   const stair = group('broad_front_stair');
-  const treadGeometry = trackGeometry(new THREE.BoxGeometry(2.8, 0.14, 0.17));
-  for (let i = 0; i < 5; i++) {
+  const treadGeometry = trackGeometry(new THREE.BoxGeometry(STAIR_TREAD_WIDTH, STAIR_TREAD_HEIGHT, STAIR_TREAD_DEPTH));
+  const zStep = (STAIR_FRONT_Z - STAIR_LAST_Z) / (STAIR_TREAD_COUNT - 1);
+  for (let i = 0; i < STAIR_TREAD_COUNT; i++) {
     const tread = mesh(treadGeometry, `stair_tread_${i + 1}`);
-    tread.position.set(0, 0.07 + i * 0.14, 3.68 - i * 0.17);
+    tread.position.set(0, STAIR_TREAD_HEIGHT * 0.5 + i * STAIR_TREAD_HEIGHT, STAIR_FRONT_Z - i * zStep);
     stair.add(tread);
   }
   stage2.add(stair); parts.broad_front_stair = stair;
@@ -480,17 +645,18 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const wingGroup = group('primary_wings');
   const wingBaseGroup = group('primary_wing_bases');
   const wingUpperGroup = group('primary_wing_uppers');
-  const wingOriginRadius = 1.48;
-  const wingBaseBottom = 0.42;
+  const wingBaseMountY = PRIMARY_WING_BASE_CENTER_Y - 0.33;
+  const wingUpperMountY = PRIMARY_WING_UPPER_CENTER_Y - 1.41;
   for (let i = 0; i < 4; i++) {
     const angle = i * Math.PI / 2;
     const baseClone = wingBaseSource.clone(true); baseClone.name = `primary_wing_base_${i}`;
-    baseClone.position.copy(radialPosition(wingOriginRadius, angle, wingBaseBottom));
+    baseClone.position.copy(radialPosition(PRIMARY_WING_BASE_ORBIT_RADIUS, angle, wingBaseMountY));
+    baseClone.scale.z = PRIMARY_WING_BASE_RADIAL_SCALE;
     baseClone.rotation.y = angle;
     wingBaseGroup.add(baseClone);
 
     const upperClone = wingUpperSource.clone(true); upperClone.name = `primary_wing_upper_${i}`;
-    upperClone.position.copy(radialPosition(wingOriginRadius, angle, wingBaseBottom));
+    upperClone.position.copy(radialPosition(PRIMARY_WING_UPPER_ORBIT_RADIUS, angle, wingUpperMountY));
     upperClone.rotation.y = angle;
     wingUpperGroup.add(upperClone);
 
@@ -500,20 +666,18 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   wingGroup.add(wingBaseGroup);
   stage2.add(wingGroup); parts.primary_wing_source = wingGroup;
   parts.primary_wing_base_source = wingBaseGroup;
-  stage3.add(wingUpperGroup); parts.primary_wing_upper_source = wingUpperGroup;
+  stage2.add(wingUpperGroup); parts.primary_wing_upper_source = wingUpperGroup;
 
-  const crown2 = tapered('stage_2_crown', 0.56, 0.9, 0.42, [0, 2.01, 0], 8);
-  stage2.add(crown2); parts.stage_2_crown = crown2;
-
-  // ---- Stage 3: upper drum, diagonal towers, interleaved buttresses, cage base ----
-  const upper = cylinder('upper_drum', 1.3, 1.2, [0, 2.38, 0], 48);
+  // ---- Stage 3: upper drum, diagonal towers, buttresses, and vault frame ----
+  const upper = cylinder('upper_drum', UPPER_DRUM_RADIUS, UPPER_DRUM_HEIGHT, [0, UPPER_DRUM_CENTER_Y, 0], 48);
   stage3.add(upper); parts.upper_drum = upper;
 
   const towerSource = makeTowerSource();
   const towerGroup = group('side_crystal_towers');
   for (let i = 0; i < 4; i++) {
     const clone = towerSource.clone(true); clone.name = `side_crystal_tower_${i}`;
-    clone.position.copy(radialPosition(2.45, Math.PI / 4 + i * Math.PI / 2, 0));
+    clone.position.copy(radialPosition(2.45, Math.PI / 4 + i * Math.PI / 2, 6.0));
+    clone.scale.y = SIDE_TOWER_VERTICAL_SCALE;
     clone.rotation.y = Math.PI / 4 + i * Math.PI / 2;
     towerGroup.add(clone);
   }
@@ -523,54 +687,98 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const buttressGroup = group('secondary_buttresses');
   for (let i = 0; i < 4; i++) {
     const clone = buttressSource.clone(true); clone.name = `secondary_buttress_${i}`;
-    clone.position.copy(radialPosition(2.85, Math.PI / 8 + i * Math.PI / 2, 0));
+    clone.position.copy(radialPosition(2.85, Math.PI / 8 + i * Math.PI / 2, 6.0));
+    clone.scale.y = SECONDARY_BUTTRESS_VERTICAL_SCALE;
     clone.rotation.y = Math.PI / 8 + i * Math.PI / 2;
     buttressGroup.add(clone);
   }
   stage3.add(buttressGroup); parts.secondary_buttress_source = buttressGroup;
 
+  const vaultFrame = group('energy_vault_frame');
+  const vaultOuterFrame = archFrame(
+    'energy_vault_outer_punched_frame',
+    ENERGY_VAULT_OUTER_WIDTH,
+    ENERGY_VAULT_OUTER_HEIGHT,
+    ENERGY_VAULT_FRAME_DEPTH,
+    ENERGY_VAULT_FRAME_THICKNESS,
+  );
+  vaultOuterFrame.position.set(0, ENERGY_VAULT_OUTER_BOTTOM_Y, ENERGY_VAULT_CENTER_Z);
+  vaultFrame.add(vaultOuterFrame);
+  const vaultRecess = solidArchPanel(
+    'energy_vault_recessed_opening',
+    ENERGY_VAULT_OPENING_WIDTH,
+    ENERGY_VAULT_OPENING_HEIGHT,
+    ENERGY_VAULT_RECESS_DEPTH,
+  );
+  vaultRecess.position.set(0, ENERGY_VAULT_OUTER_BOTTOM_Y, ENERGY_VAULT_RECESS_CENTER_Z);
+  vaultFrame.add(vaultRecess);
+  const vaultEntranceFrame = archFrame(
+    'energy_vault_small_entrance_frame',
+    ENERGY_VAULT_ENTRANCE_WIDTH,
+    ENERGY_VAULT_ENTRANCE_HEIGHT,
+    ENERGY_VAULT_ENTRANCE_FRAME_DEPTH,
+    0.2,
+  );
+  vaultEntranceFrame.position.set(0, ENERGY_VAULT_ENTRANCE_BOTTOM_Y, ENERGY_VAULT_CENTER_Z);
+  vaultFrame.add(vaultEntranceFrame);
+  const vaultEntranceRecess = solidArchPanel(
+    'energy_vault_small_entrance_recess',
+    ENERGY_VAULT_ENTRANCE_WIDTH - 0.4,
+    ENERGY_VAULT_ENTRANCE_HEIGHT - 0.2,
+    ENERGY_VAULT_ENTRANCE_RECESS_DEPTH,
+  );
+  vaultEntranceRecess.position.set(0, ENERGY_VAULT_ENTRANCE_BOTTOM_Y, ENERGY_VAULT_RECESS_CENTER_Z);
+  vaultFrame.add(vaultEntranceRecess);
+  stage3.add(vaultFrame);
+  parts.energy_vault_frame = vaultFrame;
+  parts.energy_vault_outer_punched_frame = vaultOuterFrame;
+  parts.energy_vault_recessed_opening = vaultRecess;
+  parts.energy_vault_small_entrance_frame = vaultEntranceFrame;
+  parts.energy_vault_small_entrance_recess = vaultEntranceRecess;
+
   const crownCollar = group('crown_collar');
   const collarBody = lathe('crown_collar_body', [
-    [1.55, 3.02],
-    [1.76, 3.02],
-    [1.96, 3.09],
-    [2.02, 3.18],
-    [2.02, 3.34],
-    [1.96, 3.44],
-    [1.55, 3.44],
-    [1.55, 3.02],
+    [1.55, 3.02 + CROWN_COLLAR_Y_OFFSET],
+    [1.76, 3.02 + CROWN_COLLAR_Y_OFFSET],
+    [1.96, 3.09 + CROWN_COLLAR_Y_OFFSET],
+    [2.02, 3.18 + CROWN_COLLAR_Y_OFFSET],
+    [2.02, 3.34 + CROWN_COLLAR_Y_OFFSET],
+    [1.96, 3.44 + CROWN_COLLAR_Y_OFFSET],
+    [1.55, 3.44 + CROWN_COLLAR_Y_OFFSET],
+    [1.55, 3.02 + CROWN_COLLAR_Y_OFFSET],
   ], 16);
   const upperLip = lathe('crown_collar_upper_lip', [
-    [1.55, 3.4],
-    [1.88, 3.4],
-    [2.0, 3.43],
-    [2.02, 3.47],
-    [2.02, 3.52],
-    [1.55, 3.52],
-    [1.55, 3.4],
+    [1.55, 3.4 + CROWN_COLLAR_Y_OFFSET],
+    [1.88, 3.4 + CROWN_COLLAR_Y_OFFSET],
+    [2.0, 3.43 + CROWN_COLLAR_Y_OFFSET],
+    [2.02, 3.47 + CROWN_COLLAR_Y_OFFSET],
+    [2.02, 3.52 + CROWN_COLLAR_Y_OFFSET],
+    [1.55, 3.52 + CROWN_COLLAR_Y_OFFSET],
+    [1.55, 3.4 + CROWN_COLLAR_Y_OFFSET],
   ], 16);
   const lowerLip = lathe('crown_collar_lower_lip', [
-    [1.55, 3.02],
-    [1.78, 3.02],
-    [1.88, 3.06],
-    [1.88, 3.17],
-    [1.78, 3.17],
-    [1.55, 3.17],
-    [1.55, 3.02],
+    [1.55, 3.02 + CROWN_COLLAR_Y_OFFSET],
+    [1.78, 3.02 + CROWN_COLLAR_Y_OFFSET],
+    [1.88, 3.06 + CROWN_COLLAR_Y_OFFSET],
+    [1.88, 3.17 + CROWN_COLLAR_Y_OFFSET],
+    [1.78, 3.17 + CROWN_COLLAR_Y_OFFSET],
+    [1.55, 3.17 + CROWN_COLLAR_Y_OFFSET],
+    [1.55, 3.02 + CROWN_COLLAR_Y_OFFSET],
   ], 16);
   crownCollar.add(collarBody, upperLip, lowerLip);
-  stage3.add(crownCollar);
+  stage4.add(crownCollar);
   parts.crown_collar = crownCollar;
   parts.crown_collar_body = collarBody;
   parts.crown_collar_upper_lip = upperLip;
   parts.crown_collar_lower_lip = lowerLip;
 
-  const crown3 = tapered('stage_3_crown', 0.22, 0.4, 0.6, [0, 3.6, 0], 6, Math.PI / 6);
-  stage3.add(crown3); parts.stage_3_crown = crown3;
+  const crown3 = tapered('crown_lower_socket', 0.22, 0.4, 0.6, [0, 3.6, 0], 6, Math.PI / 6);
+  parts.crown_lower_socket = crown3;
 
-  // ---- Stage 4: broad faceted crystal, front spine, finial, and canted cage arches ----
+  // ---- Stage 4: scaled crown, vault jewels, finial, and canted cage arches ----
+  const crownAssembly = group('accepted_crown_assembly');
   const central = makeCentralCrystal();
-  stage4.add(central); parts.central_crystal = central;
+  crownAssembly.add(central); parts.central_crystal = central;
   const centralSpine = central.getObjectByName('crystal_front_center_spine');
   if (centralSpine) parts.crystal_front_center_spine = centralSpine;
 
@@ -597,17 +805,37 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     clone.add(footFlare);
     cageGroup.add(clone);
   }
-  stage4.add(cageGroup); parts.crystal_cage_arch_source = cageGroup;
+  crownAssembly.add(cageGroup); parts.crystal_cage_arch_source = cageGroup;
 
   const crown4 = tapered('stage_4_crown', 0, 0.17, 0.32, [0, 7.04, 0], 8, Math.PI / 8);
-  stage4.add(crown4); parts.stage_4_crown = crown4;
+  crownAssembly.add(crown3, crown4);
+  parts.stage_4_crown = crown4;
+  parts.crown_lower_socket = crown3;
+  crownAssembly.scale.set(CROWN_SCALE, CROWN_VERTICAL_SCALE, CROWN_SCALE);
+  crownAssembly.position.y = CROWN_MOUNT_Y - CROWN_VERTICAL_SCALE * CROWN_SOURCE_BASE_Y;
+  stage4.add(crownAssembly);
+  crownAssembly.updateWorldMatrix(true, true);
+  for (const clone of cageGroup.children) {
+    const frame = clone.getObjectByName('cage_arch');
+    if (frame instanceof THREE.Mesh) clampWorldRadialExtent(frame, 1.9, 0.4);
+  }
+  parts.crown_assembly = crownAssembly;
+
+  const vaultJewels = group('energy_vault_jewels');
+  const vaultMandorla = makeVaultMandorla();
+  const vaultSeamJewel = makeVaultSeamJewel();
+  vaultJewels.add(vaultMandorla, vaultSeamJewel);
+  stage4.add(vaultJewels);
+  parts.energy_vault_jewels = vaultJewels;
+  parts.energy_vault_mandorla = vaultMandorla;
+  parts.energy_vault_seam_jewel = vaultSeamJewel;
 
   const bannerSource = group('banner_mount_source');
   bannerSource.add(beam('banner_mount', new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0.55, 0), 0.12));
   const bannerGroup = group('banner_mounts');
   for (let i = 0; i < 4; i++) {
     const clone = bannerSource.clone(true); clone.name = `banner_mount_${i}`;
-    clone.position.copy(radialPosition(3.05, Math.PI / 4 + i * Math.PI / 2, 2.9));
+    clone.position.copy(radialPosition(3.05, Math.PI / 4 + i * Math.PI / 2, PLINTH_TIER_2_TOP_Y));
     bannerGroup.add(clone);
   }
   stage4.add(bannerGroup); parts.banner_mount_source = bannerGroup;
@@ -618,7 +846,10 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     primary_wing_upper_source: 'primary_wing_upper_source',
     secondary_buttress_source: 'secondary_buttress_source',
     side_crystal_tower_source: 'side_crystal_tower_source',
+    energy_vault_frame: 'energy_vault_frame',
+    energy_vault_jewels: 'energy_vault_jewels',
     crown_collar: 'crown_collar',
+    crown_assembly: 'accepted_crown_assembly',
     crystal_cage_arch_source: 'crystal_cage_arch_source',
     banner_mount_source: 'banner_mount_source',
   };
@@ -630,48 +861,83 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     cageArchProfile: 'solid-rib',
     normalizedDimensions: {
       footprintDiameter: 1,
-      lowerDrumHeight: 0.2,
-      upperDrumHeight: 0.171,
-      crownHeight: (7.2 - 3.02) / D,
-      entranceProjection: 0.13,
-      sideTowerRadius: 0.09,
-      primaryWingOuterReach: (wingOriginRadius + 1.5) / D,
+      plinthTier1BottomY: PLINTH_TIER_1_BOTTOM_Y / D,
+      plinthTier1TopY: PLINTH_TIER_1_TOP_Y / D,
+      plinthTier1BottomRadius: PLINTH_TIER_1_BOTTOM_RADIUS / D,
+      plinthTier1TopRadius: PLINTH_TIER_1_TOP_RADIUS / D,
+      plinthTier2BottomY: PLINTH_TIER_2_BOTTOM_Y / D,
+      plinthTier2TopY: PLINTH_TIER_2_TOP_Y / D,
+      plinthTier2BottomRadius: PLINTH_TIER_2_BOTTOM_RADIUS / D,
+      plinthTier2TopRadius: PLINTH_TIER_2_TOP_RADIUS / D,
+      lowerDrumRadius: LOWER_DRUM_RADIUS / D,
+      lowerDrumHeight: LOWER_DRUM_HEIGHT / D,
+      upperDrumRadius: UPPER_DRUM_RADIUS / D,
+      upperDrumHeight: UPPER_DRUM_HEIGHT / D,
+      crownHeight: (CROWN_TARGET_APEX_Y - (3.02 + CROWN_COLLAR_Y_OFFSET)) / D,
+      entranceProjection: 0.25 / D,
+      sideTowerRadius: 0.55 / D,
+      sideTowerOuterReach: (2.45 + 0.55) / D,
+      sideTowerVerticalScale: SIDE_TOWER_VERTICAL_SCALE,
+      secondaryButtressOuterReach: (2.85 + 0.4) / D,
+      secondaryButtressVerticalScale: SECONDARY_BUTTRESS_VERTICAL_SCALE,
+      primaryWingBaseOrbitRadius: PRIMARY_WING_BASE_ORBIT_RADIUS / D,
+      primaryWingUpperOrbitRadius: PRIMARY_WING_UPPER_ORBIT_RADIUS / D,
+      primaryWingOuterReach: PRIMARY_WING_OUTER_REACH / D,
       primaryWingTangentialWidth: 1.48 / D,
-      primaryWingRadialDepth: 1.5 / D,
+      primaryWingRadialDepth: PRIMARY_WING_BASE_RADIAL_DEPTH / D,
       primaryWingBaseHeight: 0.66 / D,
-      secondaryButtressOuterReach: 0.45,
-      entranceWidth: 0.22,
-      centralCrownRadius: 0.55 / D,
+      entranceWidth: 1.6 / D,
+      entranceBayBaseY: PLINTH_TIER_2_TOP_Y / D,
+      stairTreadCount: STAIR_TREAD_COUNT,
+      stairTopY: STAIR_TOP_Y / D,
+      energyVaultOuterWidth: ENERGY_VAULT_OUTER_WIDTH / D,
+      energyVaultOuterHeight: ENERGY_VAULT_OUTER_HEIGHT / D,
+      energyVaultOuterBottomY: ENERGY_VAULT_OUTER_BOTTOM_Y / D,
+      energyVaultFrameThickness: ENERGY_VAULT_FRAME_THICKNESS / D,
+      energyVaultFrameDepth: ENERGY_VAULT_FRAME_DEPTH / D,
+      energyVaultOpeningWidth: ENERGY_VAULT_OPENING_WIDTH / D,
+      energyVaultOpeningHeight: ENERGY_VAULT_OPENING_HEIGHT / D,
+      energyVaultRecessDepth: ENERGY_VAULT_RECESS_DEPTH / D,
+      energyVaultMandorlaWidth: ENERGY_VAULT_JEWEL_WIDTH / D,
+      energyVaultMandorlaHeight: ENERGY_VAULT_JEWEL_HEIGHT / D,
+      energyVaultSeamWidth: ENERGY_VAULT_SEAM_WIDTH / D,
+      energyVaultSeamHeight: ENERGY_VAULT_SEAM_HEIGHT / D,
+      energyVaultEntranceWidth: ENERGY_VAULT_ENTRANCE_WIDTH / D,
+      energyVaultEntranceHeight: ENERGY_VAULT_ENTRANCE_HEIGHT / D,
+      centralCrownRadius: 0.55 * CROWN_SCALE / D,
       crownCollarOuterRadius: 2.02 / D,
       crownCollarInnerRadius: 1.55 / D,
       crownCollarHeight: 0.5 / D,
       crownCollarUpperLipHeight: 0.12 / D,
       crownCollarLowerLipHeight: 0.15 / D,
-      centralCrystalBaseHalfWidth: 0.55 / D,
-      centralCrystalBaseY: 3.5 / D,
-      centralCrystalApexY: 7.08 / D,
+      crownCollarSpringlineY: CROWN_COLLAR_SPRINGLINE_Y / D,
+      crownRadialScale: CROWN_SCALE,
+      crownVerticalScale: CROWN_VERTICAL_SCALE,
+      centralCrystalBaseHalfWidth: 0.55 * CROWN_SCALE / D,
+      centralCrystalBaseY: CROWN_MOUNT_Y / D,
+      centralCrystalApexY: CROWN_TARGET_APEX_Y / D,
       centralCrystalFacetSegments: 8,
-      centralCrystalSpineWidth: 0.12 / D,
-      centralCrystalSpineProud: 0.1 / D,
-      cageArchOuterWidth: CAGE_ARCH_WIDTH / D,
-      cageArchHeight: CAGE_ARCH_HEIGHT / D,
-      cageArchDepth: CAGE_ARCH_DEPTH / D,
-      cageArchOrbitRadius: CAGE_ARCH_ORBIT_RADIUS / D,
-      cageArchBaseOrbitRadius: CAGE_ARCH_ORBIT_RADIUS / D,
-      cageArchBaseOrbitMinRadius: Math.min(...CAGE_ARCH_ORBIT_RADII) / D,
-      cageArchBaseOrbitMaxRadius: Math.max(...CAGE_ARCH_ORBIT_RADII) / D,
+      centralCrystalSpineWidth: 0.12 * CROWN_SCALE / D,
+      centralCrystalSpineProud: 0.1 * CROWN_SCALE / D,
+      cageArchOuterWidth: CAGE_ARCH_WIDTH * CROWN_SCALE / D,
+      cageArchHeight: CAGE_ARCH_HEIGHT * CROWN_VERTICAL_SCALE / D,
+      cageArchDepth: CAGE_ARCH_DEPTH * CROWN_SCALE / D,
+      cageArchOrbitRadius: CAGE_ARCH_ORBIT_RADIUS * CROWN_SCALE / D,
+      cageArchBaseOrbitRadius: CAGE_ARCH_ORBIT_RADIUS * CROWN_SCALE / D,
+      cageArchBaseOrbitMinRadius: Math.min(...CAGE_ARCH_ORBIT_RADII) * CROWN_SCALE / D,
+      cageArchBaseOrbitMaxRadius: Math.max(...CAGE_ARCH_ORBIT_RADII) * CROWN_SCALE / D,
       cageArchRotationDegrees: CAGE_ARCH_ROTATION_DEGREES,
-      cageArchFootFlareWidth: CAGE_ARCH_FOOT_FLARE_WIDTH / D,
-      cageArchFootFlareDepth: CAGE_ARCH_FOOT_FLARE_DEPTH / D,
-      cageArchFootFlareHeight: CAGE_ARCH_FOOT_FLARE_HEIGHT / D,
+      cageArchFootFlareWidth: CAGE_ARCH_FOOT_FLARE_WIDTH * CROWN_SCALE / D,
+      cageArchFootFlareDepth: CAGE_ARCH_FOOT_FLARE_DEPTH * CROWN_SCALE / D,
+      cageArchFootFlareHeight: CAGE_ARCH_FOOT_FLARE_HEIGHT * CROWN_VERTICAL_SCALE / D,
       cageArchMaxRadius: 1.9 / D,
-      cageArchBaseY: CAGE_ARCH_BASE_Y / D,
-      cageArchApexY: CAGE_ARCH_APEX_Y / D,
-      cageArchApexRadius: CAGE_ARCH_APEX_RADIUS / D,
-      cageArchBodyRadius: CAGE_ARCH_BODY_RADIUS / D,
-      cageArchApexTangentialOffsetMax: Math.max(...CAGE_ARCH_APEX_TANGENTIAL_OFFSETS.map((value) => Math.abs(value))) / D,
-      cageArchBodyTangentialOffsetMax: Math.max(...CAGE_ARCH_BODY_TANGENTIAL_OFFSETS.map((value) => Math.abs(value))) / D,
-      cageArchFrontDepthOffsetMax: Math.max(...CAGE_ARCH_FRONT_DEPTH_OFFSETS) / D,
+      cageArchBaseY: (CROWN_MOUNT_Y + (CAGE_ARCH_BASE_Y - CROWN_SOURCE_BASE_Y) * CROWN_VERTICAL_SCALE) / D,
+      cageArchApexY: (CROWN_MOUNT_Y + (CAGE_ARCH_APEX_Y - CROWN_SOURCE_BASE_Y) * CROWN_VERTICAL_SCALE) / D,
+      cageArchApexRadius: CAGE_ARCH_APEX_RADIUS * CROWN_SCALE / D,
+      cageArchBodyRadius: CAGE_ARCH_BODY_RADIUS * CROWN_SCALE / D,
+      cageArchApexTangentialOffsetMax: Math.max(...CAGE_ARCH_APEX_TANGENTIAL_OFFSETS.map((value) => Math.abs(value))) * CROWN_SCALE / D,
+      cageArchBodyTangentialOffsetMax: Math.max(...CAGE_ARCH_BODY_TANGENTIAL_OFFSETS.map((value) => Math.abs(value))) * CROWN_SCALE / D,
+      cageArchFrontDepthOffsetMax: Math.max(...CAGE_ARCH_FRONT_DEPTH_OFFSETS) * CROWN_SCALE / D,
       cageArchBodyCrossStartMin: Math.min(...CAGE_ARCH_BODY_CROSS_STARTS.filter((value) => value > 0)),
       cageArchBodyCrossEndMax: Math.max(...CAGE_ARCH_BODY_CROSS_ENDS),
       cageArchApexBendStart: CAGE_ARCH_BEND_START,
@@ -687,60 +953,74 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     },
     moduleCounts: {
       foundation_disc: 1,
+      plinth_tier_1: 1,
+      plinth_tier_2: 1,
       lower_drum: 1,
       upper_drum: 1,
       entrance_bay: 1,
-      broad_front_stair: 5,
+      broad_front_stair: STAIR_TREAD_COUNT,
       primary_wing_source: 4,
       primary_wing_base_source: 4,
       primary_wing_upper_source: 4,
       secondary_buttress_source: 4,
       side_crystal_tower_source: 4,
+      energy_vault_frame: 1,
+      energy_vault_outer_punched_frame: 1,
+      energy_vault_recessed_opening: 1,
+      energy_vault_small_entrance_frame: 1,
+      energy_vault_small_entrance_recess: 1,
+      energy_vault_jewels: 1,
+      energy_vault_mandorla: 1,
+      energy_vault_seam_jewel: 1,
       central_crystal: 1,
       crystal_mandorla: 1,
       crystal_front_center_spine: 1,
       crystal_cage_arch_source: 4,
       banner_mount_source: 4,
+      crown_assembly: 1,
       crown_collar: 1,
       crown_collar_body: 1,
       crown_collar_upper_lip: 1,
       crown_collar_lower_lip: 1,
-      stage_2_crown: 1,
-      stage_3_crown: 1,
+      crown_lower_socket: 1,
       stage_4_crown: 1,
     },
     sourceIds,
     worldSpaceModuleCenters: {
       foundation_disc: [0, 0.14, 0],
-      lower_drum: [0, 1.08, 0],
-      upper_drum: [0, 2.38, 0],
-      entrance_bay: [0, 1.35, 2.1],
-      broad_front_stair: [0, 0.35, 3.2],
-      primary_wings: [0, 0.75, 0],
-      primary_wing_bases: [0, 0.75, 0],
-      primary_wing_uppers: [0, 1.83, 0],
-      primary_wing_base_0: [0, 0.75, 2.23],
-      primary_wing_base_1: [2.23, 0.75, 0],
-      primary_wing_base_2: [0, 0.75, -2.23],
-      primary_wing_base_3: [-2.23, 0.75, 0],
-      primary_wing_upper_0: [0, 1.82, 2.02],
-      primary_wing_upper_1: [2.02, 1.82, 0],
-      primary_wing_upper_2: [0, 1.82, -2.02],
-      primary_wing_upper_3: [-2.02, 1.82, 0],
-      side_crystal_towers: [0, 1.6, 0],
-      secondary_buttresses: [0, 1.2, 0],
-      crown_collar: [0, 3.27, 0],
-      crown_collar_body: [0, 3.23, 0],
-      crown_collar_upper_lip: [0, 3.46, 0],
-      crown_collar_lower_lip: [0, 3.11, 0],
-      central_crystal: [0, 5.29, 0],
-      crystal_mandorla: [0, 5.29, 0],
-      crystal_front_center_spine: [0, 5.24, 0.349],
-      crystal_cage_arches: [0, 5.13, 0],
-      banner_mounts: [0, 3.0, 0],
-      stage_2_crown: [0, 2.01, 0],
-      stage_3_crown: [0, 3.6, 0],
-      stage_4_crown: [0, 7.04, 0],
+      plinth_tier_1: [0, 1.1, 0],
+      plinth_tier_2: [0, 2.55, 0],
+      lower_drum: [0, LOWER_DRUM_CENTER_Y, 0],
+      upper_drum: [0, UPPER_DRUM_CENTER_Y, 0],
+      entrance_bay: [0, 4.8, 2.1],
+      broad_front_stair: [0, STAIR_TOP_Y * 0.5, (STAIR_FRONT_Z + STAIR_LAST_Z) * 0.5],
+      primary_wings: [0, PRIMARY_WING_BASE_CENTER_Y, 0],
+      primary_wing_bases: [0, PRIMARY_WING_BASE_CENTER_Y, 0],
+      primary_wing_uppers: [0, PRIMARY_WING_UPPER_CENTER_Y, 0],
+      primary_wing_base_0: [0, PRIMARY_WING_BASE_CENTER_Y, PRIMARY_WING_BASE_ORBIT_RADIUS],
+      primary_wing_base_1: [PRIMARY_WING_BASE_ORBIT_RADIUS, PRIMARY_WING_BASE_CENTER_Y, 0],
+      primary_wing_base_2: [0, PRIMARY_WING_BASE_CENTER_Y, -PRIMARY_WING_BASE_ORBIT_RADIUS],
+      primary_wing_base_3: [-PRIMARY_WING_BASE_ORBIT_RADIUS, PRIMARY_WING_BASE_CENTER_Y, 0],
+      primary_wing_upper_0: [0, PRIMARY_WING_UPPER_CENTER_Y, PRIMARY_WING_UPPER_ORBIT_RADIUS],
+      primary_wing_upper_1: [PRIMARY_WING_UPPER_ORBIT_RADIUS, PRIMARY_WING_UPPER_CENTER_Y, 0],
+      primary_wing_upper_2: [0, PRIMARY_WING_UPPER_CENTER_Y, -PRIMARY_WING_UPPER_ORBIT_RADIUS],
+      primary_wing_upper_3: [-PRIMARY_WING_UPPER_ORBIT_RADIUS, PRIMARY_WING_UPPER_CENTER_Y, 0],
+      side_crystal_towers: [0, 6.7, 0],
+      secondary_buttresses: [0, 6.6, 0],
+      energy_vault_frame: [0, 5.9, ENERGY_VAULT_CENTER_Z],
+      energy_vault_jewels: [0, 5.6, ENERGY_VAULT_JEWEL_CENTER_Z],
+      crown_assembly: [0, CROWN_TARGET_APEX_Y * 0.5 + CROWN_MOUNT_Y * 0.5, 0],
+      crown_collar: [0, 7.67, 0],
+      crown_collar_body: [0, 7.63, 0],
+      crown_collar_upper_lip: [0, 7.86, 0],
+      crown_collar_lower_lip: [0, 7.51, 0],
+      central_crystal: [0, 9.66, 0],
+      crystal_mandorla: [0, 9.66, 0],
+      crystal_front_center_spine: [0, 9.6, 0.471],
+      crystal_cage_arches: [0, 9.47, 0],
+      banner_mounts: [0, 3.575, 0],
+      crown_lower_socket: [0, 7.715, 0],
+      stage_4_crown: [0, 11.67, 0],
     },
   };
 

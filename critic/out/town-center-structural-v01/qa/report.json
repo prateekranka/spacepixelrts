@@ -1,0 +1,515 @@
+{
+  "base": "http://127.0.0.1:5174/town-center-structural-viewer.html",
+  "viewport": {
+    "width": 1180,
+    "height": 820
+  },
+  "captures": [
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-front-ortho.png",
+      "query": "ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1",
+      "mean": 131.24,
+      "variance": 409.06
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-right-ortho.png",
+      "query": "ui=0&view=right-ortho&stage=4&pass=beauty&freeze=1",
+      "mean": 121.85,
+      "variance": 245.2
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-back-ortho.png",
+      "query": "ui=0&view=back-ortho&stage=4&pass=beauty&freeze=1",
+      "mean": 121.25,
+      "variance": 262.75
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-left-ortho.png",
+      "query": "ui=0&view=left-ortho&stage=4&pass=beauty&freeze=1",
+      "mean": 130.14,
+      "variance": 415.21
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-top-ortho.png",
+      "query": "ui=0&view=top-ortho&stage=4&pass=beauty&freeze=1",
+      "mean": 127.16,
+      "variance": 475.19
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
+      "mean": 125.92,
+      "variance": 340.33
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-rear-3q.png",
+      "query": "ui=0&view=rear-3q&stage=4&pass=beauty&freeze=1",
+      "mean": 123.26,
+      "variance": 332.56
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-gameplay-close.png",
+      "query": "ui=0&view=gameplay-close&stage=4&pass=beauty&freeze=1",
+      "mean": 121.57,
+      "variance": 534.99
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-gameplay-normal.png",
+      "query": "ui=0&view=gameplay-normal&stage=4&pass=beauty&freeze=1",
+      "mean": 123.46,
+      "variance": 424.04
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/beauty-gameplay-far.png",
+      "query": "ui=0&view=gameplay-far&stage=4&pass=beauty&freeze=1",
+      "mean": 126.7,
+      "variance": 288.2
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/silhouette-front-ortho.png",
+      "query": "ui=0&view=front-ortho&stage=4&pass=silhouette&freeze=1",
+      "mean": 156.36,
+      "variance": 13689.1
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/silhouette-right-ortho.png",
+      "query": "ui=0&view=right-ortho&stage=4&pass=silhouette&freeze=1",
+      "mean": 154.35,
+      "variance": 13772.81
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/silhouette-back-ortho.png",
+      "query": "ui=0&view=back-ortho&stage=4&pass=silhouette&freeze=1",
+      "mean": 156.36,
+      "variance": 13689.1
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/silhouette-left-ortho.png",
+      "query": "ui=0&view=left-ortho&stage=4&pass=silhouette&freeze=1",
+      "mean": 154.35,
+      "variance": 13772.73
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/silhouette-top-ortho.png",
+      "query": "ui=0&view=top-ortho&stage=4&pass=silhouette&freeze=1",
+      "mean": 164.94,
+      "variance": 13304.49
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/front-wireframe.png",
+      "query": "ui=0&view=front-ortho&stage=4&pass=wireframe&freeze=1",
+      "mean": 119.68,
+      "variance": 869.95
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/front-normal.png",
+      "query": "ui=0&view=front-ortho&stage=4&pass=normal&freeze=1",
+      "mean": 146.8,
+      "variance": 514.46
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/front-depth.png",
+      "query": "ui=0&view=front-ortho&stage=4&pass=depth&freeze=1",
+      "mean": 170.55,
+      "variance": 1988.67
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/front-material-id.png",
+      "query": "ui=0&view=front-ortho&stage=4&pass=material-id&freeze=1",
+      "mean": 148.8,
+      "variance": 371.96
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/stage-1-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=1&pass=beauty&freeze=1",
+      "mean": 136.01,
+      "variance": 151.09
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/stage-2-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=2&pass=beauty&freeze=1",
+      "mean": 129.32,
+      "variance": 326.68
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/stage-3-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=3&pass=beauty&freeze=1",
+      "mean": 127.68,
+      "variance": 349.21
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/stage-4-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
+      "mean": 125.92,
+      "variance": 340.33
+    }
+  ],
+  "runtime": {
+    "ready": true,
+    "draws": 113,
+    "triangles": 10844,
+    "stage": 4,
+    "manifest": {
+      "assetId": "SunweaverTownCenter_Structural_v01",
+      "canonicalCivilization": "Sunweaver",
+      "footprintDiameter": 7,
+      "entranceAxis": "south",
+      "cageArchProfile": "solid-rib",
+      "normalizedDimensions": {
+        "footprintDiameter": 1,
+        "plinthTier1BottomY": 0.05714285714285715,
+        "plinthTier1TopY": 0.2571428571428572,
+        "plinthTier1BottomRadius": 0.5,
+        "plinthTier1TopRadius": 0.4714285714285714,
+        "plinthTier2BottomY": 0.2571428571428572,
+        "plinthTier2TopY": 0.4714285714285714,
+        "plinthTier2BottomRadius": 0.4785714285714286,
+        "plinthTier2TopRadius": 0.41428571428571426,
+        "lowerDrumRadius": 0.2785714285714286,
+        "lowerDrumHeight": 0.38571428571428573,
+        "upperDrumRadius": 0.23142857142857146,
+        "upperDrumHeight": 0.2285714285714286,
+        "crownHeight": 0.6138571428571427,
+        "entranceProjection": 0.03571428571428571,
+        "sideTowerRadius": 0.07857142857142858,
+        "sideTowerOuterReach": 0.42857142857142855,
+        "sideTowerVerticalScale": 0.44,
+        "secondaryButtressOuterReach": 0.4642857142857143,
+        "secondaryButtressVerticalScale": 0.62,
+        "primaryWingBaseOrbitRadius": 0.31857142857142856,
+        "primaryWingUpperOrbitRadius": 0.2885714285714286,
+        "primaryWingOuterReach": 0.49714285714285716,
+        "primaryWingTangentialWidth": 0.21142857142857144,
+        "primaryWingRadialDepth": 0.16714285714285712,
+        "primaryWingBaseHeight": 0.09428571428571429,
+        "entranceWidth": 0.2285714285714286,
+        "entranceBayBaseY": 0.4714285714285714,
+        "stairTreadCount": 20,
+        "stairTopY": 0.4714285714285714,
+        "energyVaultOuterWidth": 0.42857142857142855,
+        "energyVaultOuterHeight": 0.42857142857142855,
+        "energyVaultOuterBottomY": 0.6285714285714287,
+        "energyVaultFrameThickness": 0.05714285714285715,
+        "energyVaultFrameDepth": 0.05714285714285715,
+        "energyVaultOpeningWidth": 0.2571428571428572,
+        "energyVaultOpeningHeight": 0.37142857142857144,
+        "energyVaultRecessDepth": 0.0642857142857143,
+        "energyVaultMandorlaWidth": 0.15714285714285717,
+        "energyVaultMandorlaHeight": 0.24285714285714285,
+        "energyVaultSeamWidth": 0.05714285714285715,
+        "energyVaultSeamHeight": 0.07857142857142858,
+        "energyVaultEntranceWidth": 0.14285714285714285,
+        "energyVaultEntranceHeight": 0.1142857142857143,
+        "centralCrownRadius": 0.1060714285714286,
+        "crownCollarOuterRadius": 0.2885714285714286,
+        "crownCollarInnerRadius": 0.22142857142857145,
+        "crownCollarHeight": 0.07142857142857142,
+        "crownCollarUpperLipHeight": 0.017142857142857144,
+        "crownCollarLowerLipHeight": 0.02142857142857143,
+        "crownCollarSpringlineY": 1.0857142857142856,
+        "crownRadialScale": 1.35,
+        "crownVerticalScale": 1.15,
+        "centralCrystalBaseHalfWidth": 0.1060714285714286,
+        "centralCrystalBaseY": 1.0857142857142856,
+        "centralCrystalApexY": 1.6738571428571427,
+        "centralCrystalFacetSegments": 8,
+        "centralCrystalSpineWidth": 0.023142857142857142,
+        "centralCrystalSpineProud": 0.019285714285714288,
+        "cageArchOuterWidth": 0.189,
+        "cageArchHeight": 0.7339465373767347,
+        "cageArchDepth": 0.05014285714285715,
+        "cageArchOrbitRadius": 0.2603571428571429,
+        "cageArchBaseOrbitRadius": 0.2603571428571429,
+        "cageArchBaseOrbitMinRadius": 0.2507142857142857,
+        "cageArchBaseOrbitMaxRadius": 0.26999999999999996,
+        "cageArchRotationDegrees": 45,
+        "cageArchFootFlareWidth": 0.13885714285714285,
+        "cageArchFootFlareDepth": 0.09257142857142857,
+        "cageArchFootFlareHeight": 0.02957142857142857,
+        "cageArchMaxRadius": 0.2714285714285714,
+        "cageArchBaseY": 1.0824285714285715,
+        "cageArchApexY": 1.627857142857143,
+        "cageArchApexRadius": 0.03085714285714286,
+        "cageArchBodyRadius": 0.11957142857142858,
+        "cageArchApexTangentialOffsetMax": 0.03471428571428571,
+        "cageArchBodyTangentialOffsetMax": 0.14464285714285716,
+        "cageArchFrontDepthOffsetMax": 0.11571428571428573,
+        "cageArchBodyCrossStartMin": 0.28,
+        "cageArchBodyCrossEndMax": 0.88,
+        "cageArchApexBendStart": 0.6,
+        "cageArchCantDegrees": 42,
+        "cageArchSouthCantDegrees": 42,
+        "cageArchEastCantDegrees": 42,
+        "cageArchNorthCantDegrees": 42,
+        "cageArchWestCantDegrees": 42,
+        "cageArchDiagonal0YawDegrees": 225,
+        "cageArchDiagonal1YawDegrees": 315,
+        "cageArchDiagonal2YawDegrees": 45,
+        "cageArchDiagonal3YawDegrees": 135
+      },
+      "moduleCounts": {
+        "foundation_disc": 1,
+        "plinth_tier_1": 1,
+        "plinth_tier_2": 1,
+        "lower_drum": 1,
+        "upper_drum": 1,
+        "entrance_bay": 1,
+        "broad_front_stair": 20,
+        "primary_wing_source": 4,
+        "primary_wing_base_source": 4,
+        "primary_wing_upper_source": 4,
+        "secondary_buttress_source": 4,
+        "side_crystal_tower_source": 4,
+        "energy_vault_frame": 1,
+        "energy_vault_outer_punched_frame": 1,
+        "energy_vault_recessed_opening": 1,
+        "energy_vault_small_entrance_frame": 1,
+        "energy_vault_small_entrance_recess": 1,
+        "energy_vault_jewels": 1,
+        "energy_vault_mandorla": 1,
+        "energy_vault_seam_jewel": 1,
+        "central_crystal": 1,
+        "crystal_mandorla": 1,
+        "crystal_front_center_spine": 1,
+        "crystal_cage_arch_source": 4,
+        "banner_mount_source": 4,
+        "crown_assembly": 1,
+        "crown_collar": 1,
+        "crown_collar_body": 1,
+        "crown_collar_upper_lip": 1,
+        "crown_collar_lower_lip": 1,
+        "crown_lower_socket": 1,
+        "stage_4_crown": 1
+      },
+      "sourceIds": {
+        "primary_wing_source": "primary_wing_source",
+        "primary_wing_base_source": "primary_wing_base_source",
+        "primary_wing_upper_source": "primary_wing_upper_source",
+        "secondary_buttress_source": "secondary_buttress_source",
+        "side_crystal_tower_source": "side_crystal_tower_source",
+        "energy_vault_frame": "energy_vault_frame",
+        "energy_vault_jewels": "energy_vault_jewels",
+        "crown_collar": "crown_collar",
+        "crown_assembly": "accepted_crown_assembly",
+        "crystal_cage_arch_source": "crystal_cage_arch_source",
+        "banner_mount_source": "banner_mount_source"
+      },
+      "worldSpaceModuleCenters": {
+        "foundation_disc": [
+          0,
+          0.14,
+          0
+        ],
+        "plinth_tier_1": [
+          0,
+          1.1,
+          0
+        ],
+        "plinth_tier_2": [
+          0,
+          2.55,
+          0
+        ],
+        "lower_drum": [
+          0,
+          4.65,
+          0
+        ],
+        "upper_drum": [
+          0,
+          6.8,
+          0
+        ],
+        "entrance_bay": [
+          0,
+          4.8,
+          2.1
+        ],
+        "broad_front_stair": [
+          0,
+          1.65,
+          2.55
+        ],
+        "primary_wings": [
+          0,
+          3.9,
+          0
+        ],
+        "primary_wing_bases": [
+          0,
+          3.9,
+          0
+        ],
+        "primary_wing_uppers": [
+          0,
+          5.2,
+          0
+        ],
+        "primary_wing_base_0": [
+          0,
+          3.9,
+          2.23
+        ],
+        "primary_wing_base_1": [
+          2.23,
+          3.9,
+          0
+        ],
+        "primary_wing_base_2": [
+          0,
+          3.9,
+          -2.23
+        ],
+        "primary_wing_base_3": [
+          -2.23,
+          3.9,
+          0
+        ],
+        "primary_wing_upper_0": [
+          0,
+          5.2,
+          2.02
+        ],
+        "primary_wing_upper_1": [
+          2.02,
+          5.2,
+          0
+        ],
+        "primary_wing_upper_2": [
+          0,
+          5.2,
+          -2.02
+        ],
+        "primary_wing_upper_3": [
+          -2.02,
+          5.2,
+          0
+        ],
+        "side_crystal_towers": [
+          0,
+          6.7,
+          0
+        ],
+        "secondary_buttresses": [
+          0,
+          6.6,
+          0
+        ],
+        "energy_vault_frame": [
+          0,
+          5.9,
+          2.25
+        ],
+        "energy_vault_jewels": [
+          0,
+          5.6,
+          2.15
+        ],
+        "crown_assembly": [
+          0,
+          9.6585,
+          0
+        ],
+        "crown_collar": [
+          0,
+          7.67,
+          0
+        ],
+        "crown_collar_body": [
+          0,
+          7.63,
+          0
+        ],
+        "crown_collar_upper_lip": [
+          0,
+          7.86,
+          0
+        ],
+        "crown_collar_lower_lip": [
+          0,
+          7.51,
+          0
+        ],
+        "central_crystal": [
+          0,
+          9.66,
+          0
+        ],
+        "crystal_mandorla": [
+          0,
+          9.66,
+          0
+        ],
+        "crystal_front_center_spine": [
+          0,
+          9.6,
+          0.471
+        ],
+        "crystal_cage_arches": [
+          0,
+          9.47,
+          0
+        ],
+        "banner_mounts": [
+          0,
+          3.575,
+          0
+        ],
+        "crown_lower_socket": [
+          0,
+          7.715,
+          0
+        ],
+        "stage_4_crown": [
+          0,
+          11.67,
+          0
+        ]
+      }
+    },
+    "partNames": [
+      "foundation_disc",
+      "entrance_axis_marker",
+      "central_socket",
+      "plinth_tier_1",
+      "plinth_tier_2",
+      "lower_drum",
+      "entrance_bay",
+      "broad_front_stair",
+      "primary_wing_base_0",
+      "primary_wing_upper_0",
+      "primary_wing_base_1",
+      "primary_wing_upper_1",
+      "primary_wing_base_2",
+      "primary_wing_upper_2",
+      "primary_wing_base_3",
+      "primary_wing_upper_3",
+      "primary_wing_source",
+      "primary_wing_base_source",
+      "primary_wing_upper_source",
+      "upper_drum",
+      "side_crystal_tower_source",
+      "secondary_buttress_source",
+      "energy_vault_frame",
+      "energy_vault_outer_punched_frame",
+      "energy_vault_recessed_opening",
+      "energy_vault_small_entrance_frame",
+      "energy_vault_small_entrance_recess",
+      "crown_collar",
+      "crown_collar_body",
+      "crown_collar_upper_lip",
+      "crown_collar_lower_lip",
+      "crown_lower_socket",
+      "central_crystal",
+      "crystal_front_center_spine",
+      "crystal_cage_arch_source",
+      "stage_4_crown",
+      "crown_assembly",
+      "energy_vault_jewels",
+      "energy_vault_mandorla",
+      "energy_vault_seam_jewel",
+      "banner_mount_source"
+    ]
+  },
+  "errors": []
+}

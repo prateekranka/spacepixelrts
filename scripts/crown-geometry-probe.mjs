@@ -1,4 +1,4 @@
-// Objective geometry probe: why do the cage ribs not cross the mandorla in front ortho?
+// Objective geometry probe: verify the remounted crown cage crosses the scaled mandorla.
 // Loads the structural viewer (front-ortho, stage 4), computes world-space AABBs of the
 // cage ribs vs the mandorla/spine, and reports x-overlap bands per y-slice.
 import { chromium } from 'playwright';
@@ -77,7 +77,11 @@ const report = await page.evaluate(() => {
     }
   }
 
-  const mandorlaX = [-0.55, 0.55];
+  // The crown mandorla is scaled in PTC-CLAY-07. Use its measured world AABB
+  // instead of the pre-scale hard-coded range, and ignore the new vault jewel.
+  const crystalMandorlaKey = Object.keys(boxes).find((key) => key.startsWith('crystal_mandorla@'));
+  const mandorlaBox = crystalMandorlaKey ? boxes[crystalMandorlaKey] : null;
+  const mandorlaX = mandorlaBox ? [mandorlaBox.min[0], mandorlaBox.max[0]] : [-0.55, 0.55];
   const intersectingXAtY = (a, b, y) => {
     const dy = b[1] - a[1];
     if (Math.abs(dy) < 1e-8) return Math.abs(a[1] - y) < 1e-5 ? [a[0], b[0]] : [];
@@ -155,7 +159,7 @@ show(arches);
 console.log('\n-- flares --');
 show(flares);
 
-console.log('\n-- PTC-CLAY-06 objective checks --');
+console.log('\n-- PTC-CLAY-07 crown objective checks --');
 for (const talon of report.objectiveTalons) {
   console.log(`  ${talon.key}: x-overlap fraction ${talon.overlapFraction} (${talon.overlapSlices}/${talon.sliceCount} slices, height ${talon.ownHeight})  face angle ${talon.faceAngleDegrees}°  max radius ${talon.maxRadius}  apex-band radius ${talon.apexBandMaxRadius}  normal [${talon.normal.join(', ')}]`);
 }
