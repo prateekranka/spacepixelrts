@@ -1279,6 +1279,7 @@ export function createSunweaverTownCenter(
     turret.scale.y = 1.22;
     turretRing.add(turret);
   }
+  turretRing.rotation.y = -Math.PI * 0.125;
   registerPart(3, turretRing);
   registerPart(3, createConduits(materials));
   const frontHeart = createFrontHeartFacade(materials);
