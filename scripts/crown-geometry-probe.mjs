@@ -2,8 +2,11 @@
 // Loads the structural viewer (front-ortho, stage 4), computes world-space AABBs of the
 // cage ribs vs the mandorla/spine, and reports x-overlap bands per y-slice.
 import { chromium } from 'playwright';
+import { PNG } from 'pngjs';
+import { mkdirSync } from 'node:fs';
 
 const URL = 'http://127.0.0.1:5174/town-center-structural-viewer.html?ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1';
+const LUMINANCE_CAPTURE = 'critic/out/town-center-structural-v01/beauty-front-ortho-mandorla-gate.png';
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await browser.newPage({ viewport: { width: 1180, height: 820 } });
@@ -125,6 +128,79 @@ const report = await page.evaluate(() => {
   return { boxes, meshNames: meshes.map((m) => m.name), objectiveTalons };
 });
 
+// The fixed front-ortho QA camera is centred on the lower building and clips the
+// remounted crown. Capture a mandorla-focused front beauty frame for the objective
+// gate without changing the runtime viewer camera or the committed shot set.
+const mandorlaKey = Object.keys(report.boxes).find((key) => key.startsWith('crystal_mandorla@'));
+const mandorlaBox = mandorlaKey ? report.boxes[mandorlaKey] : null;
+let luminance = { image: LUMINANCE_CAPTURE, pass: false, samples: [], reason: 'mandorla AABB unavailable' };
+if (mandorlaBox) {
+  const centerY = (mandorlaBox.min[1] + mandorlaBox.max[1]) / 2;
+  const halfHeight = Math.max((mandorlaBox.max[1] - mandorlaBox.min[1]) / 2 + 0.45, 2.35);
+  await page.evaluate(({ centerY: y, halfHeight: half }) => {
+    const host = window.__SUNWEAVER_STRUCTURAL__;
+    host.camera.position.set(0, y, 12);
+    host.camera.lookAt(0, y, 0);
+    const aspect = window.innerWidth / window.innerHeight;
+    host.camera.left = -half * aspect;
+    host.camera.right = half * aspect;
+    host.camera.top = half;
+    host.camera.bottom = -half;
+    host.camera.updateProjectionMatrix();
+    // Isolate the mandorla/spine so crossing cage shadows cannot mask the center
+    // column that this gate is intended to measure.
+    const cage = host.model.getObjectByName('crystal_cage_arches');
+    if (cage) cage.visible = false;
+  }, { centerY, halfHeight });
+  mkdirSync('critic/out/town-center-structural-v01', { recursive: true });
+  const imageBuffer = await page.screenshot({ path: LUMINANCE_CAPTURE });
+  const png = PNG.sync.read(imageBuffer);
+  const imageCenterX = png.width / 2;
+  const imageCenterY = png.height / 2;
+  const pxPerWorldX = png.width / (2 * halfHeight * (png.width / png.height));
+  const pxPerWorldY = png.height / (2 * halfHeight);
+  const halfWidth = (mandorlaBox.max[0] - mandorlaBox.min[0]) / 2;
+  const sideOffsetPx = halfWidth * 0.5 * pxPerWorldX;
+  const lumaAt = (x, y) => {
+    let sum = 0;
+    let count = 0;
+    const radius = 3;
+    for (let yy = Math.max(0, Math.round(y) - radius); yy <= Math.min(png.height - 1, Math.round(y) + radius); yy++) {
+      for (let xx = Math.max(0, Math.round(x) - radius); xx <= Math.min(png.width - 1, Math.round(x) + radius); xx++) {
+        const offset = (yy * png.width + xx) * 4;
+        sum += 0.299 * png.data[offset] + 0.587 * png.data[offset + 1] + 0.114 * png.data[offset + 2];
+        count++;
+      }
+    }
+    return sum / count;
+  };
+  const samples = [0.25, 0.55].map((fraction) => {
+    const worldY = mandorlaBox.min[1] + fraction * (mandorlaBox.max[1] - mandorlaBox.min[1]);
+    const screenY = imageCenterY - (worldY - centerY) * pxPerWorldY;
+    const center = lumaAt(imageCenterX, screenY);
+    const left = lumaAt(imageCenterX - sideOffsetPx, screenY);
+    const right = lumaAt(imageCenterX + sideOffsetPx, screenY);
+    const side = (left + right) / 2;
+    return {
+      heightFraction: fraction,
+      worldY: Math.round(worldY * 1000) / 1000,
+      screenY: Math.round(screenY * 10) / 10,
+      center: Math.round(center * 100) / 100,
+      left: Math.round(left * 100) / 100,
+      right: Math.round(right * 100) / 100,
+      side: Math.round(side * 100) / 100,
+      delta: Math.round((center - side) * 100) / 100,
+      pass: center >= side - 2,
+    };
+  });
+  luminance = {
+    image: LUMINANCE_CAPTURE,
+    samples,
+    pass: samples.every((sample) => sample.pass),
+    method: 'center column vs side columns at half mandorla width on a crown-framed front beauty capture',
+  };
+}
+
 // Front ortho: screen-x == world-x (camera looks down -Z). Judge overlap in world x.
 const B = report.boxes;
 const names = Object.keys(B);
@@ -174,6 +250,13 @@ console.log(`  geometry limits: ${report.objectiveTalons.length} talons, max rad
 const objectivePass = report.objectiveTalons.length === 4 && overlapPassCount >= 2 && facePassCount === 4 && maxTalonRadius <= 1.9 && maxApexBandRadius <= 0.4;
 console.log(`  objective checks: ${objectivePass ? 'PASS' : 'FAIL'}`);
 if (!objectivePass) process.exitCode = 1;
+
+console.log('\n-- mandorla luminance gate --');
+for (const sample of luminance.samples ?? []) {
+  console.log(`  ${Math.round(sample.heightFraction * 100)}% height Y${sample.worldY}: center ${sample.center}, side ${sample.side} (left ${sample.left}, right ${sample.right}), delta ${sample.delta} -> ${sample.pass ? 'PASS' : 'FAIL'}`);
+}
+console.log(`  luminance gate: ${luminance.pass ? 'PASS' : 'FAIL'} (${luminance.image})`);
+if (!luminance.pass) process.exitCode = 1;
 
 // Screen-space crossing check: at what y bands does any rib's x-range overlap the mandorla's x-range?
 if (mandorla.length && arches.length) {

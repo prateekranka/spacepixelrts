@@ -98,10 +98,14 @@ const CROWN_SCALE = 1.35;
 const CROWN_VERTICAL_SCALE = 1.15;
 const CROWN_MOUNT_Y = CROWN_COLLAR_SPRINGLINE_Y;
 const CROWN_TARGET_APEX_Y = CROWN_MOUNT_Y + (7.08 - CROWN_SOURCE_BASE_Y) * CROWN_VERTICAL_SCALE;
-const CENTRAL_CRYSTAL_BASE_HALF_WIDTH = 0.70;
+const CENTRAL_CRYSTAL_BASE_HALF_WIDTH = 0.685;
+const CENTRAL_CRYSTAL_MAX_HALF_WIDTH = 0.70;
 const CENTRAL_CRYSTAL_FACET_SEGMENTS = 8;
-const CENTRAL_CRYSTAL_SPINE_WIDTH = 0.165;
-const CENTRAL_CRYSTAL_SPINE_PROUD = 0.135;
+// Source-space dimensions become ~0.46 wide and ~0.21 proud after the accepted
+// 1.35 radial crown scale. The broad rib must remain visible through the flat clay.
+const CENTRAL_CRYSTAL_SPINE_WIDTH = 0.34;
+const CENTRAL_CRYSTAL_SPINE_PROUD = 0.155;
+const CENTRAL_CRYSTAL_FRONT_BULGE = 0.14;
 const CAGE_ARCH_BASE_Y = 3.48;
 const CAGE_ARCH_ORBIT_RADIUS = 1.35;
 const CAGE_ARCH_ORBIT_RADII = [1.3, 1.4, 1.4, 1.3] as const;
@@ -235,13 +239,90 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return mesh(new THREE.LatheGeometry(points, segments), name);
   }
 
+  /**
+   * Closed almond prism with a shallow, strictly convex front envelope.
+   * The front is divided into eight planar strips so the center stays broad and lit;
+   * the rear plane and side/cap faces keep the shell watertight from every view.
+   */
+  function convexMandorla(name: string, profile: readonly [number, number][], segments: number, frontBulge: number, rearDepth: number): THREE.Mesh {
+    const rowCount = profile.length;
+    const columns = segments + 1;
+    const maxHalfWidth = Math.max(...profile.map(([radius]) => radius));
+    const frontIndex = (row: number, column: number) => (row * columns + column) * 2;
+    const rearIndex = (row: number, column: number) => (row * columns + column) * 2 + 1;
+    const vertices = new Float32Array(rowCount * columns * 2 * 3);
+    for (let row = 0; row < rowCount; row++) {
+      const [halfWidth, y] = profile[row];
+      const widthRatio = maxHalfWidth > 0 ? halfWidth / maxHalfWidth : 0;
+      const rowBulge = frontBulge * (0.16 + 0.84 * widthRatio);
+      const rearZ = -rearDepth * (0.78 + 0.22 * widthRatio);
+      for (let column = 0; column < columns; column++) {
+        const u = column / segments * 2 - 1;
+        const x = halfWidth * u;
+        // A parabola gives positive curvature toward +Z at every non-degenerate row.
+        const frontZ = rowBulge * (1 - u * u);
+        const frontOffset = frontIndex(row, column) * 3;
+        vertices[frontOffset] = x;
+        vertices[frontOffset + 1] = y;
+        vertices[frontOffset + 2] = frontZ;
+        const rearOffset = rearIndex(row, column) * 3;
+        vertices[rearOffset] = x;
+        vertices[rearOffset + 1] = y;
+        vertices[rearOffset + 2] = rearZ;
+      }
+    }
+    const indices: number[] = [];
+    for (let row = 0; row < rowCount - 1; row++) {
+      for (let column = 0; column < segments; column++) {
+        const a = frontIndex(row, column);
+        const b = frontIndex(row, column + 1);
+        const c = frontIndex(row + 1, column);
+        const d = frontIndex(row + 1, column + 1);
+        // Front winding points toward +Z, the viewer-facing side.
+        indices.push(a, b, c, b, d, c);
+        const ar = rearIndex(row, column);
+        const br = rearIndex(row, column + 1);
+        const cr = rearIndex(row + 1, column);
+        const dr = rearIndex(row + 1, column + 1);
+        indices.push(ar, cr, br, br, cr, dr);
+      }
+      const leftFront = frontIndex(row, 0);
+      const leftFrontNext = frontIndex(row + 1, 0);
+      const leftRear = rearIndex(row, 0);
+      const leftRearNext = rearIndex(row + 1, 0);
+      indices.push(leftFront, leftFrontNext, leftRear, leftFrontNext, leftRearNext, leftRear);
+      const rightFront = frontIndex(row, segments);
+      const rightFrontNext = frontIndex(row + 1, segments);
+      const rightRear = rearIndex(row, segments);
+      const rightRearNext = rearIndex(row + 1, segments);
+      indices.push(rightFront, rightRear, rightFrontNext, rightRear, rightRearNext, rightFrontNext);
+    }
+    for (let column = 0; column < segments; column++) {
+      const bottomFront = frontIndex(0, column);
+      const bottomFrontNext = frontIndex(0, column + 1);
+      const bottomRear = rearIndex(0, column);
+      const bottomRearNext = rearIndex(0, column + 1);
+      indices.push(bottomFront, bottomRear, bottomFrontNext, bottomRear, bottomRearNext, bottomFrontNext);
+      const topFront = frontIndex(rowCount - 1, column);
+      const topFrontNext = frontIndex(rowCount - 1, column + 1);
+      const topRear = rearIndex(rowCount - 1, column);
+      const topRearNext = rearIndex(rowCount - 1, column + 1);
+      indices.push(topFront, topFrontNext, topRear, topFrontNext, topRearNext, topRear);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return mesh(geometry, name);
+  }
+
   /** Narrow front-facing ridge with a controlled proud depth over the crystal surface. */
-  function frontSpine(name: string, profile: readonly [number, number][], width: number, proud: number): THREE.Mesh {
+  function frontSpine(name: string, profile: readonly [number, number][], width: number, proud: number, widthProfile?: readonly number[]): THREE.Mesh {
     const rowCount = profile.length;
     const vertices = new Float32Array(rowCount * 4 * 3);
     for (let row = 0; row < rowCount; row++) {
       const [radius, y] = profile[row];
-      const halfWidth = width * 0.5;
+      const halfWidth = (widthProfile?.[row] ?? width) * 0.5;
       const backZ = radius + 0.008;
       const frontZ = radius + proud;
       const offset = row * 12;
@@ -268,6 +349,10 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       indices.push(b, a, a + 2, b, a + 2, b + 2);
       indices.push(a + 3, b + 3, b + 1, a + 3, b + 1, a + 1);
     }
+    // Close both ends of the rib so its raised plane is a solid, finite volume.
+    indices.push(0, 1, 2, 1, 3, 2);
+    const top = (rowCount - 1) * 4;
+    indices.push(top, top + 2, top + 1, top + 1, top + 2, top + 3);
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     geometry.setIndex(indices);
@@ -511,45 +596,62 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return source;
   }
 
-  /** Broad faceted almond/mandorla with a proud front spine (stage 4 only). */
+  /** Broad convex faceted almond/mandorla with a continuous proud front spine (stage 4 only). */
   function makeCentralCrystal(): THREE.Group {
     const crystal = group('central_crystal');
-    // Stepped shoulders keep the eight-segment lathe visibly planar in flat clay.
+    // The base is already broad at the collar; the max width sits around 40% of
+    // the source height, then tapers monotonically to the pointed apex.
     const mandorlaProfile: readonly [number, number][] = [
-      [0, 3.5],
-      [0.48, 3.56],
-      [0.66, 3.78],
-      [0.70, 4.04],
-      [0.68, 4.30],
-      [0.59, 4.72],
-      [0.48, 5.12],
-      [0.37, 5.55],
-      [0.27, 5.98],
-      [0.17, 6.38],
-      [0.09, 6.72],
-      [0, 7.08],
+      [CENTRAL_CRYSTAL_BASE_HALF_WIDTH, 3.5],
+      [0.687, 3.62],
+      [0.69, 3.92],
+      [0.695, 4.38],
+      [CENTRAL_CRYSTAL_MAX_HALF_WIDTH, 4.68],
+      [CENTRAL_CRYSTAL_MAX_HALF_WIDTH, 4.94],
+      [0.68, 5.26],
+      [0.61, 5.62],
+      [0.52, 5.98],
+      [0.42, 6.30],
+      [0.32, 6.56],
+      [0.21, 6.78],
+      [0.10, 6.98],
+      [0.001, 7.08],
     ];
-    const body = lathe('crystal_mandorla', mandorlaProfile, CENTRAL_CRYSTAL_FACET_SEGMENTS);
+    const body = convexMandorla(
+      'crystal_mandorla',
+      mandorlaProfile,
+      CENTRAL_CRYSTAL_FACET_SEGMENTS,
+      CENTRAL_CRYSTAL_FRONT_BULGE,
+      0.20,
+    );
     crystal.add(body);
 
     const spineProfile: readonly [number, number][] = [
-      [0.38, 3.54],
-      [0.58, 3.72],
-      [0.68, 4.04],
-      [0.64, 4.30],
-      [0.57, 4.72],
-      [0.47, 5.12],
-      [0.36, 5.55],
-      [0.26, 5.98],
-      [0.17, 6.38],
-      [0.09, 6.72],
-      [0.02, 7.04],
+      [0.15, 3.5],
+      [0.15, 3.62],
+      [0.15, 3.92],
+      [0.15, 4.38],
+      [0.15, 4.68],
+      [0.15, 4.94],
+      [0.14, 5.26],
+      [0.13, 5.62],
+      [0.11, 5.98],
+      [0.09, 6.30],
+      [0.07, 6.56],
+      [0.05, 6.78],
+      [0.03, 6.98],
+      [0.001, 7.08],
+    ];
+    const spineWidthProfile: readonly number[] = [
+      0.29, 0.30, 0.32, 0.34, 0.34, 0.34, 0.32,
+      0.29, 0.25, 0.20, 0.15, 0.10, 0.05, 0.005,
     ];
     const spine = frontSpine(
       'crystal_front_center_spine',
       spineProfile,
       CENTRAL_CRYSTAL_SPINE_WIDTH,
       CENTRAL_CRYSTAL_SPINE_PROUD,
+      spineWidthProfile,
     );
     crystal.add(spine);
     return crystal;
@@ -863,6 +965,8 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     energy_vault_jewels: 'energy_vault_jewels',
     crown_collar: 'crown_collar',
     crown_assembly: 'accepted_crown_assembly',
+    crystal_mandorla: 'convex-faceted-shell',
+    crystal_front_center_spine: 'broad-continuous-rib-plane',
     crystal_cage_arch_source: 'crystal_cage_arch_source',
     banner_mount_source: 'banner_mount_source',
   };
@@ -929,6 +1033,8 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       crownRadialScale: CROWN_SCALE,
       crownVerticalScale: CROWN_VERTICAL_SCALE,
       centralCrystalBaseHalfWidth: CENTRAL_CRYSTAL_BASE_HALF_WIDTH * CROWN_SCALE / D,
+      centralCrystalMaxHalfWidth: CENTRAL_CRYSTAL_MAX_HALF_WIDTH * CROWN_SCALE / D,
+      centralCrystalFrontBulge: CENTRAL_CRYSTAL_FRONT_BULGE * CROWN_SCALE / D,
       centralCrystalBaseY: CROWN_MOUNT_Y / D,
       centralCrystalApexY: CROWN_TARGET_APEX_Y / D,
       centralCrystalFacetSegments: CENTRAL_CRYSTAL_FACET_SEGMENTS,
@@ -1031,7 +1137,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       crown_collar_lower_lip: [0, 7.51, 0],
       central_crystal: [0, 9.66, 0],
       crystal_mandorla: [0, 9.66, 0],
-      crystal_front_center_spine: [0, 9.6, 0.471],
+      crystal_front_center_spine: [0, 9.66, (CENTRAL_CRYSTAL_FRONT_BULGE + CENTRAL_CRYSTAL_SPINE_PROUD * 0.5) * CROWN_SCALE],
       crystal_cage_arches: [0, 9.47, 0],
       banner_mounts: [0, 3.575, 0],
       crown_lower_socket: [0, 7.715, 0],
