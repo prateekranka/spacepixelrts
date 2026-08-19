@@ -980,6 +980,59 @@ function createGallery(materials: MaterialSet, angle: number, index: number): TH
   return group;
 }
 
+function createWingDetailKit(materials: MaterialSet): THREE.Group {
+  // One shared compact meso-detail module, built once and cloned onto each of
+  // the four gallery wings (clone() shares geometry and material instances).
+  // Built in a local frame where +z is the wing's outward facade direction.
+  const kit = new THREE.Group();
+  kit.name = 'wing-detail-kit';
+
+  // Two vertical gold pilasters flanking the outer facade (radius 3.20 face).
+  const pilasterGeometry = new RoundedBoxGeometry(0.16, 1.06, 0.18, 2, 0.03);
+  for (const side of [-1, 1]) {
+    const pilaster = new THREE.Mesh(pilasterGeometry, materials.gold);
+    pilaster.name = 'wing-pilasters';
+    pilaster.position.set(side * 0.56, 2.0, 3.28);
+    kit.add(pilaster);
+  }
+
+  // Two horizontal gold bands integrated into the wing shell.
+  const bandGeometry = new RoundedBoxGeometry(1.4, 0.09, 0.12, 2, 0.02);
+  for (const y of [1.62, 2.46]) {
+    const band = new THREE.Mesh(bandGeometry, materials.gold);
+    band.name = 'wing-gold-bands';
+    band.position.set(0, y, 3.21);
+    kit.add(band);
+  }
+
+  // One small pointed side arch (gold frame + dark recessed panel) per lateral
+  // side of the wing shell, facing tangentially.
+  const sideArchGeometry = pointedArchFrame(0.44, 0.6, 0.1, 0.05).geometry;
+  const sideCavityGeometry = pointedArchFill(0.32, 0.48);
+  for (const side of [-1, 1]) {
+    const frame = new THREE.Mesh(sideArchGeometry, materials.gold);
+    frame.name = 'wing-side-arches';
+    frame.position.set(side * 0.645, 2.0, 2.34);
+    frame.rotation.y = side * Math.PI * 0.5;
+    kit.add(frame);
+    const cavity = new THREE.Mesh(sideCavityGeometry, materials.cavity);
+    cavity.name = 'wing-side-arches';
+    cavity.position.set(side * 0.648, 2.0, 2.34);
+    cavity.rotation.y = side * Math.PI * 0.5;
+    kit.add(cavity);
+  }
+
+  // Two small cyan almond insets on the outer facade.
+  const almondGeometry = almondExtrudedGeometry(0.3, 0.44, 0.05, 0.016);
+  for (const side of [-1, 1]) {
+    const almond = new THREE.Mesh(almondGeometry, materials.mandorla);
+    almond.name = 'wing-almond-insets';
+    almond.position.set(side * 0.3, 2.0, 3.215);
+    kit.add(almond);
+  }
+  return kit;
+}
+
 function createPauldronPlates(materials: MaterialSet): THREE.Group {
   const group = new THREE.Group();
   group.name = 'mid-crown';
@@ -1255,7 +1308,14 @@ export function createSunweaverTownCenter(
 
   const galleryRing = new THREE.Group();
   galleryRing.name = 'roof-wedges';
-  for (let index = 0; index < 4; index++) galleryRing.add(createGallery(materials, (index / 4) * Math.PI * 2, index));
+  const wingDetailKit = createWingDetailKit(materials);
+  for (let index = 0; index < 4; index++) {
+    const gallery = createGallery(materials, (index / 4) * Math.PI * 2, index);
+    const kit = wingDetailKit.clone();
+    kit.rotation.y = (index / 4) * Math.PI * 2;
+    gallery.add(kit);
+    galleryRing.add(gallery);
+  }
   registerPart(2, galleryRing);
   registerPart(2, createPauldronPlates(materials));
   registerPart(2, createWishboneRibs(materials));
@@ -1271,7 +1331,11 @@ export function createSunweaverTownCenter(
   registerPart(3, turretRing);
   registerPart(3, createConduits(materials));
   const frontHeart = createFrontHeartFacade(materials);
-  frontHeart.scale.setScalar(0.9);
+  // PTC-I13: raise the complete front-approach hero assembly to an exact scale
+  // in 1.03-1.05 so the cyan almond, deep arch, pauldron lips, and side weave
+  // read large and unobstructed. The group anchor keeps its attachment point
+  // and footprint; only the hero children scale.
+  frontHeart.scale.setScalar(1.04);
   registerPart(3, frontHeart);
 
   const banners: THREE.Mesh[] = [];
