@@ -8,86 +8,86 @@
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 131.24,
-      "variance": 409.06
+      "mean": 131.32,
+      "variance": 395.04
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 121.85,
-      "variance": 245.2
+      "mean": 121.88,
+      "variance": 236.08
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 121.25,
-      "variance": 262.75
+      "mean": 121.22,
+      "variance": 255.48
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 130.14,
-      "variance": 415.21
+      "mean": 130.33,
+      "variance": 402.19
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-top-ortho.png",
       "query": "ui=0&view=top-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 127.16,
-      "variance": 475.19
+      "mean": 126.61,
+      "variance": 458.68
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 125.92,
-      "variance": 340.33
+      "mean": 125.65,
+      "variance": 336.62
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-rear-3q.png",
       "query": "ui=0&view=rear-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 123.26,
-      "variance": 332.56
+      "mean": 123.01,
+      "variance": 331.36
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-close.png",
       "query": "ui=0&view=gameplay-close&stage=4&pass=beauty&freeze=1",
-      "mean": 121.57,
-      "variance": 534.99
+      "mean": 121.32,
+      "variance": 516.56
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-normal.png",
       "query": "ui=0&view=gameplay-normal&stage=4&pass=beauty&freeze=1",
-      "mean": 123.46,
-      "variance": 424.04
+      "mean": 123.22,
+      "variance": 411.86
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-far.png",
       "query": "ui=0&view=gameplay-far&stage=4&pass=beauty&freeze=1",
-      "mean": 126.7,
-      "variance": 288.2
+      "mean": 126.49,
+      "variance": 285.1
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 156.36,
-      "variance": 13689.1
+      "mean": 155.82,
+      "variance": 13713.13
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 154.35,
-      "variance": 13772.81
+      "mean": 153.94,
+      "variance": 13789.78
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 156.36,
-      "variance": 13689.1
+      "mean": 155.82,
+      "variance": 13713.13
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 154.35,
-      "variance": 13772.73
+      "mean": 153.94,
+      "variance": 13789.73
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-top-ortho.png",
@@ -98,26 +98,26 @@
     {
       "file": "critic/out/town-center-structural-v01/front-wireframe.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=wireframe&freeze=1",
-      "mean": 119.68,
-      "variance": 869.95
+      "mean": 119.51,
+      "variance": 879.93
     },
     {
       "file": "critic/out/town-center-structural-v01/front-normal.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=normal&freeze=1",
-      "mean": 146.8,
-      "variance": 514.46
+      "mean": 147.08,
+      "variance": 511.32
     },
     {
       "file": "critic/out/town-center-structural-v01/front-depth.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=depth&freeze=1",
-      "mean": 170.55,
-      "variance": 1988.67
+      "mean": 170.79,
+      "variance": 1995.77
     },
     {
       "file": "critic/out/town-center-structural-v01/front-material-id.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=material-id&freeze=1",
-      "mean": 148.8,
-      "variance": 371.96
+      "mean": 148.86,
+      "variance": 370.97
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-1-front-3q.png",
@@ -134,20 +134,20 @@
     {
       "file": "critic/out/town-center-structural-v01/stage-3-front-3q.png",
       "query": "ui=0&view=front-3q&stage=3&pass=beauty&freeze=1",
-      "mean": 127.68,
-      "variance": 349.21
+      "mean": 127.44,
+      "variance": 345.5
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-4-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 125.92,
-      "variance": 340.33
+      "mean": 125.65,
+      "variance": 336.62
     }
   ],
   "runtime": {
     "ready": true,
     "draws": 113,
-    "triangles": 10844,
+    "triangles": 10860,
     "stage": 4,
     "manifest": {
       "assetId": "SunweaverTownCenter_Structural_v01",
@@ -173,7 +173,9 @@
         "entranceProjection": 0.03571428571428571,
         "sideTowerRadius": 0.07857142857142858,
         "sideTowerOuterReach": 0.42857142857142855,
-        "sideTowerVerticalScale": 0.44,
+        "sideTowerMountY": 0.8071428571428572,
+        "sideTowerTopY": 1.1710642857142857,
+        "sideTowerVerticalScale": 0.81,
         "secondaryButtressOuterReach": 0.4642857142857143,
         "secondaryButtressVerticalScale": 0.62,
         "primaryWingBaseOrbitRadius": 0.31857142857142856,
@@ -200,7 +202,7 @@
         "energyVaultSeamHeight": 0.07857142857142858,
         "energyVaultEntranceWidth": 0.14285714285714285,
         "energyVaultEntranceHeight": 0.1142857142857143,
-        "centralCrownRadius": 0.1060714285714286,
+        "centralCrownRadius": 0.13499999999999998,
         "crownCollarOuterRadius": 0.2885714285714286,
         "crownCollarInnerRadius": 0.22142857142857145,
         "crownCollarHeight": 0.07142857142857142,
@@ -209,12 +211,12 @@
         "crownCollarSpringlineY": 1.0857142857142856,
         "crownRadialScale": 1.35,
         "crownVerticalScale": 1.15,
-        "centralCrystalBaseHalfWidth": 0.1060714285714286,
+        "centralCrystalBaseHalfWidth": 0.13499999999999998,
         "centralCrystalBaseY": 1.0857142857142856,
         "centralCrystalApexY": 1.6738571428571427,
         "centralCrystalFacetSegments": 8,
-        "centralCrystalSpineWidth": 0.023142857142857142,
-        "centralCrystalSpineProud": 0.019285714285714288,
+        "centralCrystalSpineWidth": 0.03182142857142858,
+        "centralCrystalSpineProud": 0.02603571428571429,
         "cageArchOuterWidth": 0.189,
         "cageArchHeight": 0.7339465373767347,
         "cageArchDepth": 0.05014285714285715,
@@ -387,7 +389,7 @@
         ],
         "side_crystal_towers": [
           0,
-          6.7,
+          6.923725,
           0
         ],
         "secondary_buttresses": [

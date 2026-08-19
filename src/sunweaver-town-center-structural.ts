@@ -48,7 +48,9 @@ const LOWER_DRUM_CENTER_Y = 4.65;
 const UPPER_DRUM_RADIUS = 1.62;
 const UPPER_DRUM_HEIGHT = 1.6;
 const UPPER_DRUM_CENTER_Y = 6.8;
-const SIDE_TOWER_VERTICAL_SCALE = 0.44;
+const SIDE_TOWER_MOUNT_Y = 5.65;
+const SIDE_TOWER_VERTICAL_SCALE = 0.81;
+const SIDE_TOWER_SOURCE_TOP_Y = 2.72 + 0.85 / 2;
 const SECONDARY_BUTTRESS_VERTICAL_SCALE = 0.62;
 const PRIMARY_WING_BASE_ORBIT_RADIUS = 2.23;
 const PRIMARY_WING_UPPER_ORBIT_RADIUS = 2.02;
@@ -96,6 +98,10 @@ const CROWN_SCALE = 1.35;
 const CROWN_VERTICAL_SCALE = 1.15;
 const CROWN_MOUNT_Y = CROWN_COLLAR_SPRINGLINE_Y;
 const CROWN_TARGET_APEX_Y = CROWN_MOUNT_Y + (7.08 - CROWN_SOURCE_BASE_Y) * CROWN_VERTICAL_SCALE;
+const CENTRAL_CRYSTAL_BASE_HALF_WIDTH = 0.70;
+const CENTRAL_CRYSTAL_FACET_SEGMENTS = 8;
+const CENTRAL_CRYSTAL_SPINE_WIDTH = 0.165;
+const CENTRAL_CRYSTAL_SPINE_PROUD = 0.135;
 const CAGE_ARCH_BASE_Y = 3.48;
 const CAGE_ARCH_ORBIT_RADIUS = 1.35;
 const CAGE_ARCH_ORBIT_RADII = [1.3, 1.4, 1.4, 1.3] as const;
@@ -508,36 +514,43 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   /** Broad faceted almond/mandorla with a proud front spine (stage 4 only). */
   function makeCentralCrystal(): THREE.Group {
     const crystal = group('central_crystal');
+    // Stepped shoulders keep the eight-segment lathe visibly planar in flat clay.
     const mandorlaProfile: readonly [number, number][] = [
       [0, 3.5],
-      [0.36, 3.58],
-      [0.52, 3.86],
-      [0.55, 4.08],
-      [0.53, 4.36],
-      [0.46, 4.8],
-      [0.38, 5.25],
-      [0.3, 5.72],
-      [0.22, 6.15],
-      [0.13, 6.58],
+      [0.48, 3.56],
+      [0.66, 3.78],
+      [0.70, 4.04],
+      [0.68, 4.30],
+      [0.59, 4.72],
+      [0.48, 5.12],
+      [0.37, 5.55],
+      [0.27, 5.98],
+      [0.17, 6.38],
+      [0.09, 6.72],
       [0, 7.08],
     ];
-    const body = lathe('crystal_mandorla', mandorlaProfile, 8);
+    const body = lathe('crystal_mandorla', mandorlaProfile, CENTRAL_CRYSTAL_FACET_SEGMENTS);
     crystal.add(body);
 
     const spineProfile: readonly [number, number][] = [
-      [0.38, 3.58],
-      [0.49, 3.76],
-      [0.54, 4.05],
-      [0.52, 4.4],
-      [0.47, 4.8],
-      [0.4, 5.2],
-      [0.33, 5.62],
-      [0.26, 6.02],
-      [0.19, 6.36],
-      [0.12, 6.65],
-      [0.05, 6.9],
+      [0.38, 3.54],
+      [0.58, 3.72],
+      [0.68, 4.04],
+      [0.64, 4.30],
+      [0.57, 4.72],
+      [0.47, 5.12],
+      [0.36, 5.55],
+      [0.26, 5.98],
+      [0.17, 6.38],
+      [0.09, 6.72],
+      [0.02, 7.04],
     ];
-    const spine = frontSpine('crystal_front_center_spine', spineProfile, 0.12, 0.1);
+    const spine = frontSpine(
+      'crystal_front_center_spine',
+      spineProfile,
+      CENTRAL_CRYSTAL_SPINE_WIDTH,
+      CENTRAL_CRYSTAL_SPINE_PROUD,
+    );
     crystal.add(spine);
     return crystal;
   }
@@ -676,7 +689,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const towerGroup = group('side_crystal_towers');
   for (let i = 0; i < 4; i++) {
     const clone = towerSource.clone(true); clone.name = `side_crystal_tower_${i}`;
-    clone.position.copy(radialPosition(2.45, Math.PI / 4 + i * Math.PI / 2, 6.0));
+    clone.position.copy(radialPosition(2.45, Math.PI / 4 + i * Math.PI / 2, SIDE_TOWER_MOUNT_Y));
     clone.scale.y = SIDE_TOWER_VERTICAL_SCALE;
     clone.rotation.y = Math.PI / 4 + i * Math.PI / 2;
     towerGroup.add(clone);
@@ -877,6 +890,8 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       entranceProjection: 0.25 / D,
       sideTowerRadius: 0.55 / D,
       sideTowerOuterReach: (2.45 + 0.55) / D,
+      sideTowerMountY: SIDE_TOWER_MOUNT_Y / D,
+      sideTowerTopY: (SIDE_TOWER_MOUNT_Y + SIDE_TOWER_SOURCE_TOP_Y * SIDE_TOWER_VERTICAL_SCALE) / D,
       sideTowerVerticalScale: SIDE_TOWER_VERTICAL_SCALE,
       secondaryButtressOuterReach: (2.85 + 0.4) / D,
       secondaryButtressVerticalScale: SECONDARY_BUTTRESS_VERTICAL_SCALE,
@@ -904,7 +919,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       energyVaultSeamHeight: ENERGY_VAULT_SEAM_HEIGHT / D,
       energyVaultEntranceWidth: ENERGY_VAULT_ENTRANCE_WIDTH / D,
       energyVaultEntranceHeight: ENERGY_VAULT_ENTRANCE_HEIGHT / D,
-      centralCrownRadius: 0.55 * CROWN_SCALE / D,
+      centralCrownRadius: CENTRAL_CRYSTAL_BASE_HALF_WIDTH * CROWN_SCALE / D,
       crownCollarOuterRadius: 2.02 / D,
       crownCollarInnerRadius: 1.55 / D,
       crownCollarHeight: 0.5 / D,
@@ -913,12 +928,12 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       crownCollarSpringlineY: CROWN_COLLAR_SPRINGLINE_Y / D,
       crownRadialScale: CROWN_SCALE,
       crownVerticalScale: CROWN_VERTICAL_SCALE,
-      centralCrystalBaseHalfWidth: 0.55 * CROWN_SCALE / D,
+      centralCrystalBaseHalfWidth: CENTRAL_CRYSTAL_BASE_HALF_WIDTH * CROWN_SCALE / D,
       centralCrystalBaseY: CROWN_MOUNT_Y / D,
       centralCrystalApexY: CROWN_TARGET_APEX_Y / D,
-      centralCrystalFacetSegments: 8,
-      centralCrystalSpineWidth: 0.12 * CROWN_SCALE / D,
-      centralCrystalSpineProud: 0.1 * CROWN_SCALE / D,
+      centralCrystalFacetSegments: CENTRAL_CRYSTAL_FACET_SEGMENTS,
+      centralCrystalSpineWidth: CENTRAL_CRYSTAL_SPINE_WIDTH * CROWN_SCALE / D,
+      centralCrystalSpineProud: CENTRAL_CRYSTAL_SPINE_PROUD * CROWN_SCALE / D,
       cageArchOuterWidth: CAGE_ARCH_WIDTH * CROWN_SCALE / D,
       cageArchHeight: CAGE_ARCH_HEIGHT * CROWN_VERTICAL_SCALE / D,
       cageArchDepth: CAGE_ARCH_DEPTH * CROWN_SCALE / D,
@@ -1005,7 +1020,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       primary_wing_upper_1: [PRIMARY_WING_UPPER_ORBIT_RADIUS, PRIMARY_WING_UPPER_CENTER_Y, 0],
       primary_wing_upper_2: [0, PRIMARY_WING_UPPER_CENTER_Y, -PRIMARY_WING_UPPER_ORBIT_RADIUS],
       primary_wing_upper_3: [-PRIMARY_WING_UPPER_ORBIT_RADIUS, PRIMARY_WING_UPPER_CENTER_Y, 0],
-      side_crystal_towers: [0, 6.7, 0],
+      side_crystal_towers: [0, SIDE_TOWER_MOUNT_Y + SIDE_TOWER_SOURCE_TOP_Y * SIDE_TOWER_VERTICAL_SCALE * 0.5, 0],
       secondary_buttresses: [0, 6.6, 0],
       energy_vault_frame: [0, 5.9, ENERGY_VAULT_CENTER_Z],
       energy_vault_jewels: [0, 5.6, ENERGY_VAULT_JEWEL_CENTER_Z],
