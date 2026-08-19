@@ -647,11 +647,13 @@ function createConstructionCore(materials: MaterialSet, stage: 1 | 2 | 3): THREE
   group.add(crystal);
 
   const scaffoldTop = baseY + socketHeight + crystalHeight + 0.3;
-  for (let index = 0; index < 4; index++) {
-    const angle = (index / 4) * Math.PI * 2 + Math.PI * 0.25;
-    const start = new THREE.Vector3(Math.sin(angle) * radius * 1.15, baseY + 0.04, Math.cos(angle) * radius * 1.15);
-    const end = new THREE.Vector3(Math.sin(angle) * radius * 0.55, scaffoldTop, Math.cos(angle) * radius * 0.55);
-    group.add(beam(start, end, stage === 1 ? 0.035 : 0.05, stage === 1 ? materials.goldDark : materials.gold, 7));
+  if (stage >= 2) {
+    for (let index = 0; index < 4; index++) {
+      const angle = (index / 4) * Math.PI * 2 + Math.PI * 0.25;
+      const start = new THREE.Vector3(Math.sin(angle) * radius * 1.15, baseY + 0.04, Math.cos(angle) * radius * 1.15);
+      const end = new THREE.Vector3(Math.sin(angle) * radius * 0.55, scaffoldTop, Math.cos(angle) * radius * 0.55);
+      group.add(beam(start, end, 0.05, materials.gold, 7));
+    }
   }
   if (stage === 3) {
     const crownRing = new THREE.Mesh(
@@ -826,13 +828,17 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   const almond = new THREE.Group();
   almond.name = 'front-almond-jewel';
   const almondCenterY = 1.04;
-  const almondFrame = new THREE.Mesh(almondFrameGeometry(1.22, 1.68, 0.18, 0.16), materials.gold);
+  const almondFrame = new THREE.Mesh(almondFrameGeometry(1.50, 2.02, 0.18, 0.16), materials.gold);
   almondFrame.position.set(0, almondCenterY, 0.25);
   almond.add(almondFrame);
-  const shell = new THREE.Mesh(almondExtrudedGeometry(1.06, 1.50, 0.16, 0.045), materials.crystal);
+  const backplate = new THREE.Mesh(almondExtrudedGeometry(1.30, 1.82, 0.07, 0.025), materials.energy);
+  backplate.name = 'front-almond-backplate';
+  backplate.position.set(0, almondCenterY, 0.12);
+  almond.add(backplate);
+  const shell = new THREE.Mesh(almondExtrudedGeometry(1.34, 1.86, 0.16, 0.045), materials.crystal);
   shell.position.set(0, almondCenterY, 0.20);
   almond.add(shell);
-  const core = new THREE.Mesh(almondExtrudedGeometry(0.78, 1.20, 0.10, 0.035), materials.crystalCore);
+  const core = new THREE.Mesh(almondExtrudedGeometry(1.10, 1.58, 0.10, 0.035), materials.crystalCore);
   core.position.set(0, almondCenterY, 0.30);
   almond.add(core);
   group.add(almond);
@@ -847,27 +853,33 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   group.add(tube(lipPoints(-1), 0.18, materials.gold, 36));
   group.add(tube(lipPoints(1), 0.18, materials.gold, 36));
 
-  // Interlaced ribs cross in front of the recess and terminate outside the
-  // almond frame, so they read as woven supports rather than parallel rails.
+  // Woven ribs stay in the narrow side zones. The almond remains a clean,
+  // uninterrupted cyan silhouette.
   const ribZ = 0.41;
-  group.add(tube([
-    new THREE.Vector3(-0.72, 0.22, ribZ),
-    new THREE.Vector3(-0.54, 0.62, ribZ + 0.015),
-    new THREE.Vector3(0.42, 1.47, ribZ + 0.02),
-    new THREE.Vector3(0.68, 1.90, ribZ),
-  ], 0.052, materials.goldDark, 32));
-  group.add(tube([
-    new THREE.Vector3(0.72, 0.22, ribZ + 0.025),
-    new THREE.Vector3(0.54, 0.62, ribZ + 0.04),
-    new THREE.Vector3(-0.42, 1.47, ribZ + 0.045),
-    new THREE.Vector3(-0.68, 1.90, ribZ + 0.025),
-  ], 0.052, materials.gold, 32));
   for (const side of [-1, 1]) {
+    const inner = side * 0.79;
+    const outer = side * 0.94;
     group.add(tube([
-      new THREE.Vector3(side * 0.66, 0.18, 0.39),
-      new THREE.Vector3(side * 0.76, 0.94, 0.43),
-      new THREE.Vector3(side * 0.54, 1.84, 0.42),
+      new THREE.Vector3(inner, 0.18, ribZ),
+      new THREE.Vector3(inner + side * 0.05, 0.78, ribZ + 0.01),
+      new THREE.Vector3(inner - side * 0.02, 1.38, ribZ + 0.015),
+      new THREE.Vector3(inner + side * 0.04, 1.92, ribZ),
     ], 0.052, materials.goldDark, 28));
+    group.add(tube([
+      new THREE.Vector3(outer, 0.22, ribZ + 0.02),
+      new THREE.Vector3(outer - side * 0.04, 0.82, ribZ + 0.035),
+      new THREE.Vector3(outer + side * 0.02, 1.42, ribZ + 0.04),
+      new THREE.Vector3(outer - side * 0.05, 1.88, ribZ + 0.02),
+    ], 0.052, materials.gold, 28));
+    for (const y of [0.58, 1.02, 1.46]) {
+      group.add(beam(
+        new THREE.Vector3(inner, y, ribZ + 0.01),
+        new THREE.Vector3(outer, y + 0.10, ribZ + 0.025),
+        0.035,
+        materials.gold,
+        7,
+      ));
+    }
   }
   return group;
 }
@@ -1287,11 +1299,11 @@ export function createSunweaverTownCenter(
     });
     bannerRing.add(banner);
   }
-  registerPart(1, bannerRing);
+  registerPart(3, bannerRing);
   registerPart(3, createFoliage(materials));
 
   const crystalSpire = createCrystalSpire(materials);
-  registerPart(4, crystalSpire.group);
+  registerPart(3, crystalSpire.group);
 
   const crownJewels = new THREE.Group();
   crownJewels.name = 'crystal-core';
