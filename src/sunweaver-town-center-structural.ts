@@ -33,6 +33,13 @@ export interface StructuralTownCenter extends THREE.Group {
 
 const D = 7;
 const R = D / 2;
+const CAGE_ARCH_BASE_Y = 3.48;
+const CAGE_ARCH_ORBIT_RADIUS = 1.56;
+const CAGE_ARCH_APEX_Y = 6.8;
+const CAGE_ARCH_CANT_DEGREES = 30;
+const CAGE_ARCH_CANT_RADIANS = THREE.MathUtils.degToRad(CAGE_ARCH_CANT_DEGREES);
+const CAGE_ARCH_HEIGHT = (CAGE_ARCH_APEX_Y - CAGE_ARCH_BASE_Y) / Math.cos(CAGE_ARCH_CANT_RADIANS);
+const CAGE_ARCH_YAWS_DEGREES = [0, -36, 180, 36] as const;
 
 function radialPosition(radius: number, angle: number, y: number): THREE.Vector3 {
   return new THREE.Vector3(Math.sin(angle) * radius, y, Math.cos(angle) * radius);
@@ -156,29 +163,26 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return mesh(geometry, name);
   }
 
-  /** Keep yawed side arches inside the crown collar without changing their orbit centers. */
-  function clampRadialExtent(item: THREE.Mesh, center: THREE.Vector3, limit: number, yaw: number): void {
+  /** Keep canted cage arches inside the collar orbit without changing their feet. */
+  function clampRadialExtent(item: THREE.Mesh, center: THREE.Vector3, limit: number, orientation: THREE.Quaternion): void {
     const geometry = item.geometry.clone();
     uniqueGeometries.add(geometry);
     const position = geometry.getAttribute('position');
-    const cos = Math.cos(yaw);
-    const sin = Math.sin(yaw);
+    const world = new THREE.Vector3();
+    const inverse = orientation.clone().invert();
     for (let i = 0; i < position.count; i++) {
-      const localX = position.getX(i);
-      const localZ = position.getZ(i);
-      const dx = cos * localX + sin * localZ;
-      const dz = -sin * localX + cos * localZ;
-      let worldX = center.x + dx;
-      let worldZ = center.z + dz;
+      world.set(position.getX(i), position.getY(i), position.getZ(i)).applyQuaternion(orientation);
+      const worldX = center.x + world.x;
+      const worldZ = center.z + world.z;
       const radial = Math.hypot(worldX, worldZ);
       if (radial > limit) {
         const scale = limit / radial;
-        worldX *= scale;
-        worldZ *= scale;
-        const adjustedX = worldX - center.x;
-        const adjustedZ = worldZ - center.z;
-        position.setX(i, cos * adjustedX - sin * adjustedZ);
-        position.setZ(i, sin * adjustedX + cos * adjustedZ);
+        world.x = worldX * scale - center.x;
+        world.z = worldZ * scale - center.z;
+        world.applyQuaternion(inverse);
+        position.setX(i, world.x);
+        position.setY(i, world.y);
+        position.setZ(i, world.z);
       }
     }
     position.needsUpdate = true;
@@ -302,7 +306,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   /** Thick pointed arch with a deep opening for the four-prong crown cage. */
   function makeCageArchSource(): THREE.Group {
     const source = group('crystal_cage_arch_source');
-    const frame = archFrame('cage_arch', 0.98, 3.3, 0.26, 0.26);
+    const frame = archFrame('cage_arch', 0.98, CAGE_ARCH_HEIGHT, 0.26, 0.26);
     source.add(frame);
     return source;
   }
@@ -474,7 +478,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const crown3 = tapered('stage_3_crown', 0.22, 0.4, 0.6, [0, 3.6, 0], 6, Math.PI / 6);
   stage3.add(crown3); parts.stage_3_crown = crown3;
 
-  // ---- Stage 4: broad faceted crystal, front spine, finial, and yawed cage arches ----
+  // ---- Stage 4: broad faceted crystal, front spine, finial, and canted cage arches ----
   const central = makeCentralCrystal();
   stage4.add(central); parts.central_crystal = central;
   const centralSpine = central.getObjectByName('crystal_front_center_spine');
@@ -482,16 +486,15 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
 
   const cageSource = makeCageArchSource();
   const cageGroup = group('crystal_cage_arches');
-  const cageOrbitRadius = 1.56;
-  const cageYaw = [0, -Math.PI / 4, Math.PI, Math.PI / 4];
   for (let i = 0; i < 4; i++) {
     const clone = cageSource.clone(true); clone.name = `crystal_cage_arch_${i}`;
-    clone.position.copy(radialPosition(cageOrbitRadius, i * Math.PI / 2, 3.48));
-    clone.rotation.y = cageYaw[i];
-    if (i === 1 || i === 3) {
-      const frame = clone.getObjectByName('cage_arch');
-      if (frame instanceof THREE.Mesh) clampRadialExtent(frame, clone.position, 1.9, clone.rotation.y);
-    }
+    const angle = i * Math.PI / 2;
+    clone.position.copy(radialPosition(CAGE_ARCH_ORBIT_RADIUS, angle, CAGE_ARCH_BASE_Y));
+    clone.rotation.y = THREE.MathUtils.degToRad(CAGE_ARCH_YAWS_DEGREES[i]);
+    const tangent = new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle));
+    clone.rotateOnWorldAxis(tangent, -CAGE_ARCH_CANT_RADIANS);
+    const frame = clone.getObjectByName('cage_arch');
+    if (frame instanceof THREE.Mesh) clampRadialExtent(frame, clone.position, 1.9, clone.quaternion);
     cageGroup.add(clone);
   }
   stage4.add(cageGroup); parts.crystal_cage_arch_source = cageGroup;
@@ -550,14 +553,21 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       centralCrystalSpineWidth: 0.12 / D,
       centralCrystalSpineProud: 0.1 / D,
       cageArchOuterWidth: 0.98 / D,
-      cageArchHeight: 3.3 / D,
+      cageArchHeight: CAGE_ARCH_HEIGHT / D,
       cageArchThickness: 0.26 / D,
-      cageArchOrbitRadius: cageOrbitRadius / D,
+      cageArchOrbitRadius: CAGE_ARCH_ORBIT_RADIUS / D,
       cageArchMaxRadius: 1.9 / D,
-      cageArchSouthYawDegrees: 0,
-      cageArchEastYawDegrees: -45,
-      cageArchWestYawDegrees: 45,
-      cageArchNorthYawDegrees: 180,
+      cageArchBaseY: CAGE_ARCH_BASE_Y / D,
+      cageArchApexY: CAGE_ARCH_APEX_Y / D,
+      cageArchApexRadius: Math.abs(CAGE_ARCH_ORBIT_RADIUS - CAGE_ARCH_HEIGHT * Math.sin(CAGE_ARCH_CANT_RADIANS)) / D,
+      cageArchSouthCantDegrees: CAGE_ARCH_CANT_DEGREES,
+      cageArchEastCantDegrees: CAGE_ARCH_CANT_DEGREES,
+      cageArchNorthCantDegrees: CAGE_ARCH_CANT_DEGREES,
+      cageArchWestCantDegrees: CAGE_ARCH_CANT_DEGREES,
+      cageArchSouthYawDegrees: CAGE_ARCH_YAWS_DEGREES[0],
+      cageArchEastYawDegrees: CAGE_ARCH_YAWS_DEGREES[1],
+      cageArchWestYawDegrees: CAGE_ARCH_YAWS_DEGREES[3],
+      cageArchNorthYawDegrees: CAGE_ARCH_YAWS_DEGREES[2],
     },
     moduleCounts: {
       foundation_disc: 1,
