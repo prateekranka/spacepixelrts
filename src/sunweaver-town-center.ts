@@ -815,17 +815,17 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   almond.name = 'front-almond-jewel';
   const almondCenterY = 1.04;
   const almondFrame = new THREE.Mesh(almondFrameGeometry(1.50, 2.02, 0.18, 0.16), materials.gold);
-  almondFrame.position.set(0, almondCenterY, 0.04);
+  almondFrame.position.set(0, almondCenterY, 0.16);
   almond.add(almondFrame);
   const backplate = new THREE.Mesh(almondExtrudedGeometry(1.30, 1.82, 0.07, 0.025), materials.mandorla);
   backplate.name = 'front-almond-backplate';
-  backplate.position.set(0, almondCenterY, -0.10);
+  backplate.position.set(0, almondCenterY, 0.02);
   almond.add(backplate);
   const shell = new THREE.Mesh(almondExtrudedGeometry(1.34, 1.86, 0.16, 0.045), materials.crystal);
-  shell.position.set(0, almondCenterY, -0.02);
+  shell.position.set(0, almondCenterY, 0.08);
   almond.add(shell);
   const core = new THREE.Mesh(almondExtrudedGeometry(1.10, 1.58, 0.10, 0.035), materials.mandorla);
-  core.position.set(0, almondCenterY, 0.02);
+  core.position.set(0, almondCenterY, 0.14);
   almond.add(core);
   group.add(almond);
 
