@@ -110,6 +110,82 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return mesh(geometry, name);
   }
 
+  /** Revolved faceted profile used for shallow architectural rings and crystal bodies. */
+  function lathe(name: string, profile: readonly [number, number][], segments = 16): THREE.Mesh {
+    const points = profile.map(([radius, y]) => new THREE.Vector2(radius, y));
+    return mesh(new THREE.LatheGeometry(points, segments), name);
+  }
+
+  /** Narrow front-facing ridge with a controlled proud depth over the crystal surface. */
+  function frontSpine(name: string, profile: readonly [number, number][], width: number, proud: number): THREE.Mesh {
+    const rowCount = profile.length;
+    const vertices = new Float32Array(rowCount * 4 * 3);
+    for (let row = 0; row < rowCount; row++) {
+      const [radius, y] = profile[row];
+      const halfWidth = width * 0.5;
+      const backZ = radius + 0.008;
+      const frontZ = radius + proud;
+      const offset = row * 12;
+      vertices[offset] = -halfWidth;
+      vertices[offset + 1] = y;
+      vertices[offset + 2] = backZ;
+      vertices[offset + 3] = halfWidth;
+      vertices[offset + 4] = y;
+      vertices[offset + 5] = backZ;
+      vertices[offset + 6] = -halfWidth;
+      vertices[offset + 7] = y;
+      vertices[offset + 8] = frontZ;
+      vertices[offset + 9] = halfWidth;
+      vertices[offset + 10] = y;
+      vertices[offset + 11] = frontZ;
+    }
+    const indices: number[] = [];
+    for (let row = 0; row < rowCount - 1; row++) {
+      const a = row * 4;
+      const b = (row + 1) * 4;
+      // Front, back, left, and right faces. Keep the front face wound toward +Z.
+      indices.push(b + 2, a + 2, a + 3, b + 2, a + 3, b + 3);
+      indices.push(a, b, b + 1, a, b + 1, a + 1);
+      indices.push(b, a, a + 2, b, a + 2, b + 2);
+      indices.push(a + 3, b + 3, b + 1, a + 3, b + 1, a + 1);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return mesh(geometry, name);
+  }
+
+  /** Keep yawed side arches inside the crown collar without changing their orbit centers. */
+  function clampRadialExtent(item: THREE.Mesh, center: THREE.Vector3, limit: number, yaw: number): void {
+    const geometry = item.geometry.clone();
+    uniqueGeometries.add(geometry);
+    const position = geometry.getAttribute('position');
+    const cos = Math.cos(yaw);
+    const sin = Math.sin(yaw);
+    for (let i = 0; i < position.count; i++) {
+      const localX = position.getX(i);
+      const localZ = position.getZ(i);
+      const dx = cos * localX + sin * localZ;
+      const dz = -sin * localX + cos * localZ;
+      let worldX = center.x + dx;
+      let worldZ = center.z + dz;
+      const radial = Math.hypot(worldX, worldZ);
+      if (radial > limit) {
+        const scale = limit / radial;
+        worldX *= scale;
+        worldZ *= scale;
+        const adjustedX = worldX - center.x;
+        const adjustedZ = worldZ - center.z;
+        position.setX(i, cos * adjustedX - sin * adjustedZ);
+        position.setZ(i, sin * adjustedX + cos * adjustedZ);
+      }
+    }
+    position.needsUpdate = true;
+    geometry.computeVertexNormals();
+    item.geometry = geometry;
+  }
+
   /** Low radial trapezoid/plinth with a tapered plan and a shallow sloped top. */
   function radialWedge(name: string, tangentWidth: number, radialDepth: number, height: number): THREE.Mesh {
     const innerHalf = tangentWidth * 0.40;
@@ -223,20 +299,48 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     return source;
   }
 
-  /** Substantial cage arch that frames the central faceted volume. */
+  /** Thick pointed arch with a deep opening for the four-prong crown cage. */
   function makeCageArchSource(): THREE.Group {
     const source = group('crystal_cage_arch_source');
-    const frame = archFrame('cage_arch', 1.5, 2.6, 0.26, 0.2);
+    const frame = archFrame('cage_arch', 0.98, 3.3, 0.26, 0.26);
     source.add(frame);
     return source;
   }
 
-  /** Faceted double-pointed almond central volume (stage 4, the only full-height spire). */
+  /** Broad faceted almond/mandorla with a proud front spine (stage 4 only). */
   function makeCentralCrystal(): THREE.Group {
     const crystal = group('central_crystal');
-    crystal.add(tapered('crystal_almond_lower', 0.16, 0.42, 1.05, [0, 3.85, 0], 6, Math.PI / 6));
-    crystal.add(tapered('crystal_almond_upper', 0.05, 0.16, 1.0, [0, 4.89, 0], 6, Math.PI / 6));
-    crystal.add(tapered('crystal_spire', 0.03, 0.08, 1.5, [0, 6.14, 0], 6, Math.PI / 6));
+    const mandorlaProfile: readonly [number, number][] = [
+      [0, 3.5],
+      [0.36, 3.58],
+      [0.52, 3.86],
+      [0.55, 4.08],
+      [0.53, 4.36],
+      [0.46, 4.8],
+      [0.38, 5.25],
+      [0.3, 5.72],
+      [0.22, 6.15],
+      [0.13, 6.58],
+      [0, 7.08],
+    ];
+    const body = lathe('crystal_mandorla', mandorlaProfile, 8);
+    crystal.add(body);
+
+    const spineProfile: readonly [number, number][] = [
+      [0.38, 3.58],
+      [0.49, 3.76],
+      [0.54, 4.05],
+      [0.52, 4.4],
+      [0.47, 4.8],
+      [0.4, 5.2],
+      [0.33, 5.62],
+      [0.26, 6.02],
+      [0.19, 6.36],
+      [0.12, 6.65],
+      [0.05, 6.9],
+    ];
+    const spine = frontSpine('crystal_front_center_spine', spineProfile, 0.12, 0.1);
+    crystal.add(spine);
     return crystal;
   }
 
@@ -331,27 +435,68 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   }
   stage3.add(buttressGroup); parts.secondary_buttress_source = buttressGroup;
 
-  const cageBase = cylinder('cage_base', 1.25, 0.32, [0, 3.15, 0], 8);
-  stage3.add(cageBase); parts.cage_base = cageBase;
+  const crownCollar = group('crown_collar');
+  const collarBody = lathe('crown_collar_body', [
+    [1.55, 3.02],
+    [1.76, 3.02],
+    [1.96, 3.09],
+    [2.02, 3.18],
+    [2.02, 3.34],
+    [1.96, 3.44],
+    [1.55, 3.44],
+    [1.55, 3.02],
+  ], 16);
+  const upperLip = lathe('crown_collar_upper_lip', [
+    [1.55, 3.4],
+    [1.88, 3.4],
+    [2.0, 3.43],
+    [2.02, 3.47],
+    [2.02, 3.52],
+    [1.55, 3.52],
+    [1.55, 3.4],
+  ], 16);
+  const lowerLip = lathe('crown_collar_lower_lip', [
+    [1.55, 3.02],
+    [1.78, 3.02],
+    [1.88, 3.06],
+    [1.88, 3.17],
+    [1.78, 3.17],
+    [1.55, 3.17],
+    [1.55, 3.02],
+  ], 16);
+  crownCollar.add(collarBody, upperLip, lowerLip);
+  stage3.add(crownCollar);
+  parts.crown_collar = crownCollar;
+  parts.crown_collar_body = collarBody;
+  parts.crown_collar_upper_lip = upperLip;
+  parts.crown_collar_lower_lip = lowerLip;
 
   const crown3 = tapered('stage_3_crown', 0.22, 0.4, 0.6, [0, 3.6, 0], 6, Math.PI / 6);
   stage3.add(crown3); parts.stage_3_crown = crown3;
 
-  // ---- Stage 4: aligned cage arches, faceted central volume, final crown ----
+  // ---- Stage 4: broad faceted crystal, front spine, finial, and yawed cage arches ----
   const central = makeCentralCrystal();
   stage4.add(central); parts.central_crystal = central;
+  const centralSpine = central.getObjectByName('crystal_front_center_spine');
+  if (centralSpine) parts.crystal_front_center_spine = centralSpine;
 
   const cageSource = makeCageArchSource();
   const cageGroup = group('crystal_cage_arches');
+  const cageOrbitRadius = 1.56;
+  const cageYaw = [0, -Math.PI / 4, Math.PI, Math.PI / 4];
   for (let i = 0; i < 4; i++) {
     const clone = cageSource.clone(true); clone.name = `crystal_cage_arch_${i}`;
-    clone.position.copy(radialPosition(1.25, i * Math.PI / 2, 3.15));
-    clone.rotation.y = i * Math.PI / 2;
+    clone.position.copy(radialPosition(cageOrbitRadius, i * Math.PI / 2, 3.48));
+    clone.rotation.y = cageYaw[i];
+    if (i === 1 || i === 3) {
+      const frame = clone.getObjectByName('cage_arch');
+      if (frame instanceof THREE.Mesh) clampRadialExtent(frame, clone.position, 1.9, clone.rotation.y);
+    }
     cageGroup.add(clone);
   }
   stage4.add(cageGroup); parts.crystal_cage_arch_source = cageGroup;
 
-  const crown4 = tapered('stage_4_crown', 0.02, 0.06, 0.35, [0, 3.34, 0], 6, Math.PI / 6);
+  const crown4 = tapered('stage_4_crown', 0, 0.17, 0.32, [0, 7.04, 0], 8, Math.PI / 8);
   stage4.add(crown4); parts.stage_4_crown = crown4;
 
   const bannerSource = group('banner_mount_source');
@@ -370,6 +515,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     primary_wing_upper_source: 'primary_wing_upper_source',
     secondary_buttress_source: 'secondary_buttress_source',
     side_crystal_tower_source: 'side_crystal_tower_source',
+    crown_collar: 'crown_collar',
     crystal_cage_arch_source: 'crystal_cage_arch_source',
     banner_mount_source: 'banner_mount_source',
   };
@@ -382,7 +528,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       footprintDiameter: 1,
       lowerDrumHeight: 0.2,
       upperDrumHeight: 0.171,
-      crownHeight: 0.34,
+      crownHeight: (7.2 - 3.02) / D,
       entranceProjection: 0.13,
       sideTowerRadius: 0.09,
       primaryWingOuterReach: (wingOriginRadius + 1.5) / D,
@@ -391,7 +537,27 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       primaryWingBaseHeight: 0.66 / D,
       secondaryButtressOuterReach: 0.45,
       entranceWidth: 0.22,
-      centralCrownRadius: 0.16,
+      centralCrownRadius: 0.55 / D,
+      crownCollarOuterRadius: 2.02 / D,
+      crownCollarInnerRadius: 1.55 / D,
+      crownCollarHeight: 0.5 / D,
+      crownCollarUpperLipHeight: 0.12 / D,
+      crownCollarLowerLipHeight: 0.15 / D,
+      centralCrystalBaseHalfWidth: 0.55 / D,
+      centralCrystalBaseY: 3.5 / D,
+      centralCrystalApexY: 7.08 / D,
+      centralCrystalFacetSegments: 8,
+      centralCrystalSpineWidth: 0.12 / D,
+      centralCrystalSpineProud: 0.1 / D,
+      cageArchOuterWidth: 0.98 / D,
+      cageArchHeight: 3.3 / D,
+      cageArchThickness: 0.26 / D,
+      cageArchOrbitRadius: cageOrbitRadius / D,
+      cageArchMaxRadius: 1.9 / D,
+      cageArchSouthYawDegrees: 0,
+      cageArchEastYawDegrees: -45,
+      cageArchWestYawDegrees: 45,
+      cageArchNorthYawDegrees: 180,
     },
     moduleCounts: {
       foundation_disc: 1,
@@ -405,8 +571,14 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       secondary_buttress_source: 4,
       side_crystal_tower_source: 4,
       central_crystal: 1,
+      crystal_mandorla: 1,
+      crystal_front_center_spine: 1,
       crystal_cage_arch_source: 4,
       banner_mount_source: 4,
+      crown_collar: 1,
+      crown_collar_body: 1,
+      crown_collar_upper_lip: 1,
+      crown_collar_lower_lip: 1,
       stage_2_crown: 1,
       stage_3_crown: 1,
       stage_4_crown: 1,
@@ -431,13 +603,18 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       primary_wing_upper_3: [-2.02, 1.82, 0],
       side_crystal_towers: [0, 1.6, 0],
       secondary_buttresses: [0, 1.2, 0],
-      cage_base: [0, 3.15, 0],
-      central_crystal: [0, 5.1, 0],
-      crystal_cage_arches: [0, 4.45, 0],
+      crown_collar: [0, 3.27, 0],
+      crown_collar_body: [0, 3.23, 0],
+      crown_collar_upper_lip: [0, 3.46, 0],
+      crown_collar_lower_lip: [0, 3.11, 0],
+      central_crystal: [0, 5.29, 0],
+      crystal_mandorla: [0, 5.29, 0],
+      crystal_front_center_spine: [0, 5.24, 0.349],
+      crystal_cage_arches: [0, 5.13, 0],
       banner_mounts: [0, 3.0, 0],
       stage_2_crown: [0, 2.01, 0],
       stage_3_crown: [0, 3.6, 0],
-      stage_4_crown: [0, 3.34, 0],
+      stage_4_crown: [0, 7.04, 0],
     },
   };
 
