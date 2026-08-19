@@ -98,8 +98,9 @@ const CROWN_SCALE = 1.35;
 const CROWN_VERTICAL_SCALE = 1.15;
 const CROWN_MOUNT_Y = CROWN_COLLAR_SPRINGLINE_Y;
 const CROWN_TARGET_APEX_Y = CROWN_MOUNT_Y + (7.08 - CROWN_SOURCE_BASE_Y) * CROWN_VERTICAL_SCALE;
-const CENTRAL_CRYSTAL_BASE_HALF_WIDTH = 0.685;
-const CENTRAL_CRYSTAL_MAX_HALF_WIDTH = 0.70;
+// Source-space widths become 0.972 base / 1.1475 peak after the accepted 1.35 radial scale.
+const CENTRAL_CRYSTAL_BASE_HALF_WIDTH = 0.72;
+const CENTRAL_CRYSTAL_MAX_HALF_WIDTH = 0.85;
 const CENTRAL_CRYSTAL_FACET_SEGMENTS = 8;
 // Source-space dimensions become ~0.46 wide and ~0.21 proud after the accepted
 // 1.35 radial crown scale. The broad rib must remain visible through the flat clay.
@@ -107,15 +108,19 @@ const CENTRAL_CRYSTAL_SPINE_WIDTH = 0.34;
 const CENTRAL_CRYSTAL_SPINE_PROUD = 0.155;
 const CENTRAL_CRYSTAL_FRONT_BULGE = 0.14;
 const CAGE_ARCH_BASE_Y = 3.48;
-const CAGE_ARCH_ORBIT_RADIUS = 1.35;
-const CAGE_ARCH_ORBIT_RADII = [1.3, 1.4, 1.4, 1.3] as const;
+// The inward orbit keeps the ribs over the broad vault; the separate body radius
+// remains equal to the crystal peak and the feet still reach the collar rim.
+const CAGE_ARCH_ORBIT_RADIUS = 0.95;
+const CAGE_ARCH_ORBIT_RADII = [0.92, 0.98, 0.98, 0.92] as const;
 const CAGE_ARCH_APEX_Y = 6.8;
 const CAGE_ARCH_WIDTH = 0.98;
 const CAGE_ARCH_DEPTH = 0.26;
 const CAGE_ARCH_ROTATION_DEGREES = 45;
 const CAGE_ARCH_ROTATION_RADIANS = THREE.MathUtils.degToRad(CAGE_ARCH_ROTATION_DEGREES);
 const CAGE_ARCH_FOOT_FLARE_WIDTH = 0.72;
-const CAGE_ARCH_FOOT_FLARE_DEPTH = 0.48;
+// Extend the accepted foot wedge after the inward orbit so its outer edge still
+// lands on the ~2.05 collar radius.
+const CAGE_ARCH_FOOT_FLARE_DEPTH = 0.70;
 const CAGE_ARCH_FOOT_FLARE_HEIGHT = 0.18;
 const CAGE_ARCH_CANT_DEGREES = 42;
 const CAGE_ARCH_CANT_RADIANS = THREE.MathUtils.degToRad(CAGE_ARCH_CANT_DEGREES);
@@ -123,7 +128,7 @@ const CAGE_ARCH_HEIGHT = (CAGE_ARCH_APEX_Y - CAGE_ARCH_BASE_Y) / Math.cos(CAGE_A
 // Local +Z points toward the center on each diagonal axis before the inward cant.
 const CAGE_ARCH_YAWS_DEGREES = [225, 315, 45, 135] as const;
 const CAGE_ARCH_BEND_START = 0.6;
-const CAGE_ARCH_BODY_RADIUS = 0.62;
+const CAGE_ARCH_BODY_RADIUS = 0.85;
 const CAGE_ARCH_APEX_RADIUS = 0.16;
 // Offsets pull each diagonal tip toward the front boss, so the two front talons overlap.
 const CAGE_ARCH_APEX_TANGENTIAL_OFFSETS = [-0.18, 0.12, -0.12, 0.18] as const;
@@ -603,18 +608,18 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     // the source height, then tapers monotonically to the pointed apex.
     const mandorlaProfile: readonly [number, number][] = [
       [CENTRAL_CRYSTAL_BASE_HALF_WIDTH, 3.5],
-      [0.687, 3.62],
-      [0.69, 3.92],
-      [0.695, 4.38],
+      [0.74, 3.62],
+      [0.78, 3.92],
+      [0.83, 4.38],
       [CENTRAL_CRYSTAL_MAX_HALF_WIDTH, 4.68],
       [CENTRAL_CRYSTAL_MAX_HALF_WIDTH, 4.94],
-      [0.68, 5.26],
-      [0.61, 5.62],
-      [0.52, 5.98],
-      [0.42, 6.30],
-      [0.32, 6.56],
-      [0.21, 6.78],
-      [0.10, 6.98],
+      [0.82, 5.26],
+      [0.73, 5.62],
+      [0.63, 5.98],
+      [0.52, 6.30],
+      [0.40, 6.56],
+      [0.27, 6.78],
+      [0.13, 6.98],
       [0.001, 7.08],
     ];
     const body = convexMandorla(

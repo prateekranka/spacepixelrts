@@ -8,86 +8,86 @@
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 131.32,
-      "variance": 395.27
+      "mean": 131.38,
+      "variance": 392.38
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 121.89,
-      "variance": 235.76
+      "mean": 121.88,
+      "variance": 234.3
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 121.23,
-      "variance": 255.02
+      "mean": 121.25,
+      "variance": 255.7
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 130.35,
-      "variance": 401.46
+      "mean": 130.47,
+      "variance": 401.22
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-top-ortho.png",
       "query": "ui=0&view=top-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 126.69,
-      "variance": 459.73
+      "mean": 126.46,
+      "variance": 461.84
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 125.65,
-      "variance": 336.75
+      "mean": 125.38,
+      "variance": 348.9
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-rear-3q.png",
       "query": "ui=0&view=rear-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 123.03,
-      "variance": 331.02
+      "mean": 122.81,
+      "variance": 339.83
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-close.png",
       "query": "ui=0&view=gameplay-close&stage=4&pass=beauty&freeze=1",
-      "mean": 121.32,
-      "variance": 516.58
+      "mean": 121.43,
+      "variance": 522.27
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-normal.png",
       "query": "ui=0&view=gameplay-normal&stage=4&pass=beauty&freeze=1",
-      "mean": 123.22,
-      "variance": 411.86
+      "mean": 123.23,
+      "variance": 413.93
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-far.png",
       "query": "ui=0&view=gameplay-far&stage=4&pass=beauty&freeze=1",
-      "mean": 126.39,
-      "variance": 289.48
+      "mean": 126.1,
+      "variance": 301.33
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 155.82,
-      "variance": 13713.13
+      "mean": 155.85,
+      "variance": 13711.66
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 154.03,
-      "variance": 13785.55
+      "mean": 153.97,
+      "variance": 13788.19
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 155.82,
-      "variance": 13713.13
+      "mean": 155.85,
+      "variance": 13711.66
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 154.01,
-      "variance": 13786.4
+      "mean": 153.96,
+      "variance": 13788.41
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-top-ortho.png",
@@ -99,25 +99,25 @@
       "file": "critic/out/town-center-structural-v01/front-wireframe.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=wireframe&freeze=1",
       "mean": 119.52,
-      "variance": 879.56
+      "variance": 879.22
     },
     {
       "file": "critic/out/town-center-structural-v01/front-normal.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=normal&freeze=1",
-      "mean": 147.09,
-      "variance": 511.5
+      "mean": 147.1,
+      "variance": 511.01
     },
     {
       "file": "critic/out/town-center-structural-v01/front-depth.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=depth&freeze=1",
-      "mean": 170.79,
-      "variance": 1995.67
+      "mean": 170.77,
+      "variance": 1995.46
     },
     {
       "file": "critic/out/town-center-structural-v01/front-material-id.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=material-id&freeze=1",
-      "mean": 148.86,
-      "variance": 370.97
+      "mean": 148.85,
+      "variance": 371.03
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-1-front-3q.png",
@@ -140,8 +140,8 @@
     {
       "file": "critic/out/town-center-structural-v01/stage-4-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 125.65,
-      "variance": 336.75
+      "mean": 125.38,
+      "variance": 348.9
     }
   ],
   "runtime": {
@@ -202,7 +202,7 @@
         "energyVaultSeamHeight": 0.07857142857142858,
         "energyVaultEntranceWidth": 0.14285714285714285,
         "energyVaultEntranceHeight": 0.1142857142857143,
-        "centralCrownRadius": 0.1321071428571429,
+        "centralCrownRadius": 0.13885714285714285,
         "crownCollarOuterRadius": 0.2885714285714286,
         "crownCollarInnerRadius": 0.22142857142857145,
         "crownCollarHeight": 0.07142857142857142,
@@ -211,8 +211,8 @@
         "crownCollarSpringlineY": 1.0857142857142856,
         "crownRadialScale": 1.35,
         "crownVerticalScale": 1.15,
-        "centralCrystalBaseHalfWidth": 0.1321071428571429,
-        "centralCrystalMaxHalfWidth": 0.13499999999999998,
+        "centralCrystalBaseHalfWidth": 0.13885714285714285,
+        "centralCrystalMaxHalfWidth": 0.16392857142857142,
         "centralCrystalFrontBulge": 0.027000000000000003,
         "centralCrystalBaseY": 1.0857142857142856,
         "centralCrystalApexY": 1.6738571428571427,
@@ -222,19 +222,19 @@
         "cageArchOuterWidth": 0.189,
         "cageArchHeight": 0.7339465373767347,
         "cageArchDepth": 0.05014285714285715,
-        "cageArchOrbitRadius": 0.2603571428571429,
-        "cageArchBaseOrbitRadius": 0.2603571428571429,
-        "cageArchBaseOrbitMinRadius": 0.2507142857142857,
-        "cageArchBaseOrbitMaxRadius": 0.26999999999999996,
+        "cageArchOrbitRadius": 0.18321428571428572,
+        "cageArchBaseOrbitRadius": 0.18321428571428572,
+        "cageArchBaseOrbitMinRadius": 0.17742857142857146,
+        "cageArchBaseOrbitMaxRadius": 0.189,
         "cageArchRotationDegrees": 45,
         "cageArchFootFlareWidth": 0.13885714285714285,
-        "cageArchFootFlareDepth": 0.09257142857142857,
+        "cageArchFootFlareDepth": 0.13499999999999998,
         "cageArchFootFlareHeight": 0.02957142857142857,
         "cageArchMaxRadius": 0.2714285714285714,
         "cageArchBaseY": 1.0824285714285715,
         "cageArchApexY": 1.627857142857143,
         "cageArchApexRadius": 0.03085714285714286,
-        "cageArchBodyRadius": 0.11957142857142858,
+        "cageArchBodyRadius": 0.16392857142857142,
         "cageArchApexTangentialOffsetMax": 0.03471428571428571,
         "cageArchBodyTangentialOffsetMax": 0.14464285714285716,
         "cageArchFrontDepthOffsetMax": 0.11571428571428573,
