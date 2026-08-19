@@ -1,0 +1,191 @@
+// Objective geometry probe: why do the cage ribs not cross the mandorla in front ortho?
+// Loads the structural viewer (front-ortho, stage 4), computes world-space AABBs of the
+// cage ribs vs the mandorla/spine, and reports x-overlap bands per y-slice.
+import { chromium } from 'playwright';
+
+const URL = 'http://127.0.0.1:5174/town-center-structural-viewer.html?ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1';
+
+const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const page = await browser.newPage({ viewport: { width: 1180, height: 820 } });
+await page.goto(URL, { waitUntil: 'networkidle' });
+await page.waitForFunction(() => window.__SUNWEAVER_STRUCTURAL__?.ready === true);
+
+const report = await page.evaluate(() => {
+  const scene = window.__SUNWEAVER_STRUCTURAL__.model;
+  const boxes = {}; // name -> world AABB {min:[x,y,z], max:[x,y,z]}
+  const surfaces = {}; // cage talon key -> world-space indexed triangles
+  const meshes = [];
+  scene.traverse((o) => {
+    if (o.isMesh) meshes.push(o);
+  });
+  // World AABB without a THREE global: transform geometry vertices through matrixWorld.
+  const transformPoint = (m, x, y, z) => {
+    const e = m.elements;
+    const w = e[3] * x + e[7] * y + e[11] * z + e[15];
+    const iw = w ? 1 / w : 1;
+    return [
+      (e[0] * x + e[4] * y + e[8] * z + e[12]) * iw,
+      (e[1] * x + e[5] * y + e[9] * z + e[13]) * iw,
+      (e[2] * x + e[6] * y + e[10] * z + e[14]) * iw,
+    ];
+  };
+  for (const m of meshes) {
+    // Deformed cage geometry can retain a cloned stale bounding box; recompute it
+    // before reporting the world AABB used by the human-readable overlap summary.
+    if (m.geometry) m.geometry.computeBoundingBox();
+    if (!m.geometry || !m.geometry.boundingBox) continue;
+    m.updateWorldMatrix(true, false);
+    const position = m.geometry.getAttribute('position');
+    const corners = position
+      ? Array.from({ length: position.count }, (_, i) => transformPoint(
+        m.matrixWorld,
+        position.getX(i),
+        position.getY(i),
+        position.getZ(i),
+      ))
+      : [
+        [m.geometry.boundingBox.min.x, m.geometry.boundingBox.min.y, m.geometry.boundingBox.min.z],
+        [m.geometry.boundingBox.max.x, m.geometry.boundingBox.min.y, m.geometry.boundingBox.min.z],
+        [m.geometry.boundingBox.min.x, m.geometry.boundingBox.max.y, m.geometry.boundingBox.min.z],
+        [m.geometry.boundingBox.max.x, m.geometry.boundingBox.max.y, m.geometry.boundingBox.min.z],
+        [m.geometry.boundingBox.min.x, m.geometry.boundingBox.min.y, m.geometry.boundingBox.max.z],
+        [m.geometry.boundingBox.max.x, m.geometry.boundingBox.min.y, m.geometry.boundingBox.max.z],
+        [m.geometry.boundingBox.min.x, m.geometry.boundingBox.max.y, m.geometry.boundingBox.max.z],
+        [m.geometry.boundingBox.max.x, m.geometry.boundingBox.max.y, m.geometry.boundingBox.max.z],
+      ].map((c) => transformPoint(m.matrixWorld, ...c));
+    const mn = [Infinity, Infinity, Infinity];
+    const mx = [-Infinity, -Infinity, -Infinity];
+    for (const c of corners) {
+      for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], c[i]); mx[i] = Math.max(mx[i], c[i]); }
+    }
+    // Path-based key so the four shared-name clones stay distinct
+    let p = m.parent ? m.parent.name : '';
+    let key = (m.name || 'anon') + '@' + p;
+    boxes[key] = {
+      min: mn.map((v) => Math.round(v * 100) / 100),
+      max: mx.map((v) => Math.round(v * 100) / 100),
+    };
+    if (m.name === 'cage_arch') {
+      const worldPositions = [];
+      for (let i = 0; i < position.count; i++) worldPositions.push(transformPoint(m.matrixWorld, position.getX(i), position.getY(i), position.getZ(i)));
+      const index = m.geometry.index;
+      const indices = index ? Array.from(index.array) : Array.from({ length: position.count }, (_, i) => i);
+      const e = m.matrixWorld.elements;
+      const normalLength = Math.hypot(e[8], e[9], e[10]) || 1;
+      const normal = [e[8] / normalLength, e[9] / normalLength, e[10] / normalLength];
+      surfaces[key] = { worldPositions, indices, normal };
+    }
+  }
+
+  const mandorlaX = [-0.55, 0.55];
+  const intersectingXAtY = (a, b, y) => {
+    const dy = b[1] - a[1];
+    if (Math.abs(dy) < 1e-8) return Math.abs(a[1] - y) < 1e-5 ? [a[0], b[0]] : [];
+    const t = (y - a[1]) / dy;
+    return t >= -1e-8 && t <= 1 + 1e-8 ? [a[0] + (b[0] - a[0]) * t] : [];
+  };
+  const objectiveTalons = Object.entries(surfaces).map(([key, surface]) => {
+    const ys = surface.worldPositions.map((p) => p[1]);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const radial = (p) => Math.hypot(p[0], p[2]);
+    const maxRadius = Math.max(...surface.worldPositions.map(radial));
+    const apexBand = surface.worldPositions.filter((p) => p[1] >= maxY - 0.025);
+    const apexBandMaxRadius = Math.max(...apexBand.map(radial));
+    const sliceCount = 128;
+    let overlapSlices = 0;
+    for (let slice = 0; slice < sliceCount; slice++) {
+      const y = minY + (slice + 0.5) * (maxY - minY) / sliceCount;
+      const xs = [];
+      for (let i = 0; i < surface.indices.length; i += 3) {
+        const a = surface.worldPositions[surface.indices[i]];
+        const b = surface.worldPositions[surface.indices[i + 1]];
+        const c = surface.worldPositions[surface.indices[i + 2]];
+        xs.push(...intersectingXAtY(a, b, y), ...intersectingXAtY(b, c, y), ...intersectingXAtY(c, a, y));
+      }
+      if (xs.length && Math.min(...xs) <= mandorlaX[1] && Math.max(...xs) >= mandorlaX[0]) overlapSlices++;
+    }
+    const overlapFraction = overlapSlices / sliceCount;
+    const faceAngleDegrees = Math.acos(Math.min(1, Math.abs(surface.normal[2]))) * 180 / Math.PI;
+    return {
+      key,
+      ownHeight: Math.round((maxY - minY) * 10000) / 10000,
+      maxRadius: Math.round(maxRadius * 10000) / 10000,
+      apexBandMaxRadius: Math.round(apexBandMaxRadius * 10000) / 10000,
+      overlapSlices,
+      sliceCount,
+      overlapFraction: Math.round(overlapFraction * 10000) / 10000,
+      faceAngleDegrees: Math.round(faceAngleDegrees * 10000) / 10000,
+      normal: surface.normal.map((v) => Math.round(v * 10000) / 10000),
+    };
+  });
+  return { boxes, meshNames: meshes.map((m) => m.name), objectiveTalons };
+});
+
+// Front ortho: screen-x == world-x (camera looks down -Z). Judge overlap in world x.
+const B = report.boxes;
+const names = Object.keys(B);
+const pick = (pat) => names.filter((n) => n.includes(pat));
+const mandorla = pick('mandorla');
+const spine = pick('spine');
+const arches = pick('cage_arch').filter((n) => !n.includes('flare'));
+const flares = pick('flare');
+console.log('mandorla meshes:', mandorla);
+console.log('spine meshes:', spine);
+console.log('cage rib meshes:', arches);
+console.log('flares:', flares);
+
+const show = (ns) => {
+  for (const n of ns) {
+    const b = B[n];
+    if (!b) continue;
+    const cx = (b.min[0] + b.max[0]) / 2;
+    const cy = (b.min[1] + b.max[1]) / 2;
+    const w = b.max[0] - b.min[0];
+    console.log(
+      `  ${n}  x[${b.min[0]},${b.max[0]}] (cx ${Math.round(cx * 100) / 100}, w ${Math.round(w * 100) / 100})  y[${b.min[1]},${b.max[1]}]  z[${b.min[2]},${b.max[2]}]`
+    );
+  }
+};
+console.log('\n-- mandorla --');
+show(mandorla);
+console.log('\n-- spine --');
+show(spine);
+console.log('\n-- cage ribs --');
+show(arches);
+console.log('\n-- flares --');
+show(flares);
+
+console.log('\n-- PTC-CLAY-06 objective checks --');
+for (const talon of report.objectiveTalons) {
+  console.log(`  ${talon.key}: x-overlap fraction ${talon.overlapFraction} (${talon.overlapSlices}/${talon.sliceCount} slices, height ${talon.ownHeight})  face angle ${talon.faceAngleDegrees}°  max radius ${talon.maxRadius}  apex-band radius ${talon.apexBandMaxRadius}  normal [${talon.normal.join(', ')}]`);
+}
+const overlapPassCount = report.objectiveTalons.filter((talon) => talon.overlapFraction >= 0.6).length;
+const facePassCount = report.objectiveTalons.filter((talon) => talon.faceAngleDegrees >= 25).length;
+const minFaceAngle = Math.min(...report.objectiveTalons.map((talon) => talon.faceAngleDegrees));
+const maxTalonRadius = Math.max(...report.objectiveTalons.map((talon) => talon.maxRadius));
+const maxApexBandRadius = Math.max(...report.objectiveTalons.map((talon) => talon.apexBandMaxRadius));
+console.log(`  a: ${overlapPassCount}/4 talons overlap mandorla x-range for >=60% of own height`);
+console.log(`  b: ${facePassCount}/4 talon faces are >=25° from world +Z (camera plane); minimum ${minFaceAngle}°`);
+console.log(`  geometry limits: ${report.objectiveTalons.length} talons, max radius ${maxTalonRadius}, apex-band max radius ${maxApexBandRadius}`);
+const objectivePass = report.objectiveTalons.length === 4 && overlapPassCount >= 2 && facePassCount === 4 && maxTalonRadius <= 1.9 && maxApexBandRadius <= 0.4;
+console.log(`  objective checks: ${objectivePass ? 'PASS' : 'FAIL'}`);
+if (!objectivePass) process.exitCode = 1;
+
+// Screen-space crossing check: at what y bands does any rib's x-range overlap the mandorla's x-range?
+if (mandorla.length && arches.length) {
+  const m = B[mandorla[0]];
+  const myMin = m.min[1], myMax = m.max[1];
+  console.log('\n-- overlap bands (rib crosses mandorla x-range) --');
+  for (const n of arches) {
+    const r = B[n];
+    const xOverlapMin = Math.max(r.min[0], m.min[0]);
+    const xOverlapMax = Math.min(r.max[0], m.max[0]);
+    const xOverlap = Math.max(0, xOverlapMax - xOverlapMin);
+    const yOverlap = Math.max(0, Math.min(r.max[1], myMax) - Math.max(r.min[1], myMin));
+    console.log(
+      `  ${n}: x-overlap ${Math.round(xOverlap * 100) / 100} (of rib width ${Math.round((r.max[0] - r.min[0]) * 100) / 100}), y-overlap ${Math.round(yOverlap * 100) / 100}`
+    );
+  }
+}
+
+await browser.close();

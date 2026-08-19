@@ -35,18 +35,34 @@ export interface StructuralTownCenter extends THREE.Group {
 const D = 7;
 const R = D / 2;
 const CAGE_ARCH_BASE_Y = 3.48;
-const CAGE_ARCH_ORBIT_RADIUS = 1.56;
+const CAGE_ARCH_ORBIT_RADIUS = 1.35;
+const CAGE_ARCH_ORBIT_RADII = [1.3, 1.4, 1.4, 1.3] as const;
 const CAGE_ARCH_APEX_Y = 6.8;
 const CAGE_ARCH_WIDTH = 0.98;
 const CAGE_ARCH_DEPTH = 0.26;
-const CAGE_ARCH_FLANK_ORBIT_RADIUS = 1.16;
-const CAGE_ARCH_FLANK_FOOT_FLARE_WIDTH = 0.72;
-const CAGE_ARCH_FLANK_FOOT_FLARE_DEPTH = 0.48;
-const CAGE_ARCH_FLANK_FOOT_FLARE_HEIGHT = 0.18;
-const CAGE_ARCH_CANT_DEGREES = 30;
+const CAGE_ARCH_ROTATION_DEGREES = 45;
+const CAGE_ARCH_ROTATION_RADIANS = THREE.MathUtils.degToRad(CAGE_ARCH_ROTATION_DEGREES);
+const CAGE_ARCH_FOOT_FLARE_WIDTH = 0.72;
+const CAGE_ARCH_FOOT_FLARE_DEPTH = 0.48;
+const CAGE_ARCH_FOOT_FLARE_HEIGHT = 0.18;
+const CAGE_ARCH_CANT_DEGREES = 42;
 const CAGE_ARCH_CANT_RADIANS = THREE.MathUtils.degToRad(CAGE_ARCH_CANT_DEGREES);
 const CAGE_ARCH_HEIGHT = (CAGE_ARCH_APEX_Y - CAGE_ARCH_BASE_Y) / Math.cos(CAGE_ARCH_CANT_RADIANS);
-const CAGE_ARCH_YAWS_DEGREES = [0, -36, 180, 36] as const;
+// Local +Z points toward the center on each diagonal axis before the inward cant.
+const CAGE_ARCH_YAWS_DEGREES = [225, 315, 45, 135] as const;
+const CAGE_ARCH_BEND_START = 0.6;
+const CAGE_ARCH_BODY_RADIUS = 0.62;
+const CAGE_ARCH_APEX_RADIUS = 0.16;
+// Offsets pull each diagonal tip toward the front boss, so the two front talons overlap.
+const CAGE_ARCH_APEX_TANGENTIAL_OFFSETS = [-0.18, 0.12, -0.12, 0.18] as const;
+// The front pair cross through the crystal body, then return behind the tip convergence.
+const CAGE_ARCH_BODY_TANGENTIAL_OFFSETS = [-0.75, 0, 0, 0.75] as const;
+// Different front depths make the crossing read as an over/under interlock.
+const CAGE_ARCH_FRONT_DEPTH_OFFSETS = [0.6, 0, 0, 0.3] as const;
+// Stagger the front crossings vertically: the right talon passes first, then the left.
+const CAGE_ARCH_BODY_CROSS_STARTS = [0.28, 0, 0, 0.48] as const;
+const CAGE_ARCH_BODY_CROSS_PEAKS = [0.45, 0, 0, 0.68] as const;
+const CAGE_ARCH_BODY_CROSS_ENDS = [0.64, 0, 0, 0.88] as const;
 
 function radialPosition(radius: number, angle: number, y: number): THREE.Vector3 {
   return new THREE.Vector3(Math.sin(angle) * radius, y, Math.cos(angle) * radius);
@@ -69,7 +85,7 @@ function archShape(width: number, height: number): THREE.Shape {
 function solidTalonShape(width: number, height: number): THREE.Shape {
   const half = width / 2;
   const spring = height * 0.48;
-  const shoulderHalf = width * 0.29;
+  const shoulderHalf = width * 0.26;
   const shape = new THREE.Shape();
   shape.moveTo(-half, 0);
   shape.lineTo(half, 0);
@@ -212,6 +228,52 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
         position.setY(i, world.y);
         position.setZ(i, world.z);
       }
+    }
+    position.needsUpdate = true;
+    geometry.computeVertexNormals();
+    item.geometry = geometry;
+  }
+
+  /** Re-center the upper talon after the strong mid-body cant while keeping its feet fixed. */
+  function bendCageTalonToApex(item: THREE.Mesh, angle: number, orbitRadius: number, bodyTangentialOffset: number, tangentialOffset: number, frontDepthOffset: number, crossStart: number, crossPeak: number, crossEnd: number, orientation: THREE.Quaternion): void {
+    const geometry = item.geometry.clone();
+    uniqueGeometries.add(geometry);
+    const position = geometry.getAttribute('position');
+    const inverse = orientation.clone().invert();
+    const radial = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+    const tangent = new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle));
+    const world = new THREE.Vector3();
+    for (let i = 0; i < position.count; i++) {
+      const localY = position.getY(i);
+      const t = THREE.MathUtils.clamp(localY / CAGE_ARCH_HEIGHT, 0, 1);
+      const bodyT = THREE.MathUtils.clamp(t / CAGE_ARCH_BEND_START, 0, 1);
+      const bodySmooth = bodyT * bodyT * (3 - 2 * bodyT);
+      const tipT = THREE.MathUtils.clamp((t - CAGE_ARCH_BEND_START) / (1 - CAGE_ARCH_BEND_START), 0, 1);
+      const tipSmooth = tipT * tipT * (3 - 2 * tipT);
+      const targetRadius = t <= CAGE_ARCH_BEND_START
+        ? THREE.MathUtils.lerp(orbitRadius, CAGE_ARCH_BODY_RADIUS, bodySmooth)
+        : THREE.MathUtils.lerp(CAGE_ARCH_BODY_RADIUS, CAGE_ARCH_APEX_RADIUS, tipSmooth);
+      const currentCenterRadius = orbitRadius - localY * Math.sin(CAGE_ARCH_CANT_RADIANS);
+      world.set(position.getX(i), position.getY(i), position.getZ(i)).applyQuaternion(orientation);
+      const radialCorrection = targetRadius - currentCenterRadius;
+      world.x += radial.x * radialCorrection;
+      world.z += radial.z * radialCorrection;
+      const crossIn = crossPeak > crossStart
+        ? THREE.MathUtils.smoothstep(t, crossStart, crossPeak)
+        : 0;
+      const crossOut = crossEnd > crossPeak
+        ? 1 - THREE.MathUtils.smoothstep(t, crossPeak, crossEnd)
+        : 0;
+      const bodyInterlock = crossIn * crossOut;
+      world.x += tangent.x * bodyTangentialOffset * bodyInterlock;
+      world.z += tangent.z * bodyTangentialOffset * bodyInterlock;
+      world.x += tangent.x * tangentialOffset * tipSmooth;
+      world.z += tangent.z * tangentialOffset * tipSmooth;
+      world.z += frontDepthOffset * bodyInterlock;
+      world.applyQuaternion(inverse);
+      position.setX(i, world.x);
+      position.setY(i, world.y);
+      position.setZ(i, world.z);
     }
     position.needsUpdate = true;
     geometry.computeVertexNormals();
@@ -516,22 +578,23 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const cageGroup = group('crystal_cage_arches');
   for (let i = 0; i < 4; i++) {
     const clone = cageSource.clone(true); clone.name = `crystal_cage_arch_${i}`;
-    const angle = i * Math.PI / 2;
-    const orbitRadius = (i === 1 || i === 3) ? CAGE_ARCH_FLANK_ORBIT_RADIUS : CAGE_ARCH_ORBIT_RADIUS;
+    const angle = CAGE_ARCH_ROTATION_RADIANS + i * Math.PI / 2;
+    const orbitRadius = CAGE_ARCH_ORBIT_RADII[i];
     clone.position.copy(radialPosition(orbitRadius, angle, CAGE_ARCH_BASE_Y));
     clone.rotation.y = THREE.MathUtils.degToRad(CAGE_ARCH_YAWS_DEGREES[i]);
     const tangent = new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle));
     clone.rotateOnWorldAxis(tangent, -CAGE_ARCH_CANT_RADIANS);
     const frame = clone.getObjectByName('cage_arch');
-    if (frame instanceof THREE.Mesh) clampRadialExtent(frame, clone.position, 1.9, clone.quaternion);
-    if (i === 1 || i === 3) {
-      const footFlare = radialWedge(`cage_arch_foot_flare_${i}`, CAGE_ARCH_FLANK_FOOT_FLARE_WIDTH, CAGE_ARCH_FLANK_FOOT_FLARE_DEPTH, CAGE_ARCH_FLANK_FOOT_FLARE_HEIGHT);
-      const radialOrientation = new THREE.Object3D();
-      radialOrientation.rotation.y = angle;
-      radialOrientation.rotateOnWorldAxis(tangent, -CAGE_ARCH_CANT_RADIANS);
-      footFlare.quaternion.copy(clone.quaternion.clone().invert().multiply(radialOrientation.quaternion));
-      clone.add(footFlare);
+    if (frame instanceof THREE.Mesh) {
+      bendCageTalonToApex(frame, angle, orbitRadius, CAGE_ARCH_BODY_TANGENTIAL_OFFSETS[i], CAGE_ARCH_APEX_TANGENTIAL_OFFSETS[i], CAGE_ARCH_FRONT_DEPTH_OFFSETS[i], CAGE_ARCH_BODY_CROSS_STARTS[i], CAGE_ARCH_BODY_CROSS_PEAKS[i], CAGE_ARCH_BODY_CROSS_ENDS[i], clone.quaternion);
+      clampRadialExtent(frame, clone.position, 1.9, clone.quaternion);
     }
+    const footFlare = radialWedge(`cage_arch_foot_flare_${i}`, CAGE_ARCH_FOOT_FLARE_WIDTH, CAGE_ARCH_FOOT_FLARE_DEPTH, CAGE_ARCH_FOOT_FLARE_HEIGHT);
+    const radialOrientation = new THREE.Object3D();
+    radialOrientation.rotation.y = angle;
+    radialOrientation.rotateOnWorldAxis(tangent, -CAGE_ARCH_CANT_RADIANS);
+    footFlare.quaternion.copy(clone.quaternion.clone().invert().multiply(radialOrientation.quaternion));
+    clone.add(footFlare);
     cageGroup.add(clone);
   }
   stage4.add(cageGroup); parts.crystal_cage_arch_source = cageGroup;
@@ -594,22 +657,33 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       cageArchHeight: CAGE_ARCH_HEIGHT / D,
       cageArchDepth: CAGE_ARCH_DEPTH / D,
       cageArchOrbitRadius: CAGE_ARCH_ORBIT_RADIUS / D,
-      cageArchFlankOrbitRadius: CAGE_ARCH_FLANK_ORBIT_RADIUS / D,
-      cageArchFlankFootFlareWidth: CAGE_ARCH_FLANK_FOOT_FLARE_WIDTH / D,
-      cageArchFlankFootFlareDepth: CAGE_ARCH_FLANK_FOOT_FLARE_DEPTH / D,
-      cageArchFlankFootFlareHeight: CAGE_ARCH_FLANK_FOOT_FLARE_HEIGHT / D,
+      cageArchBaseOrbitRadius: CAGE_ARCH_ORBIT_RADIUS / D,
+      cageArchBaseOrbitMinRadius: Math.min(...CAGE_ARCH_ORBIT_RADII) / D,
+      cageArchBaseOrbitMaxRadius: Math.max(...CAGE_ARCH_ORBIT_RADII) / D,
+      cageArchRotationDegrees: CAGE_ARCH_ROTATION_DEGREES,
+      cageArchFootFlareWidth: CAGE_ARCH_FOOT_FLARE_WIDTH / D,
+      cageArchFootFlareDepth: CAGE_ARCH_FOOT_FLARE_DEPTH / D,
+      cageArchFootFlareHeight: CAGE_ARCH_FOOT_FLARE_HEIGHT / D,
       cageArchMaxRadius: 1.9 / D,
       cageArchBaseY: CAGE_ARCH_BASE_Y / D,
       cageArchApexY: CAGE_ARCH_APEX_Y / D,
-      cageArchApexRadius: Math.abs(CAGE_ARCH_ORBIT_RADIUS - CAGE_ARCH_HEIGHT * Math.sin(CAGE_ARCH_CANT_RADIANS)) / D,
+      cageArchApexRadius: CAGE_ARCH_APEX_RADIUS / D,
+      cageArchBodyRadius: CAGE_ARCH_BODY_RADIUS / D,
+      cageArchApexTangentialOffsetMax: Math.max(...CAGE_ARCH_APEX_TANGENTIAL_OFFSETS.map((value) => Math.abs(value))) / D,
+      cageArchBodyTangentialOffsetMax: Math.max(...CAGE_ARCH_BODY_TANGENTIAL_OFFSETS.map((value) => Math.abs(value))) / D,
+      cageArchFrontDepthOffsetMax: Math.max(...CAGE_ARCH_FRONT_DEPTH_OFFSETS) / D,
+      cageArchBodyCrossStartMin: Math.min(...CAGE_ARCH_BODY_CROSS_STARTS.filter((value) => value > 0)),
+      cageArchBodyCrossEndMax: Math.max(...CAGE_ARCH_BODY_CROSS_ENDS),
+      cageArchApexBendStart: CAGE_ARCH_BEND_START,
+      cageArchCantDegrees: CAGE_ARCH_CANT_DEGREES,
       cageArchSouthCantDegrees: CAGE_ARCH_CANT_DEGREES,
       cageArchEastCantDegrees: CAGE_ARCH_CANT_DEGREES,
       cageArchNorthCantDegrees: CAGE_ARCH_CANT_DEGREES,
       cageArchWestCantDegrees: CAGE_ARCH_CANT_DEGREES,
-      cageArchSouthYawDegrees: CAGE_ARCH_YAWS_DEGREES[0],
-      cageArchEastYawDegrees: CAGE_ARCH_YAWS_DEGREES[1],
-      cageArchWestYawDegrees: CAGE_ARCH_YAWS_DEGREES[3],
-      cageArchNorthYawDegrees: CAGE_ARCH_YAWS_DEGREES[2],
+      cageArchDiagonal0YawDegrees: CAGE_ARCH_YAWS_DEGREES[0],
+      cageArchDiagonal1YawDegrees: CAGE_ARCH_YAWS_DEGREES[1],
+      cageArchDiagonal2YawDegrees: CAGE_ARCH_YAWS_DEGREES[2],
+      cageArchDiagonal3YawDegrees: CAGE_ARCH_YAWS_DEGREES[3],
     },
     moduleCounts: {
       foundation_disc: 1,
