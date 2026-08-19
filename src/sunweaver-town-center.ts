@@ -437,7 +437,7 @@ function almondFrameGeometry(
 ): THREE.ExtrudeGeometry {
   const outer = almondShape(width, height);
   const inner = almondShape(Math.max(0.08, width - thickness * 2), Math.max(0.12, height - thickness * 2));
-  outer.holes.push(new THREE.Path(inner.getPoints(32)));
+  outer.holes.push(new THREE.Path(inner.getPoints(32).reverse()));
   const geometry = new THREE.ExtrudeGeometry(outer, {
     depth,
     bevelEnabled: true,
@@ -804,11 +804,13 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   group.add(innerCavity);
   const deepStoneFrame = pointedArchFrame(archWidth, archHeight, 0.36, 0.28);
   deepStoneFrame.material = materials.stoneShadow;
-  deepStoneFrame.position.z = -0.48;
+  deepStoneFrame.position.z = -0.82;
+  deepStoneFrame.visible = false;
   group.add(deepStoneFrame);
   const stoneFrame = pointedArchFrame(archWidth, archHeight, 0.48, 0.28);
   stoneFrame.material = materials.stoneLight;
-  stoneFrame.position.z = -0.12;
+  stoneFrame.position.z = -0.58;
+  stoneFrame.visible = false;
   group.add(stoneFrame);
 
   const almond = new THREE.Group();
@@ -984,50 +986,64 @@ function createWingDetailKit(materials: MaterialSet): THREE.Group {
   // One shared compact meso-detail module, built once and cloned onto each of
   // the four gallery wings (clone() shares geometry and material instances).
   // Built in a local frame where +z is the wing's outward facade direction.
+  // PTC-I13: the facade-mounted elements (pilasters, bands, almond insets)
+  // were relocated onto the two lateral flank faces of the wing shell, and the
+  // side arches were pulled inward along the flank, so the south/front wing's
+  // kit no longer overlays the large cyan front-approach hero assembly while
+  // every element stays visibly attached to its wing. All kit geometry now
+  // sits at |x| >= 0.64 (flank faces) and z <= 2.16, clear of the hero's
+  // deepest solid plane (stone shadow frame back face at z ~ 2.22).
   const kit = new THREE.Group();
   kit.name = 'wing-detail-kit';
 
-  // Two vertical gold pilasters flanking the outer facade (radius 3.20 face).
-  const pilasterGeometry = new RoundedBoxGeometry(0.16, 1.06, 0.18, 2, 0.03);
+  // Two vertical gold pilasters flanking the wing shell's lateral faces,
+  // on the outer half of each flank.
+  const pilasterGeometry = new RoundedBoxGeometry(0.12, 0.78, 0.12, 2, 0.03);
   for (const side of [-1, 1]) {
     const pilaster = new THREE.Mesh(pilasterGeometry, materials.gold);
     pilaster.name = 'wing-pilasters';
-    pilaster.position.set(side * 0.56, 2.0, 3.28);
+    pilaster.position.set(side * 0.72, 2.0, 2.1);
+    pilaster.rotation.y = side * Math.PI * 0.5;
     kit.add(pilaster);
   }
 
-  // Two horizontal gold bands integrated into the wing shell.
-  const bandGeometry = new RoundedBoxGeometry(1.4, 0.09, 0.12, 2, 0.02);
-  for (const y of [1.62, 2.46]) {
+  // Two horizontal gold bands integrated into the wing shell's flank faces,
+  // one per side, tucked beneath the side arch.
+  const bandGeometry = new RoundedBoxGeometry(0.36, 0.09, 0.12, 2, 0.02);
+  for (const side of [-1, 1]) {
     const band = new THREE.Mesh(bandGeometry, materials.gold);
     band.name = 'wing-gold-bands';
-    band.position.set(0, y, 3.21);
+    band.position.set(side * 0.7, 1.655, 1.78);
+    band.rotation.y = side * Math.PI * 0.5;
     kit.add(band);
   }
 
   // One small pointed side arch (gold frame + dark recessed panel) per lateral
-  // side of the wing shell, facing tangentially.
-  const sideArchGeometry = pointedArchFrame(0.44, 0.6, 0.1, 0.05).geometry;
-  const sideCavityGeometry = pointedArchFill(0.32, 0.48);
+  // side of the wing shell, facing tangentially, on the inner half of each
+  // flank so the south kit stays behind the hero assembly.
+  const sideArchGeometry = pointedArchFrame(0.4, 0.54, 0.08, 0.05).geometry;
+  const sideCavityGeometry = pointedArchFill(0.3, 0.42);
   for (const side of [-1, 1]) {
     const frame = new THREE.Mesh(sideArchGeometry, materials.gold);
     frame.name = 'wing-side-arches';
-    frame.position.set(side * 0.645, 2.0, 2.34);
+    frame.position.set(side * 0.645, 2.0, 1.74);
     frame.rotation.y = side * Math.PI * 0.5;
     kit.add(frame);
     const cavity = new THREE.Mesh(sideCavityGeometry, materials.cavity);
     cavity.name = 'wing-side-arches';
-    cavity.position.set(side * 0.648, 2.0, 2.34);
+    cavity.position.set(side * 0.648, 2.0, 1.74);
     cavity.rotation.y = side * Math.PI * 0.5;
     kit.add(cavity);
   }
 
-  // Two small cyan almond insets on the outer facade.
-  const almondGeometry = almondExtrudedGeometry(0.3, 0.44, 0.05, 0.016);
+  // Two small cyan almond insets on the wing shell's flank faces, one per
+  // side, between the gold band and the pointed arch.
+  const almondGeometry = almondExtrudedGeometry(0.2, 0.28, 0.05, 0.012);
   for (const side of [-1, 1]) {
     const almond = new THREE.Mesh(almondGeometry, materials.mandorla);
     almond.name = 'wing-almond-insets';
-    almond.position.set(side * 0.3, 2.0, 3.215);
+    almond.position.set(side * 0.695, 1.85, 1.8);
+    almond.rotation.y = side * Math.PI * 0.5;
     kit.add(almond);
   }
   return kit;
@@ -1253,7 +1269,8 @@ export function createSunweaverTownCenter(
   options: SunweaverTownCenterOptions = {},
 ): SunweaverTownCenterModel {
   const root = new THREE.Group() as SunweaverTownCenterModel;
-  root.name = 'sunweaver-town-center';
+  root.name = 'SunweaverTownCenter_Blockout_v00';
+  root.userData.assetId = 'SunweaverTownCenter_Blockout_v00';
   const stageGroups = [1, 2, 3, 4].map((stage) => {
     const group = new THREE.Group();
     group.name = `construction-stage-${stage}`;
