@@ -629,8 +629,6 @@ function createConstructionCore(materials: MaterialSet, stage: 1 | 2 | 3): THREE
   const baseY = stage === 1 ? 1.48 : stage === 2 ? 2.5 : 3.24;
   const radius = stage === 1 ? 0.78 : stage === 2 ? 0.93 : 1.05;
   const socketHeight = stage === 1 ? 0.44 : 0.3;
-  const crystalHeight = stage === 1 ? 0.62 : stage === 2 ? 0.92 : 1.34;
-  const crystalRadius = stage === 1 ? 0.2 : stage === 2 ? 0.29 : 0.4;
 
   const socket = new THREE.Mesh(latheGeometry([
     [0.0, baseY], [radius, baseY], [radius * 1.08, baseY + 0.1],
@@ -642,37 +640,41 @@ function createConstructionCore(materials: MaterialSet, stage: 1 | 2 | 3): THREE
   socketRing.position.y = baseY + 0.1;
   group.add(socketRing);
 
-  const crystal = new THREE.Mesh(crystalGeometry(crystalRadius, crystalHeight, 7), stage === 1 ? materials.energy : materials.crystal);
-  crystal.position.y = baseY + socketHeight + crystalHeight * 0.48;
-  group.add(crystal);
-
-  const scaffoldTop = baseY + socketHeight + crystalHeight + 0.3;
   if (stage >= 2) {
+    const crystalHeight = stage === 2 ? 0.52 : 0.86;
+    const crystalRadius = stage === 2 ? 0.18 : 0.32;
+    const crystal = new THREE.Mesh(crystalGeometry(crystalRadius, crystalHeight, 7), stage === 2 ? materials.energy : materials.crystal);
+    crystal.position.y = baseY + socketHeight + crystalHeight * 0.48;
+    group.add(crystal);
+
+    const scaffoldTop = baseY + socketHeight + crystalHeight + (stage === 2 ? 0.18 : 0.26);
+    const poleTop = stage === 2 ? scaffoldTop : scaffoldTop + 0.12;
     for (let index = 0; index < 4; index++) {
       const angle = (index / 4) * Math.PI * 2 + Math.PI * 0.25;
       const start = new THREE.Vector3(Math.sin(angle) * radius * 1.15, baseY + 0.04, Math.cos(angle) * radius * 1.15);
-      const end = new THREE.Vector3(Math.sin(angle) * radius * 0.55, scaffoldTop, Math.cos(angle) * radius * 0.55);
-      group.add(beam(start, end, 0.05, materials.gold, 7));
+      const end = new THREE.Vector3(Math.sin(angle) * radius * 0.55, poleTop, Math.cos(angle) * radius * 0.55);
+      group.add(beam(start, end, stage === 2 ? 0.042 : 0.05, materials.gold, 7));
     }
-  }
-  if (stage === 3) {
-    const crownRing = new THREE.Mesh(
-      new THREE.TorusGeometry(radius * 0.56, 0.055, 8, 32),
-      materials.gold,
-    );
-    crownRing.rotation.x = Math.PI * 0.5;
-    crownRing.position.y = scaffoldTop;
-    group.add(crownRing);
-    for (let index = 0; index < 4; index++) {
-      const angle = (index / 4) * Math.PI * 2 + Math.PI * 0.25;
-      const nextAngle = ((index + 1) / 4) * Math.PI * 2 + Math.PI * 0.25;
-      group.add(beam(
-        new THREE.Vector3(Math.sin(angle) * radius * 0.55, scaffoldTop, Math.cos(angle) * radius * 0.55),
-        new THREE.Vector3(Math.sin(nextAngle) * radius * 0.55, scaffoldTop, Math.cos(nextAngle) * radius * 0.55),
-        0.042,
+
+    if (stage === 3) {
+      const crownRing = new THREE.Mesh(
+        new THREE.TorusGeometry(radius * 0.56, 0.055, 8, 32),
         materials.gold,
-        7,
-      ));
+      );
+      crownRing.rotation.x = Math.PI * 0.5;
+      crownRing.position.y = poleTop;
+      group.add(crownRing);
+      for (let index = 0; index < 4; index++) {
+        const angle = (index / 4) * Math.PI * 2 + Math.PI * 0.25;
+        const nextAngle = ((index + 1) / 4) * Math.PI * 2 + Math.PI * 0.25;
+        group.add(beam(
+          new THREE.Vector3(Math.sin(angle) * radius * 0.55, poleTop, Math.cos(angle) * radius * 0.55),
+          new THREE.Vector3(Math.sin(nextAngle) * radius * 0.55, poleTop, Math.cos(nextAngle) * radius * 0.55),
+          0.042,
+          materials.gold,
+          7,
+        ));
+      }
     }
   }
   return group;
@@ -699,20 +701,15 @@ function createStair(materials: MaterialSet): THREE.Group {
   }
 
   for (const side of [-1, 1]) {
-    const points: THREE.Vector3[] = [];
-    for (let index = 0; index < steps; index++) {
+    for (let index = 0; index < steps; index += 2) {
       const t = index / (steps - 1);
       const width = THREE.MathUtils.lerp(2.88, 1.52, t);
-      points.push(new THREE.Vector3(side * (width * 0.5 + 0.12), 0.72 + t * 1.0, THREE.MathUtils.lerp(3.58, 2.48, t)));
+      const y = 0.43 + t * 0.83;
+      const z = THREE.MathUtils.lerp(3.48, 2.53, t);
+      const nosing = new THREE.Mesh(new RoundedBoxGeometry(width + 0.04, 0.028, 0.06, 2, 0.012), materials.goldDark);
+      nosing.position.set(side * (width * 0.5 + 0.04), y + 0.07, z + 0.11);
+      stairCaps.add(nosing);
     }
-    group.add(tube(points, 0.055, materials.gold, 30));
-  }
-
-  for (const x of [-0.72, 0.72]) {
-    const runner = new THREE.Mesh(new RoundedBoxGeometry(0.36, 0.035, 1.46, 2, 0.02), materials.stoneShadow);
-    runner.position.set(x, 0.88, 3.0);
-    runner.rotation.x = -0.68;
-    group.add(runner);
   }
   return group;
 }
@@ -771,12 +768,6 @@ function createFacadeRhythm(materials: MaterialSet): THREE.Group {
     goldFrame.position.z = 0.025;
     bay.add(goldFrame);
 
-    const jewel = new THREE.Mesh(crystalGeometry(0.075, 0.24, 6), materials.energy);
-    jewel.position.set(0, 1.22, 0.13);
-    bay.add(jewel);
-    bay.add(beam(new THREE.Vector3(-0.43, -0.04, 0.0), new THREE.Vector3(-0.34, 1.15, 0.0), 0.045, materials.gold));
-    bay.add(beam(new THREE.Vector3(0.43, -0.04, 0.0), new THREE.Vector3(0.34, 1.15, 0.0), 0.045, materials.gold));
-
     const radius = 2.79;
     bay.position.set(Math.sin(angle) * radius, 0.58, Math.cos(angle) * radius);
     bay.rotation.y = angle;
@@ -785,18 +776,15 @@ function createFacadeRhythm(materials: MaterialSet): THREE.Group {
     const upperAngle = angle + Math.PI * 0.125;
     const upperBay = new THREE.Group();
     upperBay.name = `upper-almond-bay-${index + 1}`;
-    const upperCavity = new THREE.Mesh(pointedArchFill(0.36, 0.64), materials.cavity);
-    upperCavity.position.z = 0.07;
+    const upperCavity = new THREE.Mesh(pointedArchFill(0.32, 0.52), materials.cavity);
+    upperCavity.position.z = 0.06;
     upperBay.add(upperCavity);
-    const upperGold = pointedArchFrame(0.52, 0.82, 0.16, 0.055);
+    const upperGold = pointedArchFrame(0.46, 0.68, 0.14, 0.05);
     upperGold.material = materials.gold;
     upperGold.position.z = 0.02;
     upperBay.add(upperGold);
-    const upperJewel = new THREE.Mesh(crystalGeometry(0.065, 0.2, 6), materials.energy);
-    upperJewel.position.set(0, 0.43, 0.13);
-    upperBay.add(upperJewel);
     const upperRadius = 2.45;
-    upperBay.position.set(Math.sin(upperAngle) * upperRadius, 1.62, Math.cos(upperAngle) * upperRadius);
+    upperBay.position.set(Math.sin(upperAngle) * upperRadius, 1.52, Math.cos(upperAngle) * upperRadius);
     upperBay.rotation.y = upperAngle;
     group.add(upperBay);
   }
@@ -810,17 +798,19 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   // centered in the recess, close to the arch plane, without changing the annex.
   group.position.set(0, 1.28, 2.94);
 
-  const darkRecess = new THREE.Mesh(pointedArchFill(1.32, 1.92), materials.cavity);
-  darkRecess.position.z = -0.48;
+  const archWidth = 1.96;
+  const archHeight = 2.34;
+  const darkRecess = new THREE.Mesh(pointedArchFill(archWidth * 0.68, archHeight * 0.82), materials.cavity);
+  darkRecess.position.z = -0.62;
   group.add(darkRecess);
-  const innerCavity = new THREE.Mesh(pointedArchFill(1.06, 1.58), materials.foundationDark);
-  innerCavity.position.set(0, 0.02, -0.34);
+  const innerCavity = new THREE.Mesh(pointedArchFill(archWidth * 0.54, archHeight * 0.68), materials.foundationDark);
+  innerCavity.position.set(0, 0.02, -0.48);
   group.add(innerCavity);
-  const deepStoneFrame = pointedArchFrame(1.78, 2.34, 0.24, 0.28);
+  const deepStoneFrame = pointedArchFrame(archWidth, archHeight, 0.32, 0.28);
   deepStoneFrame.material = materials.stoneShadow;
-  deepStoneFrame.position.z = -0.22;
+  deepStoneFrame.position.z = -0.28;
   group.add(deepStoneFrame);
-  const stoneFrame = pointedArchFrame(1.78, 2.34, 0.42, 0.28);
+  const stoneFrame = pointedArchFrame(archWidth, archHeight, 0.48, 0.28);
   stoneFrame.material = materials.stoneLight;
   stoneFrame.position.z = 0.01;
   group.add(stoneFrame);
@@ -829,36 +819,36 @@ function createFrontHeartFacade(materials: MaterialSet): THREE.Group {
   almond.name = 'front-almond-jewel';
   const almondCenterY = 1.04;
   const almondFrame = new THREE.Mesh(almondFrameGeometry(1.50, 2.02, 0.18, 0.16), materials.gold);
-  almondFrame.position.set(0, almondCenterY, 0.25);
+  almondFrame.position.set(0, almondCenterY, 0.18);
   almond.add(almondFrame);
   const backplate = new THREE.Mesh(almondExtrudedGeometry(1.30, 1.82, 0.07, 0.025), materials.energy);
   backplate.name = 'front-almond-backplate';
-  backplate.position.set(0, almondCenterY, 0.12);
+  backplate.position.set(0, almondCenterY, -0.06);
   almond.add(backplate);
   const shell = new THREE.Mesh(almondExtrudedGeometry(1.34, 1.86, 0.16, 0.045), materials.crystal);
-  shell.position.set(0, almondCenterY, 0.20);
+  shell.position.set(0, almondCenterY, 0.02);
   almond.add(shell);
   const core = new THREE.Mesh(almondExtrudedGeometry(1.10, 1.58, 0.10, 0.035), materials.crystalCore);
-  core.position.set(0, almondCenterY, 0.30);
+  core.position.set(0, almondCenterY, 0.12);
   almond.add(core);
   group.add(almond);
 
   // Heavy curved pauldron lips hold the arch open on both sides.
   const lipPoints = (side: number): THREE.Vector3[] => [
-    new THREE.Vector3(side * 0.88, 0.08, 0.24),
-    new THREE.Vector3(side * 1.04, 0.62, 0.29),
-    new THREE.Vector3(side * 0.84, 1.38, 0.32),
-    new THREE.Vector3(side * 0.50, 2.12, 0.31),
+    new THREE.Vector3(side * 0.94, 0.08, 0.20),
+    new THREE.Vector3(side * 1.14, 0.62, 0.26),
+    new THREE.Vector3(side * 0.96, 1.38, 0.30),
+    new THREE.Vector3(side * 0.58, 2.12, 0.28),
   ];
-  group.add(tube(lipPoints(-1), 0.18, materials.gold, 36));
-  group.add(tube(lipPoints(1), 0.18, materials.gold, 36));
+  group.add(tube(lipPoints(-1), 0.22, materials.gold, 36));
+  group.add(tube(lipPoints(1), 0.22, materials.gold, 36));
 
   // Woven ribs stay in the narrow side zones. The almond remains a clean,
   // uninterrupted cyan silhouette.
-  const ribZ = 0.41;
+  const ribZ = 0.34;
   for (const side of [-1, 1]) {
-    const inner = side * 0.79;
-    const outer = side * 0.94;
+    const inner = side * 0.86;
+    const outer = side * 1.02;
     group.add(tube([
       new THREE.Vector3(inner, 0.18, ribZ),
       new THREE.Vector3(inner + side * 0.05, 0.78, ribZ + 0.01),
@@ -890,17 +880,17 @@ function createButtress(materials: MaterialSet, angle: number, index: number): T
   const shape = new THREE.Shape();
   shape.moveTo(-0.36, 0);
   shape.lineTo(0.36, 0);
-  shape.lineTo(0.29, 0.74);
-  shape.quadraticCurveTo(0.27, 1.28, 0.08, 1.65);
-  shape.lineTo(0, 1.92);
-  shape.lineTo(-0.08, 1.65);
-  shape.quadraticCurveTo(-0.27, 1.28, -0.29, 0.74);
+  shape.lineTo(0.29, 0.68);
+  shape.quadraticCurveTo(0.26, 1.02, 0.12, 1.22);
+  shape.quadraticCurveTo(0.04, 1.34, 0, 1.38);
+  shape.quadraticCurveTo(-0.04, 1.34, -0.12, 1.22);
+  shape.quadraticCurveTo(-0.26, 1.02, -0.29, 0.68);
   shape.closePath();
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: 0.48,
     bevelEnabled: true,
-    bevelSize: 0.04,
-    bevelThickness: 0.04,
+    bevelSize: 0.03,
+    bevelThickness: 0.03,
     bevelSegments: 2,
     curveSegments: 12,
   });
@@ -908,11 +898,11 @@ function createButtress(materials: MaterialSet, angle: number, index: number): T
   const fin = new THREE.Mesh(geometry, index % 2 === 0 ? materials.stoneLight : materials.stone);
   group.add(fin);
 
-  const inset = new THREE.Mesh(new RoundedBoxGeometry(0.24, 0.72, 0.035, 3, 0.06), materials.cavity);
-  inset.position.set(0, 0.78, 0.285);
+  const inset = new THREE.Mesh(new RoundedBoxGeometry(0.24, 0.58, 0.035, 3, 0.06), materials.cavity);
+  inset.position.set(0, 0.68, 0.285);
   group.add(inset);
-  group.add(beam(new THREE.Vector3(-0.31, 0.06, 0.28), new THREE.Vector3(-0.07, 1.62, 0.28), 0.04, materials.gold));
-  group.add(beam(new THREE.Vector3(0.31, 0.06, 0.28), new THREE.Vector3(0.07, 1.62, 0.28), 0.04, materials.gold));
+  group.add(beam(new THREE.Vector3(-0.28, 0.06, 0.28), new THREE.Vector3(-0.08, 1.12, 0.28), 0.035, materials.gold));
+  group.add(beam(new THREE.Vector3(0.28, 0.06, 0.28), new THREE.Vector3(0.08, 1.12, 0.28), 0.035, materials.gold));
 
   const radius = 2.62;
   group.position.set(Math.sin(angle) * radius, 0.48, Math.cos(angle) * radius);
@@ -1292,7 +1282,7 @@ export function createSunweaverTownCenter(
   const bannerRing = new THREE.Group();
   bannerRing.name = 'banner-system';
   for (let index = 0; index < 4; index++) {
-    const banner = createBanner(materials, Math.PI * 0.375 + (index / 4) * Math.PI * 2, index);
+    const banner = createBanner(materials, Math.PI * 0.25 + (index / 4) * Math.PI * 2, index);
     banner.scale.setScalar(0.92);
     banner.traverse((object) => {
       if (object instanceof THREE.Mesh && typeof object.userData.bannerIndex === 'number') banners.push(object);
@@ -1303,7 +1293,7 @@ export function createSunweaverTownCenter(
   registerPart(3, createFoliage(materials));
 
   const crystalSpire = createCrystalSpire(materials);
-  registerPart(3, crystalSpire.group);
+  registerPart(4, crystalSpire.group);
 
   const crownJewels = new THREE.Group();
   crownJewels.name = 'crystal-core';
