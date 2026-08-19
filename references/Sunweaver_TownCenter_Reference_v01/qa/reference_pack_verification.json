@@ -1,0 +1,434 @@
+{
+  "schemaVersion": 1,
+  "passed": true,
+  "requiredBaseFiles": [
+    "01_front_ortho_4096.png",
+    "02_right_ortho_4096.png",
+    "03_back_ortho_4096.png",
+    "04_left_ortho_4096.png",
+    "05_top_ortho_4096.png",
+    "06_front_three_quarter_4096.png",
+    "07_rear_three_quarter_4096.png",
+    "08_entrance_detail_2048.png",
+    "09_crystal_crown_detail_2048.png",
+    "10_buttress_tower_detail_2048.png",
+    "11_banner_and_sigil_detail_2048.png",
+    "13_scale_and_dimensions_2048.png",
+    "14_stage_1_2048.png",
+    "15_stage_2_2048.png",
+    "16_stage_3_2048.png",
+    "17_stage_4_2048.png",
+    "12_materials_2048.png"
+  ],
+  "checkedFiles": [
+    {
+      "file": "01_front_ortho_4096.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "01_front_ortho_4096_neutral.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "01_front_ortho_4096_alpha.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "02_right_ortho_4096.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "02_right_ortho_4096_neutral.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "02_right_ortho_4096_alpha.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "03_back_ortho_4096.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "03_back_ortho_4096_neutral.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "03_back_ortho_4096_alpha.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "04_left_ortho_4096.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "04_left_ortho_4096_neutral.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "04_left_ortho_4096_alpha.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "05_top_ortho_4096.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "05_top_ortho_4096_neutral.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "05_top_ortho_4096_alpha.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "06_front_three_quarter_4096.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "06_front_three_quarter_4096_neutral.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "06_front_three_quarter_4096_alpha.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "07_rear_three_quarter_4096.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "07_rear_three_quarter_4096_neutral.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "07_rear_three_quarter_4096_alpha.png",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "exists": true
+    },
+    {
+      "file": "08_entrance_detail_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "08_entrance_detail_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "08_entrance_detail_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "09_crystal_crown_detail_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "09_crystal_crown_detail_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "09_crystal_crown_detail_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "10_buttress_tower_detail_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "10_buttress_tower_detail_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "10_buttress_tower_detail_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "11_banner_and_sigil_detail_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "11_banner_and_sigil_detail_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "11_banner_and_sigil_detail_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "13_scale_and_dimensions_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "13_scale_and_dimensions_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "13_scale_and_dimensions_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "14_stage_1_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "14_stage_1_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "14_stage_1_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "15_stage_2_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "15_stage_2_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "15_stage_2_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "16_stage_3_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "16_stage_3_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "16_stage_3_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "17_stage_4_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "17_stage_4_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "17_stage_4_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "12_materials_2048.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "12_materials_2048_neutral.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    },
+    {
+      "file": "12_materials_2048_alpha.png",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "exists": true
+    }
+  ],
+  "failures": []
+}

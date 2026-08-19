@@ -1,0 +1,388 @@
+{
+  "schemaVersion": 1,
+  "source": "references/sunweaver-town-center-reference.png",
+  "sourceSha256": "2668c5f706fdc62c261c810cae665c2db2427c104f86a8caac2b00503edccf50",
+  "sourceDimensions": {
+    "width": 1536,
+    "height": 1024
+  },
+  "neutralBackground": "#808080",
+  "palette": [
+    "#F0E0B6",
+    "#D9B26E",
+    "#7AB591",
+    "#1E3A6D",
+    "#36C9FF"
+  ],
+  "outputs": [
+    {
+      "file": "01_front_ortho_4096.png",
+      "role": "front orthographic",
+      "sourceCrop": {
+        "x": 670,
+        "y": 82,
+        "width": 155,
+        "height": 273
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "02_right_ortho_4096.png",
+      "role": "right orthographic",
+      "sourceCrop": {
+        "x": 866,
+        "y": 82,
+        "width": 199,
+        "height": 273
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "03_back_ortho_4096.png",
+      "role": "back orthographic",
+      "sourceCrop": {
+        "x": 1320,
+        "y": 82,
+        "width": 185,
+        "height": 273
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "04_left_ortho_4096.png",
+      "role": "left orthographic",
+      "sourceCrop": {
+        "x": 866,
+        "y": 82,
+        "width": 199,
+        "height": 273
+      },
+      "status": "mirrored",
+      "sourceObserved": false,
+      "inferenceNote": "Mirrored from admitted right-side crop; left side is not directly observed.",
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "05_top_ortho_4096.png",
+      "role": "top orthographic",
+      "sourceCrop": {
+        "x": 263,
+        "y": 430,
+        "width": 291,
+        "height": 250
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "06_front_three_quarter_4096.png",
+      "role": "front three-quarter",
+      "sourceCrop": {
+        "x": 440,
+        "y": 82,
+        "width": 180,
+        "height": 273
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "07_rear_three_quarter_4096.png",
+      "role": "rear three-quarter",
+      "sourceCrop": {
+        "x": 1087,
+        "y": 76,
+        "width": 226,
+        "height": 289
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 4096,
+        "height": 4096
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "08_entrance_detail_2048.png",
+      "role": "entrance detail",
+      "sourceCrop": {
+        "x": 170,
+        "y": 735,
+        "width": 130,
+        "height": 143
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "09_crystal_crown_detail_2048.png",
+      "role": "crystal crown detail",
+      "sourceCrop": {
+        "x": 35,
+        "y": 735,
+        "width": 115,
+        "height": 143
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "10_buttress_tower_detail_2048.png",
+      "role": "buttress and tower detail",
+      "sourceCrop": {
+        "x": 320,
+        "y": 735,
+        "width": 135,
+        "height": 143
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "11_banner_and_sigil_detail_2048.png",
+      "role": "banner and sigil detail",
+      "sourceCrop": {
+        "x": 485,
+        "y": 735,
+        "width": 120,
+        "height": 143
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "12_materials_2048.png",
+      "role": "approved five-swatch material board",
+      "sourceCrop": null,
+      "status": "constructed-from-approved-palette",
+      "sourceObserved": false,
+      "inferenceNote": "Clean board generated from exact palette in 00_spec.json; no source text or candidate art used.",
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": false
+      }
+    },
+    {
+      "file": "13_scale_and_dimensions_2048.png",
+      "role": "scale and footprint dimensions",
+      "sourceCrop": {
+        "x": 1120,
+        "y": 760,
+        "width": 195,
+        "height": 140
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "14_stage_1_2048.png",
+      "role": "construction stage 1",
+      "sourceCrop": {
+        "x": 585,
+        "y": 500,
+        "width": 205,
+        "height": 181
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "15_stage_2_2048.png",
+      "role": "construction stage 2",
+      "sourceCrop": {
+        "x": 825,
+        "y": 500,
+        "width": 195,
+        "height": 181
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "16_stage_3_2048.png",
+      "role": "construction stage 3",
+      "sourceCrop": {
+        "x": 1055,
+        "y": 500,
+        "width": 195,
+        "height": 181
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    },
+    {
+      "file": "17_stage_4_2048.png",
+      "role": "construction stage 4",
+      "sourceCrop": {
+        "x": 1285,
+        "y": 500,
+        "width": 220,
+        "height": 181
+      },
+      "status": "direct",
+      "sourceObserved": true,
+      "inferenceNote": null,
+      "dimensions": {
+        "width": 2048,
+        "height": 2048
+      },
+      "variants": {
+        "baseEqualsNeutral": true,
+        "neutralOpaque": true,
+        "alphaHasTransparency": true
+      }
+    }
+  ]
+}
