@@ -28,6 +28,14 @@ await p.waitForTimeout(400);
 const after = await p.evaluate(() => window.__SUNWEAVER_STRUCTURAL__.camera.position.clone());
 const dist = Math.hypot(after.x - base.x, after.y - base.y, after.z - base.z);
 const moved = dist > 0.1;
+// Arrow-key pan: hold ArrowRight then compare camera position (OrbitControls pan moves camera + target together).
+await p.keyboard.down('ArrowRight');
+await p.waitForTimeout(650);
+await p.keyboard.up('ArrowRight');
+await p.waitForTimeout(250);
+const afterPan = await p.evaluate(() => window.__SUNWEAVER_STRUCTURAL__.camera.position.clone());
+const panDist = Math.hypot(afterPan.x - after.x, afterPan.y - after.y, afterPan.z - after.z);
+const arrowPanMoved = panDist > 0.05;
 const shot = await p.screenshot();
 const px = PNG.sync.read(shot);
 let sum = 0, max = 0;
@@ -37,10 +45,13 @@ console.log(JSON.stringify({
   errors,
   hasButtons: hasBtn,
   stageAfterClick: stage,
-  cameraMovedByDrag: moved,
-  dragCameraDistance: +dist.toFixed(3),
+  orbitByDrag: moved,
+  orbitDragDistance: +dist.toFixed(3),
+  panByArrows: arrowPanMoved,
+  arrowPanDistance: +panDist.toFixed(3),
   before: [base.x, base.y, base.z].map((v) => +v.toFixed(2)),
-  after: [after.x, after.y, after.z].map((v) => +v.toFixed(2)),
+  afterDrag: [after.x, after.y, after.z].map((v) => +v.toFixed(2)),
+  afterPan: [afterPan.x, afterPan.y, afterPan.z].map((v) => +v.toFixed(2)),
   renderMeanLuma: +mean.toFixed(1),
   renderMax: max,
 }, null, 1));

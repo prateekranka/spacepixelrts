@@ -135,6 +135,12 @@ resize();
 window.addEventListener('resize', resize);
 
 // Interactive orbit/zoom/pan when not in a frozen QA capture.
+const keys = new Set<string>();
+window.addEventListener('keydown', (e) => {
+  keys.add(e.code);
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', (e) => keys.delete(e.code));
 if (!freeze) {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.target.copy(activeTarget);
@@ -174,7 +180,21 @@ let ready = false;
 function frame(): void {
   requestAnimationFrame(frame);
   const delta = freeze ? 0 : Math.min(clock.getDelta(), 0.05);
-  if (controls) controls.update();
+  if (controls) {
+    // Arrows/WASD pan the aim deterministically (works on any input device).
+    let dx = 0, dy = 0;
+    if (keys.has('KeyA') || keys.has('ArrowLeft')) dx -= 1;
+    if (keys.has('KeyD') || keys.has('ArrowRight')) dx += 1;
+    if (keys.has('KeyW') || keys.has('ArrowUp')) dy += 1;
+    if (keys.has('KeyS') || keys.has('ArrowDown')) dy -= 1;
+    if (dx || dy) {
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+      const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+      const f = ((camera.userData.half as number) ?? 4.9) * 0.14;
+      controls.target.addScaledVector(right, dx * f).addScaledVector(up, dy * f);
+    }
+    controls.update();
+  }
   runtime.update(clock.elapsedTime, delta);
   renderer.render(scene, camera);
   if (!ready) {
