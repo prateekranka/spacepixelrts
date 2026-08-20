@@ -215,26 +215,39 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const ivory = new THREE.MeshStandardMaterial({ color: '#F0E0B6', roughness: 0.82, metalness: 0, flatShading: true });
   const ivoryShade = new THREE.MeshStandardMaterial({ color: '#E4D3A0', roughness: 0.84, metalness: 0, flatShading: true });
   const ivoryShadow = new THREE.MeshStandardMaterial({ color: '#D6C48E', roughness: 0.86, metalness: 0, flatShading: true });
+  // PTC-MAT-02: a slightly darker ivory for faint masonry course hairlines.
+  const ivoryCourse = new THREE.MeshStandardMaterial({ color: '#E8D6A6', roughness: 0.85, metalness: 0, flatShading: true });
+  // PTC-MAT-02: a deeper stone variant (#E3D09C) for recessed / lower faces.
+  const stoneDark = new THREE.MeshStandardMaterial({ color: '#E3D09C', roughness: 0.88, metalness: 0, flatShading: true });
   const gold = new THREE.MeshStandardMaterial({ color: '#D9B26E', roughness: 0.45, metalness: 0.5, flatShading: true });
   const goldBright = new THREE.MeshStandardMaterial({ color: '#E8C98F', roughness: 0.4, metalness: 0.5, flatShading: true });
-  const crystal = new THREE.MeshStandardMaterial({ color: '#7AB591', roughness: 0.35, metalness: 0, emissive: new THREE.Color('#36C9FF'), emissiveIntensity: 0.55, flatShading: true });
-  const crystalDim = new THREE.MeshStandardMaterial({ color: '#1E3A6D', roughness: 0.4, metalness: 0, emissive: new THREE.Color('#36C9FF'), emissiveIntensity: 0.3, flatShading: true });
+  // PTC-MAT-02: stronger cyan emissive so the crown unmistakably glows (≈2x previous).
+  const crystal = new THREE.MeshStandardMaterial({ color: '#7AB591', roughness: 0.35, metalness: 0, emissive: new THREE.Color('#36C9FF'), emissiveIntensity: 1.1, flatShading: true });
+  const crystalDim = new THREE.MeshStandardMaterial({ color: '#1E3A6D', roughness: 0.4, metalness: 0, emissive: new THREE.Color('#36C9FF'), emissiveIntensity: 0.45, flatShading: true });
 
   function paletteMaterialFor(name: string): THREE.Material {
+    if (name.includes('gold_band') || name.includes('gold_trim') || name.includes('gold_inner_edge') || name.includes('gold_ring') || name.includes('gold_lip')) return gold;
     if (name.includes('rim_lip')) return gold;
     if (name.startsWith('stair_tread_nose')) return gold;
     if (name.startsWith('entrance_coll')) return gold;
     if (name.includes('collar')) return goldBright;
     if (name === 'energy_vault_outer_punched_frame' || name === 'energy_vault_small_entrance_frame') return gold;
-    if (name.startsWith('cage_arch_foot_flare')) return gold;
+    // PTC-MAT-02: stronger gold band at each talon foot/shoulder.
+    if (name.startsWith('cage_arch_foot_flare')) return goldBright;
     if (name === 'banner_mount') return gold;
     if (name === 'entrance_pointed_arch') return gold;
     if (name === 'crystal_mandorla' || name === 'crystal_front_center_spine') return crystal;
     if (name === 'cage_arch') return crystalDim;
     if (name === 'tower_cap') return crystal;
-    if (name.startsWith('stair_tread') || name === 'south_stair_landing') return ivoryShade;
-    if (name.startsWith('wing_recessed') || name === 'crown_lower_socket' || name === 'stage_4_crown') return ivoryShade;
+    if (name.startsWith('stair_tread')) return ivoryShade;
+    if (name === 'south_stair_landing') return ivoryShade;
+    // PTC-MAT-02: recessed wing shell reads darker stone.
+    if (name.startsWith('wing_recessed')) return stoneDark;
+    if (name === 'crown_lower_socket' || name === 'stage_4_crown') return ivoryShade;
     if (name.startsWith('entrance_pylon') || name === 'entrance_back_wall' || name === 'energy_vault_small_entrance_recess' || name.startsWith('buttress')) return ivoryShadow;
+    // PTC-MAT-02: masonry course hairlines and darker drum-bottom bands.
+    if (name.includes('drum_course')) return ivoryCourse;
+    if (name.includes('drum_dark_band')) return stoneDark;
     return ivory;
   }
 
@@ -305,6 +318,14 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   function lathe(name: string, profile: readonly [number, number][], segments = 16): THREE.Mesh {
     const points = profile.map(([radius, y]) => new THREE.Vector2(radius, y));
     return mesh(new THREE.LatheGeometry(points, segments), name);
+  }
+
+  /** Thin horizontal band (flat torus) used for PTC-MAT-02 gold trim and stone courses. */
+  function ring(name: string, radius: number, tube: number, position: [number, number, number], segments = 48): THREE.Mesh {
+    const item = mesh(new THREE.TorusGeometry(radius, tube, 8, segments), name);
+    item.rotation.x = Math.PI / 2;
+    item.position.set(...position);
+    return item;
   }
 
   /**
@@ -652,6 +673,12 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     frame.position.set(0, 0.62, 0.52);
     source.add(frame);
 
+    // PTC-MAT-02: a thin gold inner edge strip just inside the wing pointed-arch
+    // opening (the existing stone shell stays; this is trim only).
+    const wingArchTrim = archFrame('wing_pointed_arch_gold_trim', 1.0, 1.28, 0.24, 0.05);
+    wingArchTrim.position.set(0, 0.62, 0.55);
+    source.add(wingArchTrim);
+
     source.add(gabledRoof('wing_shallow_gabled_roof', 0.64, 1.32, 1.90, 2.30));
     return source;
   }
@@ -818,6 +845,14 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const lower = cylinder('lower_drum', LOWER_DRUM_RADIUS, LOWER_DRUM_HEIGHT, [0, LOWER_DRUM_CENTER_Y, 0], 48);
   stage2.add(lower); parts.lower_drum = lower;
 
+  // PTC-MAT-02: layered gold trim + stone depth on the lower drum faces.
+  // Darker stone at the bottom quarter, two thin gold bands, two faint courses.
+  stage2.add(ring('lower_drum_dark_band', LOWER_DRUM_RADIUS + 0.03, 0.06, [0, 3.55, 0]));
+  stage2.add(ring('lower_drum_gold_band_0', LOWER_DRUM_RADIUS + 0.02, 0.028, [0, 4.15, 0]));
+  stage2.add(ring('lower_drum_course_0', LOWER_DRUM_RADIUS + 0.015, 0.014, [0, 4.85, 0]));
+  stage2.add(ring('lower_drum_gold_band_1', LOWER_DRUM_RADIUS + 0.02, 0.028, [0, 5.45, 0]));
+  stage2.add(ring('lower_drum_course_1', LOWER_DRUM_RADIUS + 0.015, 0.014, [0, 5.85, 0]));
+
   const entrance = group('entrance_bay');
   entrance.add(box('entrance_back_wall', [2.3, 3.0, 0.18], [0, 1.5, 1.62]));
   entrance.add(box('entrance_pylon_l', [0.5, 2.7, 1.05], [-1.2, 1.35, 2.15]));
@@ -851,6 +886,10 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   );
   stair.add(landing);
   parts.south_stair_landing = landing;
+  // PTC-MAT-02: a distinctly gold lip on the landing top so it reads as trim.
+  const landingLip = box('south_stair_landing_gold_lip', [STAIR_LANDING_WIDTH + 0.05, 0.05, STAIR_LANDING_DEPTH + 0.05], [0, STAIR_TOP_Y + 0.025, STAIR_LANDING_Z]);
+  stair.add(landingLip);
+  parts.south_stair_landing_gold_lip = landingLip;
   const collarSill = box(
     'entrance_collar_sill',
     [ENTRANCE_COLLAR_SILL_WIDTH, ENTRANCE_COLLAR_SILL_HEIGHT, ENTRANCE_COLLAR_SILL_DEPTH],
@@ -913,6 +952,13 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const upper = cylinder('upper_drum', UPPER_DRUM_RADIUS, UPPER_DRUM_HEIGHT, [0, UPPER_DRUM_CENTER_Y, 0], 48);
   stage3.add(upper); parts.upper_drum = upper;
 
+  // PTC-MAT-02: layered gold trim + stone depth on the upper drum faces.
+  stage3.add(ring('upper_drum_dark_band', UPPER_DRUM_RADIUS + 0.03, 0.05, [0, 6.15, 0]));
+  stage3.add(ring('upper_drum_gold_band_0', UPPER_DRUM_RADIUS + 0.02, 0.026, [0, 6.5, 0]));
+  stage3.add(ring('upper_drum_course_0', UPPER_DRUM_RADIUS + 0.015, 0.013, [0, 6.9, 0]));
+  stage3.add(ring('upper_drum_gold_band_1', UPPER_DRUM_RADIUS + 0.02, 0.026, [0, 7.15, 0]));
+  stage3.add(ring('upper_drum_course_1', UPPER_DRUM_RADIUS + 0.015, 0.013, [0, 7.45, 0]));
+
   const towerSource = makeTowerSource();
   const towerGroup = group('side_crystal_towers');
   for (let i = 0; i < 4; i++) {
@@ -945,6 +991,12 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   );
   vaultOuterFrame.position.set(0, ENERGY_VAULT_OUTER_BOTTOM_Y, ENERGY_VAULT_CENTER_Z);
   vaultFrame.add(vaultOuterFrame);
+
+  // PTC-MAT-02: a thin gold inner edge just inside the vault pointed-arch opening,
+  // so two gold lines frame the ivory (the outer frame is already gold).
+  const vaultInnerEdge = archFrame('energy_vault_gold_inner_edge', 2.0, 2.3, 0.06, 0.05);
+  vaultInnerEdge.position.set(0, ENERGY_VAULT_OUTER_BOTTOM_Y, ENERGY_VAULT_CENTER_Z + 0.22);
+  vaultFrame.add(vaultInnerEdge);
   const vaultEntranceFrame = archFrame(
     'energy_vault_small_entrance_frame',
     ENERGY_VAULT_ENTRANCE_WIDTH,
@@ -1034,6 +1086,9 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     radialOrientation.rotateOnWorldAxis(tangent, -CAGE_ARCH_CANT_RADIANS);
     footFlare.quaternion.copy(clone.quaternion.clone().invert().multiply(radialOrientation.quaternion));
     clone.add(footFlare);
+    // PTC-MAT-02: a thin gold base ring where the talon foot meets the collar.
+    const talonRing = ring(`crystal_cage_arch_gold_ring_${i}`, CAGE_ARCH_FOOT_FLARE_WIDTH * 0.5 + 0.06, 0.04, [clone.position.x, CAGE_ARCH_BASE_Y + 0.1, clone.position.z]);
+    cageGroup.add(talonRing);
     cageGroup.add(clone);
   }
   crownAssembly.add(cageGroup); parts.crystal_cage_arch_source = cageGroup;
@@ -1348,7 +1403,7 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     clay.dispose();
   }
   uniqueMaterials.add(clay);
-  for (const material of [ivory, ivoryShade, ivoryShadow, gold, goldBright, crystal, crystalDim]) uniqueMaterials.add(material);
+  for (const material of [ivory, ivoryShade, ivoryShadow, ivoryCourse, stoneDark, gold, goldBright, crystal, crystalDim]) uniqueMaterials.add(material);
 
   // Bind the palette material per mesh on the SAME geometry. The viewer swaps to
   // it only under the `palette` pass; beauty keeps the accepted clay.
