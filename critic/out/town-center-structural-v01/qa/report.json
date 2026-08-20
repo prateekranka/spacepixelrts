@@ -8,116 +8,116 @@
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 139.12,
-      "variance": 410.3
+      "mean": 135.98,
+      "variance": 429.2
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 124.43,
-      "variance": 238.59
+      "mean": 123.06,
+      "variance": 220.23
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 120.38,
-      "variance": 252.06
+      "mean": 120.85,
+      "variance": 239.11
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 126.29,
-      "variance": 429.65
+      "mean": 125.08,
+      "variance": 396.27
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-top-ortho.png",
       "query": "ui=0&view=top-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 122.83,
-      "variance": 357.66
+      "mean": 124.44,
+      "variance": 406.35
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 128.17,
-      "variance": 439.32
+      "mean": 127.28,
+      "variance": 435.66
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-rear-3q.png",
       "query": "ui=0&view=rear-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 117.21,
-      "variance": 287.83
+      "mean": 117.53,
+      "variance": 286.89
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-close.png",
       "query": "ui=0&view=gameplay-close&stage=4&pass=beauty&freeze=1",
-      "mean": 131.5,
-      "variance": 776.87
+      "mean": 129.23,
+      "variance": 757.48
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-normal.png",
       "query": "ui=0&view=gameplay-normal&stage=4&pass=beauty&freeze=1",
-      "mean": 129.19,
-      "variance": 580.56
+      "mean": 127.9,
+      "variance": 573.83
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-far.png",
       "query": "ui=0&view=gameplay-far&stage=4&pass=beauty&freeze=1",
-      "mean": 126.97,
-      "variance": 363.65
+      "mean": 126.43,
+      "variance": 363.08
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 155.9,
-      "variance": 13710.13
+      "mean": 156.19,
+      "variance": 13702.12
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=silhouette&freeze=1",
       "mean": 154.03,
-      "variance": 13786.01
+      "variance": 13781.57
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 155.9,
-      "variance": 13710.13
+      "mean": 156.19,
+      "variance": 13702.12
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 154,
-      "variance": 13787.25
+      "mean": 154.01,
+      "variance": 13782.93
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-top-ortho.png",
       "query": "ui=0&view=top-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 164.94,
-      "variance": 13304.49
+      "mean": 156.44,
+      "variance": 13720.58
     },
     {
       "file": "critic/out/town-center-structural-v01/front-wireframe.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=wireframe&freeze=1",
-      "mean": 119.79,
-      "variance": 856.94
+      "mean": 117.39,
+      "variance": 981.04
     },
     {
       "file": "critic/out/town-center-structural-v01/front-normal.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=normal&freeze=1",
-      "mean": 147.29,
-      "variance": 508.32
+      "mean": 147.33,
+      "variance": 472.02
     },
     {
       "file": "critic/out/town-center-structural-v01/front-depth.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=depth&freeze=1",
-      "mean": 170.76,
-      "variance": 1995.27
+      "mean": 170.77,
+      "variance": 2007.77
     },
     {
       "file": "critic/out/town-center-structural-v01/front-material-id.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=material-id&freeze=1",
-      "mean": 148.96,
-      "variance": 375.77
+      "mean": 149.5,
+      "variance": 414.46
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-1-front-3q.png",
@@ -128,26 +128,26 @@
     {
       "file": "critic/out/town-center-structural-v01/stage-2-front-3q.png",
       "query": "ui=0&view=front-3q&stage=2&pass=beauty&freeze=1",
-      "mean": 129.48,
-      "variance": 396.04
+      "mean": 128.61,
+      "variance": 394.43
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-3-front-3q.png",
       "query": "ui=0&view=front-3q&stage=3&pass=beauty&freeze=1",
-      "mean": 128.9,
-      "variance": 436.17
+      "mean": 128.03,
+      "variance": 433.56
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-4-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 128.17,
-      "variance": 439.32
+      "mean": 127.28,
+      "variance": 435.66
     }
   ],
   "runtime": {
     "ready": true,
-    "draws": 109,
-    "triangles": 11164,
+    "draws": 128,
+    "triangles": 11880,
     "stage": 4,
     "manifest": {
       "assetId": "SunweaverTownCenter_Structural_v01",
@@ -157,14 +157,25 @@
       "cageArchProfile": "solid-rib",
       "normalizedDimensions": {
         "footprintDiameter": 1,
+        "footprintRadius": 0.5,
+        "plinthMaxRadius": 0.5,
+        "stairOuterReach": 0.6615631612525977,
+        "stairFootprintOverhang": 0.16156316125259768,
+        "stairProjectionExemptFromPlinthFootprint": 1,
         "plinthTier1BottomY": 0.05714285714285715,
         "plinthTier1TopY": 0.2571428571428572,
         "plinthTier1BottomRadius": 0.5,
-        "plinthTier1TopRadius": 0.4714285714285714,
+        "plinthTier1TopRadius": 0.45,
+        "plinthTier1LipHeight": 0.02,
+        "plinthTier1LipBottomRadius": 0.48,
+        "plinthTier1LipTopRadius": 0.4714285714285714,
         "plinthTier2BottomY": 0.2571428571428572,
         "plinthTier2TopY": 0.4714285714285714,
-        "plinthTier2BottomRadius": 0.4785714285714286,
-        "plinthTier2TopRadius": 0.41428571428571426,
+        "plinthTier2BottomRadius": 0.4642857142857143,
+        "plinthTier2TopRadius": 0.39285714285714285,
+        "plinthTier2LipHeight": 0.02,
+        "plinthTier2LipBottomRadius": 0.41428571428571426,
+        "plinthTier2LipTopRadius": 0.4057142857142857,
         "lowerDrumRadius": 0.2785714285714286,
         "lowerDrumHeight": 0.38571428571428573,
         "upperDrumRadius": 0.23142857142857146,
@@ -186,8 +197,30 @@
         "primaryWingBaseHeight": 0.09428571428571429,
         "entranceWidth": 0.2285714285714286,
         "entranceBayBaseY": 0.4714285714285714,
-        "stairTreadCount": 20,
+        "stairTreadCount": 14,
+        "stairTreadWidth": 0.6285714285714287,
+        "stairTreadHeight": 0.028571428571428574,
+        "stairRiser": 0.0336734693877551,
+        "stairTreadDepth": 0.049999999999999996,
+        "stairTreadNoseHeight": 0.008571428571428572,
+        "stairTreadNoseDepth": 0.014285714285714287,
+        "stairFrontZ": 0.5428571428571428,
+        "stairLastZ": 0.32857142857142857,
         "stairTopY": 0.4714285714285714,
+        "stairLandingWidth": 0.42857142857142855,
+        "stairLandingHeight": 0.022857142857142857,
+        "stairLandingDepth": 0.12142857142857143,
+        "stairLandingZ": 0.3685714285714286,
+        "entranceCollarSillWidth": 0.2357142857142857,
+        "entranceCollarSillHeight": 0.04,
+        "entranceCollarSillDepth": 0.06571428571428571,
+        "entranceCollarFrameBaseWidth": 0.37142857142857144,
+        "entranceCollarFrameBaseHeight": 0.045714285714285714,
+        "entranceCollarFrameBaseDepth": 0.07142857142857142,
+        "entranceNosingWidth": 0.08857142857142856,
+        "entranceNosingHeight": 0.025714285714285714,
+        "entranceNosingDepth": 0.09714285714285716,
+        "entranceNosingOffsetX": 0.16,
         "energyVaultOuterWidth": 0.42857142857142855,
         "energyVaultOuterHeight": 0.42857142857142855,
         "energyVaultOuterBottomY": 0.6285714285714287,
@@ -259,12 +292,20 @@
         "foundation_disc": 1,
         "plinth_tier_1": 1,
         "plinth_tier_2": 1,
+        "plinth_tier_1_rim_lip": 1,
+        "plinth_tier_2_rim_lip": 1,
         "lower_drum": 1,
         "upper_drum": 1,
         "entrance_bay": 1,
-        "broad_front_stair": 20,
+        "broad_front_stair": 14,
+        "stair_tread_nose": 14,
+        "south_stair_landing": 1,
+        "entrance_collar_sill": 1,
+        "entrance_collar_frame_base": 1,
+        "entrance_collar_nosing": 2,
         "primary_wing_source": 4,
         "primary_wing_base_source": 4,
+        "primary_wing_inner_skirt": 4,
         "primary_wing_upper_source": 4,
         "secondary_buttress_source": 4,
         "side_crystal_tower_source": 4,
@@ -292,6 +333,15 @@
         "energy_vault_seam_jewel": "crystal_front_center_spine"
       },
       "sourceIds": {
+        "plinth_tier_1_rim_lip": "plinth_tier_1_rim_lip",
+        "plinth_tier_2_rim_lip": "plinth_tier_2_rim_lip",
+        "broad_front_stair": "broad_front_stair",
+        "stair_tread_nose": "stair_tread_nose",
+        "south_stair_landing": "south_stair_landing",
+        "entrance_collar_sill": "entrance_collar_sill",
+        "entrance_collar_frame_base": "entrance_collar_frame_base",
+        "entrance_collar_nosing": "entrance_collar_nosing",
+        "primary_wing_inner_skirt": "primary_wing_inner_skirt",
         "primary_wing_source": "primary_wing_source",
         "primary_wing_base_source": "primary_wing_base_source",
         "primary_wing_upper_source": "primary_wing_upper_source",
@@ -320,9 +370,19 @@
           1.1,
           0
         ],
+        "plinth_tier_1_rim_lip": [
+          0,
+          1.87,
+          0
+        ],
         "plinth_tier_2": [
           0,
           2.55,
+          0
+        ],
+        "plinth_tier_2_rim_lip": [
+          0,
+          3.3699999999999997,
           0
         ],
         "lower_drum": [
@@ -343,7 +403,32 @@
         "broad_front_stair": [
           0,
           1.65,
-          2.55
+          3.05
+        ],
+        "south_stair_landing": [
+          0,
+          3.2199999999999998,
+          2.58
+        ],
+        "entrance_collar_sill": [
+          0,
+          3.44,
+          2.66
+        ],
+        "entrance_collar_frame_base": [
+          0,
+          3.74,
+          2.46
+        ],
+        "entrance_collar_nosing_l": [
+          -1.12,
+          3.3899999999999997,
+          2.58
+        ],
+        "entrance_collar_nosing_r": [
+          1.12,
+          3.3899999999999997,
+          2.58
         ],
         "primary_wings": [
           0,
@@ -487,9 +572,16 @@
       "entrance_axis_marker",
       "central_socket",
       "plinth_tier_1",
+      "plinth_tier_1_rim_lip",
       "plinth_tier_2",
+      "plinth_tier_2_rim_lip",
       "lower_drum",
       "entrance_bay",
+      "south_stair_landing",
+      "entrance_collar_sill",
+      "entrance_collar_frame_base",
+      "entrance_collar_nosing_l",
+      "entrance_collar_nosing_r",
       "broad_front_stair",
       "primary_wing_base_0",
       "primary_wing_upper_0",

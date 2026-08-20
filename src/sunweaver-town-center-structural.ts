@@ -38,11 +38,17 @@ const R = D / 2;
 const PLINTH_TIER_1_BOTTOM_Y = 0.4;
 const PLINTH_TIER_1_TOP_Y = 1.8;
 const PLINTH_TIER_1_BOTTOM_RADIUS = 3.5;
-const PLINTH_TIER_1_TOP_RADIUS = 3.3;
+const PLINTH_TIER_1_TOP_RADIUS = 3.15;
+const PLINTH_TIER_1_LIP_HEIGHT = 0.14;
+const PLINTH_TIER_1_LIP_BOTTOM_RADIUS = 3.36;
+const PLINTH_TIER_1_LIP_TOP_RADIUS = 3.30;
 const PLINTH_TIER_2_BOTTOM_Y = 1.8;
 const PLINTH_TIER_2_TOP_Y = 3.3;
-const PLINTH_TIER_2_BOTTOM_RADIUS = 3.35;
-const PLINTH_TIER_2_TOP_RADIUS = 2.9;
+const PLINTH_TIER_2_BOTTOM_RADIUS = 3.25;
+const PLINTH_TIER_2_TOP_RADIUS = 2.75;
+const PLINTH_TIER_2_LIP_HEIGHT = 0.14;
+const PLINTH_TIER_2_LIP_BOTTOM_RADIUS = 2.90;
+const PLINTH_TIER_2_LIP_TOP_RADIUS = 2.84;
 const LOWER_DRUM_RADIUS = 1.95;
 const LOWER_DRUM_HEIGHT = 2.7;
 const LOWER_DRUM_CENTER_Y = 4.65;
@@ -62,12 +68,36 @@ const PRIMARY_WING_BASE_RADIAL_SCALE = PRIMARY_WING_BASE_RADIAL_DEPTH / PRIMARY_
 const PRIMARY_WING_BASE_CENTER_Y = 3.9;
 const PRIMARY_WING_UPPER_CENTER_Y = 5.2;
 const STAIR_TOP_Y = 3.3;
-const STAIR_TREAD_COUNT = 20;
-const STAIR_TREAD_WIDTH = 2.8;
-const STAIR_TREAD_HEIGHT = STAIR_TOP_Y / STAIR_TREAD_COUNT;
-const STAIR_TREAD_DEPTH = 0.17;
-const STAIR_FRONT_Z = 3.1;
-const STAIR_LAST_Z = 2.0;
+const STAIR_TREAD_COUNT = 14;
+const STAIR_TREAD_WIDTH = 4.4;
+const STAIR_TREAD_RISER = STAIR_TOP_Y / STAIR_TREAD_COUNT;
+const STAIR_TREAD_HEIGHT = 0.20;
+const STAIR_TREAD_DEPTH = 0.35;
+const STAIR_FRONT_Z = 3.80;
+const STAIR_LAST_Z = 2.30;
+const STAIR_TREAD_NOSE_HEIGHT = 0.06;
+const STAIR_TREAD_NOSE_DEPTH = 0.10;
+const STAIR_LANDING_WIDTH = 3.0;
+const STAIR_LANDING_HEIGHT = 0.16;
+const STAIR_LANDING_DEPTH = 0.85;
+const STAIR_LANDING_Z = 2.58;
+const ENTRANCE_COLLAR_SILL_WIDTH = 1.65;
+const ENTRANCE_COLLAR_SILL_HEIGHT = 0.28;
+const ENTRANCE_COLLAR_SILL_DEPTH = 0.46;
+const ENTRANCE_COLLAR_FRAME_BASE_WIDTH = 2.6;
+const ENTRANCE_COLLAR_FRAME_BASE_HEIGHT = 0.32;
+const ENTRANCE_COLLAR_FRAME_BASE_DEPTH = 0.5;
+const ENTRANCE_NOSING_WIDTH = 0.62;
+const ENTRANCE_NOSING_HEIGHT = 0.18;
+const ENTRANCE_NOSING_DEPTH = 0.68;
+const ENTRANCE_NOSING_OFFSET_X = 1.12;
+// The circular footprint governs the plinth and radial modules. The south stair
+// is an intentional forward projection, so expose its live reach in the manifest.
+const STAIR_OUTER_REACH = Math.hypot(
+  STAIR_TREAD_WIDTH * 0.5,
+  STAIR_FRONT_Z + STAIR_TREAD_DEPTH * 0.5 + STAIR_TREAD_NOSE_DEPTH,
+);
+const STAIR_FOOTPRINT_OVERHANG = Math.max(0, STAIR_OUTER_REACH - R);
 const ENERGY_VAULT_OUTER_WIDTH = 3.0;
 const ENERGY_VAULT_OUTER_HEIGHT = 3.0;
 const ENERGY_VAULT_OUTER_BOTTOM_Y = 4.4;
@@ -567,6 +597,9 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       PRIMARY_WING_BASE_SOURCE_RADIAL_DEPTH,
       0.66,
     ));
+    // A small inner seam ledge keeps the radial lobe separate from the tall
+    // plinth without changing the accepted wing silhouette or reach.
+    source.add(box('wing_base_inner_skirt', [1.64, 0.12, 0.18], [0, 0.42, 0.06]));
     return source;
   }
 
@@ -723,6 +756,15 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     64,
   );
   stage2.add(plinthTier1); parts.plinth_tier_1 = plinthTier1;
+  const plinthTier1Lip = tapered(
+    'plinth_tier_1_rim_lip',
+    PLINTH_TIER_1_LIP_TOP_RADIUS,
+    PLINTH_TIER_1_LIP_BOTTOM_RADIUS,
+    PLINTH_TIER_1_LIP_HEIGHT,
+    [0, PLINTH_TIER_1_TOP_Y + PLINTH_TIER_1_LIP_HEIGHT * 0.5, 0],
+    64,
+  );
+  stage2.add(plinthTier1Lip); parts.plinth_tier_1_rim_lip = plinthTier1Lip;
   const plinthTier2 = tapered(
     'plinth_tier_2',
     PLINTH_TIER_2_TOP_RADIUS,
@@ -732,6 +774,15 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     64,
   );
   stage2.add(plinthTier2); parts.plinth_tier_2 = plinthTier2;
+  const plinthTier2Lip = tapered(
+    'plinth_tier_2_rim_lip',
+    PLINTH_TIER_2_LIP_TOP_RADIUS,
+    PLINTH_TIER_2_LIP_BOTTOM_RADIUS,
+    PLINTH_TIER_2_LIP_HEIGHT,
+    [0, PLINTH_TIER_2_TOP_Y + PLINTH_TIER_2_LIP_HEIGHT * 0.5, 0],
+    64,
+  );
+  stage2.add(plinthTier2Lip); parts.plinth_tier_2_rim_lip = plinthTier2Lip;
 
   const lower = cylinder('lower_drum', LOWER_DRUM_RADIUS, LOWER_DRUM_HEIGHT, [0, LOWER_DRUM_CENTER_Y, 0], 48);
   stage2.add(lower); parts.lower_drum = lower;
@@ -751,9 +802,52 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const zStep = (STAIR_FRONT_Z - STAIR_LAST_Z) / (STAIR_TREAD_COUNT - 1);
   for (let i = 0; i < STAIR_TREAD_COUNT; i++) {
     const tread = mesh(treadGeometry, `stair_tread_${i + 1}`);
-    tread.position.set(0, STAIR_TREAD_HEIGHT * 0.5 + i * STAIR_TREAD_HEIGHT, STAIR_FRONT_Z - i * zStep);
+    const treadY = i * STAIR_TREAD_RISER;
+    const treadZ = STAIR_FRONT_Z - i * zStep;
+    tread.position.set(0, treadY + STAIR_TREAD_HEIGHT * 0.5, treadZ);
     stair.add(tread);
+    const nose = box(
+      `stair_tread_nose_${i + 1}`,
+      [STAIR_TREAD_WIDTH, STAIR_TREAD_NOSE_HEIGHT, STAIR_TREAD_NOSE_DEPTH],
+      [0, treadY + STAIR_TREAD_HEIGHT - STAIR_TREAD_NOSE_HEIGHT * 0.5, treadZ + STAIR_TREAD_DEPTH * 0.5 + STAIR_TREAD_NOSE_DEPTH * 0.5],
+    );
+    stair.add(nose);
   }
+  const landing = box(
+    'south_stair_landing',
+    [STAIR_LANDING_WIDTH, STAIR_LANDING_HEIGHT, STAIR_LANDING_DEPTH],
+    [0, STAIR_TOP_Y - STAIR_LANDING_HEIGHT * 0.5, STAIR_LANDING_Z],
+  );
+  stair.add(landing);
+  parts.south_stair_landing = landing;
+  const collarSill = box(
+    'entrance_collar_sill',
+    [ENTRANCE_COLLAR_SILL_WIDTH, ENTRANCE_COLLAR_SILL_HEIGHT, ENTRANCE_COLLAR_SILL_DEPTH],
+    [0, STAIR_TOP_Y + ENTRANCE_COLLAR_SILL_HEIGHT * 0.5, STAIR_LANDING_Z + 0.08],
+  );
+  stair.add(collarSill);
+  parts.entrance_collar_sill = collarSill;
+  const collarFrameBase = box(
+    'entrance_collar_frame_base',
+    [ENTRANCE_COLLAR_FRAME_BASE_WIDTH, ENTRANCE_COLLAR_FRAME_BASE_HEIGHT, ENTRANCE_COLLAR_FRAME_BASE_DEPTH],
+    [0, STAIR_TOP_Y + ENTRANCE_COLLAR_SILL_HEIGHT + ENTRANCE_COLLAR_FRAME_BASE_HEIGHT * 0.5, STAIR_LANDING_Z - 0.12],
+  );
+  stair.add(collarFrameBase);
+  parts.entrance_collar_frame_base = collarFrameBase;
+  const entranceNosingY = STAIR_TOP_Y + ENTRANCE_NOSING_HEIGHT * 0.5;
+  const entranceNosingL = box(
+    'entrance_collar_nosing_l',
+    [ENTRANCE_NOSING_WIDTH, ENTRANCE_NOSING_HEIGHT, ENTRANCE_NOSING_DEPTH],
+    [-ENTRANCE_NOSING_OFFSET_X, entranceNosingY, STAIR_LANDING_Z],
+  );
+  const entranceNosingR = box(
+    'entrance_collar_nosing_r',
+    [ENTRANCE_NOSING_WIDTH, ENTRANCE_NOSING_HEIGHT, ENTRANCE_NOSING_DEPTH],
+    [ENTRANCE_NOSING_OFFSET_X, entranceNosingY, STAIR_LANDING_Z],
+  );
+  stair.add(entranceNosingL, entranceNosingR);
+  parts.entrance_collar_nosing_l = entranceNosingL;
+  parts.entrance_collar_nosing_r = entranceNosingR;
   stage2.add(stair); parts.broad_front_stair = stair;
 
   const wingBaseSource = makeWingBaseSource();
@@ -945,6 +1039,15 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   stage4.add(bannerGroup); parts.banner_mount_source = bannerGroup;
 
   const sourceIds: Record<string, string> = {
+    plinth_tier_1_rim_lip: 'plinth_tier_1_rim_lip',
+    plinth_tier_2_rim_lip: 'plinth_tier_2_rim_lip',
+    broad_front_stair: 'broad_front_stair',
+    stair_tread_nose: 'stair_tread_nose',
+    south_stair_landing: 'south_stair_landing',
+    entrance_collar_sill: 'entrance_collar_sill',
+    entrance_collar_frame_base: 'entrance_collar_frame_base',
+    entrance_collar_nosing: 'entrance_collar_nosing',
+    primary_wing_inner_skirt: 'primary_wing_inner_skirt',
     primary_wing_source: 'primary_wing_source',
     primary_wing_base_source: 'primary_wing_base_source',
     primary_wing_upper_source: 'primary_wing_upper_source',
@@ -970,14 +1073,25 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     cageArchProfile: 'solid-rib',
     normalizedDimensions: {
       footprintDiameter: 1,
+      footprintRadius: R / D,
+      plinthMaxRadius: R / D,
+      stairOuterReach: STAIR_OUTER_REACH / D,
+      stairFootprintOverhang: STAIR_FOOTPRINT_OVERHANG / D,
+      stairProjectionExemptFromPlinthFootprint: 1,
       plinthTier1BottomY: PLINTH_TIER_1_BOTTOM_Y / D,
       plinthTier1TopY: PLINTH_TIER_1_TOP_Y / D,
       plinthTier1BottomRadius: PLINTH_TIER_1_BOTTOM_RADIUS / D,
       plinthTier1TopRadius: PLINTH_TIER_1_TOP_RADIUS / D,
+      plinthTier1LipHeight: PLINTH_TIER_1_LIP_HEIGHT / D,
+      plinthTier1LipBottomRadius: PLINTH_TIER_1_LIP_BOTTOM_RADIUS / D,
+      plinthTier1LipTopRadius: PLINTH_TIER_1_LIP_TOP_RADIUS / D,
       plinthTier2BottomY: PLINTH_TIER_2_BOTTOM_Y / D,
       plinthTier2TopY: PLINTH_TIER_2_TOP_Y / D,
       plinthTier2BottomRadius: PLINTH_TIER_2_BOTTOM_RADIUS / D,
       plinthTier2TopRadius: PLINTH_TIER_2_TOP_RADIUS / D,
+      plinthTier2LipHeight: PLINTH_TIER_2_LIP_HEIGHT / D,
+      plinthTier2LipBottomRadius: PLINTH_TIER_2_LIP_BOTTOM_RADIUS / D,
+      plinthTier2LipTopRadius: PLINTH_TIER_2_LIP_TOP_RADIUS / D,
       lowerDrumRadius: LOWER_DRUM_RADIUS / D,
       lowerDrumHeight: LOWER_DRUM_HEIGHT / D,
       upperDrumRadius: UPPER_DRUM_RADIUS / D,
@@ -1000,7 +1114,29 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       entranceWidth: 1.6 / D,
       entranceBayBaseY: PLINTH_TIER_2_TOP_Y / D,
       stairTreadCount: STAIR_TREAD_COUNT,
+      stairTreadWidth: STAIR_TREAD_WIDTH / D,
+      stairTreadHeight: STAIR_TREAD_HEIGHT / D,
+      stairRiser: STAIR_TREAD_RISER / D,
+      stairTreadDepth: STAIR_TREAD_DEPTH / D,
+      stairTreadNoseHeight: STAIR_TREAD_NOSE_HEIGHT / D,
+      stairTreadNoseDepth: STAIR_TREAD_NOSE_DEPTH / D,
+      stairFrontZ: STAIR_FRONT_Z / D,
+      stairLastZ: STAIR_LAST_Z / D,
       stairTopY: STAIR_TOP_Y / D,
+      stairLandingWidth: STAIR_LANDING_WIDTH / D,
+      stairLandingHeight: STAIR_LANDING_HEIGHT / D,
+      stairLandingDepth: STAIR_LANDING_DEPTH / D,
+      stairLandingZ: STAIR_LANDING_Z / D,
+      entranceCollarSillWidth: ENTRANCE_COLLAR_SILL_WIDTH / D,
+      entranceCollarSillHeight: ENTRANCE_COLLAR_SILL_HEIGHT / D,
+      entranceCollarSillDepth: ENTRANCE_COLLAR_SILL_DEPTH / D,
+      entranceCollarFrameBaseWidth: ENTRANCE_COLLAR_FRAME_BASE_WIDTH / D,
+      entranceCollarFrameBaseHeight: ENTRANCE_COLLAR_FRAME_BASE_HEIGHT / D,
+      entranceCollarFrameBaseDepth: ENTRANCE_COLLAR_FRAME_BASE_DEPTH / D,
+      entranceNosingWidth: ENTRANCE_NOSING_WIDTH / D,
+      entranceNosingHeight: ENTRANCE_NOSING_HEIGHT / D,
+      entranceNosingDepth: ENTRANCE_NOSING_DEPTH / D,
+      entranceNosingOffsetX: ENTRANCE_NOSING_OFFSET_X / D,
       energyVaultOuterWidth: ENERGY_VAULT_OUTER_WIDTH / D,
       energyVaultOuterHeight: ENERGY_VAULT_OUTER_HEIGHT / D,
       energyVaultOuterBottomY: ENERGY_VAULT_OUTER_BOTTOM_Y / D,
@@ -1072,12 +1208,20 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
       foundation_disc: 1,
       plinth_tier_1: 1,
       plinth_tier_2: 1,
+      plinth_tier_1_rim_lip: 1,
+      plinth_tier_2_rim_lip: 1,
       lower_drum: 1,
       upper_drum: 1,
       entrance_bay: 1,
       broad_front_stair: STAIR_TREAD_COUNT,
+      stair_tread_nose: STAIR_TREAD_COUNT,
+      south_stair_landing: 1,
+      entrance_collar_sill: 1,
+      entrance_collar_frame_base: 1,
+      entrance_collar_nosing: 2,
       primary_wing_source: 4,
       primary_wing_base_source: 4,
+      primary_wing_inner_skirt: 4,
       primary_wing_upper_source: 4,
       secondary_buttress_source: 4,
       side_crystal_tower_source: 4,
@@ -1108,11 +1252,18 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     worldSpaceModuleCenters: {
       foundation_disc: [0, 0.14, 0],
       plinth_tier_1: [0, 1.1, 0],
+      plinth_tier_1_rim_lip: [0, PLINTH_TIER_1_TOP_Y + PLINTH_TIER_1_LIP_HEIGHT * 0.5, 0],
       plinth_tier_2: [0, 2.55, 0],
+      plinth_tier_2_rim_lip: [0, PLINTH_TIER_2_TOP_Y + PLINTH_TIER_2_LIP_HEIGHT * 0.5, 0],
       lower_drum: [0, LOWER_DRUM_CENTER_Y, 0],
       upper_drum: [0, UPPER_DRUM_CENTER_Y, 0],
       entrance_bay: [0, 4.8, 2.1],
       broad_front_stair: [0, STAIR_TOP_Y * 0.5, (STAIR_FRONT_Z + STAIR_LAST_Z) * 0.5],
+      south_stair_landing: [0, STAIR_TOP_Y - STAIR_LANDING_HEIGHT * 0.5, STAIR_LANDING_Z],
+      entrance_collar_sill: [0, STAIR_TOP_Y + ENTRANCE_COLLAR_SILL_HEIGHT * 0.5, STAIR_LANDING_Z + 0.08],
+      entrance_collar_frame_base: [0, STAIR_TOP_Y + ENTRANCE_COLLAR_SILL_HEIGHT + ENTRANCE_COLLAR_FRAME_BASE_HEIGHT * 0.5, STAIR_LANDING_Z - 0.12],
+      entrance_collar_nosing_l: [-ENTRANCE_NOSING_OFFSET_X, STAIR_TOP_Y + ENTRANCE_NOSING_HEIGHT * 0.5, STAIR_LANDING_Z],
+      entrance_collar_nosing_r: [ENTRANCE_NOSING_OFFSET_X, STAIR_TOP_Y + ENTRANCE_NOSING_HEIGHT * 0.5, STAIR_LANDING_Z],
       primary_wings: [0, PRIMARY_WING_BASE_CENTER_Y, 0],
       primary_wing_bases: [0, PRIMARY_WING_BASE_CENTER_Y, 0],
       primary_wing_uppers: [0, PRIMARY_WING_UPPER_CENTER_Y, 0],
