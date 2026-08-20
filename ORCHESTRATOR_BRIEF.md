@@ -11,13 +11,16 @@ then review and judge the result.
 ## 0. The goal
 
 Build a real-time strategy game, **pixel-art style, set in space**, with **original
-civilizations, buildings, and units**, at the quality bar of *Age of Empires II:
-Definitive Edition*. It must be:
+civilizations, buildings, and units**, at the quality bar of *StarCraft II* (visuals
+closer to Brood War's readable pixel sprites). This game is StarCraft-shaped: three
+races, base building, worker gathering, big clump fights. Race parallels: Vespari
+hive/hex ~ Zerg, Aurion crystal/diamond ~ Protoss, Voidmarked tendril ~ asymmetric
+Terran-ish. Judge as a space RTS, not a medieval one. It must be:
 - **Beautiful and deep** — battle clarity, command feel, and the feel of ruling an empire.
 - **60 fps at all times** on a **landscape iPad**, touch-first.
 - Built in **Three.js**, running in the browser, deployed to Cloudflare Pages.
 
-It should literally compare side-by-side *blind* against AoE2:DE, and when ours loses,
+It should literally compare side-by-side *blind* against StarCraft II, and when ours loses,
 you must name the **single biggest gap** and send the builder back in. No fixed round count.
 Only stop when the critic is genuinely wowed.
 
@@ -31,7 +34,7 @@ For every **piece** (you define the pieces):
 2. Spawn a **Critic** sub-agent with **fresh context** that inspects the **actual running
    game in a browser** — never the builder's summary. Judgments are made against the live
    build (or `npm run dev`), with real FPS / console / visual evidence.
-3. Compare side-by-side blind against AoE2:DE. On a loss, name the **single biggest gap**,
+3. Compare side-by-side blind against StarCraft II. On a loss, name the **single biggest gap**,
    hand it back to the builder. Repeat until the critic passes (no fixed rounds).
 4. A piece is DONE only when a fresh critic is wowed.
 
@@ -96,7 +99,7 @@ quality bar. Sub-agents implement and you review.
      map generation.
    - **Wave 2 — gameplay:** 3 original civilizations, buildings, units, tech tree, economy
      (resources), combat + battle clarity, fog of war.
-   - **Wave 3 — feel/polish:** HUD + command bar + minimap (AoE2-style), audio, VFX,
+   - **Wave 3 — feel/polish:** HUD + command bar + minimap (StarCraft-style), audio, VFX,
      "feel of commanding an empire."
    - **Wave 4 — performance/hardening:** 60fps audit under load, object pooling, culling,
      iPad QA, bug sweep.
@@ -108,9 +111,10 @@ quality bar. Sub-agents implement and you review.
    per-frame allocation on hot paths.
 4. **Camera/input feel for landscape iPad.** Tap select, drag-box multi-select, two-finger
    pan/zoom, long-press context. No tiny hit targets, no mis-selects.
-5. **Three original civilizations.** Design them (AoE2-level distinctness, original lore +
-   silhouette + macro identity). At minimum a solid baseline: Worker / Scout / Fighter /
-   Siege + at least one unique unit and one unique building per civ, and a coherent economy.
+5. **Three original civilizations.** Design them (StarCraft-level distinctness, original lore +
+   silhouette + macro identity; think Zerg/Protoss/Terran clarity). At minimum a solid
+   baseline: Worker / Scout / Fighter / Siege + at least one unique unit and one unique
+   building per civ, and a coherent economy.
 
 Write these decisions into `docs/` (e.g. `docs/ARCHITECTURE.md`, `docs/DESIGN.md`,
 `docs/ORCHESTRATION.md`) **first**, before spawning builders — they are the contract every
@@ -130,7 +134,7 @@ A critic must inspect the **real running game**, not a summary. Build (once, you
   luminance spread). Reading the WebGL canvas directly returns black (drawing buffer is not
   preserved) — use Playwright's `page.screenshot()`, which captures the composited frame.
 - Optionally uses a vision model (see §8) to *actually look* at the screenshot and judge
-  "is this as beautiful/clear as AoE2:DE".
+  "is this as beautiful/clear as StarCraft II".
 
 This is how "wow" is verified. Make it real.
 
@@ -161,7 +165,7 @@ ability to review them — you review every diff, so don't spawn more than you c
 
 ## 8. Vision (USE GROK 4.6 XHIGH — user directive)
 
-Judging "beauty/feel vs AoE2:DE" visually needs a vision-capable model. **The user has
+Judging "beauty/feel vs StarCraft II" visually needs a vision-capable model. **The user has
 directed that you use Grok 4.6 Extra High for vision as well.** It is vision-capable and
 reachable via the same Cursor CLI:
 
@@ -175,7 +179,7 @@ loop is:
 
 1. `scripts/screenshot.mjs` (or `page.screenshot()`) captures the running game as PNG.
 2. Feed that PNG to `cursor-agent --model cursor-grok-4.6-xhigh` asking it to judge, blind,
-   against AoE2:DE, and to name the single biggest gap if it loses.
+   against StarCraft II, and to name the single biggest gap if it loses.
 
 Do NOT rely on the dead `modlens` providers (gemini 429/claude expired/antigravity
 keyring). Grok XHigh IS the vision model. Always pair the visual verdict with the
@@ -192,5 +196,5 @@ objective metric battery (FPS, console, palette) from `scripts/measure.mjs`.
 3. Build the critic harness (§5).
 4. Lock the Wave 1 piece list, then start spawning Composer 2.5 builders.
 
-Go. Do not stop until the game, judged blind against AoE2:DE by a fresh critic, is the one
+Go. Do not stop until the game, judged blind against StarCraft II by a fresh critic, is the one
 you'd keep. If it loses, name the single biggest gap and iterate.

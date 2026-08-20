@@ -5,11 +5,12 @@ decisions + a scope guardrail. Follow it exactly.
 
 ## What you are doing now: Wave A (bones before skin)
 
-The user wants the game to LOOK like AoE2:DE. The design is fine (preserve it); only the look
-is being rewritten. Wave A is the foundation — three changes, in this order:
+The user wants the game to LOOK like StarCraft II / Brood War (space, 3 races). The design
+is fine (preserve it); only the look is being rewritten. Wave A is the foundation — three
+changes, in this order:
 
-1. **ISOMETRIC 3/4 projection.** Convert the top-down orthographic renderer to AoE2-style
-   iso (~2:1). Buildings show two sides + roof; units are upright depth-sorted sprites. The
+1. **ISOMETRIC 3/4 projection.** Convert the top-down orthographic renderer to StarCraft-style
+   iso (~2:1 diamond). Buildings show two sides + roof; units are upright depth-sorted sprites. The
    world is a 2D grid, so this is mostly a camera + sprite-billboarding + depth-sort change
    in `src/render.ts`, not a sim change. The sim (src/sim.ts, src/engine.ts) is UNTOUCHED.
 
@@ -30,7 +31,7 @@ is being rewritten. Wave A is the foundation — three changes, in this order:
 - Sub-agents are Composer 2.5, bounded (no `timeout` — it's absent on macOS; reap processes +
   tmux sessions when done, no leaks). Verify each with a fresh Grok-vision critic against the
   ACTUAL running build — never from a self-report:
-  `cursor-agent --trust --print --model cursor-grok-4.6-xhigh "<screenshot> judge blind vs AoE2:DE, name the single biggest gap"`.
+  `cursor-agent --trust --print --model cursor-grok-4.6-xhigh "<screenshot> judge blind vs StarCraft II, name the single biggest gap"`.
 - 60fps holds (p99 < 8ms). Deploy each pass to Cloudflare Pages `spacepixelrts`; commit each
   piece; keep PROGRESS.md and notes.md current.
 

@@ -1,7 +1,7 @@
 # Starhold — live status
 
 **Play:** https://spacepixelrts.pages.dev  
-**Bar:** Age of Empires II: Definitive Edition, blind, on the running game.
+**Bar:** StarCraft II (space, 3 races, base building) — blind, on the running game.
 
 ## Now
 
