@@ -58,7 +58,9 @@ void main() {
   }
 
   float r = length(p);
-  float core = smoothstep(0.48, 0.0, r);
+  // GLSL leaves reversed smoothstep edges undefined. Invert a valid ramp
+  // instead so the particle core stays bright at the center and fades out.
+  float core = 1.0 - smoothstep(0.0, 0.48, r);
   float porous = step(0.12, hash1(vSeed * 17.0 + r * 31.0));
   float alpha = core * porous * vAge;
   if (alpha < 0.015) discard;

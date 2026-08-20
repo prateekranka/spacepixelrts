@@ -4,74 +4,82 @@
  */
 
 import { Kind, type Civ } from './engine';
+import { STARHOLD_PALETTE as P } from './palette';
 
 export type Rgba = readonly [number, number, number, number];
 export const MAG: Rgba = [255, 0, 255, 255];
 
-const INK: Rgba = [18, 14, 30, 255];
-const SKIN: Rgba = [232, 220, 196, 255];
-const SKIN_D: Rgba = [168, 148, 132, 255];
-const BONE: Rgba = [232, 220, 196, 255];
-const GUN: Rgba = [90, 96, 110, 255];
-const GUN_H: Rgba = [150, 156, 170, 255];
-const ORE: Rgba = [198, 154, 72, 255];
-const ORE_H: Rgba = [240, 214, 120, 255];
-const SOL: Rgba = [240, 196, 72, 255];
-const SOL_H: Rgba = [255, 236, 170, 255];
-const WHITE: Rgba = [244, 238, 226, 255];
-const ROCK: Rgba = [92, 82, 108, 255];
-const ROCK_H: Rgba = [148, 136, 158, 255];
-const BLOOD: Rgba = [176, 42, 48, 255];
+function rgba(hex: string): Rgba {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 0xff), ((n >> 8) & 0xff), (n & 0xff), 255];
+}
 
-const HIVE: Rgba = [46, 122, 58, 255];
-const HIVE_H: Rgba = [168, 230, 96, 255];
-const HIVE_D: Rgba = [22, 58, 32, 255];
-const CRY: Rgba = [78, 186, 214, 255];
-const CRY_H: Rgba = [210, 244, 255, 255];
-const CRY_D: Rgba = [28, 72, 96, 255];
-const VOID: Rgba = [72, 42, 140, 255];
-const VOID_H: Rgba = [186, 140, 255, 255];
-const VOID_D: Rgba = [28, 14, 48, 255];
+const INK: Rgba = rgba(P.ink);
+const SKIN: Rgba = rgba(P.sand);
+const SKIN_D: Rgba = rgba(P.sienna);
+const BONE: Rgba = rgba(P.sand);
+const GUN: Rgba = rgba(P.steel);
+const GUN_H: Rgba = rgba(P.muted);
+const ORE: Rgba = rgba(P.copper);
+const ORE_H: Rgba = rgba(P.ochre);
+const SOL: Rgba = rgba(P.ochre);
+const SOL_H: Rgba = rgba(P.amber);
+const WHITE: Rgba = rgba(P.cream);
+const ROCK: Rgba = rgba(P.slate);
+const ROCK_H: Rgba = rgba(P.steel);
+const BLOOD: Rgba = rgba(P.red);
+
+const HIVE: Rgba = rgba(P.leaf);
+const HIVE_H: Rgba = rgba(P.lime);
+const HIVE_D: Rgba = rgba(P.moss);
+const CRY: Rgba = rgba(P.sky);
+const CRY_H: Rgba = rgba(P.ice);
+const CRY_D: Rgba = rgba(P.fog);
+const VOID: Rgba = rgba(P.plum);
+const VOID_H: Rgba = rgba(P.coral);
+const VOID_D: Rgba = rgba(P.shadow);
 
 // Helion Compact option-5 Habitat Builder palette.
-const HELION_SHIRT: Rgba = [157, 123, 78, 255];
-const HELION_SHIRT_H: Rgba = [218, 180, 112, 255];
-const HELION_SHIRT_D: Rgba = [103, 75, 50, 255];
-const HELION_PANTS: Rgba = [63, 66, 78, 255];
-const HELION_PANTS_H: Rgba = [104, 106, 116, 255];
-const HELION_PANTS_D: Rgba = [32, 35, 48, 255];
-const HELION_BELT: Rgba = [91, 57, 35, 255];
-const HELION_BELT_H: Rgba = [142, 91, 48, 255];
-const HELION_BELT_D: Rgba = [50, 32, 28, 255];
-const HELION_SKIN: Rgba = [218, 153, 97, 255];
-const HELION_SKIN_H: Rgba = [242, 190, 127, 255];
-const HELION_SKIN_D: Rgba = [135, 82, 51, 255];
-const HELION_BEARD: Rgba = [58, 37, 29, 255];
-const HELION_BEARD_H: Rgba = [97, 58, 38, 255];
-const HELION_BEARD_D: Rgba = [34, 23, 24, 255];
-const HELION_BOOT: Rgba = [116, 42, 76, 255];
-const HELION_BOOT_H: Rgba = [177, 74, 110, 255];
-const HELION_BOOT_D: Rgba = [57, 25, 49, 255];
-const HELION_WOOD: Rgba = [116, 70, 42, 255];
-const HELION_WOOD_H: Rgba = [190, 129, 68, 255];
-const HELION_WOOD_D: Rgba = [58, 35, 29, 255];
-const HELION_TOOL: Rgba = [118, 126, 140, 255];
-const HELION_TOOL_H: Rgba = [210, 218, 226, 255];
-const HELION_TOOL_D: Rgba = [48, 54, 68, 255];
-const HELION_CRATE: Rgba = [138, 83, 43, 255];
-const HELION_CRATE_H: Rgba = [213, 143, 67, 255];
-const HELION_CRATE_D: Rgba = [68, 39, 30, 255];
-const HELION_FRUIT: Rgba = [198, 68, 48, 255];
-const HELION_CRYSTAL: Rgba = [132, 204, 75, 255];
-const HELION_CRYSTAL_H: Rgba = [226, 255, 153, 255];
-const HELION_CRYSTAL_D: Rgba = [58, 112, 48, 255];
+const HELION_SHIRT: Rgba = rgba(P.sienna);
+const HELION_SHIRT_H: Rgba = rgba(P.sand);
+const HELION_SHIRT_D: Rgba = rgba(P.rust);
+const HELION_PANTS: Rgba = rgba(P.slate);
+const HELION_PANTS_H: Rgba = rgba(P.steel);
+const HELION_PANTS_D: Rgba = rgba(P.ink);
+const HELION_BELT: Rgba = rgba(P.rust);
+const HELION_BELT_H: Rgba = rgba(P.copper);
+const HELION_BELT_D: Rgba = rgba(P.shadow);
+const HELION_SKIN: Rgba = rgba(P.copper);
+const HELION_SKIN_H: Rgba = rgba(P.ochre);
+const HELION_SKIN_D: Rgba = rgba(P.sienna);
+const HELION_BEARD: Rgba = rgba(P.shadow);
+const HELION_BEARD_H: Rgba = rgba(P.rust);
+const HELION_BEARD_D: Rgba = rgba(P.ink);
+const HELION_BOOT: Rgba = rgba(P.plum);
+const HELION_BOOT_H: Rgba = rgba(P.berry);
+const HELION_BOOT_D: Rgba = rgba(P.shadow);
+const HELION_WOOD: Rgba = rgba(P.sienna);
+const HELION_WOOD_H: Rgba = rgba(P.ochre);
+const HELION_WOOD_D: Rgba = rgba(P.rust);
+const HELION_TOOL: Rgba = rgba(P.steel);
+const HELION_TOOL_H: Rgba = rgba(P.cream);
+const HELION_TOOL_D: Rgba = rgba(P.ink);
+const HELION_CRATE: Rgba = rgba(P.sienna);
+const HELION_CRATE_H: Rgba = rgba(P.copper);
+const HELION_CRATE_D: Rgba = rgba(P.rust);
+const HELION_FRUIT: Rgba = rgba(P.red);
+const HELION_CRYSTAL: Rgba = rgba(P.lime);
+const HELION_CRYSTAL_H: Rgba = rgba(P.ice);
+const HELION_CRYSTAL_D: Rgba = rgba(P.leaf);
+const HELION_SCOUT_PANEL: Rgba = rgba(P.berry);
+const HELION_SCOUT_PANEL_H: Rgba = rgba(P.coral);
 
 // Wall tones sit above quiet-dust terrain (~102,88,108) so edges read at RTS zoom.
-const WALL: Rgba = [118, 106, 124, 255];
-const WALL_H: Rgba = [156, 146, 164, 255];
-const WALL_D: Rgba = [82, 72, 92, 255];
-const WIN: Rgba = [210, 228, 255, 255];
-const DOOR: Rgba = [20, 14, 26, 255];
+const WALL: Rgba = rgba(P.steel);
+const WALL_H: Rgba = rgba(P.muted);
+const WALL_D: Rgba = rgba(P.slate);
+const WIN: Rgba = rgba(P.ice);
+const DOOR: Rgba = rgba(P.ink);
 
 export class Pix {
   constructor(readonly w: number, readonly h: number, readonly d: Uint8ClampedArray) {}
@@ -127,9 +135,9 @@ function civIndex(civ: Civ): number {
 }
 
 function civInk(civ: number): Rgba {
-  if (civ < 0.5) return [14, 32, 16, 255];
-  if (civ < 1.5) return [8, 22, 34, 255];
-  return [22, 8, 32, 255];
+  if (civ < 0.5) return rgba(P.moss);
+  if (civ < 1.5) return rgba(P.fog);
+  return rgba(P.shadow);
 }
 
 function strokeOutline(p: Pix, c: Rgba): void {
@@ -183,7 +191,7 @@ function drawDoor(p: Pix, cx: number, bottomY: number, w: number, h: number): vo
 function drawWindows(p: Pix, slots: readonly (readonly [number, number])[]): void {
   for (const [x, y] of slots) {
     p.fillRect(x, y, 2, 2, WIN);
-    p.set(x, y, [236, 244, 255, 255]);
+    p.set(x, y, rgba(P.cream));
   }
 }
 
@@ -1446,6 +1454,7 @@ function drawWorkerPix(civ: number, frame: number): Pix {
 
 // ── Scout ───────────────────────────────────────────────────────────────────
 function drawScoutPix(civ: number): Pix {
+  if (civ < 0.5) return drawHelionScoutPix();
   const p = Pix.alloc(32, 32);
   const { md, hi, dk } = civPal(civ);
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
@@ -1495,6 +1504,182 @@ function drawScoutPix(civ: number): Pix {
   // Team emissive — engine glow.
   p.set(27, 19, MAG);
   p.set(28, 20, MAG);
+  return p;
+}
+
+/** Helion Tri-Arc Surveyor — a narrow tripod scout with a solar sensor halo. */
+function drawHelionScoutPix(): Pix {
+  const p = Pix.alloc(32, 32);
+  const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
+
+  // Three articulated legs and broad feet match the board's grounded tripod.
+  linePix(p, 10, 22, 4, 29, INK);
+  linePix(p, 11, 22, 5, 29, INK);
+  linePix(p, 21, 22, 27, 29, INK);
+  linePix(p, 20, 22, 26, 29, INK);
+  p.fillRect(5, 23, 2, 6, ORE_H);
+  p.fillRect(25, 23, 2, 6, ORE);
+  p.fillRect(15, 23, 3, 8, INK);
+  p.fillRect(16, 24, 1, 7, BONE);
+  p.fillRect(3, 29, 5, 2, INK);
+  p.fillRect(24, 29, 5, 2, INK);
+  p.fillRect(14, 30, 5, 2, INK);
+  p.circ(10, 23, 2, ROCK_H);
+  p.circ(21, 23, 2, ROCK);
+
+  // Faceted cream body: bright front plane, dark side plane, magenta top plate.
+  dark(8, 17, 17, 8);
+  fillQuad(p, 9, 19, 16, 15, 23, 18, 16, 24, BONE);
+  fillQuad(p, 9, 19, 16, 15, 16, 22, 9, 23, ORE_H);
+  fillQuad(p, 16, 15, 23, 18, 22, 24, 16, 24, ROCK);
+  fillQuad(p, 16, 16, 21, 18, 19, 21, 15, 20, MAG);
+  p.set(20, 18, ORE_H);
+  p.fillRect(8, 22, 3, 2, ORE);
+  p.circ(11, 21, 2, INK);
+  p.circ(11, 21, 1, SOL_H);
+  p.set(11, 20, SOL);
+  p.circ(16, 15, 2, ROCK_H);
+  p.set(16, 14, ORE_H);
+
+  // Triangular sensor frame: gold rails, black solar-cell interior, amber lens.
+  for (let y = 4; y <= 12; y++) {
+    const half = y < 9 ? y - 3 : 12 - y;
+    p.fillRect(16 - half - 1, y, half * 2 + 3, 1, INK);
+    if (y >= 6 && y <= 11) p.fillRect(16 - half, y, Math.max(1, half * 2 + 1), 1, ROCK);
+  }
+  linePix(p, 16, 2, 7, 13, ORE_H);
+  linePix(p, 17, 2, 25, 13, ORE);
+  linePix(p, 7, 13, 25, 13, ORE_H);
+  linePix(p, 7, 14, 25, 14, INK);
+  linePix(p, 16, 4, 10, 12, ROCK_H);
+  linePix(p, 16, 4, 22, 12, ROCK);
+  p.fillRect(14, 2, 5, 2, ORE);
+  p.set(16, 2, SOL_H);
+  p.circ(16, 8, 2, SOL);
+  p.set(16, 7, SOL_H);
+  p.set(16, 8, ORE_H);
+
+  // Short mast joins the sensor to the body; the panel stays the team-color key.
+  dark(15, 13, 3, 4);
+  p.fillRect(16, 13, 1, 4, ORE_H);
+  p.set(24, 21, SOL_H);
+  p.set(25, 22, MAG);
+  return p;
+}
+
+/** 128px Helion Tri-Arc Surveyor for close-zoom, source-resolution art. */
+function drawHelionScoutHdPix(): Pix {
+  const p = Pix.alloc(128, 128);
+  const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
+  const wideLine = (x0: number, y0: number, x1: number, y1: number, c: Rgba, width = 2) => {
+    for (let i = 0; i < width; i++) linePix(p, x0 + i, y0 + i, x1 + i, y1 + i, c);
+  };
+
+  // Three articulated legs with dark outlines, bronze struts, joint caps, and
+  // broad feet. The side legs angle outward while the front leg stays vertical.
+  wideLine(37, 83, 26, 99, INK, 5);
+  wideLine(39, 85, 28, 100, ORE, 3);
+  wideLine(26, 99, 16, 119, INK, 5);
+  wideLine(28, 100, 19, 118, ORE_H, 3);
+  wideLine(91, 83, 102, 99, INK, 5);
+  wideLine(89, 85, 100, 100, ORE_H, 3);
+  wideLine(102, 99, 112, 119, INK, 5);
+  wideLine(100, 100, 109, 118, ORE, 3);
+  wideLine(59, 86, 59, 122, INK, 6);
+  wideLine(68, 86, 68, 122, INK, 6);
+  p.fillRect(63, 89, 4, 32, BONE);
+  p.fillRect(64, 91, 2, 26, WHITE);
+  p.fillRect(11, 118, 19, 7, INK);
+  p.fillRect(99, 118, 19, 7, INK);
+  p.fillRect(56, 121, 16, 6, INK);
+  p.fillRect(14, 116, 12, 4, ORE_H);
+  p.fillRect(102, 116, 12, 4, ORE);
+  p.fillRect(60, 119, 9, 3, BONE);
+  p.fillRect(15, 122, 10, 2, ROCK_H);
+  p.fillRect(103, 122, 10, 2, ROCK);
+  p.fillRect(62, 124, 6, 2, ROCK_H);
+  p.circ(37, 84, 7, INK);
+  p.circ(37, 84, 4, ROCK_H);
+  p.circ(37, 84, 2, ORE_H);
+  p.circ(91, 84, 7, INK);
+  p.circ(91, 84, 4, ROCK);
+  p.circ(91, 84, 2, ORE_H);
+  p.circ(26, 100, 6, INK);
+  p.circ(26, 100, 3, ORE_H);
+  p.circ(102, 100, 6, INK);
+  p.circ(102, 100, 3, ORE_H);
+
+  // Faceted chassis: the board's body is nearly as wide as its sensor base.
+  // Keep the bright front, bronze left cheek, graphite right cheek, and
+  // smaller magenta top plate as separate planes.
+  dark(21, 48, 86, 48);
+  fillQuad(p, 24, 69, 64, 49, 104, 69, 64, 94, BONE);
+  fillQuad(p, 24, 69, 64, 49, 64, 94, 24, 87, ORE_H);
+  fillQuad(p, 64, 49, 104, 69, 98, 87, 64, 94, ROCK);
+  fillQuad(p, 45, 59, 64, 50, 83, 59, 64, 69, HELION_SCOUT_PANEL);
+  fillQuad(p, 51, 60, 64, 56, 77, 60, 64, 65, HELION_SCOUT_PANEL_H);
+  p.fillRect(28, 73, 7, 14, ORE);
+  p.fillRect(92, 73, 7, 12, ROCK_H);
+  p.fillRect(58, 88, 13, 4, WHITE);
+  p.fillRect(60, 92, 9, 3, ORE_H);
+  p.fillRect(32, 65, 16, 3, WHITE);
+  p.fillRect(78, 65, 13, 3, ORE);
+  p.fillRect(26, 84, 10, 4, ROCK_H);
+  p.fillRect(91, 84, 8, 4, INK);
+
+  // Front survey lens and side service ports add the board's mechanical read.
+  p.circ(39, 76, 10, INK);
+  p.circ(39, 76, 7, ORE);
+  p.circ(39, 75, 4, SOL);
+  p.circ(38, 74, 2, SOL_H);
+  p.set(37, 72, WHITE);
+  p.circ(91, 75, 5, INK);
+  p.circ(91, 75, 3, SOL_H);
+  p.fillRect(48, 82, 11, 3, ROCK_H);
+  p.fillRect(50, 86, 8, 2, ORE);
+  p.fillRect(72, 79, 13, 3, ROCK_H);
+  p.fillRect(74, 83, 10, 2, ORE_H);
+  p.set(79, 77, WHITE);
+  p.set(81, 77, WHITE);
+  p.circ(64, 50, 6, ROCK_H);
+  p.circ(64, 48, 3, ORE_H);
+
+  // Triangular sensor halo. The frame is shorter and the lens smaller than
+  // the first pass, matching the reference's body-to-sensor proportions.
+  for (let y = 12; y <= 54; y++) {
+    const half = Math.max(3, Math.round(((y - 10) / 44) * 43));
+    const x0 = 64 - half;
+    const width = half * 2 + 1;
+    p.fillRect(x0, y, width, 2, INK);
+    if (y >= 17 && y <= 50) p.fillRect(x0 + 4, y, Math.max(2, width - 8), 1, ROCK);
+  }
+  wideLine(62, 7, 19, 55, ORE_H, 3);
+  wideLine(65, 7, 109, 55, ORE, 3);
+  wideLine(19, 53, 109, 53, ORE_H, 3);
+  wideLine(20, 57, 108, 57, INK, 3);
+  wideLine(64, 13, 34, 51, ROCK_H, 2);
+  wideLine(65, 13, 94, 51, ROCK, 2);
+  wideLine(22, 43, 106, 43, ROCK_H, 2);
+  p.fillRect(58, 4, 13, 5, ORE);
+  p.fillRect(61, 4, 8, 3, ORE_H);
+  p.fillRect(63, 3, 3, 2, SOL_H);
+  p.fillRect(15, 51, 9, 8, ORE);
+  p.fillRect(104, 51, 9, 8, ORE);
+  p.fillRect(17, 52, 5, 4, ORE_H);
+  p.fillRect(106, 52, 5, 4, ORE_H);
+  p.circ(64, 29, 9, ORE);
+  p.circ(64, 29, 7, SOL);
+  p.circ(64, 28, 4, SOL_H);
+  p.circ(62, 26, 2, WHITE);
+  p.fillRect(62, 36, 4, 10, ORE_H);
+
+  // Mast and beacon connect the triangle to the chassis without breaking its
+  // silhouette. The beacon remains a team-color key; the armour stays magenta.
+  dark(59, 50, 10, 20);
+  p.fillRect(62, 50, 4, 20, ORE_H);
+  p.fillRect(66, 51, 3, 17, ORE);
+  p.fillRect(85, 75, 6, 6, SOL_H);
+  p.fillRect(89, 79, 6, 6, MAG);
   return p;
 }
 
@@ -1913,9 +2098,17 @@ export const CIVS = 3;
 const ATLAS_CELL = 32;
 const HALL_CELL = 64;
 const ATLAS_COLS = 16;
+const SCOUT_CELL = 128;
+const SCOUT_COLS = CIVS * UNIT_FRAMES;
 
 export interface SpriteAtlas {
   canvas: HTMLCanvasElement;
+  scoutCanvas: HTMLCanvasElement;
+  scoutCell: number;
+  scoutCols: number;
+  scoutFrames: number;
+  scoutWidth: number;
+  scoutHeight: number;
   cell: number;
   hallCell: number;
   cols: number;
@@ -1951,6 +2144,17 @@ export function buildSpriteAtlas(): SpriteAtlas {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
+  // Scouts use a separate 128px strip. This keeps the existing 32px atlas
+  // layout stable for workers and buildings while giving the selected scout
+  // enough source pixels to stay crisp when the camera zooms.
+  const scoutWidth = SCOUT_COLS * SCOUT_CELL;
+  const scoutHeight = SCOUT_CELL;
+  const scoutCanvas = document.createElement('canvas');
+  scoutCanvas.width = scoutWidth;
+  scoutCanvas.height = scoutHeight;
+  const scoutCtx = scoutCanvas.getContext('2d')!;
+  scoutCtx.imageSmoothingEnabled = false;
+
   const blitUnit = (pix: Pix, slot: number) => {
     const col = slot % ATLAS_COLS;
     const row = Math.floor(slot / ATLAS_COLS);
@@ -1965,12 +2169,32 @@ export function buildSpriteAtlas(): SpriteAtlas {
     ctx.drawImage(off, dx, dy);
   };
 
+  const blitScout = (pix: Pix, slot: number) => {
+    const col = slot % SCOUT_COLS;
+    const img = ctx.createImageData(pix.w, pix.h);
+    img.data.set(pix.d);
+    const off = document.createElement('canvas');
+    off.width = pix.w;
+    off.height = pix.h;
+    off.getContext('2d')!.putImageData(img, 0, 0);
+    scoutCtx.drawImage(off, col * SCOUT_CELL, 0, SCOUT_CELL, SCOUT_CELL);
+  };
+
   const civs: Civ[] = ['vespari', 'aurion', 'voidmarked'];
   for (let kind = 0; kind < UNIT_KINDS; kind++) {
     for (let civ = 0; civ < CIVS; civ++) {
       for (let frame = 0; frame < UNIT_FRAMES; frame++) {
         blitUnit(drawUnitSprite(kind as Kind, civs[civ], frame), slotIndex(kind, civ, frame));
       }
+    }
+  }
+
+  for (let civ = 0; civ < CIVS; civ++) {
+    for (let frame = 0; frame < UNIT_FRAMES; frame++) {
+      const pix = civ === 0 && frame < 4
+        ? drawHelionScoutHdPix()
+        : drawUnitSprite(Kind.Scout, civs[civ], frame);
+      blitScout(pix, civ * UNIT_FRAMES + frame);
     }
   }
 
@@ -2023,6 +2247,12 @@ export function buildSpriteAtlas(): SpriteAtlas {
 
   return {
     canvas,
+    scoutCanvas,
+    scoutCell: SCOUT_CELL,
+    scoutCols: SCOUT_COLS,
+    scoutFrames: UNIT_FRAMES,
+    scoutWidth,
+    scoutHeight,
     cell: ATLAS_CELL,
     hallCell: HALL_CELL,
     cols: ATLAS_COLS,

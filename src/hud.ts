@@ -1,6 +1,6 @@
 /** P30 / P31 / P35 — AoE2-style command chrome for landscape iPad. */
 
-import { Kind, MAP, Ord } from './engine';
+import { Kind, MAP, Ord, Tile } from './engine';
 import type { Civ } from './engine';
 import {
   ALL_CIVS,
@@ -21,6 +21,7 @@ import {
 import type { World } from './sim';
 import type { Input } from './input';
 import type { GameRenderer } from './render';
+import { STARHOLD_PALETTE as P } from './palette';
 
 export class Hud {
   readonly root: HTMLElement;
@@ -58,7 +59,13 @@ export class Hud {
           <span data-k="pop"><i></i><b id="pop">0/0</b><small>Pop</small></span>
         </div>
         <div id="meta">
+          <button type="button" id="scout-focus">Scout</button>
           <button type="button" id="idlew">Idle worker</button>
+          <div id="zoom" aria-label="Zoom controls">
+            <span>Zoom</span>
+            <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+            <button type="button" id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+          </div>
           <b id="fps">60</b>
         </div>
       </div>
@@ -73,7 +80,7 @@ export class Hud {
         </div>
         <div id="cmds"></div>
       </div>
-      <div id="civpick" aria-label="Choose civilization"></div>
+      <div id="civpick" aria-label="Choose player civilization for 1v1"></div>
       <p id="hint">Landscape command deck · two-finger pan · pinch zoom · box-select to rally the swarm</p>
       <div id="match-end" hidden>
         <div class="match-panel">
@@ -113,6 +120,9 @@ export class Hud {
       onCivSwitch(civ);
     });
     this.root.querySelector('#idlew')!.addEventListener('click', () => input.commandAt('idleworker'));
+    this.root.querySelector('#scout-focus')!.addEventListener('click', () => input.focusScout());
+    this.root.querySelector('#zoom-out')!.addEventListener('click', () => input.zoomOut());
+    this.root.querySelector('#zoom-in')!.addEventListener('click', () => input.zoomIn());
     this.minimap.addEventListener('pointerdown', (e) => {
       const r = this.minimap.getBoundingClientRect();
       const x = ((e.clientX - r.left) / r.width) * MAP;
@@ -158,13 +168,13 @@ export class Hud {
   }
 
   private renderCivPick(active: Civ | null): void {
-    this.civPickEl.innerHTML = ALL_CIVS
+    this.civPickEl.innerHTML = `<span class="picker-label">Player civ · 1v1</span>${ALL_CIVS
       .map((civ) => {
         const on = civ === active;
         const cls = ['civ-tile', civ, on ? 'on' : ''].filter(Boolean).join(' ');
         return `<button type="button" data-civ="${civ}" class="${cls}" aria-pressed="${on}"><strong>${CIV_NAME[civ]}</strong><small>${civShort(civ)}</small></button>`;
       })
-      .join('');
+      .join('')}`;
   }
 
   private drawMatchEnd(world: World): void {
@@ -309,7 +319,7 @@ export class Hud {
     const ctx = this.mctx;
     const w = this.minimap.width;
     const h = this.minimap.height;
-    ctx.fillStyle = '#07060f';
+    ctx.fillStyle = P.ink;
     ctx.fillRect(0, 0, w, h);
     const sx = w / MAP;
     const sz = h / MAP;
@@ -318,27 +328,53 @@ export class Hud {
         const i = x + z * MAP;
         if (!world.explored[0][i]) continue;
         const t = world.tiles[i];
+        const level = Math.min(3, world.height[i] | 0);
+        const terrainBand = [P.deep, P.slate, P.steel, P.sand][level];
         ctx.fillStyle =
-          t === 2 ? '#3a3244' : t === 3 ? '#e0b84a' : t === 4 ? '#5aa8d0' : t === 5 ? '#ffd36a' : '#161022';
-        if (!world.visible[0][i]) ctx.fillStyle = '#0c0a16';
+          t === Tile.Rock
+            ? P.shadow
+            : t === Tile.Ore
+              ? P.ochre
+              : t === Tile.Gas
+                ? P.sky
+                : t === Tile.Solar
+                  ? P.amber
+                  : terrainBand;
+        if (!world.visible[0][i]) ctx.fillStyle = level > 0 ? P.shadow : P.ink;
         ctx.fillRect(x * sx, z * sz, sx * 2 + 0.5, sz * 2 + 0.5);
       }
     }
     for (const e of world.ents) {
       if (!e.alive || !e.vis) continue;
-      ctx.fillStyle = e.team === 0 ? '#5eff5e' : e.team === 1 ? '#ff3a3a' : '#e0b84a';
+      const px = e.x * sx;
+      const pz = e.z * sz;
+      if (e.kind === Kind.Resource) {
+        ctx.fillStyle =
+          e.cargoType === Tile.Ore
+            ? P.amber
+            : e.cargoType === Tile.Gas
+              ? P.ice
+              : e.cargoType === Tile.Solar
+                ? P.cream
+                : P.muted;
+        ctx.beginPath();
+        ctx.arc(px, pz, 3.4, 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
+      ctx.fillStyle = e.team === 0 ? P.lime : e.team === 1 ? P.red : P.amber;
       const s = isBuilding(e.kind) ? 3.6 : 2.4;
-      ctx.fillRect(e.x * sx - s / 2, e.z * sz - s / 2, s, s);
+      ctx.fillRect(px - s / 2, pz - s / 2, s, s);
     }
     const cam = input.pan;
     const rw = (input.halfH * 2 * (viewAspect())) / MAP * w;
     const rh = (input.halfH * 2) / MAP * h;
     const cx = cam.x * sx - rw / 2;
     const cy = cam.z * sz - rh / 2;
-    ctx.strokeStyle = '#f0d460';
+    ctx.strokeStyle = P.amber;
     ctx.lineWidth = 3;
     ctx.strokeRect(cx, cy, rw, rh);
-    ctx.strokeStyle = '#fff8d088';
+    ctx.strokeStyle = `${P.cream}88`;
     ctx.lineWidth = 1;
     ctx.strokeRect(cx + 1, cy + 1, Math.max(0, rw - 2), Math.max(0, rh - 2));
   }
@@ -357,9 +393,9 @@ function viewAspect(): number {
 }
 
 function civPlateBg(civ: Civ): string {
-  if (civ === 'aurion') return 'linear-gradient(145deg,#163844 0%,#061018 100%)';
-  if (civ === 'voidmarked') return 'linear-gradient(145deg,#2a0a28 0%,#1c3a22 100%)';
-  return 'linear-gradient(145deg,#3a2818 0%,#1a0e08 100%)';
+  if (civ === 'aurion') return `linear-gradient(145deg,${P.sky} 0%,${P.ink} 100%)`;
+  if (civ === 'voidmarked') return `linear-gradient(145deg,${P.plum} 0%,${P.moss} 100%)`;
+  return `linear-gradient(145deg,${P.sienna} 0%,${P.rust} 100%)`;
 }
 
 function civShort(civ: Civ): string {
@@ -369,67 +405,72 @@ function civShort(civ: Civ): string {
 }
 
 const HUD_CSS = `
-#hud{position:fixed;inset:0;pointer-events:none;color:#f4efe4;font-family:"Trebuchet MS","Segoe UI",sans-serif;z-index:5}
+#hud{position:fixed;inset:0;pointer-events:none;color:${P.cream};font-family:"Trebuchet MS","Segoe UI",sans-serif;z-index:5}
 #game,#overlay{position:absolute;inset:0;width:100%;height:100%;display:block}
 #overlay{pointer-events:none;z-index:2}
 #topbar,#bottom,#civpick,#civpick button{pointer-events:auto}
-#topbar{position:absolute;left:0;right:0;top:0;box-sizing:border-box;height:calc(56px + env(safe-area-inset-top,0px));min-height:56px;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);display:flex;align-items:stretch;background:linear-gradient(#1a1428ee,#120e1cf2);border-bottom:2px solid #c9a227;box-shadow:0 8px 24px #0008}
+#topbar{position:absolute;left:0;right:0;top:0;box-sizing:border-box;height:calc(56px + env(safe-area-inset-top,0px));min-height:56px;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);display:flex;align-items:stretch;background:linear-gradient(${P.night}ee,${P.ink}f2);border-bottom:2px solid ${P.amber};box-shadow:0 8px 24px #0008}
 #brand{display:flex;gap:10px;align-items:center;padding:0 14px;min-width:210px}
-#brand .sigil{color:#c9a227;font-size:22px}
+#brand .sigil{color:${P.amber};font-size:22px}
 #brand strong{display:block;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
 #brand em{display:block;font-style:normal;font-size:10px;opacity:.55;letter-spacing:.18em;text-transform:uppercase}
 #res{display:flex;flex:1;justify-content:center;gap:22px;align-items:center}
 #res span{display:flex;align-items:center;gap:8px;min-width:90px}
 #res i{width:12px;height:12px;display:block;box-shadow:0 0 0 1px #0008}
-#res [data-k=ore] i{background:#c4a548}
-#res [data-k=gas] i{background:#5aa8d0}
-#res [data-k=nrg] i{background:#e0b84a}
-#res [data-k=pop] i{background:#7ec87a}
+#res [data-k=ore] i{background:${P.sand}}
+#res [data-k=gas] i{background:${P.sky}}
+#res [data-k=nrg] i{background:${P.ochre}}
+#res [data-k=pop] i{background:${P.lime}}
 #res b{font-variant-numeric:tabular-nums;font-size:24px;font-weight:700;line-height:1}
-#res [data-k=ore] b{color:#e8c060;text-shadow:0 0 10px #c4a54855}
-#res [data-k=gas] b{color:#7ee7ff;text-shadow:0 0 10px #5aa8d055}
-#res [data-k=nrg] b{color:#ffd36a;text-shadow:0 0 10px #e0b84a55}
-#res [data-k=pop] b{color:#8ee88a;text-shadow:0 0 10px #7ec87a55}
+#res [data-k=ore] b{color:${P.amber};text-shadow:0 0 10px ${P.sand}55}
+#res [data-k=gas] b{color:${P.ice};text-shadow:0 0 10px ${P.sky}55}
+#res [data-k=nrg] b{color:${P.cream};text-shadow:0 0 10px ${P.ochre}55}
+#res [data-k=pop] b{color:${P.lime};text-shadow:0 0 10px ${P.leaf}55}
 #res small{opacity:.55;font-size:10px;letter-spacing:.12em;text-transform:uppercase}
 #meta{display:flex;align-items:center;gap:12px;padding:0 14px}
 #meta b{font-variant-numeric:tabular-nums;font-size:13px;opacity:.7}
-#meta b.low{color:#e84d4d;opacity:1}
-#idlew,#cmds button{background:#241a36;color:#f4efe4;border:1px solid #c9a22788;border-radius:2px;min-height:44px;min-width:44px;padding:6px 10px;font:inherit;cursor:pointer}
-#idlew:hover,#cmds button:not(:disabled):hover{background:#35264c}
-#idlew.pulse{animation:idlew-pulse 1.05s ease-in-out infinite;border-color:#f0d460;box-shadow:0 0 14px #c9a227aa,inset 0 0 10px #ffd36a33}
-@keyframes idlew-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:1;box-shadow:0 0 22px #f0d460cc,inset 0 0 14px #ffd36a55}}
-#bottom{position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;height:calc(168px + env(safe-area-inset-bottom,0px));min-height:168px;display:grid;grid-template-columns:168px 1fr 1.2fr;gap:10px;padding:8px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));background:linear-gradient(#120e1cf2,#1a1428f4);border-top:2px solid #c9a227}
-#minimap{width:148px;height:148px;image-rendering:pixelated;border:2px solid #c9a227;background:#07060f;align-self:center;margin-left:6px}
-#card{display:flex;gap:12px;align-items:center;padding:8px 6px}
-#portrait{width:72px;height:72px;border:2px solid #c9a227;background:#1a0e08;flex:none;box-shadow:inset 0 0 12px #0008;position:relative;overflow:hidden}
-#portrait.civ-plate::before{content:"";position:absolute;inset:14%;border:2px solid #c9a227;transform:rotate(45deg);box-shadow:0 0 14px #f0d46066,inset 0 0 8px #ffd36a44}
-#portrait.civ-plate::after{content:"◆";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#f0d460;text-shadow:0 0 12px #ffd36a88}
-#portrait.unit-plate::before{content:"";position:absolute;inset:0;border:1px solid #c9a22744}
+#meta b.low{color:${P.coral};opacity:1}
+#scout-focus,#idlew,#zoom button,#cmds button{background:${P.deep};color:${P.cream};border:1px solid ${P.amber}88;border-radius:2px;min-height:44px;min-width:44px;padding:6px 10px;font:inherit;cursor:pointer}
+#scout-focus:hover,#idlew:hover,#zoom button:hover,#cmds button:not(:disabled):hover{background:${P.plum}}
+#zoom{display:flex;align-items:center;gap:4px}
+#zoom span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
+#zoom button{font-size:20px;line-height:1;padding:4px 10px}
+#idlew.pulse{animation:idlew-pulse 1.05s ease-in-out infinite;border-color:${P.amber};box-shadow:0 0 14px ${P.amber}aa,inset 0 0 10px ${P.amber}33}
+@keyframes idlew-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:1;box-shadow:0 0 22px ${P.amber}cc,inset 0 0 14px ${P.amber}55}}
+#bottom{position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;height:calc(112px + env(safe-area-inset-bottom,0px));min-height:112px;display:grid;grid-template-columns:168px 1fr 1.2fr;grid-template-rows:minmax(0,1fr);gap:10px;padding:8px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));background:linear-gradient(${P.ink}f2,${P.night}f4);border-top:2px solid ${P.amber};overflow:visible}
+#bottom>*{min-height:0}
+#minimap{width:156px;height:156px;image-rendering:pixelated;border:2px solid ${P.amber};background:${P.ink};align-self:end;margin-left:6px}
+#card{display:flex;gap:12px;align-items:center;min-height:0;padding:8px 6px}
+#portrait{width:56px;height:56px;border:2px solid ${P.amber};background:${P.rust};flex:none;box-shadow:inset 0 0 12px #0008;position:relative;overflow:hidden}
+#portrait.civ-plate::before{content:"";position:absolute;inset:14%;border:2px solid ${P.amber};transform:rotate(45deg);box-shadow:0 0 14px ${P.amber}66,inset 0 0 8px ${P.amber}44}
+#portrait.civ-plate::after{content:"◆";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:${P.amber};text-shadow:0 0 12px ${P.amber}88}
+#portrait.unit-plate::before{content:"";position:absolute;inset:0;border:1px solid ${P.amber}44}
 #seltitle{margin:0 0 6px;font-size:16px;letter-spacing:.04em}
 #selstats{margin:0;font-size:12px;opacity:.75;line-height:1.35;max-width:42ch}
-#cmds{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;align-content:center;padding:6px}
+#cmds{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;align-content:center;min-height:0;padding:6px}
 #cmds button.verb{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;text-align:left;min-height:44px;min-width:44px;padding:8px 10px}
-#cmds button.verb.on{border-color:#f0d460;background:linear-gradient(#3a2e18,#241a36);box-shadow:inset 0 0 0 2px #f0d460,0 0 10px #c9a22744}
-#cmds button.verb:disabled{opacity:.38;cursor:not-allowed;filter:saturate(.55);border-color:#c9a22744}
+#cmds button.verb.on{border-color:${P.amber};background:linear-gradient(${P.sienna},${P.deep});box-shadow:inset 0 0 0 2px ${P.amber},0 0 10px ${P.amber}44}
+#cmds button.verb:disabled{opacity:.38;cursor:not-allowed;filter:saturate(.55);border-color:${P.amber}44}
 #cmds button.verb strong{font-size:13px;letter-spacing:.02em}
 #cmds small{opacity:.55;font-size:10px;letter-spacing:.04em}
 #civpick{position:absolute;left:calc(10px + env(safe-area-inset-left,0px));top:calc(68px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:6px;pointer-events:auto;z-index:6}
-#civpick .civ-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:132px;min-height:48px;padding:8px 12px;border:2px solid #c9a22766;border-radius:2px;background:#120e1cf0;color:#f4efe4;font:inherit;cursor:pointer;text-align:left;box-shadow:0 4px 16px #0006}
+#civpick .picker-label{padding:0 4px;color:${P.amber};font-size:9px;letter-spacing:.14em;text-transform:uppercase;opacity:.78}
+#civpick .civ-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:132px;min-height:48px;padding:8px 12px;border:2px solid ${P.amber}66;border-radius:2px;background:${P.ink}f0;color:${P.cream};font:inherit;cursor:pointer;text-align:left;box-shadow:0 4px 16px #0006}
 #civpick .civ-tile strong{font-size:12px;letter-spacing:.06em;text-transform:uppercase;line-height:1.2}
 #civpick .civ-tile small{opacity:.6;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
-#civpick .civ-tile.vespari{background:linear-gradient(135deg,#3a2818 0%,#1a0e08 100%)}
-#civpick .civ-tile.aurion{background:linear-gradient(135deg,#163844 0%,#061018 100%)}
-#civpick .civ-tile.voidmarked{background:linear-gradient(135deg,#2a0a28 0%,#1c3a22 100%)}
-#civpick .civ-tile.on{border-color:#f0d460;box-shadow:0 0 0 1px #000,0 0 18px #c9a22766,inset 0 0 0 2px #f0d46055}
-#civpick .civ-tile:not(.on):hover{border-color:#c9a227;filter:brightness(1.08)}
+#civpick .civ-tile.vespari{background:linear-gradient(135deg,${P.sienna} 0%,${P.rust} 100%)}
+#civpick .civ-tile.aurion{background:linear-gradient(135deg,${P.sky} 0%,${P.ink} 100%)}
+#civpick .civ-tile.voidmarked{background:linear-gradient(135deg,${P.plum} 0%,${P.moss} 100%)}
+#civpick .civ-tile.on{border-color:${P.amber};box-shadow:0 0 0 1px #000,0 0 18px ${P.amber}66,inset 0 0 0 2px ${P.amber}55}
+#civpick .civ-tile:not(.on):hover{border-color:${P.amber};filter:brightness(1.08)}
 #hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.45;pointer-events:none;white-space:nowrap}
 #match-end{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;z-index:8}
-#match-end .match-panel{padding:18px 28px 16px;border:3px solid #c9a227;background:linear-gradient(#1a1428f2,#120e1cf0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;min-width:280px}
-#match-end.win .match-panel{border-color:#7ec87a;box-shadow:0 0 0 2px #000,0 0 32px #7ec87a44,0 12px 40px #000a,inset 0 0 24px #0006}
-#match-end.lose .match-panel{border-color:#e84d4d;box-shadow:0 0 0 2px #000,0 0 32px #e84d4d44,0 12px 40px #000a,inset 0 0 24px #0006}
-#match-title{margin:0 0 8px;font-size:28px;letter-spacing:.18em;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 16px #c9a22766}
-#match-end.win #match-title{color:#8ee88a;text-shadow:0 2px 0 #000,0 0 20px #7ec87a88}
-#match-end.lose #match-title{color:#ff6a6a;text-shadow:0 2px 0 #000,0 0 20px #e84d4d88}
+#match-end .match-panel{padding:18px 28px 16px;border:3px solid ${P.amber};background:linear-gradient(${P.night}f2,${P.ink}f0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;min-width:280px}
+#match-end.win .match-panel{border-color:${P.leaf};box-shadow:0 0 32px ${P.leaf}44,0 12px 40px #000a,inset 0 0 24px #0006}
+#match-end.lose .match-panel{border-color:${P.red};box-shadow:0 0 32px ${P.red}44,0 12px 40px #000a,inset 0 0 24px #0006}
+#match-title{margin:0 0 8px;font-size:28px;letter-spacing:.18em;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 16px ${P.amber}66}
+#match-end.win #match-title{color:${P.lime};text-shadow:0 2px 0 #000,0 0 20px ${P.leaf}88}
+#match-end.lose #match-title{color:${P.coral};text-shadow:0 2px 0 #000,0 0 20px ${P.red}88}
 #match-sub{margin:0;font-size:13px;letter-spacing:.08em;opacity:.82;text-transform:uppercase}
 @media (orientation:portrait){
   #rotate-gate{display:flex !important}

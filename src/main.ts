@@ -8,14 +8,16 @@ import { Input } from './input';
 import { Hud } from './hud';
 import { Sfx } from './audio';
 import { enemyCiv, parseBootCiv } from './content';
+import { OPENING_CAMERA } from './opening-presentation';
 
 const VERSION = '0.9.12-iso';
 const SEED = 0x5eed;
-const OPENING_PAN = { x: MAP * 0.5, z: MAP * 0.52, halfH: 7.2 };
+const OPENING_PAN = OPENING_CAMERA;
 
 const host = document.getElementById('app');
 if (!host) throw new Error('Starhold boot: #app host missing');
 const world = new World();
+world.fogOfWarEnabled = new URLSearchParams(window.location.search).get('fog') === '1';
 world.civ[0] = 'vespari';
 world.civ[1] = 'aurion';
 const bootCiv = parseBootCiv(window.location.search);

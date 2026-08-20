@@ -1,6 +1,7 @@
 /** P20–P23 — civilizations, stats, costs. */
 
 import { Kind, type Civ } from './engine';
+import { STARHOLD_PALETTE as P } from './palette';
 
 export const CIV_NAME: Record<Civ, string> = {
   vespari: 'Helion Compact',
@@ -24,11 +25,17 @@ export function parseBootCiv(search: string): Civ | null {
   return ALL_CIVS.includes(raw as Civ) ? (raw as Civ) : null;
 }
 
+function rgb(hex: string): [number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255];
+}
+
+/** Team accents are fixed to the Starhold tokens, not ad-hoc neon colors. */
 export const TEAM_RGB: [number, number, number][] = [
-  [0.24, 0.78, 0.42],
-  [0.92, 0.32, 0.28],
-  [0.28, 0.58, 1.0],
-  [0.95, 0.78, 0.22],
+  rgb(P.leaf),
+  rgb(P.red),
+  rgb(P.sky),
+  rgb(P.amber),
 ];
 
 export interface Stats {

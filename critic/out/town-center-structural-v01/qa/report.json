@@ -8,86 +8,86 @@
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 135.98,
-      "variance": 429.2
+      "mean": 135.94,
+      "variance": 433.08
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 123.06,
-      "variance": 220.23
+      "mean": 122.93,
+      "variance": 232.3
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 120.85,
-      "variance": 239.11
+      "mean": 120.76,
+      "variance": 249.84
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 125.08,
-      "variance": 396.27
+      "mean": 124.88,
+      "variance": 409.39
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-top-ortho.png",
       "query": "ui=0&view=top-ortho&stage=4&pass=beauty&freeze=1",
-      "mean": 124.44,
-      "variance": 406.35
+      "mean": 124.35,
+      "variance": 405.8
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 127.28,
-      "variance": 435.66
+      "mean": 127.3,
+      "variance": 435.37
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-rear-3q.png",
       "query": "ui=0&view=rear-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 117.53,
-      "variance": 286.89
+      "mean": 117.58,
+      "variance": 287.15
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-close.png",
       "query": "ui=0&view=gameplay-close&stage=4&pass=beauty&freeze=1",
-      "mean": 129.23,
-      "variance": 757.48
+      "mean": 129.29,
+      "variance": 755.25
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-normal.png",
       "query": "ui=0&view=gameplay-normal&stage=4&pass=beauty&freeze=1",
-      "mean": 127.9,
-      "variance": 573.83
+      "mean": 127.94,
+      "variance": 572.85
     },
     {
       "file": "critic/out/town-center-structural-v01/beauty-gameplay-far.png",
       "query": "ui=0&view=gameplay-far&stage=4&pass=beauty&freeze=1",
-      "mean": 126.43,
-      "variance": 363.08
+      "mean": 126.44,
+      "variance": 362.97
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-front-ortho.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 156.19,
-      "variance": 13702.12
+      "mean": 156.11,
+      "variance": 13705.03
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-right-ortho.png",
       "query": "ui=0&view=right-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 154.03,
-      "variance": 13781.57
+      "mean": 153.98,
+      "variance": 13783.35
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-back-ortho.png",
       "query": "ui=0&view=back-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 156.19,
-      "variance": 13702.12
+      "mean": 156.11,
+      "variance": 13705.03
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-left-ortho.png",
       "query": "ui=0&view=left-ortho&stage=4&pass=silhouette&freeze=1",
-      "mean": 154.01,
-      "variance": 13782.93
+      "mean": 153.96,
+      "variance": 13784.51
     },
     {
       "file": "critic/out/town-center-structural-v01/silhouette-top-ortho.png",
@@ -98,26 +98,26 @@
     {
       "file": "critic/out/town-center-structural-v01/front-wireframe.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=wireframe&freeze=1",
-      "mean": 117.39,
-      "variance": 981.04
+      "mean": 115.61,
+      "variance": 1109.37
     },
     {
       "file": "critic/out/town-center-structural-v01/front-normal.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=normal&freeze=1",
-      "mean": 147.33,
-      "variance": 472.02
+      "mean": 147.31,
+      "variance": 472.9
     },
     {
       "file": "critic/out/town-center-structural-v01/front-depth.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=depth&freeze=1",
-      "mean": 170.77,
-      "variance": 2007.77
+      "mean": 170.8,
+      "variance": 2008.71
     },
     {
       "file": "critic/out/town-center-structural-v01/front-material-id.png",
       "query": "ui=0&view=front-ortho&stage=4&pass=material-id&freeze=1",
-      "mean": 149.5,
-      "variance": 414.46
+      "mean": 149.6,
+      "variance": 418.94
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-1-front-3q.png",
@@ -128,26 +128,68 @@
     {
       "file": "critic/out/town-center-structural-v01/stage-2-front-3q.png",
       "query": "ui=0&view=front-3q&stage=2&pass=beauty&freeze=1",
-      "mean": 128.61,
-      "variance": 394.43
+      "mean": 128.62,
+      "variance": 394.16
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-3-front-3q.png",
       "query": "ui=0&view=front-3q&stage=3&pass=beauty&freeze=1",
-      "mean": 128.03,
-      "variance": 433.56
+      "mean": 128.16,
+      "variance": 431.86
     },
     {
       "file": "critic/out/town-center-structural-v01/stage-4-front-3q.png",
       "query": "ui=0&view=front-3q&stage=4&pass=beauty&freeze=1",
-      "mean": 127.28,
-      "variance": 435.66
+      "mean": 127.3,
+      "variance": 435.37
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/palette-front-ortho.png",
+      "query": "ui=0&view=front-ortho&stage=4&pass=palette&freeze=1",
+      "mean": 142.1,
+      "variance": 787.7
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/palette-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=4&pass=palette&freeze=1",
+      "mean": 131.84,
+      "variance": 701.75
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/palette-top-ortho.png",
+      "query": "ui=0&view=top-ortho&stage=4&pass=palette&freeze=1",
+      "mean": 125.44,
+      "variance": 704.52
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/palette-stage-1-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=1&pass=palette&freeze=1",
+      "mean": 133.84,
+      "variance": 395.92
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/palette-stage-2-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=2&pass=palette&freeze=1",
+      "mean": 132.61,
+      "variance": 635.4
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/palette-stage-3-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=3&pass=palette&freeze=1",
+      "mean": 132.46,
+      "variance": 695.74
+    },
+    {
+      "file": "critic/out/town-center-structural-v01/palette-stage-4-front-3q.png",
+      "query": "ui=0&view=front-3q&stage=4&pass=palette&freeze=1",
+      "mean": 131.84,
+      "variance": 701.75
     }
   ],
   "runtime": {
     "ready": true,
-    "draws": 128,
-    "triangles": 11880,
+    "draws": 148,
+    "triangles": 26584,
     "stage": 4,
     "manifest": {
       "assetId": "SunweaverTownCenter_Structural_v01",
@@ -578,6 +620,7 @@
       "lower_drum",
       "entrance_bay",
       "south_stair_landing",
+      "south_stair_landing_gold_lip",
       "entrance_collar_sill",
       "entrance_collar_frame_base",
       "entrance_collar_nosing_l",

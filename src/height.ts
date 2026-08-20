@@ -2,7 +2,10 @@
 
 import { MAP, clamp } from './engine';
 
-export const HEIGHT_SCALE = 1.1;
+// Keep the three stored height levels visibly separated at the opening camera.
+// The sim still stores the same 0–3 levels; this only gives the renderer enough
+// vertical span for a plateau and its ramp to read as terrain, not decoration.
+export const HEIGHT_SCALE = 1.35;
 
 function hash21(x: number, z: number, seed: number): number {
   const n = Math.sin((x + seed * 0.013) * 127.1 + (z + seed * 0.029) * 311.7) * 43758.5453;

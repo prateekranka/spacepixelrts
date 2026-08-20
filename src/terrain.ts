@@ -3,7 +3,34 @@
 import * as THREE from 'three';
 import { MAP } from './engine';
 import { HEIGHT_SCALE } from './height';
+import { OPENING_CENTER, OPENING_CORRIDOR, OPENING_MESA } from './opening-presentation';
 import type { World } from './sim';
+import { STARHOLD_PALETTE as P } from './palette';
+
+function glslColor(hex: string): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 0xff) / 255;
+  const g = ((n >> 8) & 0xff) / 255;
+  const b = (n & 0xff) / 255;
+  return `vec3(${r.toFixed(3)}, ${g.toFixed(3)}, ${b.toFixed(3)})`;
+}
+
+const TC = Object.freeze({
+  ink: glslColor(P.ink),
+  night: glslColor(P.night),
+  deep: glslColor(P.deep),
+  shadow: glslColor(P.shadow),
+  fog: glslColor(P.fog),
+  slate: glslColor(P.slate),
+  steel: glslColor(P.steel),
+  sky: glslColor(P.sky),
+  pale: glslColor(P.pale),
+  sand: glslColor(P.sand),
+  sienna: glslColor(P.sienna),
+  copper: glslColor(P.copper),
+  ochre: glslColor(P.ochre),
+  amber: glslColor(P.amber),
+});
 
 const TERRAIN_VERT = /* glsl */ `
 uniform sampler2D uHeight;
@@ -22,10 +49,10 @@ void main() {
   vec4 baseWp = modelMatrix * vec4(position, 1.0);
   vec2 worldXZ = baseWp.xz;
   float hC = sampleH(worldXZ);
-  float hX = sampleH(worldXZ + vec2(1.0, 0.0)) - hC;
-  float hZ = sampleH(worldXZ + vec2(0.0, 1.0)) - hC;
+  float hX = sampleH(worldXZ + vec2(1.0, 0.0)) - sampleH(worldXZ - vec2(1.0, 0.0));
+  float hZ = sampleH(worldXZ + vec2(0.0, 1.0)) - sampleH(worldXZ - vec2(0.0, 1.0));
   vElev = hC / 3.0;
-  vSlope = clamp(length(vec2(hX, hZ)) * 1.35, 0.0, 1.0);
+  vSlope = clamp(length(vec2(hX, hZ)) * 0.68, 0.0, 1.0);
 
   vec3 pos = vec3(position.x, position.y, hC * uHeightScale);
   vec4 wp = modelMatrix * vec4(pos, 1.0);
@@ -38,6 +65,9 @@ const TERRAIN_FRAG = /* glsl */ `
 uniform sampler2D uTiles;
 uniform sampler2D uDecals;
 uniform vec2 uMapSize;
+uniform vec2 uOpeningCenter;
+uniform vec2 uOpeningCorridor;
+uniform vec2 uOpeningMesa;
 varying vec2 vWorld;
 varying float vElev;
 varying float vSlope;
@@ -90,48 +120,67 @@ float boulderMask(vec2 local) {
 }
 
 vec3 dustColor(vec2 world, float elev, float rim) {
-  vec3 base = vec3(0.400, 0.345, 0.425);
-  vec3 dark = vec3(0.378, 0.325, 0.400);
-  vec3 deep = vec3(0.362, 0.312, 0.388);
-  vec3 hi = vec3(0.428, 0.372, 0.448);
-  vec3 col = mix(deep, base, elev * 0.45 + 0.55);
-  col = mix(col, dark, (1.0 - elev) * 0.12);
-  col = mix(col, hi, elev * 0.06);
-  col += vec3(0.46, 0.42, 0.50) * rim * 0.10;
+  vec3 base = ${TC.slate};
+  vec3 dark = ${TC.fog};
+  vec3 deep = ${TC.night};
+  vec3 hi = ${TC.steel};
+  float terrace = smoothstep(0.12, 0.78, elev);
+  vec3 col = mix(deep, base, terrace);
+  col = mix(col, dark, (1.0 - terrace) * 0.22);
+  col = mix(col, hi, smoothstep(0.45, 0.92, elev) * 0.24);
+  col = mix(col, ${TC.sand}, smoothstep(0.76, 0.98, elev) * 0.24);
+  col += ${TC.pale} * rim * 0.14;
+
+  // A quiet, camera-readable dust lane anchors the opening clash. The inset
+  // edge gives the two camps a clear route without painting a hard rectangle.
+  vec2 lane = abs(world - uOpeningCenter) / uOpeningCorridor;
+  float laneEdge = smoothstep(0.72, 0.98, max(lane.x, lane.y));
+  float laneInside = 1.0 - smoothstep(0.92, 1.02, max(lane.x, lane.y));
+  col = mix(col, col + vec3(0.042, 0.030, 0.052), laneInside * 0.62);
+  col = mix(col, ${TC.shadow}, laneEdge * 0.42);
+
+  // The opening mesa has an east-facing approach. A short, warm dust strip
+  // makes the ramp route legible at the default zoom before a player pans.
+  float mesaDx = world.x - uOpeningCenter.x;
+  float rampSpan = smoothstep(6.0, 7.2, mesaDx) * (1.0 - smoothstep(14.0, 15.2, mesaDx));
+  float rampWidth = 1.0 - smoothstep(0.0, 1.25, abs(world.y - (uOpeningCenter.y + uOpeningMesa.y)));
+  col = mix(col, ${TC.sienna}, rampSpan * rampWidth * 0.52);
   return col;
 }
 
 vec3 rockColor(vec2 world, float rim, float cliff) {
   vec2 local = fract(world);
   float mask = boulderMask(local);
-  vec3 rock = vec3(0.361, 0.322, 0.424);
-  vec3 rockH = vec3(0.580, 0.533, 0.620);
-  vec3 ink = vec3(0.071, 0.055, 0.118);
-  vec3 col = mix(vec3(0.416, 0.353, 0.439), rock, mask);
+  vec3 rock = ${TC.slate};
+  vec3 rockH = ${TC.steel};
+  vec3 ink = ${TC.ink};
+  vec3 col = mix(${TC.fog}, rock, mask);
   col = mix(col, rockH, mask * 0.55 * (1.0 - local.y));
   col = mix(col, ink, (1.0 - mask) * 0.08);
   float edge = smoothstep(0.45, 0.72, mask);
-  col += vec3(0.52, 0.48, 0.58) * rim * edge * 0.18;
+  col += ${TC.pale} * rim * edge * 0.18;
   float shadow = smoothstep(0.82, 0.98, local.y) * (1.0 - mask);
-  col = mix(col, vec3(0.188, 0.165, 0.243), shadow * 0.45);
-  col = mix(col, vec3(0.165, 0.138, 0.215), cliff * 0.55);
+  col = mix(col, ${TC.shadow}, shadow * 0.45);
+  col = mix(col, ${TC.night}, cliff * 0.55);
   return col;
 }
 
 vec3 voidColor(vec2 world) {
   float n = valueNoise(world * 0.08);
-  return vec3(0.165 + n * 0.04, 0.141 + n * 0.03, 0.251 + n * 0.05);
+  return ${TC.night} + vec3(n * 0.04, n * 0.03, n * 0.05);
 }
 
 void main() {
   vec2 world = vWorld;
-  float elev = mix(qElev(world), vElev, 0.72);
+  float elev = mix(qElev(world), vElev, 0.92);
   float rim = sunRim(world);
-  float cliff = smoothstep(0.22, 0.62, vSlope);
+  float cliff = smoothstep(0.08, 0.34, vSlope);
 
   float t = tileType(world);
   float decal = decalRock(world);
-  bool isRock = t > 1.5 && t < 2.5 || decal > 0.5;
+  // Cliff rims use the rock atlas. Keep the high plateau interior as dust so
+  // the camera reads a continuous top surface above the darker side wall.
+  bool isRock = decal > 0.5 || (t > 1.5 && t < 2.5 && (cliff > 0.18 || vElev < 0.20));
 
   vec3 col;
   if (t < 0.5) {
@@ -140,10 +189,11 @@ void main() {
     col = rockColor(world, rim, cliff);
   } else {
     col = dustColor(world, elev, rim);
-    col = mix(col, vec3(0.318, 0.288, 0.348), cliff * 0.22);
-    if (t > 2.5 && t < 3.5) col = mix(col, vec3(0.776, 0.604, 0.282), 0.12);
-    else if (t > 3.5 && t < 4.5) col = mix(col, vec3(0.361, 0.659, 0.824), 0.10);
-    else if (t > 4.5 && t < 5.5) col = mix(col, vec3(0.941, 0.769, 0.282), 0.10);
+    col = mix(col, ${TC.deep}, cliff * 0.72);
+    col += ${TC.steel} * 0.16 * smoothstep(0.42, 0.82, elev);
+    if (t > 2.5 && t < 3.5) col = mix(col, ${TC.ochre}, 0.16);
+    else if (t > 3.5 && t < 4.5) col = mix(col, ${TC.sky}, 0.14);
+    else if (t > 4.5 && t < 5.5) col = mix(col, ${TC.amber}, 0.14);
   }
 
   gl_FragColor = vec4(col, 1.0);
@@ -249,6 +299,11 @@ export function buildTerrainMesh(world: World): THREE.Mesh {
       uHeightScale: { value: HEIGHT_SCALE },
       uMapHalf: { value: half },
       uMapSize: { value: new THREE.Vector2(MAP, MAP) },
+      uOpeningCenter: { value: new THREE.Vector2(OPENING_CENTER.x, OPENING_CENTER.z) },
+      uOpeningCorridor: {
+        value: new THREE.Vector2(OPENING_CORRIDOR.halfW, OPENING_CORRIDOR.halfD),
+      },
+      uOpeningMesa: { value: new THREE.Vector2(OPENING_MESA.dx, OPENING_MESA.dz) },
     },
     vertexShader: TERRAIN_VERT,
     fragmentShader: TERRAIN_FRAG,

@@ -1,10 +1,17 @@
 /** P11 / P82 — tiny prop atlas (gems + wrecks). Units/buildings are GPU SDFs. */
 
+import { STARHOLD_PALETTE as P } from './palette';
+
 export const CELL = 32;
 export const SHEET = 128;
 export const COLS = SHEET / CELL;
 
 export const MAG = [255, 0, 255, 255] as const;
+
+function rgba(hex: string): [number, number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 0xff), ((n >> 8) & 0xff), (n & 0xff), 255];
+}
 
 export type Uv = { u0: number; v0: number; u1: number; v1: number; w: number; h: number };
 
@@ -14,16 +21,16 @@ export interface Atlas {
 }
 
 const PAL = {
-  ink: [18, 14, 30, 255],
-  rock: [92, 82, 108, 255],
-  rockH: [148, 136, 158, 255],
-  ore: [198, 154, 72, 255],
-  oreH: [240, 214, 120, 255],
-  gas: [92, 168, 210, 255],
-  gasH: [186, 230, 255, 255],
-  sol: [240, 196, 72, 255],
-  solH: [255, 236, 170, 255],
-  white: [244, 238, 226, 255],
+  ink: rgba(P.ink),
+  rock: rgba(P.slate),
+  rockH: rgba(P.steel),
+  ore: rgba(P.copper),
+  oreH: rgba(P.ochre),
+  gas: rgba(P.sky),
+  gasH: rgba(P.ice),
+  sol: rgba(P.ochre),
+  solH: rgba(P.amber),
+  white: rgba(P.cream),
 } as const;
 
 type Rgba = readonly [number, number, number, number] | [number, number, number, number];
@@ -157,6 +164,10 @@ function drawPropWreck(): Pix {
     const [x1, y1] = pts[(i + 1) % pts.length];
     p.line(x0, y0, x1, y1, PAL.ink);
   }
+  // Fill the irregular hull so the salvage reads as a wreck, not a black
+  // zig-zag mark when it is enlarged in the isometric view.
+  p.fill(5, 11, 13, 6, PAL.rock);
+  p.fill(7, 8, 10, 5, PAL.rock);
   for (let y = 5; y <= 17; y++) {
     for (let x = 5; x <= 18; x++) {
       if (x + y > 22 && x * 1.05 + y * 0.9 < 28) p.set(x, y, PAL.rock);
@@ -169,21 +180,23 @@ function drawPropWreck(): Pix {
   }
   p.line(9, 7, 15, 6, PAL.rockH);
   p.set(10, 7, PAL.rockH);
-  for (let x = 6; x <= 17; x++) p.set(x, 18, [58, 50, 72, 255]);
-  p.finish();
+  p.line(8, 15, 16, 13, PAL.ore);
+  p.set(13, 11, PAL.oreH);
+  for (let x = 6; x <= 17; x++) p.set(x, 18, PAL.rock);
+  p.outline(PAL.ink);
   return p;
 }
 
 function drawPropVent(): Pix {
   const p = Pix.alloc(18, 20);
-  p.fill(6, 14, 6, 5, [58, 52, 68, 255]);
-  p.circ(9, 15, 4, [72, 66, 82, 255]);
+  p.fill(6, 14, 6, 5, PAL.rock);
+  p.circ(9, 15, 4, PAL.rockH);
   p.circ(9, 11, 3, PAL.gas);
   p.circ(9, 8, 2, PAL.gasH);
   p.set(9, 5, PAL.solH);
   p.set(8, 4, PAL.sol);
   p.set(10, 6, PAL.gasH);
-  p.line(9, 3, 9, 1, [186, 230, 255, 200]);
+  p.line(9, 3, 9, 1, PAL.gasH);
   p.set(8, 2, PAL.solH);
   p.finish();
   return p;

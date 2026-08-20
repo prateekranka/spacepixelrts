@@ -33,6 +33,20 @@ import {
   minTrainEpoch,
   uniqueUnit,
 } from './content';
+import {
+  OPENING_CENTER,
+  OPENING_CAMP,
+  OPENING_CONVOY,
+  OPENING_CORRIDOR,
+  OPENING_MESA,
+  OPENING_VENTS,
+  inOpeningCamp,
+  inOpeningCorridor,
+  openingCampCenter,
+  openingFighterSlot,
+  openingUniqueSlot,
+  openingWorkerSlot,
+} from './opening-presentation';
 
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
@@ -60,6 +74,8 @@ export class World {
     { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0 },
   ];
   readonly civ: Civ[] = ['vespari', 'aurion', 'voidmarked', 'vespari'];
+  /** Clear-map review mode. Pass `?fog=1` from main to restore gameplay fog. */
+  fogOfWarEnabled = false;
   readonly bolts: Bolt[] = [];
   readonly sparks: Spark[] = [];
   readonly flags: { x: number; z: number; t: number }[] = [];
@@ -276,10 +292,15 @@ export class World {
     let offsets: { dx: number; dz: number }[] | null = null;
     if (spread && unitIds.length > 1) {
       let maxR = 0.32;
+      let hasWorker = false;
       for (const id of unitIds) {
-        maxR = Math.max(maxR, STATS[this.ents[id].kind].radius);
+        const kind = this.ents[id].kind;
+        maxR = Math.max(maxR, STATS[kind].radius);
+        hasWorker ||= kind === Kind.Worker;
       }
-      const spacing = clamp(maxR * 2.6, 0.7, 1.1);
+      // Worker sprites are wider than their collision radius. Give worker
+      // groups a larger visual lane so the destination does not stack bodies.
+      const spacing = hasWorker ? 1.25 : clamp(maxR * 2.6, 0.7, 1.1);
       offsets = this.formationOffsets(unitIds.length, spacing);
     }
     for (let i = 0; i < unitIds.length; i++) {
@@ -410,6 +431,15 @@ export class World {
       }
     }
     this.generateHeightmap(rng);
+    this.stampMesa(
+      OPENING_CENTER.x + OPENING_MESA.dx,
+      OPENING_CENTER.z + OPENING_MESA.dz,
+      OPENING_MESA.radius,
+      OPENING_MESA.peak,
+      0,
+      0.18,
+      1.0,
+    );
     this.stampPatch(Tile.Ore, 9, rng);
     this.stampPatch(Tile.Gas, 6, rng);
     this.stampPatch(Tile.Solar, 5, rng);
@@ -451,7 +481,7 @@ export class World {
   ): boolean {
     if (Math.hypot(cx - 10, cz - 10) < 13 + r) return true;
     if (Math.hypot(cx - (MAP - 11), cz - (MAP - 11)) < 13 + r) return true;
-    if (Math.hypot(cx - MAP * 0.5, cz - MAP * 0.52) < 15 + r) return true;
+    if (Math.hypot(cx - OPENING_CENTER.x, cz - OPENING_CENTER.z) < 15 + r) return true;
     for (const p of placed) {
       if (Math.hypot(cx - p.x, cz - p.z) < p.r + r + 7) return true;
       // Don't place a diagonal reflection of an existing mesa.
@@ -536,9 +566,7 @@ export class World {
   }
 
   private isHeightPad(x: number, z: number): boolean {
-    const icx = (MAP * 0.5) | 0;
-    const icz = (MAP * 0.52) | 0;
-    if (x >= icx - 14 && x <= icx + 13 && z >= icz - 10 && z <= icz + 9) return true;
+    if (inOpeningCorridor(x + 0.5, z + 0.5) || inOpeningCamp(x + 0.5, z + 0.5)) return true;
     if (x >= 4 && x <= 16 && z >= 4 && z <= 16) return true;
     if (x >= MAP - 17 && x <= MAP - 5 && z >= MAP - 17 && z <= MAP - 5) return true;
     return false;
@@ -554,10 +582,26 @@ export class World {
 
   /** 2-tile ring outside pads — clamp steep rim to level 1 so exits stay walkable. */
   private skirtRampsAroundPads(): void {
-    const icx = (MAP * 0.5) | 0;
-    const icz = (MAP * 0.52) | 0;
+    const rect = (cx: number, cz: number, halfW: number, halfD: number) => ({
+      x0: Math.floor(cx - halfW),
+      x1: Math.ceil(cx + halfW) - 1,
+      z0: Math.floor(cz - halfD),
+      z1: Math.ceil(cz + halfD) - 1,
+    });
     const regions = [
-      { x0: icx - 14, x1: icx + 13, z0: icz - 10, z1: icz + 9 },
+      rect(OPENING_CENTER.x, OPENING_CENTER.z, OPENING_CORRIDOR.halfW, OPENING_CORRIDOR.halfD),
+      rect(
+        OPENING_CENTER.x,
+        OPENING_CENTER.z - OPENING_CAMP.offset,
+        OPENING_CAMP.halfW,
+        OPENING_CAMP.halfD,
+      ),
+      rect(
+        OPENING_CENTER.x,
+        OPENING_CENTER.z + OPENING_CAMP.offset,
+        OPENING_CAMP.halfW,
+        OPENING_CAMP.halfD,
+      ),
       { x0: 4, x1: 16, z0: 4, z1: 16 },
       { x0: MAP - 17, x1: MAP - 5, z0: MAP - 17, z1: MAP - 5 },
     ];
@@ -611,70 +655,40 @@ export class World {
 
   /** Dust pad + interior rocks + gem nodes + props under the opening camera frustum. */
   private stampOpeningGround(): void {
-    const cx = MAP * 0.5;
-    const cz = MAP * 0.52;
-    const icx = cx | 0;
-    const icz = cz | 0;
-    for (let z = -10; z <= 9; z++) {
-      for (let x = -14; x <= 13; x++) {
-        const xx = icx + x;
-        const zz = icz + z;
-        if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
-        this.tiles[xx + zz * MAP] = Tile.Dust;
-        this.block[xx + zz * MAP] = 0;
-      }
-    }
-    const inFireLane = (zz: number): boolean => Math.abs(zz - icz) < 3.6;
-    const onZFlank = (xx: number, zz: number): boolean =>
-      Math.abs(xx - icx) <= 1.6 && Math.abs(zz - icz) >= 5.0 && Math.abs(zz - icz) <= 6.8;
-    const stampCampPad = (hx: number, hz: number): void => {
-      for (let dz = -1; dz <= 1; dz++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const xx = hx + dx;
-          const zz = hz + dz;
-          if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) continue;
-          this.tiles[xx + zz * MAP] = Tile.Dust;
-          this.block[xx + zz * MAP] = 0;
+    const cx = OPENING_CENTER.x;
+    const cz = OPENING_CENTER.z;
+    const paintRect = (x0: number, x1: number, z0: number, z1: number): void => {
+      for (let z = z0; z <= z1; z++) {
+        for (let x = x0; x <= x1; x++) {
+          if (x < 1 || z < 1 || x >= MAP - 1 || z >= MAP - 1) continue;
+          this.tiles[x + z * MAP] = Tile.Dust;
+          this.block[x + z * MAP] = 0;
         }
       }
     };
-    const placeRock = (xx: number, zz: number): void => {
-      if (xx < 1 || zz < 1 || xx >= MAP - 1 || zz >= MAP - 1) return;
-      if (inFireLane(zz) || !onZFlank(xx, zz)) return;
-      this.tiles[xx + zz * MAP] = Tile.Rock;
-      this.block[xx + zz * MAP] = 1;
-    };
-    const rockOffsets: [number, number][] = [
-      [-1, -5],
-      [0, -5],
-      [1, -5],
-      [-1, 6],
-      [0, 6],
-      [1, 6],
-    ];
-    for (const [dx, dz] of rockOffsets) placeRock(icx + dx, icz + dz);
-    stampCampPad(icx, icz - 6);
-    stampCampPad(icx, icz + 6);
-    // Gems — ore among Helion workers, gas at +Z camp, solar east of north camp.
-    this.placeOpeningNodeAt(Tile.Ore, cx - 0.25, cz - 5.35);
-    this.placeOpeningNodeAt(Tile.Gas, cx + 1.1, cz + 5.35);
-    this.placeOpeningNodeAt(Tile.Solar, cx + 1.1, cz - 5.35);
-    // Contested mid ore + duel-lane boulders on the clash X (gap midpoint).
-    this.placeOpeningNodeAt(Tile.Ore, cx, cz);
-    this.placePropAt(Tile.PropWreck, cx, cz - 2.85);
-    this.placePropAt(Tile.PropWreck, cx, cz + 2.85);
-    const rockBillboards: [number, number][] = [
-      [icx - 1, icz - 5],
-      [icx, icz - 5],
-      [icx + 1, icz - 5],
-      [icx - 1, icz + 6],
-      [icx, icz + 6],
-      [icx + 1, icz + 6],
-    ];
-    for (const [px, pz] of rockBillboards) {
-      if (inFireLane(pz)) continue;
-      this.placeProp(Tile.PropWreck, px, pz);
+    paintRect(
+      Math.floor(cx - OPENING_CORRIDOR.halfW),
+      Math.ceil(cx + OPENING_CORRIDOR.halfW) - 1,
+      Math.floor(cz - OPENING_CORRIDOR.halfD),
+      Math.ceil(cz + OPENING_CORRIDOR.halfD) - 1,
+    );
+    for (const sign of [-1, 1]) {
+      const campZ = cz + sign * OPENING_CAMP.offset;
+      paintRect(
+        Math.floor(cx - OPENING_CAMP.halfW),
+        Math.ceil(cx + OPENING_CAMP.halfW) - 1,
+        Math.floor(campZ - OPENING_CAMP.halfD),
+        Math.ceil(campZ + OPENING_CAMP.halfD) - 1,
+      );
     }
+    // Gems — ore among Helion workers, gas at +Z camp, solar east of north camp.
+    this.placeOpeningNodeAt(Tile.Ore, cx - 0.25, cz - 6.45);
+    this.placeOpeningNodeAt(Tile.Gas, cx + 1.1, cz + 6.45);
+    this.placeOpeningNodeAt(Tile.Solar, cx + 1.1, cz - 6.45);
+    // Contested mid ore plus scenery kept outside the combat corridor.
+    this.placeOpeningNodeAt(Tile.Ore, cx, cz);
+    for (const prop of OPENING_CONVOY) this.placePropAt(Tile.PropWreck, cx + prop.x, cz + prop.z);
+    for (const prop of OPENING_VENTS) this.placePropAt(Tile.PropVent, cx + prop.x, cz + prop.z);
   }
 
   /** One ground tile + gem entity at exact world coords. */
@@ -690,18 +704,6 @@ export class World {
       node.hp = kind === Tile.Ore ? 280 : kind === Tile.Gas ? 200 : 160;
       node.maxHp = node.hp;
       node.radius = 0.55;
-    }
-  }
-
-  /** Decorative prop billboard — not gatherable. */
-  private placeProp(kind: Tile, cx: number, cz: number): void {
-    if (cx < 1 || cz < 1 || cx >= MAP - 1 || cz >= MAP - 1) return;
-    const prop = this.spawn(Kind.Resource, 'vespari', 3, cx + 0.5, cz + 0.5);
-    if (prop) {
-      prop.cargoType = kind;
-      prop.hp = 9999;
-      prop.maxHp = 9999;
-      prop.radius = 0.45;
     }
   }
 
@@ -740,20 +742,14 @@ export class World {
   private openingClashEnt(e: Ent): boolean {
     if (!e.alive || e.team > 1) return false;
     if (e.kind !== Kind.Fighter && e.kind !== Kind.Ravager && e.kind !== Kind.Prism) return false;
-    const dx = e.x - MAP * 0.5;
-    const dz = e.z - MAP * 0.52;
+    const dx = e.x - OPENING_CENTER.x;
+    const dz = e.z - OPENING_CENTER.z;
     return dx * dx + dz * dz < 110;
   }
 
   private openingFlankCampEnt(e: Ent): boolean {
     if (!e.alive) return false;
-    const cx = MAP * 0.5;
-    const cz = MAP * 0.52;
-    const mdx = e.x - cx;
-    const mdz = e.z - cz;
-    if (Math.abs(mdx) > 1.2) return false;
-    const adz = Math.abs(mdz);
-    if (adz < 5.0 || adz > 6.8) return false;
+    if (!inOpeningCamp(e.x, e.z)) return false;
     if (e.kind === Kind.House || e.kind === Kind.Worker) return true;
     if (e.kind !== Kind.Resource) return false;
     return e.cargoType !== Tile.PropWreck && e.cargoType !== Tile.PropVent;
@@ -761,9 +757,7 @@ export class World {
 
   private openingMidGemWorkerEnt(e: Ent): boolean {
     if (!e.alive || e.kind !== Kind.Worker) return false;
-    const cx = MAP * 0.5;
-    const cz = MAP * 0.52;
-    return Math.abs(e.tx - cx) < 0.15 && Math.abs(e.tz - cz) < 0.15;
+    return Math.abs(e.tx - OPENING_CENTER.x) < 0.15 && Math.abs(e.tz - OPENING_CENTER.z) < 0.15;
   }
 
   private openingTableauWorker(e: Ent): boolean {
@@ -856,33 +850,31 @@ export class World {
     this.spawn(Kind.Scout, a, 0, 16, 14);
     this.spawn(Kind.Scout, b, 1, MAP - 16, MAP - 14);
 
-    // Opening clash — two 2×4 ranks on the same depth (X), split on Z; hold Attack in place.
-    const cx = MAP * 0.5;
-    const cz = MAP * 0.52;
-    const colPitch = 1.12;
-    const rowPitch = 1.4;
-    const gap = 3.6;
-    const zHelion = cz - gap / 2;
-    const zKryos = cz + gap / 2;
+    // Opening clash — camera-aligned 2x4 ranks with enough presentation
+    // footprint to keep opposing silhouettes countable.
+    const cx = OPENING_CENTER.x;
+    const cz = OPENING_CENTER.z;
     for (let i = 0; i < 8; i++) {
       const col = i % 4;
       const row = (i / 4) | 0;
-      const x = cx + (row - 0.5) * rowPitch;
-      const zOff = (col - 1.5) * colPitch;
-      const f0 = this.spawn(Kind.Fighter, a, 0, x, zHelion + zOff);
+      const f0Slot = openingFighterSlot(0, row, col);
+      const f1Slot = openingFighterSlot(1, row, col);
+      const f0 = this.spawn(Kind.Fighter, a, 0, f0Slot.x, f0Slot.z);
       if (f0) {
         f0.order = Ord.Attack;
-        f0.tx = x;
-        f0.tz = zKryos + zOff;
+        f0.tx = f1Slot.x;
+        f0.tz = f1Slot.z;
+        f0.facing = dir8(f0.tx - f0.x, f0.tz - f0.z);
         f0.cooldown = -0.08 * (i % 5);
       }
       const kryosLiving = (row === 0 && col >= 1 && col <= 2) || (row === 1 && col <= 2);
-      const f1 = this.spawn(Kind.Fighter, b, 1, x, zKryos + zOff);
+      const f1 = this.spawn(Kind.Fighter, b, 1, f1Slot.x, f1Slot.z);
       if (f1) {
         if (kryosLiving) {
           f1.order = Ord.Attack;
-          f1.tx = x;
-          f1.tz = zHelion + zOff;
+          f1.tx = f0Slot.x;
+          f1.tz = f0Slot.z;
+          f1.facing = dir8(f1.tx - f1.x, f1.tz - f1.z);
           f1.cooldown = -0.08 * ((i + 2) % 5);
         } else {
           f1.hp = 0;
@@ -894,23 +886,28 @@ export class World {
         }
       }
     }
-    const rv = this.spawn(uniqueUnit(a), a, 0, cx - 1.35, zHelion);
+    const uniqueSlot = openingUniqueSlot(0);
+    const rv = this.spawn(uniqueUnit(a), a, 0, uniqueSlot.x, uniqueSlot.z);
     if (rv) {
       rv.order = Ord.Attack;
-      rv.tx = cx - 1.35;
-      rv.tz = zKryos;
+      rv.tx = OPENING_CENTER.x + 2.2;
+      rv.tz = OPENING_CENTER.z + 2.2;
+      rv.facing = dir8(rv.tx - rv.x, rv.tz - rv.z);
       rv.cooldown = -0.15;
     }
 
     // Forward camps — workers + gem parked beyond Helion wing with visible Z gap.
+    const camp0 = openingCampCenter(0);
+    const camp1 = openingCampCenter(1);
     const oreX = cx - 0.25;
-    const oreZ = cz - 5.35;
+    const oreZ = camp0.z - 0.1;
     const gasX = cx + 1.1;
-    const gasZ = cz + 5.35;
-    this.spawn(Kind.House, a, 0, cx, cz - 6.45);
-    this.spawn(Kind.House, b, 1, cx, cz + 6.45);
+    const gasZ = camp1.z - 0.1;
+    this.spawn(Kind.House, a, 0, camp0.x, camp0.z);
+    this.spawn(Kind.House, b, 1, camp1.x, camp1.z);
     for (let i = 0; i < 3; i++) {
-      const w = this.spawn(Kind.Worker, a, 0, cx - 1.0 + i * 0.75, cz - 5.35);
+      const slot = openingWorkerSlot(0, i);
+      const w = this.spawn(Kind.Worker, a, 0, slot.x, slot.z);
       if (w) {
         w.order = Ord.Gather;
         w.tx = oreX;
@@ -918,7 +915,8 @@ export class World {
       }
     }
     for (let i = 0; i < 3; i++) {
-      const wk = this.spawn(Kind.Worker, b, 1, cx - 1.0 + i * 0.75, cz + 5.35);
+      const slot = openingWorkerSlot(1, i);
+      const wk = this.spawn(Kind.Worker, b, 1, slot.x, slot.z);
       if (wk) {
         wk.order = Ord.Gather;
         wk.tx = gasX;
@@ -1015,7 +1013,9 @@ export class World {
         const gx = target && e.order !== Ord.Move && !openingMarch ? target.x : e.tx;
         const gz = target && e.order !== Ord.Move && !openingMarch ? target.z : e.tz;
         this.steer(e, gx, gz, st.spd * (1 + e.frenzy * 0.08));
-        if (e.order === Ord.Move && dist2(e.x, e.z, e.tx, e.tz) < 0.16) {
+        const pathDone = !e.path || e.pathI >= (e.path.length >> 1);
+        const reachedGoalTile = pathDone && tileAt(e.x, e.z) === tileAt(e.tx, e.tz);
+        if (e.order === Ord.Move && (dist2(e.x, e.z, e.tx, e.tz) < 0.16 || reachedGoalTile)) {
           e.order = Ord.Idle;
           e.vx = e.vz = 0;
           e.path = null;
@@ -1065,7 +1065,11 @@ export class World {
       return;
     }
     e.tid = node.id;
-    const gatherR = openingCampWorker ? 2.05 : node.radius + 0.45;
+    const gatherR = openingCampWorker
+      ? this.openingMidGemWorkerEnt(e)
+        ? 2.8
+        : 2.05
+      : node.radius + 0.45;
     if (dist2(e.x, e.z, node.x, node.z) < gatherR * gatherR) {
       e.vx = e.vz = 0;
       e.path = null;
@@ -1282,6 +1286,8 @@ export class World {
   }
 
   private steer(e: Ent, gx: number, gz: number, spd: number): void {
+    const startX = e.x;
+    const startZ = e.z;
     if (!e.path || e.pathI >= (e.path.length >> 1)) {
       e.path = this.pathfind(e.x, e.z, gx, gz);
       e.pathI = 0;
@@ -1308,7 +1314,9 @@ export class World {
     else {
       e.path = this.pathfind(e.x, e.z, gx, gz);
       e.pathI = 0;
+      e.vx = e.vz = 0;
     }
+    if (Math.abs(e.x - startX) + Math.abs(e.z - startZ) < 0.0001) e.vx = e.vz = 0;
     e.x = clamp(e.x, 0.6, MAP - 0.6);
     e.z = clamp(e.z, 0.6, MAP - 0.6);
     if (e.kind === Kind.Worker) {
@@ -1457,6 +1465,16 @@ export class World {
   }
 
   private updateFog(): void {
+    if (!this.fogOfWarEnabled) {
+      this.visible[0].fill(1);
+      this.visible[1].fill(1);
+      this.explored[0].fill(1);
+      this.explored[1].fill(1);
+      for (let i = 0; i < MAX_ENTS; i++) {
+        if (this.ents[i].alive) this.ents[i].vis = true;
+      }
+      return;
+    }
     this.visible[0].fill(0);
     this.visible[1].fill(0);
     for (let i = 0; i < MAX_ENTS; i++) {

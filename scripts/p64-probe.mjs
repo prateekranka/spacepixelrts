@@ -94,7 +94,7 @@ function sheetUsesSafeArea() {
         kryosLiving >= 2 &&
         (sparks >= 1 || (p.hitSfx ?? 0) > 0) &&
         p99 < 22 &&
-        Math.abs((bottomRect?.height ?? 0) - 168) < 2 &&
+        Math.abs((bottomRect?.height ?? 0) - 112) < 2 &&
         hudUsesSafeArea,
     };
   });
@@ -130,7 +130,7 @@ function sheetUsesSafeArea() {
     bottom.style.paddingBottom = `${10 + mockInset}px`;
     bottom.style.paddingLeft = `${10 + mockInset}px`;
     bottom.style.paddingRight = `${10 + mockInset}px`;
-    bottom.style.height = `${168 + mockInset}px`;
+    bottom.style.height = `${112 + mockInset}px`;
     topbar.style.paddingTop = `${mockInset}px`;
     topbar.style.paddingLeft = `${mockInset}px`;
     topbar.style.paddingRight = `${mockInset}px`;
@@ -163,7 +163,7 @@ function sheetUsesSafeArea() {
         hudUsesSafeArea &&
         paddingBottom > 0 &&
         maxCmdBottom <= innerH - mockInset + 0.5 &&
-        bottomRect.height >= 168 + mockInset - 1,
+        bottomRect.height >= 112 + mockInset - 1,
     };
   }, MOCK_INSET);
 

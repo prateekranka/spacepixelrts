@@ -96,6 +96,20 @@ export class Input {
     }
   }
 
+  /** Focus and select the player scout so it is controllable from the opening view. */
+  focusScout(): void {
+    const scout = this.world.ents.find(
+      (e) => e.alive && e.team === 0 && e.kind === Kind.Scout && e.hp > 0 && e.vis,
+    );
+    if (!scout) return;
+    this.selected.clear();
+    this.selected.add(scout.id);
+    this.pan.x = scout.x;
+    this.pan.z = scout.z;
+    this.halfH = Math.min(this.halfH, 6.2);
+    this.sfx.select();
+  }
+
   private onDown(e: PointerEvent): void {
     const el = e.target as HTMLElement;
     if (el.closest('#topbar, #bottom, #civpick')) return;
@@ -324,6 +338,15 @@ export class Input {
 
   private zoom(f: number): void {
     this.halfH = Math.min(28, Math.max(4, this.halfH * f));
+  }
+
+  /** HUD controls use the same bounded camera path as wheel and pinch zoom. */
+  zoomIn(): void {
+    this.zoom(0.8);
+  }
+
+  zoomOut(): void {
+    this.zoom(1.25);
   }
 
   private edgePan(dt: number): void {

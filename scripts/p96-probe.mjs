@@ -47,10 +47,9 @@ function heightProbe(w) {
   const hist = [0, 0, 0, 0];
   let blocked = 0;
   let rock = 0;
-  let padMax = 0;
+  let corridorMax = 0;
+  let shelfMax = 0;
   let maxTile = { x: 0, z: 0, h: 0 };
-  const icx = (MAP * 0.5) | 0;
-  const icz = (MAP * 0.52) | 0;
   for (let z = 0; z < MAP; z++) {
     for (let x = 0; x < MAP; x++) {
       const i = x + z * MAP;
@@ -58,13 +57,11 @@ function heightProbe(w) {
       hist[h] = (hist[h] ?? 0) + 1;
       if (w.block[i]) blocked++;
       if (w.tiles[i] === 2) rock++;
-      if (
-        x >= icx - 14 &&
-        x <= icx + 13 &&
-        z >= icz - 10 &&
-        z <= icz + 9
-      ) {
-        padMax = Math.max(padMax, h);
+      const dx = Math.abs(x + 0.5 - MAP * 0.5);
+      const dz = Math.abs(z + 0.5 - MAP * 0.52);
+      if (dx <= 9 && dz <= 5) corridorMax = Math.max(corridorMax, h);
+      if (x + 0.5 > MAP * 0.5 + 7 && x + 0.5 < MAP * 0.5 + 16 && dz < 10) {
+        shelfMax = Math.max(shelfMax, h);
       }
       if (h > maxTile.h) maxTile = { x, z, h };
     }
@@ -74,7 +71,8 @@ function heightProbe(w) {
     hist,
     blocked,
     rock,
-    padMax,
+    corridorMax,
+    shelfMax,
     maxTile,
     pathLen: path ? path.length >> 1 : 0,
     pathOk: !!path,
@@ -102,10 +100,9 @@ const out = { base: BASE, judgedAt: new Date().toISOString() };
     const hist = [0, 0, 0, 0];
     let blocked = 0;
     let rock = 0;
-    let padMax = 0;
+    let corridorMax = 0;
+    let shelfMax = 0;
     let maxTile = { x: 0, z: 0, h: 0 };
-    const icx = (MAP * 0.5) | 0;
-    const icz = (MAP * 0.52) | 0;
     for (let z = 0; z < MAP; z++) {
       for (let x = 0; x < MAP; x++) {
         const i = x + z * MAP;
@@ -113,13 +110,11 @@ const out = { base: BASE, judgedAt: new Date().toISOString() };
         hist[h]++;
         if (w.block[i]) blocked++;
         if (w.tiles[i] === 2) rock++;
-        if (
-          x >= icx - 14 &&
-          x <= icx + 13 &&
-          z >= icz - 10 &&
-          z <= icz + 9
-        ) {
-          padMax = Math.max(padMax, h);
+        const dx = Math.abs(x + 0.5 - MAP * 0.5);
+        const dz = Math.abs(z + 0.5 - MAP * 0.52);
+        if (dx <= 9 && dz <= 5) corridorMax = Math.max(corridorMax, h);
+        if (x + 0.5 > MAP * 0.5 + 7 && x + 0.5 < MAP * 0.5 + 16 && dz < 10) {
+          shelfMax = Math.max(shelfMax, h);
         }
         if (h > maxTile.h) maxTile = { x, z, h };
       }
@@ -129,7 +124,8 @@ const out = { base: BASE, judgedAt: new Date().toISOString() };
       hist,
       blocked,
       rock,
-      padMax,
+      corridorMax,
+      shelfMax,
       maxTile,
       pathLen: path ? path.length >> 1 : 0,
       pathOk: !!path,
@@ -171,10 +167,11 @@ const out = { base: BASE, judgedAt: new Date().toISOString() };
 await browser.close();
 
 out.pass =
-  out.opening?.version === '0.9.3-iso' &&
+  out.opening?.version === '0.9.12-iso' &&
   out.probe?.blocked > 0 &&
   out.probe?.rock > 0 &&
-  out.probe?.padMax === 0 &&
+  out.probe?.corridorMax === 0 &&
+  out.probe?.shelfMax >= 1 &&
   out.probe?.pathOk &&
   out.probe?.hist?.[1] > 100 &&
   out.opening?.p99FrameMs < 8;

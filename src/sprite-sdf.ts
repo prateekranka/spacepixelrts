@@ -10,7 +10,7 @@ export function civIndex(civ: Civ): number {
 }
 
 export function spriteSize(kind: Kind): number {
-  return kind === Kind.Hall ? 64 : 32;
+  return kind === Kind.Hall ? 64 : kind === Kind.Scout ? 128 : 32;
 }
 
 export const UNIT_FRAMES = 7;
@@ -48,6 +48,11 @@ uniform vec2 uAtlasSize;
 uniform float uAtlasCols;
 uniform float uCell;
 uniform float uHallCell;
+uniform sampler2D uScoutAtlas;
+uniform vec2 uScoutAtlasSize;
+uniform float uScoutCell;
+uniform float uScoutCols;
+uniform float uScoutFrames;
 uniform float uUnitRows;
 uniform float uBuildingRow;
 uniform float uWorker8Y;
@@ -76,8 +81,16 @@ void main() {
   float pixH;
   float worker8 = 0.0;
   float worker8Action = 0.0;
+  float scout = 0.0;
 
-  if (kind < 0.5 && frame < 3.5) {
+  if (kind > 0.5 && kind < 1.5) {
+    scout = 1.0;
+    col = civ * uScoutFrames + floor(frame);
+    row = 0.0;
+    cellSz = uScoutCell;
+    rowStride = uScoutCell;
+    pixH = uScoutCell;
+  } else if (kind < 0.5 && frame < 3.5) {
     worker8 = 1.0;
     col = floor(vDir + 0.5) + (frame > 0.5 ? 8.0 : 0.0);
     cellSz = uCell;
@@ -109,11 +122,14 @@ void main() {
   }
 
   float bob = 0.0;
-  if (kind < 9.5 && worker8 < 0.5) bob = mod(floor(frame), 2.0);
+  if (kind < 9.5 && worker8 < 0.5 && scout < 0.5) bob = mod(floor(frame), 2.0);
 
   float padX = (cellSz - spr) * 0.5;
   float rowY;
-  if (worker8 > 0.5) {
+  if (scout > 0.5) {
+    rowY = 0.0;
+    padX = 0.0;
+  } else if (worker8 > 0.5) {
     rowY =
       worker8Action > 0.5
         ? uWorker8ActionY + (frame - uWorker8ActionBase) * uWorker8ActionH
@@ -127,7 +143,9 @@ void main() {
   float spriteTop = rowY + (cellSz - pixH) - bob;
   if (worker8 > 0.5) spriteTop = rowY;
   float canvasX;
-  if (kind >= 9.5 && kind < 10.5) {
+  if (scout > 0.5) {
+    canvasX = col * uScoutCell + vUv.x * uScoutCell;
+  } else if (kind >= 9.5 && kind < 10.5) {
     canvasX = col * uHallCell + vUv.x * spr;
   } else if (worker8 > 0.5) {
     canvasX = col * uCell + vUv.x * uCell;
@@ -137,8 +155,12 @@ void main() {
   float canvasY = spriteTop + (1.0 - vUv.y) * (pixH - 1.0);
 
   vec2 atlasUV = vec2((canvasX + 0.5) / uAtlasSize.x, 1.0 - (canvasY + 0.5) / uAtlasSize.y);
+  vec2 scoutUV = vec2(
+    (canvasX + 0.5) / uScoutAtlasSize.x,
+    1.0 - (canvasY + 0.5) / uScoutAtlasSize.y
+  );
 
-  vec4 tex = texture2D(uSpriteAtlas, atlasUV);
+  vec4 tex = scout > 0.5 ? texture2D(uScoutAtlas, scoutUV) : texture2D(uSpriteAtlas, atlasUV);
   vec3 colRgb = tex.rgb;
   if (tex.a < 0.08) discard;
 
