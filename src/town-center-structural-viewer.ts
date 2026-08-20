@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   createSunweaverTownCenterStructural,
   type StructuralStage,
@@ -71,11 +72,19 @@ const viewDefinitions: Record<string, { position: THREE.Vector3; target: THREE.V
 
 function setView(name: string): void {
   const selected = viewDefinitions[name] ?? viewDefinitions['front-3q'];
+  activeTarget.copy(selected.target);
   camera.position.copy(selected.position);
   camera.lookAt(selected.target);
   camera.updateMatrixWorld(true);
   camera.userData.half = selected.half;
+  if (controls) {
+    controls.target.copy(activeTarget);
+    controls.update();
+  }
 }
+
+let activeTarget = new THREE.Vector3(0, 3.3, 0);
+let controls: OrbitControls | null = null;
 
 const originalMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
 const qaMaterials: THREE.Material[] = [];
@@ -125,6 +134,28 @@ applyPass(pass);
 resize();
 window.addEventListener('resize', resize);
 
+// Interactive orbit/zoom/pan when not in a frozen QA capture.
+if (!freeze) {
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.copy(activeTarget);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.12;
+  controls.update();
+  document.querySelectorAll<HTMLButtonElement>('[data-stage]').forEach((b) => {
+    b.addEventListener('click', () => { runtime.setStage(Number(b.dataset.stage) as StructuralStage); setStageLabel(Number(b.dataset.stage)); });
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((b) => {
+    b.addEventListener('click', () => setView(b.dataset.view ?? 'front-3q'));
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-pass]').forEach((b) => {
+    b.addEventListener('click', () => applyPass(b.dataset.pass ?? 'beauty'));
+  });
+}
+function setStageLabel(value: number): void {
+  const el = document.getElementById('stage-label');
+  if (el) el.textContent = `stage ${value}/4`;
+}
+
 const runtimeHost = {
   ready: false,
   model,
@@ -143,6 +174,7 @@ let ready = false;
 function frame(): void {
   requestAnimationFrame(frame);
   const delta = freeze ? 0 : Math.min(clock.getDelta(), 0.05);
+  if (controls) controls.update();
   runtime.update(clock.elapsedTime, delta);
   renderer.render(scene, camera);
   if (!ready) {
