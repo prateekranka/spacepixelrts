@@ -152612,3 +152612,16 @@ Decision needed from user on scope (see chat).
   A: These four files are a **Starhaven** concept pack: three isometric map/HUD mockups plus one pixel unit-evolution sheet. Images 1, 2, and 4 are painted/stylized 3D UI comps (not pixel). Image 3 is already high-count isometric pixel art.
   
   ---
+
+---
+
+### User correction: the bar is StarCraft, not AoE2
+
+The user pointed out: this game IS StarCraft (three factions, space, base building).
+Comparing against AoE2 (medieval) pushed the art wrong — the critic kept asking for
+bows, tunics, and people carrying crates. The correct reference for a space 3-race RTS
+is StarCraft II (modern) + Brood War (pixel style). Race parallels: Vespari hive/hex ~
+Zerg (organic hex), Aurion crystal/diamond ~ Protoss (clean crystalline), Voidmarked
+tendril ~ Terran-adjacent asymmetric. All canonical briefs now say StarCraft II as the
+blind bar: unit silhouettes per race, base building, worker gathering, 60fps clump
+fights. Keep isometric ~2:1 diamond projection (same in both games).
