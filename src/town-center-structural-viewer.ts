@@ -30,7 +30,9 @@ viewerHost.appendChild(renderer.domElement);
 
 const hemi = new THREE.HemisphereLight('#E4E4E4', '#555555', 1.6);
 const key = new THREE.DirectionalLight('#FFFFFF', 2.2);
-key.position.set(-7, 11, 8);
+// Front-biased key: the unified central jewel-column's facade must catch light so it
+// reads as the brightest element (reference energy-crystal), not a shadowed void.
+key.position.set(-4, 9, 14);
 key.castShadow = true;
 key.shadow.mapSize.set(1024, 1024);
 key.shadow.camera.left = -7; key.shadow.camera.right = 7; key.shadow.camera.top = 9; key.shadow.camera.bottom = -5;
