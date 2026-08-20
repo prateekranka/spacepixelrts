@@ -207,6 +207,37 @@ function solidTalonShape(width: number, height: number): THREE.Shape {
 
 export function createSunweaverTownCenterStructural(): StructuralTownCenter {
   const clay = new THREE.MeshStandardMaterial({ color: '#B8B4AC', roughness: 0.86, metalness: 0, flatShading: true });
+
+  // PTC-MAT-01: approved reference palette applied on top of the accepted clay
+  // geometry. These never touch the clay material or any geometry/stage/runtime
+  // contract; they are bound per-mesh via userData.paletteMaterial and only used
+  // by the viewer's `palette` pass.
+  const ivory = new THREE.MeshStandardMaterial({ color: '#F0E0B6', roughness: 0.82, metalness: 0, flatShading: true });
+  const ivoryShade = new THREE.MeshStandardMaterial({ color: '#E4D3A0', roughness: 0.84, metalness: 0, flatShading: true });
+  const ivoryShadow = new THREE.MeshStandardMaterial({ color: '#D6C48E', roughness: 0.86, metalness: 0, flatShading: true });
+  const gold = new THREE.MeshStandardMaterial({ color: '#D9B26E', roughness: 0.45, metalness: 0.5, flatShading: true });
+  const goldBright = new THREE.MeshStandardMaterial({ color: '#E8C98F', roughness: 0.4, metalness: 0.5, flatShading: true });
+  const crystal = new THREE.MeshStandardMaterial({ color: '#7AB591', roughness: 0.35, metalness: 0, emissive: new THREE.Color('#36C9FF'), emissiveIntensity: 0.55, flatShading: true });
+  const crystalDim = new THREE.MeshStandardMaterial({ color: '#1E3A6D', roughness: 0.4, metalness: 0, emissive: new THREE.Color('#36C9FF'), emissiveIntensity: 0.3, flatShading: true });
+
+  function paletteMaterialFor(name: string): THREE.Material {
+    if (name.includes('rim_lip')) return gold;
+    if (name.startsWith('stair_tread_nose')) return gold;
+    if (name.startsWith('entrance_coll')) return gold;
+    if (name.includes('collar')) return goldBright;
+    if (name === 'energy_vault_outer_punched_frame' || name === 'energy_vault_small_entrance_frame') return gold;
+    if (name.startsWith('cage_arch_foot_flare')) return gold;
+    if (name === 'banner_mount') return gold;
+    if (name === 'entrance_pointed_arch') return gold;
+    if (name === 'crystal_mandorla' || name === 'crystal_front_center_spine') return crystal;
+    if (name === 'cage_arch') return crystalDim;
+    if (name === 'tower_cap') return crystal;
+    if (name.startsWith('stair_tread') || name === 'south_stair_landing') return ivoryShade;
+    if (name.startsWith('wing_recessed') || name === 'crown_lower_socket' || name === 'stage_4_crown') return ivoryShade;
+    if (name.startsWith('entrance_pylon') || name === 'entrance_back_wall' || name === 'energy_vault_small_entrance_recess' || name.startsWith('buttress')) return ivoryShadow;
+    return ivory;
+  }
+
   const parts: Record<string, THREE.Object3D> = {};
   const pickables: THREE.Mesh[] = [];
   const uniqueGeometries = new Set<THREE.BufferGeometry>();
@@ -1317,6 +1348,13 @@ export function createSunweaverTownCenterStructural(): StructuralTownCenter {
     clay.dispose();
   }
   uniqueMaterials.add(clay);
+  for (const material of [ivory, ivoryShade, ivoryShadow, gold, goldBright, crystal, crystalDim]) uniqueMaterials.add(material);
+
+  // Bind the palette material per mesh on the SAME geometry. The viewer swaps to
+  // it only under the `palette` pass; beauty keeps the accepted clay.
+  root.traverse((object) => {
+    if (object instanceof THREE.Mesh) object.userData.paletteMaterial = paletteMaterialFor(object.name);
+  });
 
   const runtime: StructuralRuntime = {
     root,

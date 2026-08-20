@@ -91,9 +91,14 @@ function applyPass(name: string): void {
     else if (name === 'material-id') {
       const hash = String(object.userData.partId ?? object.name).split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
       material = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL((hash % 360) / 360, 0.56, 0.48) });
+    } else if (name === 'palette') {
+      material = (object.userData.paletteMaterial as THREE.Material | undefined) ?? (object.material as THREE.Material);
     } else material = object.material as THREE.Material;
     if (name === 'beauty') {
       object.material = originalMaterials.get(object) as THREE.Material;
+    } else if (name === 'palette') {
+      // Bind the accepted palette set onto the SAME geometry; never the clay.
+      object.material = (object.userData.paletteMaterial as THREE.Material | undefined) ?? (originalMaterials.get(object) as THREE.Material);
     } else {
       object.material = material;
       qaMaterials.push(material);
@@ -101,8 +106,9 @@ function applyPass(name: string): void {
   });
   if (name === 'silhouette') scene.background = new THREE.Color('#FFFFFF');
   else scene.background = new THREE.Color('#858585');
-  ground.visible = name === 'beauty';
-  hemi.visible = name === 'beauty'; key.visible = name === 'beauty'; fill.visible = name === 'beauty';
+  const beautyLike = name === 'beauty' || name === 'palette';
+  ground.visible = beautyLike;
+  hemi.visible = beautyLike; key.visible = beautyLike; fill.visible = beautyLike;
 }
 
 function resize(): void {
