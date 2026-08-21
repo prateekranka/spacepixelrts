@@ -112,6 +112,7 @@ export class Input {
 
   private onDown(e: PointerEvent): void {
     const el = e.target as HTMLElement;
+    if (el.closest('#start-screen')) return;
     if (el.closest('#topbar, #bottom, #civpick')) return;
     this.sfx.resume();
     this.host.setPointerCapture(e.pointerId);

@@ -139,6 +139,10 @@ export class Hud {
     void view;
   }
 
+  setVisible(visible: boolean): void {
+    this.root.hidden = !visible;
+  }
+
   draw(world: World, input: Input, fps: number): void {
     const eco = world.teams[0];
     (this.root.querySelector('#ore') as HTMLElement).textContent = String(eco.ore | 0);

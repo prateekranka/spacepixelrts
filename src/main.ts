@@ -9,6 +9,7 @@ import { Hud } from './hud';
 import { Sfx } from './audio';
 import { enemyCiv, parseBootCiv } from './content';
 import { OPENING_CAMERA } from './opening-presentation';
+import { StartScreen } from './start-screen';
 
 const VERSION = '0.9.12-iso';
 const SEED = 0x5eed;
@@ -44,6 +45,10 @@ input.pan.z = OPENING_PAN.z;
 input.halfH = OPENING_PAN.halfH;
 
 function switchCiv(player: Civ): void {
+  resetMatch(player);
+}
+
+function resetMatch(player: Civ): void {
   world.civ[0] = player;
   world.civ[1] = enemyCiv(player);
   world.reset(SEED);
@@ -58,6 +63,21 @@ function switchCiv(player: Civ): void {
 
 const hud = new Hud(host);
 hud.bind(world, input, view, switchCiv);
+hud.setVisible(false);
+
+let matchStarted = false;
+let startScreen: StartScreen | null = null;
+
+function startMatch(player: Civ): void {
+  resetMatch(player);
+  matchStarted = true;
+  acc = 0;
+  hud.setVisible(true);
+  startScreen?.destroy();
+  startScreen = null;
+}
+
+startScreen = new StartScreen(host, world.civ[0], { onNewMatch: startMatch });
 
 let acc = 0;
 let last = performance.now();
@@ -77,12 +97,14 @@ function frame(now: number): void {
     frames = 0;
     fpsT = 0;
   }
-  input.tick(raw);
+  input.tick(matchStarted ? raw : 0);
   let steps = 0;
-  while (acc >= DT && steps < 5) {
-    world.step();
-    acc -= DT;
-    steps++;
+  if (matchStarted) {
+    while (acc >= DT && steps < 5) {
+      world.step();
+      acc -= DT;
+      steps++;
+    }
   }
   const alpha = acc / DT;
   view.draw(world, alpha, input.selected, input.box);
@@ -108,6 +130,8 @@ function publish(): void {
     hall: Kind.Hall,
     winner: world.winner,
     hitSfx,
+    screen: matchStarted ? 'match' : 'start',
+    matchStarted,
   };
   const w = window as unknown as {
     __SPACEPIXEL__: typeof probe;
