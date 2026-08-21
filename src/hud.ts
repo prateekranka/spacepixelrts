@@ -3,7 +3,6 @@
 import { Kind, MAP, Ord, Tile } from './engine';
 import type { Civ } from './engine';
 import {
-  ALL_CIVS,
   CIV_NAME,
   CIV_PROFILE,
   STATS,
@@ -83,7 +82,7 @@ export class Hud {
         </div>
         <div id="cmds"></div>
       </div>
-      <div id="civpick" aria-label="Choose player civilization for 1v1"></div>
+      <div id="civpick" aria-label="Current 1v1 matchup"></div>
       <p id="hint">Landscape command deck · two-finger pan · pinch zoom · box-select to rally the swarm</p>
       <div id="match-end" hidden>
         <div class="match-panel">
@@ -107,23 +106,15 @@ export class Hud {
     this.pauseEl = this.root.querySelector('#pause-toggle')!;
     this.civPickEl = this.root.querySelector('#civpick')!;
     this.injectCss();
-    this.renderCivPick(null);
+    this.renderCivPick(null, null);
   }
 
   bind(
     world: World,
     input: Input,
     view: GameRenderer,
-    onCivSwitch: (civ: Civ) => void,
     onPauseToggle: () => void,
   ): void {
-    this.civPickEl.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest('button[data-civ]') as HTMLButtonElement | null;
-      if (!btn || btn.disabled) return;
-      const civ = btn.dataset.civ as Civ;
-      if (civ === world.civ[0]) return;
-      onCivSwitch(civ);
-    });
     this.root.querySelector('#idlew')!.addEventListener('click', () => input.commandAt('idleworker'));
     this.root.querySelector('#scout-focus')!.addEventListener('click', () => input.focusScout());
     this.pauseEl.addEventListener('click', () => onPauseToggle());
@@ -181,18 +172,19 @@ export class Hud {
     const sig = `${player}|${world.civ[1]}`;
     if (sig !== this.civSig) {
       this.civSig = sig;
-      this.renderCivPick(player);
+      this.renderCivPick(player, world.civ[1]);
     }
   }
 
-  private renderCivPick(active: Civ | null): void {
-    this.civPickEl.innerHTML = `<span class="picker-label">Player civ · 1v1</span>${ALL_CIVS
-      .map((civ) => {
-        const on = civ === active;
-        const cls = ['civ-tile', civ, on ? 'on' : ''].filter(Boolean).join(' ');
-        return `<button type="button" data-civ="${civ}" class="${cls}" aria-pressed="${on}"><strong>${CIV_NAME[civ]}</strong><small>${civShort(civ)}</small></button>`;
-      })
-      .join('')}`;
+  private renderCivPick(player: Civ | null, rival: Civ | null): void {
+    if (!player || !rival) {
+      this.civPickEl.innerHTML = '<span class="picker-label">1v1 matchup</span>';
+      return;
+    }
+    this.civPickEl.innerHTML = `
+      <span class="picker-label">1v1 matchup</span>
+      <span class="civ-tile ${player} on"><strong>${CIV_NAME[player]}</strong><small>You</small></span>
+      <span class="civ-tile ${rival} rival"><strong>${CIV_NAME[rival]}</strong><small>Rival</small></span>`;
   }
 
   private drawMatchEnd(world: World): void {
@@ -416,15 +408,11 @@ function civPlateBg(civ: Civ): string {
   return `linear-gradient(145deg,${P.sienna} 0%,${P.rust} 100%)`;
 }
 
-function civShort(civ: Civ): string {
-  return CIV_PROFILE[civ].subtitle;
-}
-
 const HUD_CSS = `
 #hud{position:fixed;inset:0;pointer-events:none;color:${P.cream};font-family:"Trebuchet MS","Segoe UI",sans-serif;z-index:5}
 #game,#overlay{position:absolute;inset:0;width:100%;height:100%;display:block}
 #overlay{pointer-events:none;z-index:2}
-#topbar,#bottom,#civpick,#civpick button{pointer-events:auto}
+#topbar,#bottom{pointer-events:auto}
 #topbar{position:absolute;left:0;right:0;top:0;box-sizing:border-box;height:calc(56px + env(safe-area-inset-top,0px));min-height:56px;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);display:flex;align-items:stretch;background:linear-gradient(${P.night}ee,${P.ink}f2);border-bottom:2px solid ${P.amber};box-shadow:0 8px 24px #0008}
 #brand{display:flex;gap:10px;align-items:center;padding:0 14px;min-width:210px}
 #brand .sigil{color:${P.amber};font-size:22px}
@@ -471,16 +459,16 @@ const HUD_CSS = `
 #cmds button.verb:disabled{opacity:.38;cursor:not-allowed;filter:saturate(.55);border-color:${P.amber}44}
 #cmds button.verb strong{font-size:13px;letter-spacing:.02em}
 #cmds small{opacity:.55;font-size:10px;letter-spacing:.04em}
-#civpick{position:absolute;left:calc(10px + env(safe-area-inset-left,0px));top:calc(68px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:6px;pointer-events:auto;z-index:6}
+#civpick{position:absolute;left:calc(10px + env(safe-area-inset-left,0px));top:calc(68px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:6}
 #civpick .picker-label{padding:0 4px;color:${P.amber};font-size:9px;letter-spacing:.14em;text-transform:uppercase;opacity:.78}
-#civpick .civ-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:132px;min-height:48px;padding:8px 12px;border:2px solid ${P.amber}66;border-radius:2px;background:${P.ink}f0;color:${P.cream};font:inherit;cursor:pointer;text-align:left;box-shadow:0 4px 16px #0006}
+#civpick .civ-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:132px;min-height:48px;padding:8px 12px;border:2px solid ${P.amber}66;border-radius:2px;background:${P.ink}f0;color:${P.cream};font:inherit;cursor:default;text-align:left;box-shadow:0 4px 16px #0006}
 #civpick .civ-tile strong{font-size:12px;letter-spacing:.06em;text-transform:uppercase;line-height:1.2}
 #civpick .civ-tile small{opacity:.6;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
 #civpick .civ-tile.vespari{background:linear-gradient(135deg,${P.sienna} 0%,${P.rust} 100%)}
 #civpick .civ-tile.aurion{background:linear-gradient(135deg,${P.sky} 0%,${P.ink} 100%)}
 #civpick .civ-tile.voidmarked{background:linear-gradient(135deg,${P.plum} 0%,${P.moss} 100%)}
 #civpick .civ-tile.on{border-color:${P.amber};box-shadow:0 0 0 1px #000,0 0 18px ${P.amber}66,inset 0 0 0 2px ${P.amber}55}
-#civpick .civ-tile:not(.on):hover{border-color:${P.amber};filter:brightness(1.08)}
+#civpick .civ-tile.rival{border-color:${P.ice}99}
 #hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.45;pointer-events:none;white-space:nowrap}
 #match-end{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;z-index:8}
 #match-end .match-panel{padding:18px 28px 16px;border:3px solid ${P.amber};background:linear-gradient(${P.night}f2,${P.ink}f0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;min-width:280px}

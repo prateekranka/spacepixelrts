@@ -18,11 +18,12 @@ import {
   fromLegacyCiv,
   normalizeMatchConfig,
   toLegacyCiv,
+  validateMatchConfig,
   type MatchConfig,
 } from './match-config';
 import { QA_SCENARIOS, parseQaScenario, type QaScenario } from './qa-scenarios';
 
-const VERSION = '0.10.0-m0';
+const VERSION = '0.11.0-m1';
 const hostNode = document.getElementById('app');
 if (!hostNode) throw new Error('Starhaven boot: #app host missing');
 const host: HTMLElement = hostNode;
@@ -31,6 +32,7 @@ const params = new URLSearchParams(window.location.search);
 const qaScenario = parseQaScenario(window.location.search);
 const qaFrozen = qaScenario !== undefined && params.get('qa-run') !== '1';
 const uiHidden = params.get('ui') === '0';
+const qaHoldLoading = params.get('qa-hold-loading') === '1';
 const orientationParam = params.get('orientation');
 const orientation =
   orientationParam === 'landscape-right' ? 'landscape-right' : 'landscape-left';
@@ -46,6 +48,7 @@ let hud: Hud | null = null;
 let startScreen: StartScreen | null = null;
 let loadingScreen: HTMLDivElement | null = null;
 let matchResetCount = 0;
+let matchStartInFlight = false;
 let terminalStateDispatched = false;
 let hitSfx = 0;
 let acc = 0;
@@ -57,10 +60,14 @@ const frameWorkSamples = new Float32Array(120);
 let frameWorkCount = 0;
 let frameWorkHead = 0;
 let p99FrameMs = 0;
+const transitionHistory: AppState[] = ['Boot'];
 const sfx = new Sfx();
 
 const flow = new AppFlow({
-  onTransition: (transition) => syncPresentation(transition),
+  onTransition: (transition) => {
+    transitionHistory.push(transition.to);
+    syncPresentation(transition);
+  },
 });
 
 function normalBootConfig(): MatchConfig {
@@ -79,11 +86,14 @@ function normalBootConfig(): MatchConfig {
   return normalizeMatchConfig(config);
 }
 
-function resolvedSeed(config: MatchConfig): number {
-  if (config.seedMode === 'deterministic') return config.seed >>> 0;
+function resolveMatchConfig(config: MatchConfig): MatchConfig {
+  const normalized = normalizeMatchConfig(config);
+  if (normalized.seedMode === 'deterministic') {
+    return { ...normalized, seed: normalized.seed >>> 0 };
+  }
   const seed = new Uint32Array(1);
   crypto.getRandomValues(seed);
-  return seed[0] || config.seed >>> 0;
+  return { ...normalized, seed: seed[0] || normalized.seed >>> 0 };
 }
 
 function applyCamera(): void {
@@ -100,8 +110,7 @@ function prepareMatch(config: MatchConfig): void {
   nextWorld.civ[0] = toLegacyCiv(config.playerFaction);
   nextWorld.civ[1] = toLegacyCiv(config.aiFaction);
   nextWorld.fogOfWarEnabled = config.fogOfWar;
-  nextWorld.reset(resolvedSeed(config));
-  matchResetCount++;
+  nextWorld.reset(config.seed >>> 0);
 
   const nextView = new GameRenderer(host);
   nextView.init(nextWorld);
@@ -119,7 +128,6 @@ function prepareMatch(config: MatchConfig): void {
     nextWorld,
     nextInput,
     nextView,
-    () => console.error('Starhaven: faction switching moves to MatchSetup in M1'),
     () => dispatchAppEvent('TOGGLE_PAUSE'),
   );
   nextHud.setPaused(false);
@@ -133,6 +141,41 @@ function prepareMatch(config: MatchConfig): void {
   acc = 0;
   terminalStateDispatched = false;
   applyCamera();
+  matchResetCount++;
+}
+
+function nextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function startConfiguredMatch(config: MatchConfig): Promise<void> {
+  if (matchStartInFlight || flow.state !== 'MatchSetup') return;
+  const validation = validateMatchConfig(config);
+  const seedValid = Number.isInteger(config.seed) && config.seed >= 0 && config.seed <= 0xffffffff;
+  if (!validation.valid || !seedValid) return;
+
+  activeScenario = null;
+  activeConfig = resolveMatchConfig(config);
+  matchStartInFlight = true;
+  const started = flow.dispatch('START_MATCH');
+  if (!started.accepted) {
+    matchStartInFlight = false;
+    return;
+  }
+
+  try {
+    await nextAnimationFrame();
+    await nextAnimationFrame();
+    prepareMatch(activeConfig);
+    publish();
+    await nextAnimationFrame();
+    if (!qaHoldLoading) flow.dispatch('LOAD_READY');
+  } catch (error) {
+    console.error('Starhaven: match initialization failed', error);
+    flow.dispatch('LOAD_FAILED');
+  } finally {
+    matchStartInFlight = false;
+  }
 }
 
 function syncPresentation(transition: TransitionResult): void {
@@ -145,19 +188,31 @@ function syncPresentation(transition: TransitionResult): void {
     showLoadingScreen();
   }
   if (transition.from === 'Loading' && transition.to !== 'Loading') hideLoadingScreen();
-  if (transition.to === 'MainMenu') startScreen?.showMainMenu();
-  if (transition.to === 'MatchSetup') startScreen?.showMatchSetup(activeConfig, false);
+  if (transition.to === 'MainMenu') {
+    if (!startScreen) createStartScreen();
+    startScreen?.showMainMenu();
+  }
+  if (transition.to === 'MatchSetup') {
+    if (!startScreen) createStartScreen();
+    startScreen?.showMatchSetup(activeConfig, true);
+  }
   if (transition.to === 'Playing') hud?.setVisible(!uiHidden);
 }
 
 function showLoadingScreen(): void {
   if (loadingScreen) return;
+  const faction = activeConfig.playerFaction === 'sunweaver' ? 'Sunweaver' : 'Gravemark';
+  const difficulty = activeConfig.difficulty.charAt(0).toUpperCase() + activeConfig.difficulty.slice(1);
+  const seedLabel = activeConfig.seedMode === 'deterministic'
+    ? `Deterministic seed ${activeConfig.seed >>> 0}`
+    : `Random seed ${activeConfig.seed >>> 0}`;
   const root = document.createElement('div');
   root.setAttribute('role', 'status');
   root.setAttribute('aria-live', 'polite');
   root.innerHTML = `
     <div style="letter-spacing:.24em;font-size:12px;color:#bfc8d6">STARHAVEN // HELIOS RIFT</div>
     <strong style="font-size:clamp(28px,5vw,54px);font-weight:650">Preparing skirmish</strong>
+    <div style="font-size:13px;color:#bfc8d6">${faction} · ${difficulty} · ${seedLabel}</div>
     <div style="width:min(320px,55vw);height:3px;background:#202938;overflow:hidden">
       <span style="display:block;width:64%;height:100%;background:#52d7c7"></span>
     </div>`;
@@ -218,7 +273,9 @@ function createStartScreen(): void {
       activeConfig = normalizeMatchConfig(config);
       publish();
     },
-    onStartMatch: () => {},
+    onStartMatch: (config) => {
+      void startConfiguredMatch(config);
+    },
   });
 }
 
@@ -301,6 +358,7 @@ interface StarhavenQaProbe {
   readonly entities: number;
   readonly orientation: string;
   readonly frozen: boolean;
+  readonly transitionHistory: readonly AppState[];
   dispatch(event: AppEvent): TransitionResult;
 }
 
@@ -355,6 +413,7 @@ function publish(): void {
     entities: activeEntityCount(),
     orientation,
     frozen: qaFrozen,
+    transitionHistory: transitionHistory.slice(),
     dispatch: dispatchAppEvent,
   };
   appWindow.__STARHAVEN_QA__ = Object.freeze(qaProbe);

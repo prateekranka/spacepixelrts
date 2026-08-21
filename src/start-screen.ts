@@ -55,6 +55,15 @@ const FACTIONS: Readonly<Record<FactionId, FactionSummary>> = {
 const otherFaction = (faction: FactionId): FactionId =>
   faction === 'sunweaver' ? 'gravemark' : 'sunweaver';
 
+function seedEntryErrorFor(raw: string): string | null {
+  if (raw.trim() === '') return 'Deterministic seed is required.';
+  const value = Number(raw);
+  if (!Number.isInteger(value)) return 'Seed must be an unsigned 32-bit integer.';
+  if (value < 0) return 'Seed cannot be negative; use 0 through 4294967295.';
+  if (value > 0xffffffff) return 'Seed cannot exceed 4294967295.';
+  return null;
+}
+
 export class StartScreen {
   readonly root: HTMLElement;
   private readonly callbacks: StartScreenCallbacks;
@@ -64,6 +73,7 @@ export class StartScreen {
   private readonly live: HTMLElement;
   private config: MatchConfig;
   private startEnabled = false;
+  private seedEntryError: string | null = null;
   private panelTrigger: HTMLElement | null = null;
   private readonly keyHandler: (event: KeyboardEvent) => void;
 
@@ -226,6 +236,7 @@ export class StartScreen {
     this.closePanel();
     this.config = cloneMatchConfig(config);
     this.startEnabled = startEnabled;
+    this.seedEntryError = null;
     this.menuView.hidden = true;
     this.setupView.hidden = false;
     this.live.textContent = '';
@@ -260,7 +271,7 @@ export class StartScreen {
         case 'new-skirmish': this.callbacks.onNewSkirmish(); break;
         case 'back': this.callbacks.onBackToMenu(); break;
         case 'start-match':
-          if (this.startEnabled && validateMatchConfig(this.config).valid) {
+          if (this.seedEntryError === null && this.startEnabled && validateMatchConfig(this.config).valid) {
             this.callbacks.onStartMatch(cloneMatchConfig(this.config));
           }
           break;
@@ -282,12 +293,19 @@ export class StartScreen {
   private handleInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!input.matches('[data-seed-input]')) return;
-    const value = Number(input.value);
-    if (!Number.isInteger(value) || value < 0 || value > 0xffffffff) {
-      this.renderValidation(['Seed must be an unsigned 32-bit integer.']);
+    const seedError = seedEntryErrorFor(input.value);
+    if (seedError !== null) {
+      this.markSeedEntryInvalid(seedError);
       return;
     }
-    this.commitConfig({ ...this.config, seed: value });
+    this.seedEntryError = null;
+    this.commitConfig({ ...this.config, seed: Number(input.value) });
+  }
+
+  private markSeedEntryInvalid(message: string): void {
+    this.seedEntryError = message;
+    this.renderValidation([message]);
+    this.root.querySelector<HTMLButtonElement>('[data-start-action="start-match"]')!.disabled = true;
   }
 
   private updateField(field: ConfigField, rawValue: string): void {
@@ -358,9 +376,9 @@ export class StartScreen {
     seedInput.value = String(this.config.seed >>> 0);
 
     const validation = validateMatchConfig(this.config);
-    this.renderValidation(validation.errors);
+    this.renderValidation(this.seedEntryError !== null ? [this.seedEntryError] : validation.errors);
     const start = this.root.querySelector<HTMLButtonElement>('[data-start-action="start-match"]')!;
-    start.disabled = !this.startEnabled || !validation.valid;
+    start.disabled = !this.startEnabled || !validation.valid || this.seedEntryError !== null;
     const note = start.querySelector('small')!;
     note.textContent = this.startEnabled ? 'Enter the Helios Rift' : 'Match connection pending';
   }

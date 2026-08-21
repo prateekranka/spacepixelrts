@@ -38,15 +38,32 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   Starhaven. Commit `bd3dfeb`.
 - M1-B COMPLETE: full two-faction skirmish form for player/AI civilization, difficulty, Helios Rift,
   fog, speed, tactical pause, and seed mode/value. Mirror choices auto-swap the other side through one
-  typed config callback. Start remains disabled until M1-C connects world creation.
+  typed config callback. Commit `980785e`.
 - M1-B evidence: MatchSetup passes at 1366 × 1024 in both landscape orientations, browser errors 0,
   reset count 0, seed 24301 visible, and game-work p99 0.1 ms. Three critics PASSed usability; their
   repeated dead-panel and same-color faction gaps were repaired. A fresh critic PASSed the repair.
   Evidence: `~/.codex/evidence/starhaven-m1b-setup/20260821T174856Z.dI0Avp/`.
+- M1-C COMPLETE: the validated form now drives `MatchSetup -> Loading -> Playing`; deterministic seed
+  424242 survives exactly, random seed resolves once, Loading paints without an arbitrary delay, and
+  one successful match creates one reset. Hidden `qa-hold-loading=1` lets Playwright capture that same
+  submitted match before a legal probe `LOAD_READY` resumes Playing.
+- Player-facing HUD continuity is canonical: Sunweaver and Gravemark only, shown as a read-only
+  `You` versus `Rival` strip. Legacy civilization IDs stay private. The deferred third faction is not
+  present in the 1v1 HUD.
+- M1-C interaction smoke PASSes with exact Gravemark/Sunweaver/Veteran/fog-off/1.25×/On-demand/seed
+  424242 config, ordered `[Boot, MainMenu, MatchSetup, Loading, Playing]` history, reset count 0 -> 1,
+  p99 3.4 ms, three composited captures, and browser errors 0.
+- Full post-M1 regression: 26/26 iPad route-orientation captures PASS, worst p99 5.3 ms, extras 4,
+  contact sheet present. Evidence: `~/.codex/evidence/starhaven-m1c-flow/20260821T181056Z.xBlgaB/`.
+- M1-C initial visual gate correctly FAILed visible match-identity drift. After the same-match Loading
+  capture and canonical HUD repair, three fresh DeepSeek critics PASSed. Final tool-free Ox review:
+  PASS.
 - Open visual debt for M2/M5: all three M0 critics found poor unit contrast at normal camera height.
   Fix silhouette/contrast before the scouting and combat gates; do not reopen M0 infrastructure.
-- **Next:** M1-C connects the validated form through Loading to one deterministic match reset. No
-  content or gameplay expansion before the First Playable loop closes.
+- Known state limit for M8: `Results -> REMATCH` returns to setup, but a second world on the same page
+  still needs teardown/re-init support.
+- **Next:** M2 completes the player-driven opening and scout/fog discovery loop. No content expansion
+  beyond that bounded milestone.
 
 ## Historical
 

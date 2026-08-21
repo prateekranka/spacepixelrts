@@ -4,8 +4,8 @@ import { Kind, type Civ } from './engine';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export const CIV_NAME: Record<Civ, string> = {
-  vespari: 'Helion Compact',
-  aurion: 'Kryos Conclave',
+  vespari: 'Sunweaver',
+  aurion: 'Gravemark',
   voidmarked: 'Nihiline',
 };
 
