@@ -43,10 +43,6 @@ import {
   OPENING_VENTS,
   inOpeningCamp,
   inOpeningCorridor,
-  openingCampCenter,
-  openingFighterSlot,
-  openingUniqueSlot,
-  openingWorkerSlot,
 } from './opening-presentation';
 
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
@@ -75,8 +71,8 @@ export class World {
     { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0 },
   ];
   readonly civ: Civ[] = ['vespari', 'aurion', 'voidmarked', 'vespari'];
-  /** Clear-map review mode. Pass `?fog=1` from main to restore gameplay fog. */
-  fogOfWarEnabled = false;
+  /** Gameplay fog by default; pass `?fog=0` from main for clear-map review. */
+  fogOfWarEnabled = true;
   readonly bolts: Bolt[] = [];
   readonly sparks: Spark[] = [];
   readonly flags: { x: number; z: number; t: number }[] = [];
@@ -168,7 +164,6 @@ export class World {
     this.spawnScenario();
     this.recountPop();
     this.updateFog();
-    this.revealOpeningVision(MAP * 0.5, MAP * 0.52);
     this.refreshVis();
   }
 
@@ -799,20 +794,6 @@ export class World {
     return 1;
   }
 
-  private revealOpeningVision(cx: number, cz: number): void {
-    const icx = cx | 0;
-    const icz = cz | 0;
-    for (let z = icz - 10; z <= icz + 10; z++) {
-      if (z < 0 || z >= MAP) continue;
-      for (let x = icx - 14; x <= icx + 14; x++) {
-        if (x < 0 || x >= MAP) continue;
-        const idx = x + z * MAP;
-        this.visible[0][idx] = 1;
-        this.explored[0][idx] = 1;
-      }
-    }
-  }
-
   private stampPatch(kind: Tile, count: number, rng: () => number): void {
     for (let i = 0; i < count; i++) {
       const cx = 8 + (rng() * (MAP - 16)) | 0;
@@ -839,122 +820,30 @@ export class World {
   }
 
   private spawnScenario(): void {
-    const a = this.civ[0];
-    const b = this.civ[1];
-    this.spawn(Kind.Hall, a, 0, 10.5, 10.5);
-    this.spawn(Kind.House, a, 0, 13.5, 8.5);
-    this.spawn(Kind.House, a, 0, 12.0, 12.0);
-    this.spawn(Kind.House, a, 0, 8.8, 9.0);
-    this.spawn(Kind.Barracks, a, 0, 8.2, 13.6);
-    this.spawn(Kind.Hall, b, 1, MAP - 10.5, MAP - 10.5);
-    this.spawn(Kind.House, b, 1, MAP - 13.2, MAP - 8.4);
-    this.spawn(Kind.House, b, 1, MAP - 12.0, MAP - 12.0);
-    this.spawn(Kind.House, b, 1, MAP - 8.8, MAP - 9.0);
-    this.spawn(Kind.Barracks, b, 1, MAP - 8.1, MAP - 13.5);
-
-    for (let i = 0; i < 5; i++) {
-      const w0 = this.spawn(Kind.Worker, a, 0, 12.2 + i * 0.55, 12.4);
-      if (w0) {
-        w0.order = Ord.Gather;
-        w0.tx = 18;
-        w0.tz = 16;
-      }
-      const w1 = this.spawn(Kind.Worker, b, 1, MAP - 12.2 - i * 0.55, MAP - 12.4);
-      if (w1) {
-        w1.order = Ord.Gather;
-        w1.tx = MAP - 18;
-        w1.tz = MAP - 16;
-      }
-    }
-    this.spawn(Kind.Scout, a, 0, 16, 14);
-    this.spawn(Kind.Scout, b, 1, MAP - 16, MAP - 14);
-
-    // Opening clash — camera-aligned 2x4 ranks with enough presentation
-    // footprint to keep opposing silhouettes countable.
-    const cx = OPENING_CENTER.x;
-    const cz = OPENING_CENTER.z;
-    for (let i = 0; i < 8; i++) {
-      const col = i % 4;
-      const row = (i / 4) | 0;
-      const f0Slot = openingFighterSlot(0, row, col);
-      const f1Slot = openingFighterSlot(1, row, col);
-      const f0 = this.spawn(Kind.Fighter, a, 0, f0Slot.x, f0Slot.z);
-      if (f0) {
-        f0.order = Ord.Attack;
-        f0.tx = f1Slot.x;
-        f0.tz = f1Slot.z;
-        f0.facing = dir8(f0.tx - f0.x, f0.tz - f0.z);
-        f0.cooldown = -0.08 * (i % 5);
-      }
-      const kryosLiving = (row === 0 && col >= 1 && col <= 2) || (row === 1 && col <= 2);
-      const f1 = this.spawn(Kind.Fighter, b, 1, f1Slot.x, f1Slot.z);
-      if (f1) {
-        if (kryosLiving) {
-          f1.order = Ord.Attack;
-          f1.tx = f0Slot.x;
-          f1.tz = f0Slot.z;
-          f1.facing = dir8(f1.tx - f1.x, f1.tz - f1.z);
-          f1.cooldown = -0.08 * ((i + 2) % 5);
-        } else {
-          f1.hp = 0;
-          f1.corpseT = 4;
-          f1.vx = f1.vz = 0;
-          f1.path = null;
-          f1.tid = -1;
-          f1.order = Ord.Idle;
-        }
-      }
-    }
-    const uniqueSlot = openingUniqueSlot(0);
-    const rv = this.spawn(uniqueUnit(a), a, 0, uniqueSlot.x, uniqueSlot.z);
-    if (rv) {
-      rv.order = Ord.Attack;
-      rv.tx = OPENING_CENTER.x + 2.2;
-      rv.tz = OPENING_CENTER.z + 2.2;
-      rv.facing = dir8(rv.tx - rv.x, rv.tz - rv.z);
-      rv.cooldown = -0.15;
-    }
-
-    // Forward camps — workers + gem parked beyond Helion wing with visible Z gap.
-    const camp0 = openingCampCenter(0);
-    const camp1 = openingCampCenter(1);
-    const oreX = cx - 0.25;
-    const oreZ = camp0.z - 0.1;
-    const gasX = cx + 1.1;
-    const gasZ = camp1.z - 0.1;
-    this.spawn(Kind.House, a, 0, camp0.x, camp0.z);
-    this.spawn(Kind.House, b, 1, camp1.x, camp1.z);
-    for (let i = 0; i < 3; i++) {
-      const slot = openingWorkerSlot(0, i);
-      const w = this.spawn(Kind.Worker, a, 0, slot.x, slot.z);
-      if (w) {
-        w.order = Ord.Gather;
-        w.tx = oreX;
-        w.tz = oreZ;
-      }
-    }
-    for (let i = 0; i < 3; i++) {
-      const slot = openingWorkerSlot(1, i);
-      const wk = this.spawn(Kind.Worker, b, 1, slot.x, slot.z);
-      if (wk) {
-        wk.order = Ord.Gather;
-        wk.tx = gasX;
-        wk.tz = gasZ;
-      }
-    }
-
-    // Contested mid gem — Helion workers gather between the firing wings.
-    const midSpawns: [number, number][] = [
-      [cx - 0.85, cz - 0.7],
-      [cx + 0.85, cz - 0.7],
-      [cx, cz + 0.85],
+    // M2-A opening — six entities per side, mirrored through the map center.
+    const workerOffsets: readonly (readonly [number, number])[] = [
+      [-2.6, -2.2],
+      [2.6, -2.2],
+      [-2.6, 2.6],
+      [2.6, 2.6],
     ];
-    for (const [wx, wz] of midSpawns) {
-      const w = this.spawn(Kind.Worker, a, 0, wx, wz);
-      if (w) {
-        w.order = Ord.Gather;
-        w.tx = cx;
-        w.tz = cz;
+    const nodeOffsets: readonly (readonly [Tile, number, number])[] = [
+      [Tile.Ore, 5.5, -1.5],
+      [Tile.Gas, -1.5, 5.5],
+      [Tile.Solar, 5.5, 4.5],
+    ];
+    for (let t = 0; t < 2; t++) {
+      const sgn = t === 0 ? 1 : -1;
+      const bx = t === 0 ? 10.5 : MAP - 10.5;
+      const bz = t === 0 ? 10.5 : MAP - 10.5;
+      this.spawn(Kind.Hall, this.civ[t], t, bx, bz);
+      for (const [dx, dz] of workerOffsets) {
+        this.spawn(Kind.Worker, this.civ[t], t, bx + dx * sgn, bz + dz * sgn);
+      }
+      this.spawn(Kind.Scout, this.civ[t], t, bx + 4.2 * sgn, bz - 4.2 * sgn);
+      // Safe mirrored gems — one of each type within reach of every Core.
+      for (const [kind, dx, dz] of nodeOffsets) {
+        this.placeOpeningNodeAt(kind, bx + dx * sgn, bz + dz * sgn);
       }
     }
   }
@@ -1520,19 +1409,6 @@ export class World {
         }
       }
     }
-    if (this.tick < 200) {
-      const ocx = (MAP * 0.5) | 0;
-      const ocz = (MAP * 0.52) | 0;
-      for (let z = ocz - 10; z <= ocz + 10; z++) {
-        if (z < 0 || z >= MAP) continue;
-        for (let x = ocx - 14; x <= ocx + 14; x++) {
-          if (x < 0 || x >= MAP) continue;
-          const idx = x + z * MAP;
-          this.visible[0][idx] = 1;
-          this.explored[0][idx] = 1;
-        }
-      }
-    }
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive) continue;
@@ -1542,14 +1418,6 @@ export class World {
       }
       const idx = tileAt(e.x, e.z);
       e.vis = this.visible[0][idx] === 1 && !(e.kind === Kind.Shade && e.stealth > 0.55);
-    }
-    if (this.tick < 240) {
-      for (let i = 0; i < MAX_ENTS; i++) {
-        const e = this.ents[i];
-        if (!e.alive) continue;
-        if (this.openingClashEnt(e)) e.vis = true;
-        if (this.openingFlankCampEnt(e) || this.openingMidGemWorkerEnt(e)) e.vis = true;
-      }
     }
   }
 

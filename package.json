@@ -11,8 +11,10 @@
     "critic": "node scripts/measure.mjs --screenshot critic/out/latest.png",
     "screenshot": "node scripts/screenshot.mjs",
     "test:m0": "tsx tests/app-flow.test.ts",
+    "test:m2": "tsx tests/m2-opening.test.ts",
     "qa:m0": "node scripts/qa-m0.mjs",
-    "qa:m1": "node scripts/qa-m1.mjs"
+    "qa:m1": "node scripts/qa-m1.mjs",
+    "qa:m2-opening": "node scripts/qa-m2-opening.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"

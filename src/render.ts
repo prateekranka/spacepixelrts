@@ -1363,8 +1363,6 @@ export class GameRenderer {
   private fogTex!: THREE.DataTexture;
   private fogData = new Uint8Array(MAP * MAP * 4);
   private fogMesh!: THREE.Mesh;
-  /** Fog remains available for inspection, but art review starts with a clear map. */
-  readonly fogOfWarEnabled = new URLSearchParams(window.location.search).get('fog') === '1';
   /** Procedural mesh experiment; append ?mesh=0 to compare the sprite path. */
   readonly proceduralScoutEnabled = new URLSearchParams(window.location.search).get('mesh') !== '0';
   private heightData!: Uint8Array;
@@ -1555,7 +1553,7 @@ export class GameRenderer {
     this.fogMesh = buildFogMesh(buildHeightTexture(world));
     const fogMat = this.fogMesh.material as THREE.ShaderMaterial;
     fogMat.uniforms.uFog.value = this.fogTex;
-    this.fogMesh.visible = this.fogOfWarEnabled;
+    this.fogMesh.visible = world.fogOfWarEnabled;
     this.scene.add(this.fogMesh);
   }
 
@@ -1950,7 +1948,8 @@ export class GameRenderer {
   }
 
   private updateFog(world: World): void {
-    if (!this.fogOfWarEnabled) return;
+    this.fogMesh.visible = world.fogOfWarEnabled;
+    if (!world.fogOfWarEnabled) return;
     const vis = world.visible[0];
     const exp = world.explored[0];
     const d = this.fogData;

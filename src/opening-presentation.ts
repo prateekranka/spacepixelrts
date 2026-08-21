@@ -8,7 +8,8 @@ export interface OpeningSlot {
 }
 
 export const OPENING_CENTER = { x: MAP * 0.5, z: MAP * 0.52 } as const;
-export const OPENING_CAMERA = { ...OPENING_CENTER, halfH: 7.2 } as const;
+/** Base-first opening framing over the Sunweaver starting plateau. */
+export const OPENING_CAMERA = { x: 12, z: 12, halfH: 9 } as const;
 
 /** The clear 18x10 combat corridor around the opening clash. */
 export const OPENING_CORRIDOR = { halfW: 9, halfD: 5 } as const;

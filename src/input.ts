@@ -16,6 +16,9 @@ export interface Box {
 /** Screen-space pick radius (CSS px) — matches ARCHITECTURE.md hit test. */
 const PICK_PX = 28;
 
+/** M2-A: stationary single-pointer hold that must elapse before a Move is issued. */
+const LONG_PRESS_MS = 450;
+
 export class Input {
   selected = new Set<number>();
   groups: number[][] = [[], [], [], []];
@@ -32,6 +35,9 @@ export class Input {
   private moved = false;
   private downX = 0;
   private downY = 0;
+  private pressTimer: number | null = null;
+  private pressFired = false;
+  private multiPointerGesture = false;
 
   constructor(
     readonly host: HTMLElement,
@@ -44,7 +50,7 @@ export class Input {
     host.addEventListener('pointerdown', (e) => this.onDown(e));
     host.addEventListener('pointermove', (e) => this.onMove(e));
     host.addEventListener('pointerup', (e) => this.onUp(e));
-    host.addEventListener('pointercancel', (e) => this.onUp(e));
+    host.addEventListener('pointercancel', (e) => this.onUp(e, true));
     host.addEventListener(
       'wheel',
       (e) => {
@@ -120,7 +126,15 @@ export class Input {
     this.moved = false;
     this.downX = e.clientX;
     this.downY = e.clientY;
+    // A second button or finger during a hold (right click mid-press, two-finger
+    // gesture) cancels the pending long press before it can fire.
+    this.cancelLongPress();
+    if (this.pointers.size === 1) {
+      this.pressFired = false;
+      this.multiPointerGesture = false;
+    }
     if (this.pointers.size === 2) {
+      this.multiPointerGesture = true;
       const pts = [...this.pointers.values()];
       this.pinch0 = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       this.panning = true;
@@ -137,6 +151,10 @@ export class Input {
     }
     this.dragging = true;
     this.box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
+    // M2-A: arm the stationary long-press Move for a lone left pointer.
+    if (e.button === 0 && e.isPrimary && this.place === null && this.selected.size > 0) {
+      this.pressTimer = window.setTimeout(() => this.fireLongPress(), LONG_PRESS_MS);
+    }
   }
 
   private onMove(e: PointerEvent): void {
@@ -145,7 +163,10 @@ export class Input {
     const dx = e.clientX - prev.x;
     const dy = e.clientY - prev.y;
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (Math.abs(e.clientX - this.downX) + Math.abs(e.clientY - this.downY) > 8) this.moved = true;
+    if (Math.abs(e.clientX - this.downX) + Math.abs(e.clientY - this.downY) > 8) {
+      this.moved = true;
+      this.cancelLongPress();
+    }
 
     if (this.pointers.size === 2 && this.panning) {
       const pts = [...this.pointers.values()];
@@ -159,21 +180,39 @@ export class Input {
       this.panByScreenDelta(dx, dy);
       return;
     }
-    if (this.dragging && this.box) {
+    if (this.dragging && this.box && !this.pressFired) {
       this.box.x1 = e.clientX;
       this.box.y1 = e.clientY;
     }
   }
 
-  private onUp(e: PointerEvent): void {
+  private onUp(e: PointerEvent, cancelled = false): void {
     this.pointers.delete(e.pointerId);
+    this.cancelLongPress();
     if (this.pointers.size < 2) this.panning = false;
+    if (cancelled) {
+      // Pointercancel ends the gesture outright: never a tap, box, or press fire.
+      this.dragging = false;
+      this.box = null;
+      this.pressFired = false;
+      this.multiPointerGesture = false;
+      return;
+    }
+    if (this.multiPointerGesture) {
+      this.dragging = false;
+      this.box = null;
+      this.pressFired = false;
+      if (this.pointers.size === 0) this.multiPointerGesture = false;
+      return;
+    }
     if (e.button === 2) {
       this.dragging = false;
       this.box = null;
       return;
     }
-    if (this.dragging && this.box && this.moved) {
+    if (this.pressFired) {
+      // The long-press Move consumed this gesture; release is not a tap or box.
+    } else if (this.dragging && this.box && this.moved) {
       this.selectBox(this.box);
       this.sfx.select();
     } else if (this.dragging && !this.moved) {
@@ -182,7 +221,33 @@ export class Input {
     }
     this.dragging = false;
     this.box = null;
+    this.pressFired = false;
     if (this.pointers.size === 0) this.panning = false;
+  }
+
+  /** M2-A: a held stationary single pointer orders the current selection to Move. */
+  private fireLongPress(): void {
+    this.pressTimer = null;
+    if (
+      this.place !== null ||
+      this.moved ||
+      this.pressFired ||
+      this.pointers.size !== 1 ||
+      this.selected.size === 0
+    ) {
+      return;
+    }
+    const w = this.pickWorld(this.downX, this.downY);
+    this.world.issue([...this.selected], Ord.Move, w.x, w.z, -1);
+    this.sfx.move();
+    this.pressFired = true;
+  }
+
+  private cancelLongPress(): void {
+    if (this.pressTimer !== null) {
+      clearTimeout(this.pressTimer);
+      this.pressTimer = null;
+    }
   }
 
   private selectTap(cx: number, cy: number): void {

@@ -62,8 +62,21 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   Fix silhouette/contrast before the scouting and combat gates; do not reopen M0 infrastructure.
 - Known state limit for M8: `Results -> REMATCH` returns to setup, but a second world on the same page
   still needs teardown/re-init support.
-- **Next:** M2 completes the player-driven opening and scout/fog discovery loop. No content expansion
-  beyond that bounded milestone.
+- M2-A COMPLETE: production reset now starts each side with exactly one Core, four idle workers, and
+  one idle scout. Mirrored safe Ore/Gas/Solar pads sit within 10 world units; the staged battle,
+  forced center reveal, camps, corpses, and pre-issued combat orders are gone from production.
+- Fog defaults on and the renderer follows the validated world setting. The center and rival Core are
+  unexplored at tick 0. The normal camera frames the player base.
+- Touch long-press Move is live at 450 ms with explicit primary-pointer, drag, cancel, right-click, and
+  multi-pointer guards. The browser smoke proves a selected scout receives an unexplored-terrain Move
+  order while selection stays intact.
+- M2-A verification: `test:m0`, `test:m2`, build, and diff check PASS; touch smoke p99 4.4 ms; M1 flow
+  regression p99 1.7 ms; full route matrix 26/26 PASS, errors 0, worst p99 4.8 ms, extras 4 and contact
+  sheet present. Evidence: `~/.codex/evidence/starhaven-m2a-scout-fog/20260821T195436Z.1T1rZq/`.
+- M2-A visual gate: three independent DeepSeek critics PASSed. A fresh focused critic PASSed the
+  hardened long-press frame. Repeated visible debt: far-zoom fog-edge contrast; fix in M2-B.
+- **Next:** M2-B adds persistent discovery latches and hides every resource/objective/landmark until
+  scout vision earns it.
 
 ## Historical
 
