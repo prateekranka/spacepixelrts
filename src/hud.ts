@@ -21,6 +21,8 @@ import {
 import type { World } from './sim';
 import type { Input } from './input';
 import type { GameRenderer } from './render';
+import { SEEN_PLAYER } from './discovery';
+import type { LandmarkKind } from './discovery';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export class Hud {
@@ -355,10 +357,12 @@ export class Hud {
       }
     }
     for (const e of world.ents) {
-      if (!e.alive || !e.vis) continue;
+      if (!e.alive) continue;
+      const discovered = (e.seenBy & SEEN_PLAYER) !== 0;
       const px = e.x * sx;
       const pz = e.z * sz;
       if (e.kind === Kind.Resource) {
+        if (!discovered) continue;
         ctx.fillStyle =
           e.cargoType === Tile.Ore
             ? P.amber
@@ -372,9 +376,18 @@ export class Hud {
         ctx.fill();
         continue;
       }
+      const building = isBuilding(e.kind);
+      if (e.team !== 0 && !e.vis && !(building && discovered)) continue;
+      const remembered = e.team !== 0 && !e.vis;
+      if (remembered) ctx.globalAlpha = 0.42;
       ctx.fillStyle = e.team === 0 ? P.lime : e.team === 1 ? P.red : P.amber;
-      const s = isBuilding(e.kind) ? 3.6 : 2.4;
+      const s = building ? 3.6 : 2.4;
       ctx.fillRect(px - s / 2, pz - s / 2, s, s);
+      if (remembered) ctx.globalAlpha = 1;
+    }
+    for (const landmark of world.landmarks) {
+      if ((landmark.discoveredBy & SEEN_PLAYER) === 0) continue;
+      drawLandmarkMarker(ctx, landmark.x * sx, landmark.z * sz, landmark.kind);
     }
     const cam = input.pan;
     const rw = (input.halfH * 2 * (viewAspect())) / MAP * w;
@@ -400,6 +413,80 @@ export class Hud {
 
 function viewAspect(): number {
   return window.innerWidth / Math.max(1, window.innerHeight);
+}
+
+function drawLandmarkMarker(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  kind: LandmarkKind,
+): void {
+  ctx.lineWidth = 1;
+  switch (kind) {
+    case 'central-objective': {
+      const outer = 7.5;
+      const inner = 4.4;
+      ctx.save();
+      ctx.fillStyle = `${P.ink}cc`;
+      ctx.strokeStyle = P.amber;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = P.amber;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(x, y, outer, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = P.cream;
+      ctx.strokeStyle = P.ink;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y - inner);
+      ctx.lineTo(x + inner, y);
+      ctx.lineTo(x, y + inner);
+      ctx.lineTo(x - inner, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      break;
+    }
+    case 'relic': {
+      ctx.strokeStyle = P.ice;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
+    case 'expansion': {
+      const h = 2.9;
+      ctx.strokeStyle = P.sand;
+      ctx.strokeRect(x - h, y - h, h * 2, h * 2);
+      break;
+    }
+    case 'safe-route': {
+      const r = 3.1;
+      ctx.fillStyle = P.lime;
+      ctx.beginPath();
+      ctx.moveTo(x, y - r);
+      ctx.lineTo(x + r, y + r * 0.7);
+      ctx.lineTo(x - r, y + r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'danger-route': {
+      const r = 3.1;
+      ctx.fillStyle = P.red;
+      ctx.beginPath();
+      ctx.moveTo(x, y + r);
+      ctx.lineTo(x + r, y - r * 0.7);
+      ctx.lineTo(x - r, y - r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+  }
 }
 
 function civPlateBg(civ: Civ): string {

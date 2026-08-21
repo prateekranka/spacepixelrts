@@ -359,6 +359,23 @@ interface StarhavenQaProbe {
   readonly orientation: string;
   readonly frozen: boolean;
   readonly transitionHistory: readonly AppState[];
+  readonly discoveries: readonly {
+    team: number;
+    tick: number;
+    id: number | string;
+    kind: string;
+    label: string;
+    x: number;
+    z: number;
+  }[];
+  readonly landmarks: readonly {
+    id: string;
+    kind: string;
+    label: string;
+    x: number;
+    z: number;
+    discoveredBy: number;
+  }[];
   dispatch(event: AppEvent): TransitionResult;
 }
 
@@ -414,6 +431,8 @@ function publish(): void {
     orientation,
     frozen: qaFrozen,
     transitionHistory: transitionHistory.slice(),
+    discoveries: world?.discoveryLog.map((event) => ({ ...event })) ?? [],
+    landmarks: world?.landmarks.map((landmark) => ({ ...landmark })) ?? [],
     dispatch: dispatchAppEvent,
   };
   appWindow.__STARHAVEN_QA__ = Object.freeze(qaProbe);

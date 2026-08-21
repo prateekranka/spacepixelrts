@@ -44,6 +44,8 @@ import {
   inOpeningCamp,
   inOpeningCorridor,
 } from './opening-presentation';
+import { SEEN_PLAYER, SEEN_RIVAL, makeHeliosLandmarks } from './discovery';
+import type { DiscoveryEvent, EntityDiscoveryEvent, Landmark } from './discovery';
 
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
@@ -78,6 +80,12 @@ export class World {
   readonly flags: { x: number; z: number; t: number }[] = [];
   readonly hash = new Spatial();
   readonly q: number[] = [];
+  /** M2-B — Helios Rift landmarks; fresh records with cleared latches on every reset. */
+  landmarks: Landmark[] = makeHeliosLandmarks();
+  /** M2-B — chronological discovery events (entities, resources, structures). */
+  readonly discoveryLog: DiscoveryEvent[] = [];
+  /** Wired from main; fires on first sight of an entity or landmark per team. */
+  onDiscover?: (event: DiscoveryEvent) => void;
   tick = 0;
   seed = 0x5eed;
   /** -1 in play · 0 player win · 1 enemy win */
@@ -160,24 +168,12 @@ export class World {
     this.marshalPeelI = 0;
     this.marshalSiegeSpawned = false;
     this.aiT = 0;
+    this.discoveryLog.length = 0;
+    this.landmarks = makeHeliosLandmarks();
     this.genMap();
     this.spawnScenario();
     this.recountPop();
     this.updateFog();
-    this.refreshVis();
-  }
-
-  private refreshVis(): void {
-    for (let i = 0; i < MAX_ENTS; i++) {
-      const e = this.ents[i];
-      if (!e.alive) continue;
-      if (e.team === 0) {
-        e.vis = true;
-        continue;
-      }
-      const idx = tileAt(e.x, e.z);
-      e.vis = this.visible[0][idx] === 1 && !(e.kind === Kind.Shade && e.stealth > 0.55);
-    }
   }
 
   spawn(kind: Kind, civ: Civ, team: number, x: number, z: number): Ent | null {
@@ -213,6 +209,7 @@ export class World {
     e.rallyZ = z;
     e.radius = st.radius;
     e.vis = true;
+    e.seenBy = 0;
     e.path = null;
     e.pathI = 0;
     e.hitFlash = 0;
@@ -1372,12 +1369,90 @@ export class World {
     return !!this.block[tileAt(x, z)];
   }
 
+  private discoveryBit(team: number): number {
+    return team === 0 ? SEEN_PLAYER : SEEN_RIVAL;
+  }
+
+  private entityDiscoveryMeta(e: Ent): Pick<EntityDiscoveryEvent, 'kind' | 'label'> {
+    if (e.kind === Kind.Resource) {
+      const label =
+        e.cargoType === Tile.Ore
+          ? 'Ore Field'
+          : e.cargoType === Tile.Gas
+            ? 'Volatile Field'
+            : e.cargoType === Tile.Solar
+              ? 'Lumen Field'
+              : e.cargoType === Tile.PropWreck
+                ? 'Neutral Tech Relic'
+                : 'Rift Vent';
+      return { kind: 'resource', label };
+    }
+    if (isBuilding(e.kind)) {
+      return { kind: 'enemy-structure', label: e.kind === Kind.Hall ? 'Enemy Core' : 'Enemy Structure' };
+    }
+    return { kind: 'entity', label: 'Enemy Unit' };
+  }
+
+  private markEntityDiscovered(team: number, e: Ent): void {
+    const bit = this.discoveryBit(team);
+    if ((e.seenBy & bit) !== 0) return;
+    e.seenBy |= bit;
+    if (e.team === team) return;
+    const meta = this.entityDiscoveryMeta(e);
+    const event: EntityDiscoveryEvent = {
+      team,
+      tick: this.tick,
+      id: e.id,
+      kind: meta.kind,
+      label: meta.label,
+      x: e.x,
+      z: e.z,
+    };
+    this.discoveryLog.push(event);
+    this.onDiscover?.(event);
+  }
+
+  private markLandmarksDiscovered(team: number): void {
+    const bit = this.discoveryBit(team);
+    const visible = this.visible[team];
+    for (const landmark of this.landmarks) {
+      if ((landmark.discoveredBy & bit) !== 0) continue;
+      if (!visible[tileAt(landmark.x, landmark.z)]) continue;
+      landmark.discoveredBy |= bit;
+      const event: DiscoveryEvent = {
+        team,
+        tick: this.tick,
+        id: landmark.id,
+        kind: landmark.kind,
+        label: landmark.label,
+        x: landmark.x,
+        z: landmark.z,
+      };
+      this.discoveryLog.push(event);
+      this.onDiscover?.(event);
+    }
+  }
+
+  private markVisibleEntitiesDiscovered(team: number): void {
+    const visible = this.visible[team];
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive) continue;
+      if (e.team !== team && e.kind === Kind.Shade && e.stealth > 0.55) continue;
+      if (e.team === team || visible[tileAt(e.x, e.z)]) this.markEntityDiscovered(team, e);
+    }
+  }
+
   private updateFog(): void {
     if (!this.fogOfWarEnabled) {
       this.visible[0].fill(1);
       this.visible[1].fill(1);
       this.explored[0].fill(1);
       this.explored[1].fill(1);
+      for (let team = 0; team < 2; team++) {
+        this.markVisibleEntitiesDiscovered(team);
+        this.markLandmarksDiscovered(team);
+      }
       for (let i = 0; i < MAX_ENTS; i++) {
         if (this.ents[i].alive) this.ents[i].vis = true;
       }
@@ -1409,11 +1484,19 @@ export class World {
         }
       }
     }
+    for (let team = 0; team < 2; team++) {
+      this.markVisibleEntitiesDiscovered(team);
+      this.markLandmarksDiscovered(team);
+    }
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive) continue;
       if (e.team === 0) {
         e.vis = true;
+        continue;
+      }
+      if (e.kind === Kind.Resource) {
+        e.vis = (e.seenBy & SEEN_PLAYER) !== 0;
         continue;
       }
       const idx = tileAt(e.x, e.z);

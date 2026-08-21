@@ -1546,8 +1546,11 @@ export class GameRenderer {
     this.buildStars();
     this.buildNebula();
     this.fogTex = new THREE.DataTexture(this.fogData, MAP, MAP, THREE.RGBAFormat);
-    this.fogTex.magFilter = THREE.NearestFilter;
-    this.fogTex.minFilter = THREE.NearestFilter;
+    // Smooth texel blending keeps the explored/unexplored boundary a soft ramp
+    // instead of a bright pixelated stair-step at far zoom.
+    this.fogTex.magFilter = THREE.LinearFilter;
+    this.fogTex.minFilter = THREE.LinearFilter;
+    this.fogTex.generateMipmaps = false;
     this.fogTex.wrapS = this.fogTex.wrapT = THREE.ClampToEdgeWrapping;
     this.fogTex.needsUpdate = true;
     this.fogMesh = buildFogMesh(buildHeightTexture(world));
@@ -1964,12 +1967,12 @@ export class GameRenderer {
         d[o] = 14;
         d[o + 1] = 12;
         d[o + 2] = 28;
-        d[o + 3] = 58;
+        d[o + 3] = 56;
       } else {
-        d[o] = 8;
-        d[o + 1] = 6;
-        d[o + 2] = 18;
-        d[o + 3] = 175;
+        d[o] = 3;
+        d[o + 1] = 2;
+        d[o + 2] = 8;
+        d[o + 3] = 208;
       }
     }
     this.fogTex.needsUpdate = true;

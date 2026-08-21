@@ -75,8 +75,22 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   sheet present. Evidence: `~/.codex/evidence/starhaven-m2a-scout-fog/20260821T195436Z.1T1rZq/`.
 - M2-A visual gate: three independent DeepSeek critics PASSed. A fresh focused critic PASSed the
   hardened long-press frame. Repeated visible debt: far-zoom fog-edge contrast; fix in M2-B.
-- **Next:** M2-B adds persistent discovery latches and hides every resource/objective/landmark until
-  scout vision earns it.
+- M2-B COMPLETE: each entity and deterministic Helios landmark now has a two-team first-sight latch.
+  Discovery events log once per team with stable ids, labels, positions, and ticks. Reset/reuse and
+  fog-off behavior are deterministic and covered by tests.
+- Undiscovered resources, rival structures, relics, expansions, routes, and the Central Lumen field
+  stay out of the player view and minimap. Discovered resources persist through explored fog; enemy
+  units still require current LOS; remembered enemy structures draw dim.
+- The minimap now shows discovery-gated landmark types. The Central Lumen field uses a large
+  ring-and-diamond beacon. Far-zoom unexplored fog is darker, while explored fog stays readable.
+- M2-B verification: `test:m0`, both `test:m2` files, build, and diff check PASS. Discovery browser
+  proof PASSes at p99 3.8 ms with exact before/after state and errors 0. Opening regression p99 4.1 ms,
+  M1 flow p99 1.7 ms, and full route matrix 26/26 PASS at worst p99 4.4 ms.
+  Evidence: `~/.codex/evidence/starhaven-m2b-discovery/20260821T220332Z.THOXye/`.
+- M2-B visual gate: three DeepSeek critics PASSed world-view discovery. Their unanimous weak minimap
+  marker note was repaired; a fresh critic PASSed the enlarged beacon. Tool-free Ox Go sim and view
+  reviews PASSed after adding stealth and rival unit/Core coverage.
+- **Next:** M2-C adds short contextual opening guidance driven by real selection and discovery state.
 
 ## Historical
 
