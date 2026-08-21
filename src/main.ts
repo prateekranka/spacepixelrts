@@ -135,31 +135,6 @@ function prepareMatch(config: MatchConfig): void {
   applyCamera();
 }
 
-function beginMatch(config: MatchConfig): void {
-  activeConfig = normalizeMatchConfig(config);
-  const started = flow.dispatch('START_MATCH');
-  if (!started.accepted) return;
-  try {
-    prepareMatch(activeConfig);
-    flow.dispatch('LOAD_READY');
-  } catch (error) {
-    console.error('Starhaven: match initialization failed', error);
-    flow.dispatch('LOAD_FAILED');
-  }
-}
-
-function beginFromStartScreen(civ: Civ): void {
-  const canonical = fromLegacyCiv(civ) ?? DEFAULT_MATCH_CONFIG.playerFaction;
-  activeScenario = null;
-  activeConfig = normalizeMatchConfig({
-    ...cloneMatchConfig(DEFAULT_MATCH_CONFIG),
-    playerFaction: canonical,
-    aiFaction: canonical === 'sunweaver' ? 'gravemark' : 'sunweaver',
-  });
-  if (!flow.dispatch('OPEN_SETUP').accepted) return;
-  beginMatch(activeConfig);
-}
-
 function syncPresentation(transition: TransitionResult): void {
   document.documentElement.dataset.appState = transition.to;
   const paused = transition.to === 'TacticalPause';
@@ -170,6 +145,8 @@ function syncPresentation(transition: TransitionResult): void {
     showLoadingScreen();
   }
   if (transition.from === 'Loading' && transition.to !== 'Loading') hideLoadingScreen();
+  if (transition.to === 'MainMenu') startScreen?.showMainMenu();
+  if (transition.to === 'MatchSetup') startScreen?.showMatchSetupPlaceholder();
   if (transition.to === 'Playing') hud?.setVisible(!uiHidden);
 }
 
@@ -207,10 +184,6 @@ function hideLoadingScreen(): void {
 }
 
 function dispatchAppEvent(event: AppEvent): TransitionResult {
-  if (event === 'START_MATCH') {
-    const result = flow.dispatch(event);
-    return result;
-  }
   if (event === 'LOAD_READY' && !world) {
     try {
       prepareMatch(activeConfig);
@@ -238,8 +211,10 @@ function runQaScenario(scenario: QaScenario): void {
 }
 
 function createStartScreen(): void {
-  const initialLegacy = toLegacyCiv(activeConfig.playerFaction);
-  startScreen = new StartScreen(host, initialLegacy, { onNewMatch: beginFromStartScreen });
+  startScreen = new StartScreen(host, {
+    onNewSkirmish: () => dispatchAppEvent('OPEN_SETUP'),
+    onBackToMenu: () => dispatchAppEvent('BACK'),
+  });
 }
 
 createStartScreen();
