@@ -46,6 +46,8 @@ input.halfH = OPENING_PAN.halfH;
 
 function switchCiv(player: Civ): void {
   resetMatch(player);
+  matchPaused = false;
+  hud.setPaused(false);
 }
 
 function resetMatch(player: Civ): void {
@@ -62,22 +64,38 @@ function resetMatch(player: Civ): void {
 }
 
 const hud = new Hud(host);
-hud.bind(world, input, view, switchCiv);
-hud.setVisible(false);
-
 let matchStarted = false;
+let matchPaused = false;
+
+function togglePause(): void {
+  if (!matchStarted) return;
+  matchPaused = !matchPaused;
+  hud.setPaused(matchPaused);
+}
+
+hud.bind(world, input, view, switchCiv, togglePause);
+hud.setVisible(false);
+hud.setPaused(false);
 let startScreen: StartScreen | null = null;
 
 function startMatch(player: Civ): void {
   resetMatch(player);
   matchStarted = true;
+  matchPaused = false;
   acc = 0;
   hud.setVisible(true);
+  hud.setPaused(false);
   startScreen?.destroy();
   startScreen = null;
 }
 
 startScreen = new StartScreen(host, world.civ[0], { onNewMatch: startMatch });
+
+window.addEventListener('keydown', (event) => {
+  if (event.code !== 'Space' || event.repeat) return;
+  event.preventDefault();
+  togglePause();
+});
 
 let acc = 0;
 let last = performance.now();
@@ -99,7 +117,7 @@ function frame(now: number): void {
   }
   input.tick(matchStarted ? raw : 0);
   let steps = 0;
-  if (matchStarted) {
+  if (matchStarted && !matchPaused) {
     while (acc >= DT && steps < 5) {
       world.step();
       acc -= DT;
@@ -132,6 +150,7 @@ function publish(): void {
     hitSfx,
     screen: matchStarted ? 'match' : 'start',
     matchStarted,
+    paused: matchPaused,
   };
   const w = window as unknown as {
     __SPACEPIXEL__: typeof probe;

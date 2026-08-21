@@ -36,6 +36,7 @@ export class Hud {
   private matchTitleEl: HTMLElement;
   private matchSubEl: HTMLElement;
   private idlewEl: HTMLButtonElement;
+  private pauseEl: HTMLButtonElement;
   private civPickEl: HTMLElement;
   private cmdsSig = '';
   private civSig = '';
@@ -61,6 +62,7 @@ export class Hud {
         <div id="meta">
           <button type="button" id="scout-focus">Scout</button>
           <button type="button" id="idlew">Idle worker</button>
+          <button type="button" id="pause-toggle" aria-label="Pause simulation" title="Pause simulation">Ⅱ</button>
           <div id="zoom" aria-label="Zoom controls">
             <span>Zoom</span>
             <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
@@ -101,6 +103,7 @@ export class Hud {
     this.matchTitleEl = this.root.querySelector('#match-title')!;
     this.matchSubEl = this.root.querySelector('#match-sub')!;
     this.idlewEl = this.root.querySelector('#idlew')!;
+    this.pauseEl = this.root.querySelector('#pause-toggle')!;
     this.civPickEl = this.root.querySelector('#civpick')!;
     this.injectCss();
     this.renderCivPick(null);
@@ -111,6 +114,7 @@ export class Hud {
     input: Input,
     view: GameRenderer,
     onCivSwitch: (civ: Civ) => void,
+    onPauseToggle: () => void,
   ): void {
     this.civPickEl.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('button[data-civ]') as HTMLButtonElement | null;
@@ -121,6 +125,7 @@ export class Hud {
     });
     this.root.querySelector('#idlew')!.addEventListener('click', () => input.commandAt('idleworker'));
     this.root.querySelector('#scout-focus')!.addEventListener('click', () => input.focusScout());
+    this.pauseEl.addEventListener('click', () => onPauseToggle());
     this.root.querySelector('#zoom-out')!.addEventListener('click', () => input.zoomOut());
     this.root.querySelector('#zoom-in')!.addEventListener('click', () => input.zoomIn());
     this.minimap.addEventListener('pointerdown', (e) => {
@@ -141,6 +146,13 @@ export class Hud {
 
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
+  }
+
+  setPaused(paused: boolean): void {
+    this.pauseEl.textContent = paused ? '▶' : 'Ⅱ';
+    this.pauseEl.title = paused ? 'Resume simulation' : 'Pause simulation';
+    this.pauseEl.setAttribute('aria-label', paused ? 'Resume simulation' : 'Pause simulation');
+    this.pauseEl.classList.toggle('paused', paused);
   }
 
   draw(world: World, input: Input, fps: number): void {
@@ -434,8 +446,10 @@ const HUD_CSS = `
 #meta{display:flex;align-items:center;gap:12px;padding:0 14px}
 #meta b{font-variant-numeric:tabular-nums;font-size:13px;opacity:.7}
 #meta b.low{color:${P.coral};opacity:1}
-#scout-focus,#idlew,#zoom button,#cmds button{background:${P.deep};color:${P.cream};border:1px solid ${P.amber}88;border-radius:2px;min-height:44px;min-width:44px;padding:6px 10px;font:inherit;cursor:pointer}
-#scout-focus:hover,#idlew:hover,#zoom button:hover,#cmds button:not(:disabled):hover{background:${P.plum}}
+#scout-focus,#idlew,#pause-toggle,#zoom button,#cmds button{background:${P.deep};color:${P.cream};border:1px solid ${P.amber}88;border-radius:2px;min-height:44px;min-width:44px;padding:6px 10px;font:inherit;cursor:pointer}
+#scout-focus:hover,#idlew:hover,#pause-toggle:hover,#zoom button:hover,#cmds button:not(:disabled):hover{background:${P.plum}}
+#pause-toggle{font-size:17px;line-height:1;padding:4px 8px}
+#pause-toggle.paused{border-color:${P.coral};color:${P.coral};box-shadow:0 0 14px ${P.coral}55,inset 0 0 8px ${P.coral}22}
 #zoom{display:flex;align-items:center;gap:4px}
 #zoom span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
 #zoom button{font-size:20px;line-height:1;padding:4px 10px}
