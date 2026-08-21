@@ -90,7 +90,20 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
 - M2-B visual gate: three DeepSeek critics PASSed world-view discovery. Their unanimous weak minimap
   marker note was repaired; a fresh critic PASSed the enlarged beacon. Tool-free Ox Go sim and view
   reviews PASSed after adding stealth and rival unit/Core coverage.
-- **Next:** M2-C adds short contextual opening guidance driven by real selection and discovery state.
+- M2-C COMPLETE: pure guidance state derives only from real selection and the Central Lumen discovery
+  bit. Exact prompts are `Select your scout`, `Explore the nearby signal`, then the required two-line
+  discovery/contest message. Worker, enemy scout, and dead scout selections do not advance it.
+- The prompt is a pointer-transparent safe-area HUD strip. `SCOUT` brackets the real player scout;
+  off-screen `SIGNAL` uses the real landmark projection and safe edge clamping; both brackets disappear
+  after discovery. No timer, modal, dimmer, input capture, or animation exists.
+- M2-C verification: `test:m0`, all three `test:m2` files, build, diff check and guidance browser proof
+  PASS. Guidance proof p99 4.2 ms with three 1366 × 1024 captures and errors 0. Opening p99 5.0 ms,
+  discovery 4.0 ms, M1 1.7 ms, and final route matrix 26/26 PASS at worst p99 2.7 ms.
+  Evidence: `~/.codex/evidence/starhaven-m2c-guidance/20260821T224915Z.w98gBF/`.
+- M2-C visual gate: three DeepSeek critics PASSed the non-blocking banner. Their repeated target-link
+  gap was repaired; a fresh critic PASSed the scout/signal brackets. Tool-free Ox Go state and
+  presentation reviews PASSed after direct dead/enemy selection and bracket DOM coverage.
+- **Next:** M2-D gives the AI scout-driven knowledge and removes all perfect-map targeting.
 
 ## Historical
 

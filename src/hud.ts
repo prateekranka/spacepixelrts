@@ -23,6 +23,7 @@ import type { Input } from './input';
 import type { GameRenderer } from './render';
 import { SEEN_PLAYER } from './discovery';
 import type { LandmarkKind } from './discovery';
+import { evaluateOpeningGuidance } from './opening-guidance';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export class Hud {
@@ -40,8 +41,11 @@ export class Hud {
   private idlewEl: HTMLButtonElement;
   private pauseEl: HTMLButtonElement;
   private civPickEl: HTMLElement;
+  private guidanceEl: HTMLElement;
+  private guidanceTargetEl: HTMLElement;
   private cmdsSig = '';
   private civSig = '';
+  private guidanceSig = '';
 
   constructor(host: HTMLElement) {
     this.root = document.createElement('div');
@@ -86,6 +90,8 @@ export class Hud {
       </div>
       <div id="civpick" aria-label="Current 1v1 matchup"></div>
       <p id="hint">Landscape command deck · two-finger pan · pinch zoom · box-select to rally the swarm</p>
+      <aside id="guidance" aria-live="polite"><strong></strong><span></span></aside>
+      <div id="guidance-target" aria-hidden="true" hidden><span></span></div>
       <div id="match-end" hidden>
         <div class="match-panel">
           <h1 id="match-title">VICTORY</h1>
@@ -107,6 +113,8 @@ export class Hud {
     this.idlewEl = this.root.querySelector('#idlew')!;
     this.pauseEl = this.root.querySelector('#pause-toggle')!;
     this.civPickEl = this.root.querySelector('#civpick')!;
+    this.guidanceEl = this.root.querySelector('#guidance')!;
+    this.guidanceTargetEl = this.root.querySelector('#guidance-target')!;
     this.injectCss();
     this.renderCivPick(null, null);
   }
@@ -166,6 +174,7 @@ export class Hud {
     this.drawCivPick(world);
     this.drawMini(world, input);
     this.drawCard(world, input);
+    this.drawGuidance(world, input);
     this.drawMatchEnd(world);
   }
 
@@ -187,6 +196,47 @@ export class Hud {
       <span class="picker-label">1v1 matchup</span>
       <span class="civ-tile ${player} on"><strong>${CIV_NAME[player]}</strong><small>You</small></span>
       <span class="civ-tile ${rival} rival"><strong>${CIV_NAME[rival]}</strong><small>Rival</small></span>`;
+  }
+
+  private drawGuidance(world: World, input: Input): void {
+    const g = evaluateOpeningGuidance(world.ents, world.landmarks, input.selected);
+    if (g.id !== this.guidanceSig) {
+      this.guidanceSig = g.id;
+      const strong = this.guidanceEl.querySelector<HTMLElement>('strong')!;
+      const span = this.guidanceEl.querySelector<HTMLElement>('span')!;
+      strong.textContent = g.primary;
+      span.textContent = g.secondary ?? '';
+      this.guidanceEl.dataset.state = g.id;
+    }
+
+    let target: { x: number; y: number; z: number; label: string } | null = null;
+    if (g.id === 'select-scout') {
+      const scout = world.ents.find(
+        (entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Scout,
+      );
+      if (scout) target = { x: scout.x, y: 0.8, z: scout.z, label: 'SCOUT' };
+    } else if (g.id === 'explore-signal') {
+      const signal = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+      if (signal) target = { x: signal.x, y: 0.6, z: signal.z, label: 'SIGNAL' };
+    }
+    if (!target) {
+      this.guidanceTargetEl.hidden = true;
+      return;
+    }
+
+    const view = input.view;
+    const projected = view.project(target.x, target.y, target.z);
+    const rect = view.overlay.getBoundingClientRect();
+    const rawX = rect.left + projected.x * (rect.width / Math.max(1, view.overlay.width));
+    const rawY = rect.top + projected.y * (rect.height / Math.max(1, view.overlay.height));
+    const x = Math.max(32, Math.min(window.innerWidth - 32, rawX));
+    const y = Math.max(92, Math.min(window.innerHeight - 190, rawY));
+    const offscreen = Math.abs(x - rawX) > 0.5 || Math.abs(y - rawY) > 0.5;
+    this.guidanceTargetEl.hidden = false;
+    this.guidanceTargetEl.style.left = `${x}px`;
+    this.guidanceTargetEl.style.top = `${y}px`;
+    this.guidanceTargetEl.dataset.offscreen = String(offscreen);
+    this.guidanceTargetEl.querySelector<HTMLElement>('span')!.textContent = target.label;
   }
 
   private drawMatchEnd(world: World): void {
@@ -557,6 +607,14 @@ const HUD_CSS = `
 #civpick .civ-tile.on{border-color:${P.amber};box-shadow:0 0 0 1px #000,0 0 18px ${P.amber}66,inset 0 0 0 2px ${P.amber}55}
 #civpick .civ-tile.rival{border-color:${P.ice}99}
 #hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.45;pointer-events:none;white-space:nowrap}
+#guidance{position:fixed;left:50%;top:calc(68px + env(safe-area-inset-top,0px));transform:translateX(-50%);box-sizing:border-box;width:min(460px,calc(100vw - 380px));margin:0;padding:8px 16px 9px;border:2px solid ${P.amber};background:linear-gradient(${P.night}f0,${P.ink}ec);box-shadow:0 0 0 2px #000,0 6px 18px #0008,inset 0 0 14px #0007;text-align:center;pointer-events:none;z-index:6;font-size:12px;line-height:1.35}
+#guidance strong{display:block;color:${P.amber};font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 10px ${P.sand}55}
+#guidance span{display:block;margin-top:3px;color:${P.cream};font-size:11px;letter-spacing:.03em;opacity:.8}
+#guidance span:empty{display:none}
+#guidance-target{position:fixed;width:46px;height:46px;box-sizing:border-box;transform:translate(-50%,-50%);border:2px solid ${P.amber};border-radius:50%;box-shadow:0 0 0 2px #000b,0 0 14px ${P.amber}88,inset 0 0 0 3px #0008;pointer-events:none;z-index:7}
+#guidance-target[hidden]{display:none}
+#guidance-target[data-offscreen="true"]{border-radius:4px;background:${P.ink}b8}
+#guidance-target span{position:absolute;left:50%;top:calc(100% + 5px);transform:translateX(-50%);padding:2px 5px;border:1px solid ${P.amber};background:${P.ink}e8;color:${P.cream};font-size:9px;font-weight:700;letter-spacing:.12em;line-height:1;white-space:nowrap;text-shadow:0 1px 0 #000}
 #match-end{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;z-index:8}
 #match-end .match-panel{padding:18px 28px 16px;border:3px solid ${P.amber};background:linear-gradient(${P.night}f2,${P.ink}f0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;min-width:280px}
 #match-end.win .match-panel{border-color:${P.leaf};box-shadow:0 0 32px ${P.leaf}44,0 12px 40px #000a,inset 0 0 24px #0006}

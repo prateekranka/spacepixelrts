@@ -11,11 +11,12 @@
     "critic": "node scripts/measure.mjs --screenshot critic/out/latest.png",
     "screenshot": "node scripts/screenshot.mjs",
     "test:m0": "tsx tests/app-flow.test.ts",
-    "test:m2": "tsx tests/m2-opening.test.ts && tsx tests/m2-discovery.test.ts",
+    "test:m2": "tsx tests/m2-opening.test.ts && tsx tests/m2-discovery.test.ts && tsx tests/m2-guidance.test.ts",
     "qa:m0": "node scripts/qa-m0.mjs",
     "qa:m1": "node scripts/qa-m1.mjs",
     "qa:m2-opening": "node scripts/qa-m2-opening.mjs",
-    "qa:m2-discovery": "node scripts/qa-m2-discovery.mjs"
+    "qa:m2-discovery": "node scripts/qa-m2-discovery.mjs",
+    "qa:m2-guidance": "node scripts/qa-m2-guidance.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"
