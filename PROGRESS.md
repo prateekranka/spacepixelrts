@@ -29,10 +29,14 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   gameplay milestones supply distinct world fixtures.
 - `npm run test:m0` and `npm run build` pass.
 - Full iPad 4:3 evidence matrix: 26/26 route-orientation captures pass, browser errors 0, worst
-  game-work p99 6.1 ms, UI-free / close / far captures present, and contact sheet present.
+  game-work p99 5.9 ms, UI-free / selected / close / far captures present, and contact sheet present.
   Manifest: `~/.codex/evidence/starhaven-m0-harness/20260821T154246Z.VS76FM/manifest.json`.
-- **Next:** three image-only DeepSeek critiques of the M0 evidence, then M1 main menu and skirmish
-  setup. No content or gameplay expansion before the First Playable loop closes.
+- M0 blind visual gate: three independent DeepSeek Vision critics PASSed the pack as a stable
+  review baseline. A fresh focused critic also PASSed the selected-scout state.
+- Open visual debt for M2/M5: all three critics found poor unit contrast at normal camera height.
+  Fix silhouette/contrast before the scouting and combat gates; do not reopen M0 infrastructure.
+- **Next:** M1 main menu and skirmish setup. No content or gameplay expansion before the First
+  Playable loop closes.
 
 ## Historical
 

@@ -345,7 +345,7 @@ function buildContactSheet(files, cellW, cellH, columns, rows, outFile) {
   fs.writeFileSync(outFile, PNG.sync.write(sheet));
 }
 
-async function capturePage(context, { url, label, shotPath, viewport, expectedSeed, verifyScenario, mutateHalfH, samplePerf }) {
+async function capturePage(context, { url, label, shotPath, viewport, expectedSeed, verifyScenario, mutateHalfH, selectScout, samplePerf }) {
   const page = await context.newPage();
   const result = {
     label,
@@ -383,6 +383,15 @@ async function capturePage(context, { url, label, shotPath, viewport, expectedSe
         if (!input) throw new Error('__STARHOLD_INPUT__ missing');
         input.halfH = value;
       }, mutateHalfH);
+      await settleFrames(page);
+    }
+    if (selectScout) {
+      await page.evaluate(() => {
+        const input = globalThis.__STARHOLD_INPUT__;
+        if (!input) throw new Error('__STARHOLD_INPUT__ missing');
+        input.focusScout();
+        if (input.selected.size === 0) throw new Error('scout selection did not produce a selected unit');
+      });
       await settleFrames(page);
     }
     if (samplePerf) {
@@ -532,6 +541,18 @@ async function main() {
         viewport,
         expectedSeed: seed,
         verifyScenario: 'opening',
+        samplePerf: false,
+      }),
+    );
+    extras.push(
+      await capturePage(context, {
+        url: `${baseUrl}?qa=opening&orientation=landscape-left`,
+        label: 'gameplay-selected',
+        shotPath: path.join(extrasDir, 'gameplay-selected.png'),
+        viewport,
+        expectedSeed: seed,
+        verifyScenario: 'opening',
+        selectScout: true,
         samplePerf: false,
       }),
     );
