@@ -34,16 +34,19 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
 - M0 blind visual gate: three independent DeepSeek Vision critics PASSed the pack as a stable
   review baseline. A fresh focused critic also PASSed the selected-scout state.
 - M1-A COMPLETE: canonical five-item Starhaven main menu, in-place Tutorial/Factions/Settings
-  panels, disabled Continue reason, and legal MatchSetup placeholder. Browser title and portrait gate
-  now use Starhaven.
-- M1-A evidence: MainMenu and MatchSetup both pass at 1366 × 1024 in both landscape orientations,
-  browser errors 0, worst game-work p99 0.1 ms. Three independent DeepSeek critics PASSed the menu;
-  two noted non-blocking unused left-side space.
-  Evidence: `~/.codex/evidence/starhaven-m1a-menu/20260821T172607Z.ob6Vch/`.
+  panels, disabled Continue reason, and legal MatchSetup entry. Browser title and portrait gate use
+  Starhaven. Commit `bd3dfeb`.
+- M1-B COMPLETE: full two-faction skirmish form for player/AI civilization, difficulty, Helios Rift,
+  fog, speed, tactical pause, and seed mode/value. Mirror choices auto-swap the other side through one
+  typed config callback. Start remains disabled until M1-C connects world creation.
+- M1-B evidence: MatchSetup passes at 1366 × 1024 in both landscape orientations, browser errors 0,
+  reset count 0, seed 24301 visible, and game-work p99 0.1 ms. Three critics PASSed usability; their
+  repeated dead-panel and same-color faction gaps were repaired. A fresh critic PASSed the repair.
+  Evidence: `~/.codex/evidence/starhaven-m1b-setup/20260821T174856Z.dI0Avp/`.
 - Open visual debt for M2/M5: all three M0 critics found poor unit contrast at normal camera height.
   Fix silhouette/contrast before the scouting and combat gates; do not reopen M0 infrastructure.
-- **Next:** M1-B skirmish setup and civilization selection. No content or gameplay expansion before
-  the First Playable loop closes.
+- **Next:** M1-C connects the validated form through Loading to one deterministic match reset. No
+  content or gameplay expansion before the First Playable loop closes.
 
 ## Historical
 

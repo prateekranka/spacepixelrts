@@ -146,7 +146,7 @@ function syncPresentation(transition: TransitionResult): void {
   }
   if (transition.from === 'Loading' && transition.to !== 'Loading') hideLoadingScreen();
   if (transition.to === 'MainMenu') startScreen?.showMainMenu();
-  if (transition.to === 'MatchSetup') startScreen?.showMatchSetupPlaceholder();
+  if (transition.to === 'MatchSetup') startScreen?.showMatchSetup(activeConfig, false);
   if (transition.to === 'Playing') hud?.setVisible(!uiHidden);
 }
 
@@ -214,6 +214,11 @@ function createStartScreen(): void {
   startScreen = new StartScreen(host, {
     onNewSkirmish: () => dispatchAppEvent('OPEN_SETUP'),
     onBackToMenu: () => dispatchAppEvent('BACK'),
+    onConfigChange: (config) => {
+      activeConfig = normalizeMatchConfig(config);
+      publish();
+    },
+    onStartMatch: () => {},
   });
 }
 
