@@ -1,5 +1,5 @@
 import type { Civ } from './engine';
-import { ALL_CIVS, CIV_NAME } from './content';
+import { ALL_CIVS, CIV_NAME, CIV_PROFILE } from './content';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export interface StartScreenCallbacks {
@@ -8,36 +8,20 @@ export interface StartScreenCallbacks {
 
 interface FactionCard {
   civ: Civ;
-  callSign: string;
-  doctrine: string;
-  edge: string;
-  plan: string;
   accent: string;
 }
 
 const FACTIONS: readonly FactionCard[] = [
   {
     civ: 'vespari',
-    callSign: 'HELION COMPACT',
-    doctrine: 'Solar geometry',
-    edge: 'Flexible forward control',
-    plan: 'Scout wide, then compress the frontier with energy and speed.',
     accent: P.amber,
   },
   {
     civ: 'aurion',
-    callSign: 'KRYOS CONCLAVE',
-    doctrine: 'Cold precision',
-    edge: 'Durable positions',
-    plan: 'Freeze the approach, hold long sight lines, and punish overreach.',
     accent: P.ice,
   },
   {
     civ: 'voidmarked',
-    callSign: 'NIHILINE',
-    doctrine: 'Spore pressure',
-    edge: 'Stealth and disruption',
-    plan: 'Make unsafe ground, strike from concealment, and break the rhythm.',
     accent: P.leaf,
   },
 ];
@@ -157,13 +141,14 @@ export class StartScreen {
     const grid = this.root.querySelector('.faction-grid')!;
     grid.innerHTML = FACTIONS.map((faction) => {
       const selected = faction.civ === this.selectedCiv;
+      const profile = CIV_PROFILE[faction.civ];
       return `
         <button type="button" class="faction-card ${selected ? 'selected' : ''}" data-civ="${faction.civ}" role="listitem" aria-pressed="${selected}">
           <span class="faction-sigil" style="--faction-accent:${faction.accent}">${faction.civ === 'vespari' ? '✦' : faction.civ === 'aurion' ? '◇' : '◌'}</span>
           <span class="faction-copy">
             <strong>${CIV_NAME[faction.civ]}</strong>
-            <small>${faction.callSign}</small>
-            <em>${faction.doctrine}</em>
+            <small>${profile.subtitle}</small>
+            <em>${profile.doctrine}</em>
           </span>
           <span class="faction-mark" style="--faction-accent:${faction.accent}"></span>
         </button>
@@ -173,14 +158,15 @@ export class StartScreen {
 
   private updateSelection(): void {
     const faction = FACTIONS.find((entry) => entry.civ === this.selectedCiv)!;
+    const profile = CIV_PROFILE[faction.civ];
     this.selection.innerHTML = `
       <div class="summary-accent" style="--faction-accent:${faction.accent}"></div>
       <div>
         <p class="summary-kicker">Selected doctrine</p>
-        <h3>${CIV_NAME[faction.civ]} <span>· ${faction.doctrine}</span></h3>
-        <p>${faction.plan}</p>
+        <h3>${CIV_NAME[faction.civ]} <span>· ${profile.doctrine}</span></h3>
+        <p>${profile.plan}</p>
       </div>
-      <span class="summary-edge">${faction.edge}</span>
+      <span class="summary-edge">${profile.edge}</span>
     `;
   }
 

@@ -5,6 +5,7 @@ import type { Civ } from './engine';
 import {
   ALL_CIVS,
   CIV_NAME,
+  CIV_PROFILE,
   STATS,
   hallName,
   houseName,
@@ -50,7 +51,7 @@ export class Hud {
           <span class="sigil">◆</span>
           <div>
             <strong id="civname">Helion Compact</strong>
-            <em>Starhold</em>
+            <em id="doctrine">Solar geometry</em>
           </div>
         </div>
         <div id="res">
@@ -162,6 +163,7 @@ export class Hud {
     (this.root.querySelector('#nrg') as HTMLElement).textContent = String(eco.energy | 0);
     (this.root.querySelector('#pop') as HTMLElement).textContent = `${eco.pop}/${eco.cap}`;
     (this.root.querySelector('#civname') as HTMLElement).textContent = CIV_NAME[world.civ[0]];
+    (this.root.querySelector('#doctrine') as HTMLElement).textContent = CIV_PROFILE[world.civ[0]].doctrine;
     this.fpsEl.textContent = `${fps} FPS`;
     this.fpsEl.className = fps < 55 ? 'low' : '';
     const idlePulse = world.ents.some(
@@ -415,9 +417,7 @@ function civPlateBg(civ: Civ): string {
 }
 
 function civShort(civ: Civ): string {
-  if (civ === 'aurion') return 'Ice cathedral';
-  if (civ === 'voidmarked') return 'Void mycelium';
-  return 'Solar geometry';
+  return CIV_PROFILE[civ].subtitle;
 }
 
 const HUD_CSS = `

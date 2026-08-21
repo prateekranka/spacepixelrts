@@ -11,6 +11,47 @@ export const CIV_NAME: Record<Civ, string> = {
 
 export const ALL_CIVS: Civ[] = ['vespari', 'aurion', 'voidmarked'];
 
+export interface CivProfile {
+  subtitle: string;
+  doctrine: string;
+  edge: string;
+  plan: string;
+  startOre: number;
+  startGas: number;
+  startEnergy: number;
+}
+
+/** Opening identities are intentionally different before technology paths diverge. */
+export const CIV_PROFILE: Record<Civ, CivProfile> = {
+  vespari: {
+    subtitle: 'Sunward network',
+    doctrine: 'Solar geometry',
+    edge: 'Flexible forward control',
+    plan: 'Scout wide, then compress the frontier with energy and speed.',
+    startOre: 220,
+    startGas: 40,
+    startEnergy: 110,
+  },
+  aurion: {
+    subtitle: 'Ice cathedral',
+    doctrine: 'Cold precision',
+    edge: 'Durable positions',
+    plan: 'Freeze the approach, hold long sight lines, and punish overreach.',
+    startOre: 250,
+    startGas: 45,
+    startEnergy: 70,
+  },
+  voidmarked: {
+    subtitle: 'Void mycelium',
+    doctrine: 'Spore pressure',
+    edge: 'Stealth and disruption',
+    plan: 'Make unsafe ground, strike from concealment, and break the rhythm.',
+    startOre: 200,
+    startGas: 70,
+    startEnergy: 90,
+  },
+};
+
 /** Opponent for skirmish — always a different people. */
 export function enemyCiv(player: Civ): Civ {
   if (player === 'vespari') return 'aurion';

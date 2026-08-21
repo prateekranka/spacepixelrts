@@ -24,6 +24,7 @@ import {
 import type { Bolt, Civ, Ent, Spark, TeamEco } from './engine';
 import {
   BUILD_HP_START,
+  CIV_PROFILE,
   GATHER_MAX,
   POP_HALL,
   POP_HOUSE,
@@ -134,8 +135,26 @@ export class World {
       this.ents[i].id = i;
       this.free.push(i);
     }
-    this.teams[0] = { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 };
-    this.teams[1] = { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 };
+    const playerStart = CIV_PROFILE[this.civ[0]];
+    const enemyStart = CIV_PROFILE[this.civ[1]];
+    this.teams[0] = {
+      ore: playerStart.startOre,
+      gas: playerStart.startGas,
+      energy: playerStart.startEnergy,
+      pop: 0,
+      cap: 0,
+      epoch: 0,
+      ageT: 0,
+    };
+    this.teams[1] = {
+      ore: enemyStart.startOre,
+      gas: enemyStart.startGas,
+      energy: enemyStart.startEnergy,
+      pop: 0,
+      cap: 0,
+      epoch: 0,
+      ageT: 0,
+    };
     this.explored[0].fill(0);
     this.explored[1].fill(0);
     this.visible[0].fill(0);
