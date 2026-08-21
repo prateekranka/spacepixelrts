@@ -22,14 +22,17 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   solar-ascendancy / sky-dominion / iron-colossus / rift-engineering; legacy vespari/aurion kept
   as private adapters until a dedicated migration; Nihiline/voidmarked hidden and deferred).
 - Active branch `chatgptpro2008` tracking origin/chatgptpro2008.
-- Current relevant commits: `9fc3067` differentiate faction opening economies · `f8c94f5` tactical
-  pause control (pause-only so far) · `336659a` Starhaven start screen · `21e7c08` player
-  direction docs · `a9acec2` shared presentation modules.
-- Build passes (`tsc --noEmit && vite build`) on the branch tip.
-- Gap analysis and frozen M0/M1 contracts recorded in `docs/FIRST_PLAYABLE_GAP_ANALYSIS.md`.
-- **Next: M0** — deterministic game states + visual QA scenarios
-  (`chore: add deterministic game states and visual QA scenarios`), then M1 front door, then the
-  full loop. No content/polish work before the loop closes.
+- M0 COMPLETE: explicit `Boot -> MainMenu -> MatchSetup -> Loading -> Playing -> TacticalPause /
+  Victory / Defeat -> Results` state machine; no writable menu/gameplay booleans remain.
+- Deterministic `?qa=` registry covers 9 primary and 4 supplemental routes with fixed seed, camera,
+  config, orientation, and frozen fixture tick. Later-match routes are honest scaffolds until their
+  gameplay milestones supply distinct world fixtures.
+- `npm run test:m0` and `npm run build` pass.
+- Full iPad 4:3 evidence matrix: 26/26 route-orientation captures pass, browser errors 0, worst
+  game-work p99 6.1 ms, UI-free / close / far captures present, and contact sheet present.
+  Manifest: `~/.codex/evidence/starhaven-m0-harness/20260821T154246Z.VS76FM/manifest.json`.
+- **Next:** three image-only DeepSeek critiques of the M0 evidence, then M1 main menu and skirmish
+  setup. No content or gameplay expansion before the First Playable loop closes.
 
 ## Historical
 

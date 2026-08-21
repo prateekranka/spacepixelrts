@@ -9,7 +9,9 @@
     "preview": "vite preview --host --port 4173 --strictPort",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=spacepixelrts",
     "critic": "node scripts/measure.mjs --screenshot critic/out/latest.png",
-    "screenshot": "node scripts/screenshot.mjs"
+    "screenshot": "node scripts/screenshot.mjs",
+    "test:m0": "tsx tests/app-flow.test.ts",
+    "qa:m0": "node scripts/qa-m0.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"
