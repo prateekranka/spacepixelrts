@@ -1,5 +1,11 @@
 # Starhaven direction
 
+> **STATUS NOTICE (2026-08-21):** `docs/FIRST_PLAYABLE.md` is now the active product contract and
+> **supersedes the old three-faction first-pass scope below wherever the two conflict** — most
+> notably, the First Playable exposes exactly two playable factions (Sunweaver vs Gravemark) on
+> one map (Helios Rift); the third faction stays hidden and deferred. The historical body below
+> is preserved unchanged for context.
+
 ## Product promise
 
 Starhaven is a touch-first space real-time strategy game. It combines a persistent economy, asymmetric factions, exploration, and deliberate tactical control. It must feel like its own game, not a fantasy reskin of an existing age-based RTS.
