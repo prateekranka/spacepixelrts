@@ -126,15 +126,23 @@ world exactly once per started skirmish.
 
 The skirmish opens player-driven with an exact starting composition: exactly one Core, four
 workers gathering safe nearby resources, one scout idle at base, and unexplored surroundings.
-The player selects the scout personally and explores; nothing plays itself. Exploring yields
-discoveries (terrain features, resource caches, traces of the enemy) each surfaced with a short
-contextual prompt at the moment it matters — never blocking modal tutorials. The layout is
-deterministic at fixed seed; the exploration is the player's own action.
+The player selects the scout personally and explores; nothing plays itself. Scouting can reveal
+shared resource sites, expansion locations, enemy structures, neutral technology relics, safe and
+dangerous routes, and the Central Lumen Field. Resources and objectives are neither interactable
+nor shown on the minimap until discovered. Contextual prompts teach through play: "Select your
+scout", "Explore the nearby signal", "A shared Lumen field has been discovered", and "The enemy
+may contest this location". The AI must also scout and starts without perfect map knowledge. The
+layout is deterministic at fixed seed; the exploration is the player's own action.
 
 ### M3 — Asymmetric economies
 
-Sunweaver and Gravemark economies differ measurably: different opening resource rhythms and
-spend profiles, same deterministic sim core.
+Sunweaver workers establish lightweight collection links. Connected Solar/Lumen sites start
+quickly and run efficiently, but exposed links are vulnerable. Excess energy can temporarily
+boost production, vision, or shields. Sunweaver supports a small, expensive, efficient army.
+
+Gravemark workers build durable extraction rigs. Sites start more slowly but are harder to remove;
+industrial storage/refining and production infrastructure scale into a larger, slower, more
+replaceable army. The AI uses these exact economy rules. It receives no arbitrary resource income.
 
 ### M4 — Two-way technology choice
 
@@ -157,17 +165,28 @@ Exactly four unit types per faction; roles distinct and readable (one anchor rol
 
 ### M6 — Touch strategy controls
 
-Tactical pause freezes the sim; radial command menu; touch-first worker assignment; formation
-gestures. Everything usable one-thumbed on iPad; keyboard never required.
+Tactical pause freezes or heavily slows the sim while the player queues movement paths, focus
+targets, formations, abilities, worker orders, and technology/unit-counter inspection. Resume
+executes the queued commands in order. A contextual radial command menu contains Move, Attack,
+Ability, Guard, Retreat, and Formation; workers instead get Gather, Build, Repair, Assist, and
+Return. Touch controls include drag selection, double-tap unit-type selection, pinned army groups,
+automatic mixed-unit formations, and "assign N workers". Keyboard input is never required.
 
 ### M7 — Faction AI
 
-The AI opponent plays its faction doctrine with imperfect knowledge (it respects fog of war and
-does not cheat vision), sustains an economy, and pressures the shared center and your Core.
+The AI opponent plays its faction doctrine with imperfect knowledge and the same economy rules.
+Sunweaver scouts early, expands quickly, avoids wasteful fights, attacks exposed infrastructure,
+prioritizes technology, and withdraws damaged elite units. Gravemark claims defensible zones,
+protects extractors, builds production infrastructure, advances slowly, attacks in timed heavy
+pushes, and tries to cut off retreat routes. Difficulty changes reaction delay, scouting quality,
+army composition, attack timing, target priority, and retreat willingness. It never changes map
+knowledge or grants resource cheats.
 
 ### M8 — Shared-center conflict and Core victory
 
-One contested center area both players fight over. Destroying the enemy Core ends the match:
+The Central Lumen Field grants a modest energy income and periodic global vision pulse while held;
+it accelerates conflict but never grants an alternate victory. Late resources pull both factions
+toward the same center. Destroying the enemy Core ends the match:
 Victory if you destroyed it, Defeat if yours falls. Victory/Defeat advance to Results only by
 explicit Continue; Results reports outcome, duration, and key stats, then exits to MatchSetup or
 the main menu.
@@ -194,18 +213,18 @@ the main menu.
 
 ## First Playable Complete checklist (all twelve required)
 
-1. Player-facing main menu reachable from boot.
-2. Setup screen visibly selects player AND AI faction plus difficulty/map/fog/speed/pause/seed.
-3. Loading step renders at least one real match frame before play.
-4. One Helios Rift map hosts every skirmish deterministically.
-5. Fog scouting works and is required to find the enemy and the shared center.
-6. Both faction economies gather, spend, and sustain production asymmetrically.
-7. Each faction commits ONE irreversible choice between TWO technology paths.
-8. Exactly four units per faction form the compact army.
-9. A shared contested center drives conflict mid-match.
-10. Destroying the enemy Core wins the match.
-11. Losing your own Core ends the match in Defeat.
-12. Results screen reports the outcome and returns cleanly to the main menu.
+1. Launch into a proper main menu.
+2. Configure a skirmish.
+3. Select either Sunweaver or Gravemark.
+4. Scout a fog-covered Helios Rift.
+5. Discover resources, the shared objective, and the enemy.
+6. Establish a functioning faction-specific economy.
+7. Choose one irreversible technology path.
+8. Produce a compact mixed army from the exact four-unit roster.
+9. Fight an AI that follows faction-specific strategy with imperfect knowledge.
+10. Win or lose within approximately 12–18 minutes.
+11. Understand what happened from the Results screen.
+12. Play primarily through touch controls at 4:3 iPad landscape.
 
 ## Operating contract
 

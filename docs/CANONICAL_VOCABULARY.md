@@ -14,6 +14,7 @@ dedicated data migration lands.
 | Faction 2 | Gravemark | `gravemark` | adapts to legacy `aurion` (Kryos Conclave) until data migration |
 | Hidden faction | — (not shown) | `voidmarked` (legacy ID retained privately) | legacy `voidmarked` / Nihiline is hidden and deferred, **not deleted** |
 | First Playable map | Helios Rift | `helios-rift` | none yet |
+| Shared objective | Central Lumen Field | `central-lumen-field` | no legacy public label; implementation may reuse existing Lumen/energy resource primitives |
 | Objective structure | Core | `core` | may adapt internally to legacy Hall / Nexus kinds |
 | Progression | technology paths | `tech-path` | replaces internal `epoch` / `ageT` presentation; sim field rename deferred |
 
