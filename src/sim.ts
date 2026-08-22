@@ -75,6 +75,8 @@ export class World {
   readonly civ: Civ[] = ['vespari', 'aurion', 'voidmarked', 'vespari'];
   /** Gameplay fog by default; pass `?fog=0` from main for clear-map review. */
   fogOfWarEnabled = true;
+  /** M2-D — legacy scripted marshal cheats are off by default (docs/M2_D_AI_KNOWLEDGE.md). */
+  scriptedMarshalEnabled = false;
   readonly bolts: Bolt[] = [];
   readonly sparks: Spark[] = [];
   readonly flags: { x: number; z: number; t: number }[] = [];
@@ -421,8 +423,10 @@ export class World {
     this.stepSparks();
     this.updateFog();
     this.stepFlags();
-    this.stepEnemyMarshal();
-    this.stepMarshalPeel();
+    if (this.scriptedMarshalEnabled) {
+      this.stepEnemyMarshal();
+      this.stepMarshalPeel();
+    }
     this.stepAi();
     if ((this.tick & 7) === 0) this.recountPop();
     this.checkWinner();
@@ -964,7 +968,11 @@ export class World {
       return;
     }
     let node = e.tid >= 0 ? this.ents[e.tid] : null;
-    if (!node?.alive || node.kind !== Kind.Resource) node = this.nearestResource(e.x, e.z);
+    // M2-D R2 — team 1 gathers only from nodes it has discovered.
+    if (!node?.alive || node.kind !== Kind.Resource || (e.team === 1 && (node.seenBy & SEEN_RIVAL) === 0)) {
+      node =
+        e.team === 1 ? this.nearestResourceForTeam(1, e.x, e.z) : this.nearestResource(e.x, e.z);
+    }
     if (!node) {
       e.order = Ord.Idle;
       return;
@@ -1286,6 +1294,25 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team !== team || e.kind !== Kind.Hall || e.progress < 1) continue;
+      const d = dist2(x, z, e.x, e.z);
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  /** M2-D — AI-visible resource search: only nodes this team has discovered (R2). */
+  nearestResourceForTeam(team: number, x: number, z: number): Ent | null {
+    const bit = team === 0 ? SEEN_PLAYER : SEEN_RIVAL;
+    let best: Ent | null = null;
+    let bestD = 1e9;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.kind !== Kind.Resource) continue;
+      if (e.cargoType !== Tile.Ore && e.cargoType !== Tile.Gas && e.cargoType !== Tile.Solar) continue;
+      if ((e.seenBy & bit) === 0) continue;
       const d = dist2(x, z, e.x, e.z);
       if (d < bestD) {
         bestD = d;
@@ -1730,6 +1757,59 @@ export class World {
       eco.energy >= STATS[Kind.Scout].energy
     ) {
       this.tryTrain(hall, Kind.Scout);
+    }
+    // M2-D R3/R4 — deterministic scouting and sight-based target invalidation.
+    this.stepAiScout();
+    this.stepAiTargetInvalidation();
+  }
+
+  /** M2-D R3 — send an idle rival Scout to the nearest explored-but-not-visible tile. */
+  private stepAiScout(): void {
+    const scout = this.ents.find(
+      (e) => e.alive && e.team === 1 && e.kind === Kind.Scout && e.order === Ord.Idle,
+    );
+    if (!scout) return;
+    const exp = this.explored[1];
+    const vis = this.visible[1];
+    let bestX = -1;
+    let bestZ = -1;
+    let bestD = Infinity;
+    for (let z = 0; z < MAP; z++) {
+      for (let x = 0; x < MAP; x++) {
+        const idx = x + z * MAP;
+        if (exp[idx] === 0 || vis[idx] !== 0) continue;
+        const d = dist2(x + 0.5, z + 0.5, MAP / 2, MAP / 2);
+        if (d < bestD) {
+          bestD = d;
+          bestX = x;
+          bestZ = z;
+        }
+      }
+    }
+    if (bestX < 0) return;
+    scout.order = Ord.Move;
+    scout.tx = bestX + 0.5;
+    scout.tz = bestZ + 0.5;
+    scout.tid = -1;
+    scout.path = null;
+    scout.pathI = 0;
+  }
+
+  /** M2-D R4 — attackers drop targets their team can no longer see. */
+  private stepAiTargetInvalidation(): void {
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1 || e.order !== Ord.Attack || e.tid < 0) continue;
+      const t = this.ents[e.tid];
+      if (!t.alive || t.hp <= 0) continue;
+      if (t.team === 1) continue;
+      if (this.visible[1][tileAt(t.x, t.z)] !== 0) continue;
+      e.order = Ord.Idle;
+      e.tid = -1;
+      e.vx = 0;
+      e.vz = 0;
+      e.path = null;
+      e.pathI = 0;
     }
   }
 

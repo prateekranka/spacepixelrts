@@ -16,7 +16,9 @@
     "qa:m1": "node scripts/qa-m1.mjs",
     "qa:m2-opening": "node scripts/qa-m2-opening.mjs",
     "qa:m2-discovery": "node scripts/qa-m2-discovery.mjs",
-    "qa:m2-guidance": "node scripts/qa-m2-guidance.mjs"
+    "qa:m2-guidance": "node scripts/qa-m2-guidance.mjs",
+    "qa:m2-ai": "node scripts/qa-m2-ai.mjs",
+    "test:m2-ai": "tsx tests/m2-ai-knowledge.test.ts"
   },
   "dependencies": {
     "three": "^0.180.0"
