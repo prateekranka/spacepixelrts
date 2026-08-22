@@ -105,6 +105,32 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   presentation reviews PASSed after direct dead/enemy selection and bracket DOM coverage.
 - **Next:** M2-D gives the AI scout-driven knowledge and removes all perfect-map targeting.
 
+## Now (resumed 2026-08-22, Linux workspace)
+
+- Work resumed from a fresh clone of `chatgptpro2008` at `2b818fe` (the uncommitted M2-D
+  tree on the Mac was not reachable; M2-D was re-implemented here against a frozen contract).
+- `docs/M2_D_AI_KNOWLEDGE.md` FROZEN: scripted marshal cheats off by default
+  (`scriptedMarshalEnabled=false`); AI workers gather only discovered resources;
+  rival Scout walks an explored-not-visible frontier deterministically; attackers drop
+  targets lost from sight; zero resource grants. Legacy behavior restored by flipping the flag.
+- Missing build entry `town-center-viewer.html` (was untracked on the Mac) restored; `build` is green.
+- M2-D COMPLETE at commit `e43c58f`: `test:m0`, all three `test:m2` files, new
+  `test:m2-ai`, build, and diff check PASS. New `qa:m2-ai` browser proof PASSes on the live
+  opening route: 8 AI workers, 4 gathering, 0 unknown-resource targets, 0 hidden-Core
+  sightings, rival exploration 313 -> 1402 tiles, 0 cheat units, sim step 0.11 ms.
+- Frame-budget note: this Linux container renders through SwiftShader, so render p99 there is
+  not meaningful (~455 ms software raster). `qa:m2-ai` detects software GL and gates the
+  sim-work share instead (max 5 fixed steps per frame = 0.57 ms vs 8 ms budget) while recording
+  the render number ungated. Hardware-GL runs keep gating real p99 directly.
+- Evidence: `/home/bobbyranka/workspace/evidence/starhaven-m2d-ai/` (manifest + before/after captures).
+- M2-D visual gate DEFERRED, honestly: no image-capable critic route exists in this
+  environment (DeepSeek vision provider absent; Hermes fallback vision errored). M2-D changed
+  no render path; its critical gate is the passed sim audit. Re-run the three-critic visual
+  gate when a vision route is available.
+- Push pending: this box has no GitHub token yet (`gh auth login` or `GH_TOKEN` needed);
+  commit `e43c58f` sits local on `chatgptpro2008`.
+- **Next:** M3 asymmetric faction economies per `docs/FIRST_PLAYABLE.md`.
+
 ## Historical
 
 Pre-First-Playable town-center art campaign (Sunweaver Town Center structural rebuild,
