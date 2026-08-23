@@ -19,6 +19,7 @@
     "qa:m2-guidance": "node scripts/qa-m2-guidance.mjs",
     "qa:m2-ai": "node scripts/qa-m2-ai.mjs",
     "qa:touch-contract": "node scripts/qa-touch-contract.mjs",
+    "qa:progression-handoff": "node scripts/qa-progression-handoff.mjs",
     "test:m2-ai": "tsx tests/m2-ai-knowledge.test.ts",
     "test:m4": "tsx tests/m4-tech-paths.test.ts",
     "test:m5": "tsx tests/m5-army.test.ts",

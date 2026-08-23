@@ -1,0 +1,23 @@
+
+> spacepixelrts@0.1.0 qa:progression-handoff
+> node scripts/qa-progression-handoff.mjs
+
+[dev] 
+[dev]   VITE v7.3.6  ready in 182 ms
+[dev] 
+[dev]   ➜  Local:   http://127.0.0.1:39949/
+qa-progression-handoff: dev server ready at http://127.0.0.1:39949
+[RED] RED current tree: completed Yard has no actionable tech-focus button
+[RED] RED current tree: Lumen Guard exposes "needs path" instead of "Choose path first"
+[RED] RED current tree: Solar Strider exposes "needs path" instead of "Choose path first"
+[RED] RED current tree: Yard build label hides Charge (saw "150 ore")
+--- qa-progression-handoff summary ---
+ok=false
+manifest=/tmp/starhaven-m6b-progression-handoff/manifest.json
+errors:
+  - Error: RED current-tree contract failures:
+RED current tree: completed Yard has no actionable tech-focus button
+RED current tree: Lumen Guard exposes "needs path" instead of "Choose path first"
+RED current tree: Solar Strider exposes "needs path" instead of "Choose path first"
+RED current tree: Yard build label hides Charge (saw "150 ore")
+    at main (file:///home/bobbyranka/workspace/spacepixelrts/scripts/qa-progression-handoff.mjs:415:13)

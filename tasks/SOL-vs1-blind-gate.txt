@@ -1,0 +1,22 @@
+# VS-1 Fresh Blind Visual Gate
+
+You are a fresh UI/RTS critic. Judge ONLY the five attached composited screenshots from the actual running Starhaven build at target iPad logical size 1366×1024. Do not inspect source, repo, tests, logs, or hidden state.
+
+Sequence:
+1. Yard selected before handoff.
+2. Nexus path choices.
+3. Path channel in progress.
+4. Permanent committed path.
+5. Yard after unlock.
+
+Bar: a touch-first commercial RTS. Judge whether a first player can understand and execute the one-way flow Yard → choose permanent Nexus doctrine → wait for commitment → return to enabled combat roster. Check hierarchy, 44px-ish target clarity, complete resource costs, state distinction, clipping/collision, and next-action clarity. Ignore general terrain/unit art unless it prevents this interaction.
+
+Output exactly:
+VERDICT: PASS or FAIL
+HANDOFF: one sentence
+COST TRUTH: one sentence
+STATE CLARITY: one sentence
+NEXT ACTION: one sentence
+SINGLE BIGGEST GAP: one sentence
+
+PASS only if the interaction is clearly usable at 1366×1024 and no category defect blocks the flow. Be strict but do not fail it for unrelated future art debt.

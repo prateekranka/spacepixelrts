@@ -128,6 +128,23 @@ export class Input {
     this.sfx.select();
   }
 
+  /** Focus the player's completed Nexus so research is reachable without a building pick. */
+  focusHall(): boolean {
+    const hall = this.world.ents.find(
+      (e) => e.alive && e.team === 0 && e.kind === Kind.Hall && e.hp > 0 && e.progress >= 1,
+    );
+    if (!hall) return false;
+    this.selected.clear();
+    this.selected.add(hall.id);
+    this.commandMode = null;
+    this.place = null;
+    this.pan.x = hall.x;
+    this.pan.z = hall.z;
+    this.halfH = Math.min(this.halfH, 6.2);
+    this.sfx.select();
+    return true;
+  }
+
   private onDown(e: PointerEvent): void {
     const el = e.target as HTMLElement;
     if (el.closest('#start-screen')) return;

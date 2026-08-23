@@ -258,11 +258,16 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   Volatiles visibly rose 40→48 in honest real time. Evidence/report:
   `/home/bobbyranka/workspace/evidence/starhaven-m6a-blind-touch/`.
   Remaining named gap: FIND IDLE WORKER is clipped at 1024×768 (responsive-HUD debt).
-- **M6-B progression handoff + honest costs FROZEN**
-  (`docs/M6_B_PROGRESSION_HANDOFF.md`): actionable `TECHNOLOGY PATH` / `CHOOSE PATH`
-  entry from no-selection and Yard decks selects/centers Nexus; all build/train labels show
-  every real Ore/Volatiles/Charge deduction; locked units say `Choose path first`.
-  Strict browser RED→GREEN required; sim/content/render stay untouched.
+- **M6-B / VS-1 progression handoff + honest costs COMPLETE:** strict RED proved missing
+  `tech-focus`, bare `needs path`, and hidden Yard Charge cost. GREEN adds no-selection
+  `TECHNOLOGY PATH`, Yard `CHOOSE PATH`, Nexus focus/centering, full Ore/Volatiles/Charge labels,
+  and explicit `Choose path first` recovery copy; sim/content/render untouched. Lead reran
+  progression QA, touch QA, all m0–m5 suites, and build: PASS, console errors 0. QA negative
+  no-Nexus case moved last so it no longer contaminates visual evidence with Defeat.
+  Fresh Sol Max-fast blind gate on five 1366×1024 composited states: **PASS**. Named non-blocking
+  debt: lower deck crowding near viewport edge. Evidence:
+  `/home/bobbyranka/workspace/evidence/starhaven-vs1-target/`. Next active piece: VS-2A honest AI
+  Yard→path→mixed-army doctrine.
 - **Production matches working tree** (`game-C12P1XJ5.js`): force-deployed twice — first the
   M5-A/M4-B state bobby was viewing, then this build. `desktop.html` route deployed too:
   strips the portrait rotate-gate so non-iPad browsers render full landscape UI

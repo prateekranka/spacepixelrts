@@ -315,6 +315,9 @@ export class Hud {
       input.commandAt('gather');
       if (input.commandMode === 'gather') this.hintEl.textContent = 'GATHER ARMED · Tap a resource node';
     }
+    if (cmd === 'tech-focus') {
+      this.hintEl.textContent = input.focusHall() ? 'Choose one permanent path' : 'Build a Nexus first';
+    }
     if (cmd.startsWith('path-')) world.tryCommitPath(0, cmd.slice(5) as TechPathId);
     if (cmd.startsWith('train-')) {
       const kind = Number(cmd.slice(6)) as Kind;
@@ -381,6 +384,14 @@ export class Hud {
     const eco = world.teams[0];
     const channel = world.pathChannelT(0);
     const channeling = channel > 0;
+    const costLabel = (cost: Pick<(typeof STATS)[number], 'ore' | 'gas' | 'energy'>): string => {
+      const parts: string[] = [];
+      if (cost.ore > 0) parts.push(`${cost.ore} Ore`);
+      if (cost.gas > 0) parts.push(`${cost.gas} Volatiles`);
+      if (cost.energy > 0) parts.push(`${cost.energy} Charge`);
+      return parts.join(' · ');
+    };
+    const pathCost = costLabel({ ore: 400, gas: 0, energy: 80 });
     type CmdButton = {
       cmd: string;
       label: string;
@@ -398,12 +409,15 @@ export class Hud {
       return {
         cmd: `train-${kind}`,
         label,
-        sub: locked ? 'needs path' : overCap ? 'pop cap' : (sub ?? `${st.ore} ore`),
+        sub: locked ? 'Choose path first' : overCap ? 'pop cap' : (sub ?? costLabel(st)),
         disabled: overCap || locked || extraDisabled,
       };
     };
     const btns: CmdButton[] = [];
     if (ent === null) {
+      if (world.techPathOf(0) === null) {
+        btns.push({ cmd: 'tech-focus', label: 'TECHNOLOGY PATH', sub: 'Open Nexus research' });
+      }
       btns.push({ cmd: 'idleworker', label: 'FIND IDLE WORKER', sub: 'find drone' });
       btns.push({ cmd: 'move', label: 'MOVE', sub: 'Tap ground to move', disabled: true });
       btns.push({ cmd: 'attack', label: 'ATTACK', sub: 'Tap target to attack', disabled: true });
@@ -436,7 +450,7 @@ export class Hud {
             cmd: `path-${id}`,
             label: info.name,
             sub: info.blurb,
-            detail: channeling ? `Committing · ${Math.ceil(channel)}s` : '400 ore · 80 charge',
+            detail: channeling ? `Committing · ${Math.ceil(channel)}s` : pathCost,
             detailClass: channeling ? 'countdown' : 'cost',
             barPct: pct,
             disabled: !afford || channeling || ent.trainT > 0,
@@ -446,17 +460,20 @@ export class Hud {
       }
       btns.push(trainBtn(Kind.Worker, workerName(civ), undefined, channeling));
       btns.push(trainBtn(Kind.Scout, labelOf(Kind.Scout, civ), undefined, channeling));
-      btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: `${STATS[Kind.House].ore} ore` });
-      btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: `${STATS[Kind.Barracks].ore} ore` });
-      btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: `${STATS[Kind.UniqueB].ore} ore` });
+      btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: costLabel(STATS[Kind.House]) });
+      btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: costLabel(STATS[Kind.Barracks]) });
+      btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: costLabel(STATS[Kind.UniqueB]) });
     } else if (kind === Kind.Barracks) {
+      if (world.techPathOf(0) === null) {
+        btns.push({ cmd: 'tech-focus', label: 'CHOOSE PATH', sub: 'Open Nexus research' });
+      }
       btns.push(trainBtn(Kind.Fighter, fighterName(civ)));
       btns.push(trainBtn(uniqueUnit(civ), labelOf(uniqueUnit(civ), civ)));
     } else if (kind === Kind.Worker) {
-      btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: `${STATS[Kind.House].ore} ore` });
-      btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: `${STATS[Kind.Barracks].ore} ore` });
-      btns.push({ cmd: `build-${Kind.Hall}`, label: hallName(civ), sub: `${STATS[Kind.Hall].ore} ore` });
-      btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: `${STATS[Kind.UniqueB].ore} ore` });
+      btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: costLabel(STATS[Kind.House]) });
+      btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: costLabel(STATS[Kind.Barracks]) });
+      btns.push({ cmd: `build-${Kind.Hall}`, label: hallName(civ), sub: costLabel(STATS[Kind.Hall]) });
+      btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: costLabel(STATS[Kind.UniqueB]) });
       btns.push({ cmd: 'gather', label: 'GATHER', sub: 'Tap a resource node' });
       btns.push({ cmd: 'stop', label: 'STOP', sub: 'Cancel orders' });
     } else if (kind !== null) {
