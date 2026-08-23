@@ -198,6 +198,7 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   Sol now also runs design-support memos (M5 roster mapping memo dispatched in parallel).
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
+  (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
 
 ## Historical
 
