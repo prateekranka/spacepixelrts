@@ -1,0 +1,64 @@
+# VS2A Builder — honest AI production doctrine (strict TDD)
+
+Read FIRST:
+1. DIRECTIVE.md
+2. docs/VERTICAL_SLICE_SPRINT.md
+3. docs/VS2A_HONEST_AI.md (frozen, implement exactly)
+4. docs/M2_D_AI_KNOWLEDGE.md
+5. src/sim.ts stepAi/stepAiScout/tryPlace/tryCommitPath/tryTrain/thinkBuild/thinkBuildings
+6. src/main.ts prepareMatch
+7. tests/m2-ai-knowledge.test.ts + tests/m4-tech-paths.test.ts
+8. scripts/qa-m2-ai.mjs (browser/perf patterns)
+
+Owned scope:
+- src/sim.ts
+- src/main.ts
+- tests/vs2-ai-doctrine.test.ts (new)
+- scripts/qa-vs2-ai-doctrine.mjs (new)
+- package.json (`test:vs2-ai`, `qa:vs2-ai-doctrine`)
+- tasks/VS2A-red.log (force-add despite tasks/*.log ignore)
+No content/stats/render/HUD/input/assets changes. No dependency.
+
+Strict sequence:
+A. Write test:vs2-ai FIRST. Run on untouched source. It must RED for missing Yard/path/mixed force; save full output verbatim to tasks/VS2A-red.log.
+B. Implement minimum production behavior. Do not weaken tests.
+C. Write/run browser proof from frozen spec.
+D. Run all gates and commit your work yourself.
+
+Non-negotiable implementation:
+- World.aiDifficulty typed Difficulty, default standard; main sets config before reset.
+- cadence only: cadet 2.6, standard 1.4, veteran 0.8.
+- AI one Yard via canPlace+tryPlace+real Worker construction. Eight deterministic ring offsets.
+- complete Yard then correct path via tryCommitPath and normal 40s channel.
+- mixed Fighter/unique through tryTrain; first force 2+2; normal costs/times/cap.
+- unique mapping: vespari Ravager, aurion Prism. Never Siege/ Shade.
+- rally center; attack player Hall only after Hall.seenBy includes SEEN_RIVAL and force >=4.
+- Scout target must be an UNEXPLORED, nonblocked frontier tile adjacent to explored; deterministic score/tie. Do not read enemy entities for frontier selection.
+- no resource assignments/floors/grants, direct tech writes, direct building/unit spawn, hidden target, or shortened training.
+- leave scripted marshal legacy intact/default false.
+
+Test instrumentation may wrap public tryPlace/tryCommitPath/tryTrain and call through to prove legal seams and exact costs. Keep tests deterministic and fast (<30s preferred).
+
+Browser QA:
+- fixed opening route, Standard, 1366x1024;
+- direct world fast-step only (read/stage camera; do not mutate resources/entities/path);
+- capture Yard, channel, mixed center force, discovered-Core attack;
+- milestone ticks/economies/path/counts/visibility, console errors, sim timing;
+- milestones by minute 12, software GL sim share <8ms.
+
+Run:
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /home/bobbyranka/workspace/evidence/starhaven-vs2a-ai
+npm run qa:progression-handoff -- --out /tmp/vs2a-progression
+npm run qa:touch-contract -- --out /tmp/vs2a-touch
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit exact prefix: `VS2A: ...`
+Do not push or deploy. Report commit SHA, RED lines, milestone ticks, no-grant proof, gate tails, deviations.

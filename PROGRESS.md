@@ -266,8 +266,13 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   no-Nexus case moved last so it no longer contaminates visual evidence with Defeat.
   Fresh Sol Max-fast blind gate on five 1366×1024 composited states: **PASS**. Named non-blocking
   debt: lower deck crowding near viewport edge. Evidence:
-  `/home/bobbyranka/workspace/evidence/starhaven-vs1-target/`. Next active piece: VS-2A honest AI
-  Yard→path→mixed-army doctrine.
+  `/home/bobbyranka/workspace/evidence/starhaven-vs1-target/`. VS-1 is deployed.
+- **VS-2A honest AI doctrine FROZEN / ACTIVE** (`docs/VS2A_HONEST_AI.md`): measured honest
+  Gravemark economy reaches 891 Ore / 816 Volatiles / 70 Charge at minute 4 and needs no grant.
+  Piece adds legal one-Yard construction, normal 400/80 path channel, 2+2 mixed army, true
+  unexplored-frontier scouting, center rally, and discovered-Core attack. Difficulty affects only
+  decision cadence. Strict RED→GREEN plus fixed-seed 1366×1024 fast-step browser proof required;
+  no HUD/render/assets changes.
 - **Production live at VS-1** (`e36d48e`, `assets/main-CPZobgDv.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live browser readback at
   1366×1024 confirms Yard `150 Ore · 20 Charge`, no-selection `TECHNOLOGY PATH`, both path
