@@ -221,13 +221,18 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   (was 12.2 pre-fix, now 28.3). Sol round on M5-C FAILed on darkness; M5-D fixed that
   named gap. Fresh Sol re-gate still FAILed: topbar/ability/objective hierarchy collides.
   Visual-only iteration is paused while the critics test the actual game loop.
-- **Blind gameplay gate IN PROGRESS (three independent Sol Max fast players, production UI only):**
-  1. first-time 1366×1024 player — full menu→match, minimum 10 real minutes;
-  2. 1024×768 touch-emulated player — selection/pan/zoom/pause/economy/combat;
-  3. expert RTS systems player — minimum 15 real minutes, timeline at 2/5/10/15 min.
-  No critic may inspect source, QA URLs, hidden state, or mutate the sim. Evidence/report roots:
-  `/home/bobbyranka/workspace/evidence/starhaven-blind-{gameplay,touch,systems}-sol/`.
-  Gameplay findings, not the next milestone number, decide the next implementation piece.
+- **Blind gameplay gate — 2/3 COMPLETE (Sol Max fast, sealed production UI):**
+  1. touch-only 1024×768: 51:05, FAIL — no trustworthy touch contract; armed MOVE tap
+     deselects, resources become Attacking/no income, pause off-screen, technology dead-end;
+  2. first-time 1366×1024: 52:25, FAIL — same economy→army break; no Harvest feedback,
+     Yard/tech unreachable, combat/AI unreadable; zero console errors;
+  3. expert RTS systems run still finishing its report.
+  Evidence/reports: `/home/bobbyranka/workspace/evidence/starhaven-blind-{gameplay,touch,systems}-sol/`.
+- **M6-A touch order truth + first income FROZEN** (`docs/M6_A_TOUCH_ORDER_TRUTH.md`,
+  `5694b28`) from code-traced root causes: MOVE/ATTACK HUD handlers were comments,
+  next tap always called selectTap, long-press hard-coded Move, and Resource team 3 entered
+  enemy-pick before gather. Luna strict TDD builder dispatched: browser QA must go RED on
+  current behavior before input.ts/hud.ts edits; sim.ts stays untouched.
 - **Production matches working tree** (`game-C12P1XJ5.js`): force-deployed twice — first the
   M5-A/M4-B state bobby was viewing, then this build. `desktop.html` route deployed too:
   strips the portrait rotate-gate so non-iPad browsers render full landscape UI
