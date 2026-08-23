@@ -2,10 +2,10 @@
 
 **Play:** https://spacepixelrts.pages.dev
 **Bar:** StarCraft II (space RTS, base building, asymmetric factions) — blind, on the running game.
-**Active goal:** **First Playable Skirmish** — one 12–18 minute iPad-first 4:3 loop: main menu ->
-setup -> loading -> Helios Rift -> fog scouting -> faction economy -> ONE irreversible choice
-between TWO technology paths per faction -> four-unit compact army -> shared-center conflict ->
-destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
+**Active goal:** **Playable Vertical Slice** — close one honest 12–18 minute iPad-first 4:3
+skirmish before deep controls or general polish: menu -> scout -> gather -> choose technology path ->
+train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
+`docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
 
 ## Roles (active)
 
@@ -22,6 +22,19 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   solar-ascendancy / sky-dominion / iron-colossus / rift-engineering; legacy vespari/aurion kept
   as private adapters until a dedicated migration; Nihiline/voidmarked hidden and deferred).
 - Active branch `chatgptpro2008` tracking origin/chatgptpro2008.
+- **Vertical Slice Sprint STARTED from clean GitHub HEAD** (`f3595be`): stopped M6-B partial
+  work preserved in stash `stopped-M6B-partial-before-vertical-slice-restart`, then tree reset to
+  `origin/chatgptpro2008`. Baseline build + m0/m2/m2-ai/m3/m4/m5 gates pass.
+- Code audit found three loop-closure blockers: player cannot reach Nexus technology from Yard;
+  honest AI gathers/scouts but never builds Yard/commits path/fields army; Victory/Defeat has no
+  Continue/Results UI. Locked closure order is VS-1 handoff, VS-2 AI+center, VS-3 results, then
+  VS-4 slice-critical combat assets. Specs: `docs/VERTICAL_SLICE_SPRINT.md` and
+  `docs/VS1_COMBAT_ASSETS.md`.
+- Managed image generation for the two faction asset boards failed before charging with a Nous/FAL
+  charge-intent fetch timeout (three attempts). Asset path switched to the existing deterministic
+  startup-rasterized pixel pipeline; this does not block gameplay closure.
+- One Luna Max-fast focused audit is running with an 8-real-minute in-match cap. Long exploratory
+  playtests are retired; future seam checks stay at 5–10 minutes and final pacing uses fast QA.
 - M0 COMPLETE: explicit `Boot -> MainMenu -> MatchSetup -> Loading -> Playing -> TacticalPause /
   Victory / Defeat -> Results` state machine; no writable menu/gameplay booleans remain.
 - Deterministic `?qa=` registry covers 9 primary and 4 supplemental routes with fixed seed, camera,

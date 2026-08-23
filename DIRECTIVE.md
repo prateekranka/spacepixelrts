@@ -13,8 +13,15 @@ This is the single active directive for Starhaven work. Read, in order:
 
 ## Current order
 
-Vocabulary (done) -> **M0 harness** (next) -> M1 front door -> complete playable loop.
-No more content or polish before the full loop exists.
+M0–M6-A foundations are complete. The active order is now the bounded closure sprint in
+`docs/VERTICAL_SLICE_SPRINT.md`:
+
+**VS-1 progression handoff -> VS-2 honest AI + center conflict -> VS-3 terminal/results ->
+VS-4 four-unit combat asset pack.**
+
+Do not resume deep radial/formation controls, extra maps/units, or general visual polish before
+VS-1–3 close the complete skirmish loop. VS-4 is the first asset pass because it changes only the
+four silhouettes required to judge that loop.
 
 ## Historical note
 
