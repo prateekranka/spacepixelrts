@@ -24,6 +24,12 @@ const EXPECTED_MAPPINGS = [
   { kind: 2, civ: 1, row: 2 },
   { kind: 5, civ: 1, row: 3 },
 ];
+const EXPECTED_WORLD_SCALES = [
+  { kind: 2, civ: 0, row: 0, scale: [1.18, 1.40] },
+  { kind: 4, civ: 0, row: 1, scale: [1.52, 1.14] },
+  { kind: 2, civ: 1, row: 2, scale: [1.24, 1.42] },
+  { kind: 5, civ: 1, row: 3, scale: [1.52, 1.34] },
+];
 
 function assertThat(condition, message) {
   if (!condition) throw new Error(message);
@@ -147,6 +153,59 @@ function analyzePng(file, expectedWidth, expectedHeight) {
   };
 }
 
+function analyzeCombatRows(file) {
+  const png = PNG.sync.read(fs.readFileSync(file));
+  assertThat(png.width === 1024 && png.height === 256, 'combat atlas dimensions changed while measuring rows');
+  const rows = [];
+  for (let row = 0; row < 4; row++) {
+    const cells = [];
+    for (let column = 0; column < 16; column++) {
+      let alphaPixels = 0;
+      let brightPixels = 0;
+      let minX = CELL;
+      let minY = CELL;
+      let maxX = -1;
+      let maxY = -1;
+      for (let localY = 0; localY < CELL; localY++) {
+        for (let localX = 0; localX < CELL; localX++) {
+          const x = column * CELL + localX;
+          const y = row * CELL + localY;
+          const index = (x + y * png.width) * 4;
+          const alpha = png.data[index + 3];
+          if (alpha <= 0) continue;
+          alphaPixels++;
+          minX = Math.min(minX, localX);
+          minY = Math.min(minY, localY);
+          maxX = Math.max(maxX, localX);
+          maxY = Math.max(maxY, localY);
+          const luma = 0.2126 * png.data[index] + 0.7152 * png.data[index + 1] + 0.0722 * png.data[index + 2];
+          if (luma >= 65) brightPixels++;
+        }
+      }
+      assertThat(alphaPixels > 0, `combat atlas row ${row} column ${column} is empty while measuring rows`);
+      cells.push({
+        dir: column % 8,
+        pose: Math.floor(column / 8),
+        alphaPixels,
+        alphaWidth: maxX - minX + 1,
+        alphaHeight: maxY - minY + 1,
+        brightMaterialShare: Math.round((brightPixels / alphaPixels) * 10000) / 10000,
+      });
+    }
+    const widths = cells.map((cell) => cell.alphaWidth);
+    const heights = cells.map((cell) => cell.alphaHeight);
+    const brightShares = cells.map((cell) => cell.brightMaterialShare);
+    rows.push({
+      row,
+      alphaWidth: { min: Math.min(...widths), max: Math.max(...widths) },
+      alphaHeight: { min: Math.min(...heights), max: Math.max(...heights) },
+      brightMaterialShare: { min: Math.min(...brightShares), max: Math.max(...brightShares) },
+      cells,
+    });
+  }
+  return { lumaThreshold: 65, rows };
+}
+
 function attachErrors(page, manifest, label) {
   page.on('console', (message) => {
     if (message.type() === 'error') manifest.errors.push(`${label} console.error: ${message.text()}`);
@@ -244,6 +303,7 @@ async function exportCombatCanvases(page, out) {
     contactPath,
     atlasImage: analyzePng(atlasPath, 1024, 256),
     contactImage: analyzePng(contactPath, 2048, 1024),
+    sourceMetrics: analyzeCombatRows(atlasPath),
     sourceMagenta: data.sourceMagenta,
     atlas: data.atlas,
     runtime: data.runtime,
@@ -351,6 +411,38 @@ async function readRenderer(page) {
   });
 }
 
+async function readCombatInstanceScales(page) {
+  return page.evaluate((expectedMappings) => {
+    const view = globalThis.__STARHOLD_VIEW__;
+    const mesh = [...view.scene.children].find((object) => object.isInstancedMesh && object.material?.uniforms?.uCombatAtlas);
+    if (!mesh) throw new Error('combat mesh missing for matrix scale probe');
+    const meta = mesh.geometry.getAttribute('iMeta')?.array;
+    const matrices = mesh.instanceMatrix?.array;
+    if (!meta || !matrices) throw new Error('combat instance attributes missing for matrix scale probe');
+    return expectedMappings.map((mapping) => {
+      let index = -1;
+      for (let candidate = 0; candidate < mesh.count; candidate++) {
+        const base = candidate * 4;
+        if (Math.round(meta[base]) === mapping.kind && Math.round(meta[base + 1]) === mapping.civ) {
+          index = candidate;
+          break;
+        }
+      }
+      if (index < 0) return { ...mapping, instance: -1, actual: null, pass: false };
+      const base = index * 16;
+      const scaleX = Math.hypot(matrices[base], matrices[base + 1], matrices[base + 2]);
+      const scaleY = Math.hypot(matrices[base + 4], matrices[base + 5], matrices[base + 6]);
+      const actual = [Math.round(scaleX * 10000) / 10000, Math.round(scaleY * 10000) / 10000];
+      return {
+        ...mapping,
+        instance: index,
+        actual,
+        pass: Math.abs(actual[0] - mapping.scale[0]) < 0.0001 && Math.abs(actual[1] - mapping.scale[1]) < 0.0001,
+      };
+    });
+  }, EXPECTED_WORLD_SCALES);
+}
+
 async function measurePolicy(page) {
   const measure = await page.evaluate(() => {
     const world = globalThis.__STARHOLD_WORLD__;
@@ -423,6 +515,7 @@ async function main() {
       sourceMagentaPixels: exportData.sourceMagenta,
       expectedSourceMagenta: true,
     };
+    manifest.checks.sourceMetrics = exportData.sourceMetrics;
     manifest.checks.runtimeContract = exportData.runtime;
     assertThat(exportData.atlas.width === 1024 && exportData.atlas.height === 256, 'combat atlas dimensions are not 1024x256');
     assertThat(exportData.atlas.cell === 64 && exportData.atlas.cols === 16 && exportData.atlas.rows === 4, 'combat atlas cell grid is not 64/16/4');
@@ -449,6 +542,13 @@ async function main() {
 
     const lineup = await stageFixture(exportPage, 'lineup');
     await settleFrames(exportPage);
+    const worldScales = await readCombatInstanceScales(exportPage);
+    manifest.checks.worldScales = {
+      expected: EXPECTED_WORLD_SCALES,
+      actual: worldScales,
+      allExact: worldScales.every((mapping) => mapping.pass),
+    };
+    assertThat(worldScales.every((mapping) => mapping.pass), `actual combat world scales do not match R2: ${JSON.stringify(worldScales)}`);
     const lineupPath = path.join(out, 'lineup-after.png');
     await exportPage.screenshot({ path: lineupPath, type: 'png' });
     const lineupImage = analyzePng(lineupPath, VIEWPORT.width, VIEWPORT.height);

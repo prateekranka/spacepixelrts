@@ -1430,26 +1430,27 @@ function drawLumenGuardCombat(dir: number, pose: number): Pix {
   const gaitA = pose ? (side || back ? 2 : 1) : 0;
   const gaitB = pose ? (side || back ? 0 : 2) : 0;
 
-  // Opposite-side spear: its 2px shaft remains continuous from head to boot.
-  p.fillRect(spearX - 1, 8, 2, 46, COMBAT_INK);
-  p.fillRect(spearX, 9, 1, 43, SUN_GOLD);
-  p.fillRect(spearX - 4, 7, 8, 4, COMBAT_INK);
-  p.fillRect(spearX - 2, 8, 4, 2, SUN_AMBER);
-  p.fillRect(spearX - 1, 5, 2, 4, COMBAT_INK);
-  p.set(spearX, 6, SUN_CREAM);
+  // Opposite-side spear: its 2px shaft remains continuous from the new
+  // connected tip to the boot. The tip reaches rows 0–2 without moving the
+  // main body above its authored y=11 top.
+  p.fillRect(spearX - 1, 2, 2, 52, COMBAT_INK);
+  p.fillRect(spearX, 3, 1, 49, SUN_GOLD);
+  p.fillRect(spearX - 2, 2, 4, 5, COMBAT_INK);
+  p.fillRect(spearX - 1, 3, 2, 3, SUN_AMBER);
+  p.set(spearX, 2, SUN_CREAM);
 
   // Planted legs are painted before the body so their joins stay ink-connected.
   const legAX = side ? 24 : cx - 6;
   const legBX = side ? 35 : cx + 2;
-  combatLeg(p, legAX + (pose ? 1 : 0), 40 - gaitA, 56, 4, SUN_TEAL, SUN_CREAM, SUN_TEAL_D);
-  combatLeg(p, legBX - (pose ? 1 : 0), 40 - gaitB, 56, 4, SUN_TEAL_D, SUN_SAND, COMBAT_INK);
+  combatLeg(p, legAX + (pose ? 1 : 0), 40 - gaitA, 53, 4, SUN_TEAL, SUN_CREAM, SUN_TEAL_D);
+  combatLeg(p, legBX - (pose ? 1 : 0), 40 - gaitB, 53, 4, SUN_TEAL_D, SUN_SAND, COMBAT_INK);
 
   combatRect(p, bodyX - 1, 25, bodyW + 2, 16, SUN_SAND, SUN_CREAM, SUN_TEAL_D);
   p.fillRect(bodyX, 31, bodyW, 6, SUN_TEAL);
   p.fillRect(bodyX + 2, 35, bodyW - 4, 4, SUN_SAND);
   p.fillRect(cx - 4, 11, 8, 9, COMBAT_INK);
   p.fillRect(cx - 3, 12, 6, 6, SUN_CREAM);
-  p.fillRect(cx - 6, 10, 12, 3, SUN_GOLD);
+  p.fillRect(cx - 6, 11, 12, 3, SUN_GOLD);
   p.fillRect(cx - 3, 16, 6, 3, SUN_TEAL_D);
   p.fillRect(cx - 1, 19, 2, 7, COMBAT_INK);
   p.set(cx - 1, 17, SUN_AMBER);
@@ -1475,6 +1476,7 @@ function drawSolarStriderCombat(dir: number, pose: number): Pix {
   const side = dir === 0;
   const back = dir === 2;
   const front = dir === 6;
+  const threeQuarter = dir === 1 || dir === 7;
   const hullX = side ? 11 : front || back ? 21 : 14;
   const hullW = side ? 42 : front || back ? 23 : 37;
   const engineX = side ? 31 : front || back ? 32 : dir === 1 ? 34 : 30;
@@ -1521,6 +1523,33 @@ function drawSolarStriderCombat(dir: number, pose: number): Pix {
   p.fillRect(emitterRight ? emitterX : emitterX - 1, 34, 4, 4, COMBAT_INK);
   p.fillRect(emitterRight ? emitterX + 1 : emitterX, 35, 2, 1, SUN_GOLD);
   p.set(emitterRight ? emitterX + 2 : emitterX - 1, 35, SUN_AMBER);
+
+  // Connected ivory/gold outriggers keep compressed front/back and 3Q views
+  // broad without filling the negative space under the low hull.
+  const stabilizerReach = front || back ? 10 : threeQuarter ? 6 : 0;
+  if (stabilizerReach > 0) {
+    const left = hullX - stabilizerReach;
+    const right = hullX + hullW - 1;
+    const stabilizerBase = front || back ? SUN_CREAM : SUN_GOLD;
+    p.fillRect(left, 33, stabilizerReach + 3, 6, COMBAT_INK);
+    p.fillRect(left + 2, 34, stabilizerReach, 3, stabilizerBase);
+    p.fillRect(left + 3, 34, Math.max(1, stabilizerReach - 1), 2, SUN_CREAM);
+    p.fillRect(right - 2, 33, stabilizerReach + 3, 6, COMBAT_INK);
+    p.fillRect(right, 34, stabilizerReach, 3, stabilizerBase);
+    p.fillRect(right + 1, 34, Math.max(1, stabilizerReach - 1), 2, SUN_CREAM);
+    if (front || back) {
+      p.fillRect(left - 2, 32, 8, 7, SUN_CREAM);
+      p.fillRect(right + stabilizerReach - 3, 32, 8, 7, SUN_CREAM);
+    }
+  }
+  if (front || back) {
+    // Keep a small offset emitter on the compressed face after the outrigger
+    // pass; it preserves the low machine's directional read.
+    const facePortX = hullX - 4;
+    p.fillRect(facePortX - 2, 34, 6, 5, COMBAT_INK);
+    p.fillRect(facePortX - 1, 35, 4, 3, SUN_GOLD);
+    p.set(facePortX, 36, SUN_AMBER);
+  }
   return p;
 }
 
@@ -1533,21 +1562,25 @@ function drawRiftGuardCombat(dir: number, pose: number): Pix {
   const cx = side ? 31 : threeQuarter ? 33 : 31;
   const shieldX = side ? 19 : dir === 1 ? 38 : back ? 38 : front ? 39 : 37;
   const shieldW = side ? 15 : 14;
-  const spearX = side ? 50 : dir === 1 ? 22 : back ? 22 : front ? 21 : 23;
+  const spearX = side ? 50 : front ? 20 : 21;
   const bodyW = side ? 10 : 9;
   const bodyX = cx - Math.floor(bodyW / 2);
   const gaitA = pose ? (side || front ? 2 : 1) : 0;
   const gaitB = pose ? (side || front ? 0 : 2) : 0;
 
-  // Crystal spear on the shoulder opposite the tower shield.
-  p.fillRect(spearX - 1, 10, 2, 43, COMBAT_INK);
-  p.fillRect(spearX - 3, 7, 6, 5, COMBAT_INK);
-  p.fillRect(spearX - 2, 8, 4, 3, GRAVE_CRYSTAL);
+  // Crystal spear on the shoulder opposite the tower shield. The 9px
+  // connected ice/slate head projects into rows 0–2 and remains outside the
+  // rectangular shield in every authored view.
+  p.fillRect(spearX - 1, 2, 2, 52, COMBAT_INK);
+  p.fillRect(spearX, 3, 1, 49, GRAVE_STEEL);
+  p.fillRect(spearX - 2, 2, 4, 9, COMBAT_INK);
+  p.fillRect(spearX - 1, 3, 2, 7, GRAVE_CRYSTAL);
+  p.set(spearX, 2, GRAVE_ICE);
 
-  combatLeg(p, bodyX, 41 - gaitA, 56, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
-  combatLeg(p, bodyX + 6 - (pose ? 1 : 0), 41 - gaitB, 56, 4, GRAVE_FOG, GRAVE_SLATE, COMBAT_INK);
+  combatLeg(p, bodyX - (pose ? 1 : 0), 41 - gaitA, 53, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
+  combatLeg(p, bodyX + 6 - (pose ? 1 : 0), 41 - gaitB, 53, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
   combatRect(p, bodyX - 1, 25, bodyW + 2, 16, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
-  p.fillRect(bodyX, 32, bodyW, 5, GRAVE_FOG);
+  p.fillRect(bodyX, 32, bodyW, 5, GRAVE_STEEL);
   p.fillRect(cx - 4, 11, 8, 10, COMBAT_INK);
   p.fillRect(cx - 2, 13, 4, 5, GRAVE_SLATE);
   p.fillRect(cx, 21, 1, 5, COMBAT_INK);
@@ -1559,10 +1592,10 @@ function drawRiftGuardCombat(dir: number, pose: number): Pix {
   p.fillRect(shieldX + 2, shieldY, shieldW - 4, 2, COMBAT_INK);
   p.fillRect(shieldX, shieldY + 2, 2, 39, COMBAT_INK);
   p.fillRect(shieldX + shieldW - 2, shieldY + 2, 2, 39, COMBAT_INK);
-  p.fillRect(shieldX + 2, shieldY + 41, shieldW - 4, 2, COMBAT_INK);
+  p.fillRect(shieldX + 2, shieldY + 40, shieldW - 4, 2, COMBAT_INK);
   p.fillRect(shieldX + 3, shieldY + 3, shieldW - 6, 29, GRAVE_SLATE);
   p.fillRect(shieldX + 3, shieldY + 6, 3, front ? 24 : 25, GRAVE_STEEL);
-  p.fillRect(shieldX + 6, shieldY + 5, shieldW - 9, 26, GRAVE_FOG);
+  p.fillRect(shieldX + 6, shieldY + 5, shieldW - 9, 26, GRAVE_STEEL);
   p.fillRect(shieldX + 3, shieldY + 38, shieldW - 6, 3, COMBAT_INK);
   p.fillRect(shieldX + 1, shieldY + 5, 3, 6, GRAVE_BONE);
   p.fillRect(shieldX + shieldW - 4, shieldY + 7, 3, 6, GRAVE_GOLD);
@@ -1593,21 +1626,22 @@ function drawBurdenWalkerCombat(dir: number, pose: number): Pix {
   const side = dir === 0;
   const back = dir === 2;
   const front = dir === 6;
-  const hullX = side ? 12 : front || back ? 20 : 14;
-  const hullW = side ? 42 : front || back ? 26 : 38;
+  const threeQuarter = dir === 1 || dir === 7;
+  const hullX = side ? 12 : front || back ? 18 : 14;
+  const hullW = side ? 42 : front || back ? 30 : 38;
   const engineX = side ? 26 : front || back ? 31 : dir === 1 ? 29 : 33;
   const legXs = side
     ? [12, 22, 39, 49]
     : front || back
-      ? [21, 27, 36, 42]
-      : [15, 23, 37, 45];
+      ? [18, 25, 40, 47]
+      : [14, 23, 39, 48];
   const legW = side ? 6 : front || back ? 6 : 6;
   const gait = pose ? 2 : 0;
 
   // Thick block legs stay denser than Solar Strider's narrow supports.
   for (let i = 0; i < legXs.length; i++) {
     const lift = pose && (i === 0 || i === 2) ? gait : 0;
-    combatLeg(p, legXs[i], 43, 57 - lift, legW, i % 2 ? GRAVE_FOG : GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
+    combatLeg(p, legXs[i], 43, 57 - lift, legW, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
   }
 
   p.fillRect(hullX + 3, 29, hullW - 6, 3, COMBAT_INK);
@@ -1628,7 +1662,7 @@ function drawBurdenWalkerCombat(dir: number, pose: number): Pix {
   p.fillRect(engineX + 5, 12, 2, 16, COMBAT_INK);
   p.fillRect(engineX - 5, 10, 10, 3, COMBAT_INK);
   p.fillRect(engineX - 5, 25, 10, 3, COMBAT_INK);
-  p.fillRect(engineX - 3, 15, 6, 9, GRAVE_FOG);
+  p.fillRect(engineX - 3, 15, 6, 9, GRAVE_SLATE);
   p.fillRect(engineX - 3, 14, 2, 8, GRAVE_STEEL);
   p.fillRect(engineX - 3, 12, 6, 2, GRAVE_BONE);
   p.fillRect(engineX - 5, 24, 10, 3, GRAVE_GOLD);
@@ -1648,6 +1682,20 @@ function drawBurdenWalkerCombat(dir: number, pose: number): Pix {
   p.fillRect(forwardRight ? cannonX + 5 : cannonX - 4, 35, 2, 2, GRAVE_CRYSTAL);
   p.set(forwardRight ? cannonX + 5 : cannonX - 4, 35, GRAVE_ICE);
   if (!forwardRight) p.fillRect(cannonX + 3, 35, 3, 1, COMBAT_INK);
+
+  // Broad attached stabilizers widen compressed front/back and 3Q views;
+  // their slate/steel planes stay above the open negative space under the hull.
+  const stabilizerReach = front || back ? 7 : threeQuarter ? 4 : 0;
+  if (stabilizerReach > 0) {
+    const left = hullX - stabilizerReach;
+    const right = hullX + hullW - 1;
+    p.fillRect(left, 33, stabilizerReach + 3, 7, COMBAT_INK);
+    p.fillRect(left + 2, 34, stabilizerReach, 4, GRAVE_SLATE);
+    p.fillRect(left + 3, 34, Math.max(1, stabilizerReach - 1), 2, GRAVE_STEEL);
+    p.fillRect(right - 2, 33, stabilizerReach + 3, 7, COMBAT_INK);
+    p.fillRect(right, 34, stabilizerReach, 4, GRAVE_SLATE);
+    p.fillRect(right + 1, 34, Math.max(1, stabilizerReach - 1), 2, GRAVE_STEEL);
+  }
   return p;
 }
 

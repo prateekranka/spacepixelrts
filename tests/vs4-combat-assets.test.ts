@@ -18,6 +18,9 @@ const ALPHA_MIN = COMBAT_CELL * COMBAT_CELL * 0.12;
 const ALPHA_MAX = COMBAT_CELL * COMBAT_CELL * 0.55;
 const metricValues = {
   alpha: [] as number[],
+  alphaWidth: [] as number[],
+  alphaHeight: [] as number[],
+  brightMaterialShare: [] as number[],
   connected: [] as number[],
   directionDelta: [] as number[],
   poseDelta: [] as number[],
@@ -26,6 +29,11 @@ const metricValues = {
   guardIou: [] as number[],
   walkerIou: [] as number[],
 };
+const r2Failures: string[] = [];
+
+function requireR2(condition: boolean, message: string): void {
+  if (!condition) r2Failures.push(message);
+}
 
 function alphaAt(p: Pix, x: number, y: number): boolean {
   return p.d[(x + y * p.w) * 4 + 3] > 0;
@@ -35,6 +43,36 @@ function alphaCount(p: Pix): number {
   let count = 0;
   for (let i = 3; i < p.d.length; i += 4) if (p.d[i] > 0) count++;
   return count;
+}
+
+function brightMaterialShare(p: Pix): number {
+  let bright = 0;
+  let alpha = 0;
+  for (let i = 0; i < p.d.length; i += 4) {
+    if (p.d[i + 3] <= 0) continue;
+    alpha++;
+    const luma = 0.2126 * p.d[i] + 0.7152 * p.d[i + 1] + 0.0722 * p.d[i + 2];
+    if (luma >= 65) bright++;
+  }
+  return bright / alpha;
+}
+
+function alphaInRows(p: Pix, minY: number, maxY: number): number {
+  let count = 0;
+  for (let y = Math.max(0, minY); y <= Math.min(p.h - 1, maxY); y++) {
+    for (let x = 0; x < p.w; x++) if (alphaAt(p, x, y)) count++;
+  }
+  return count;
+}
+
+// The main guard mass is centered in the cell; weapon pixels are deliberately
+// outside this band so the top spear contract cannot be satisfied by moving the
+// whole body upward.
+function guardBodyTop(p: Pix): number {
+  for (let y = 0; y < p.h; y++) {
+    for (let x = 24; x <= 40; x++) if (alphaAt(p, x, y)) return y;
+  }
+  return p.h;
 }
 
 function rgbaEqual(a: Pix, b: Pix, x: number, y: number): boolean {
@@ -168,6 +206,21 @@ for (let row = 0; row < COMBAT_ROWS; row++) {
       assert.ok(connected >= 0.96, `row ${row} dir ${dir} pose ${pose} connected`);
       const bounds = sourceBounds(p);
       assert.ok(bounds.minX >= 0 && bounds.minY >= 0 && bounds.maxX < COMBAT_CELL && bounds.maxY < COMBAT_CELL, `row ${row} dir ${dir} pose ${pose} bounds`);
+      const alphaWidth = bounds.maxX - bounds.minX + 1;
+      const alphaHeight = bounds.maxY - bounds.minY + 1;
+      const brightShare = brightMaterialShare(p);
+      metricValues.alphaWidth.push(alphaWidth);
+      metricValues.alphaHeight.push(alphaHeight);
+      metricValues.brightMaterialShare.push(brightShare);
+      if (row === 0 || row === 2) {
+        requireR2(alphaWidth >= 24 && alphaHeight >= 44, `row ${row} dir ${dir} pose ${pose} guard alpha bound ${alphaWidth}x${alphaHeight}, expected >=24x44`);
+        requireR2(bounds.minY <= 2, `row ${row} dir ${dir} pose ${pose} spear minY ${bounds.minY}, expected <=2`);
+        requireR2(alphaInRows(p, 0, 2) >= 4, `row ${row} dir ${dir} pose ${pose} spear pixels rows0..2 ${alphaInRows(p, 0, 2)}, expected >=4`);
+        requireR2(guardBodyTop(p) >= 11, `row ${row} dir ${dir} pose ${pose} guard body top ${guardBodyTop(p)}, expected >=11`);
+      } else {
+        requireR2(alphaWidth >= 44 && alphaHeight >= 28, `row ${row} dir ${dir} pose ${pose} walker alpha bound ${alphaWidth}x${alphaHeight}, expected >=44x28`);
+      }
+      requireR2(brightShare >= 0.30, `row ${row} dir ${dir} pose ${pose} bright material ${(brightShare * 100).toFixed(2)}%, expected >=30%`);
       const sourceHeight = bounds.maxY - bounds.minY + 1;
       metricValues.sourceHeight.push(sourceHeight);
       assert.ok(sourceHeight >= 40 && sourceHeight <= 52, `row ${row} dir ${dir} pose ${pose} source height`);
@@ -219,7 +272,12 @@ console.log(`VS4 pixel metrics: ${JSON.stringify({
   poseDeltaPercent: range(metricValues.poseDelta),
   magShare: range(metricValues.magShare),
   sourceHeight: range(metricValues.sourceHeight),
+  alphaWidth: range(metricValues.alphaWidth),
+  alphaHeight: range(metricValues.alphaHeight),
+  brightMaterialShare: range(metricValues.brightMaterialShare),
   guardSilhouetteIou: range(metricValues.guardIou),
   walkerSilhouetteIou: range(metricValues.walkerIou),
 })}`);
+console.log(`VS4 R2 readability failures: ${JSON.stringify(r2Failures)}`);
+assert.equal(r2Failures.length, 0, `VS4 R2 readability contract RED: ${r2Failures.join('; ')}`);
 console.log('VS4 combat pixel contract: PASS');

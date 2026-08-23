@@ -1353,9 +1353,11 @@ function isCombatLiveEnt(e: Ent): boolean {
 }
 
 function combatWorldScale(e: Ent): readonly [number, number] {
-  if (e.kind === Kind.Fighter) return [1.05, 1.28];
-  if (e.kind === Kind.Ravager) return [1.38, 1.02];
-  return [1.34, 1.24];
+  if (e.kind === Kind.Fighter && e.civ === 'vespari') return [1.18, 1.40];
+  if (e.kind === Kind.Ravager && e.civ === 'vespari') return [1.52, 1.14];
+  if (e.kind === Kind.Fighter && e.civ === 'aurion') return [1.24, 1.42];
+  if (e.kind === Kind.Prism && e.civ === 'aurion') return [1.52, 1.34];
+  return [1, 1];
 }
 
 export class GameRenderer {
