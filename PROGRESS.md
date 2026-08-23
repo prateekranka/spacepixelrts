@@ -291,11 +291,11 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   pulse 30s/4s, sim share <0.8ms, winner -1, console 0, all VS2/M0–M5/build gates PASS. Fresh Sol
   R2 blind gate: **PASS**. Named non-blocking debt: thin capture progress. Evidence:
   `/home/bobbyranka/workspace/evidence/starhaven-vs2b-r2-lead/`. Next: VS-3 terminal/results.
-- **Production live at VS-2A** (`5833429`, `assets/main-LvBGVAyw.js`): deployed to the
-  existing `spacepixelrts` Pages project on production branch `main`. Live production QA readback
-  at tick 9650 confirms Standard AI, scripted marshal false, one Yard, one Habitat, Iron Colossus,
-  2 Rift Guards + 2 Burden Walkers, discovered player Core, four legal Core targets, and zero
-  console errors. `desktop.html` remains the non-orientation-gated laptop preview route.
+- **Production live at VS-2B** (`02ace06`, `assets/main-DYc8EcJQ.js`): deployed to the
+  existing `spacepixelrts` Pages project on production branch `main`. Live production readback
+  spawned one legal Lumen Guard fixture, stepped normal sim to ownership, then confirmed
+  `LUMEN · SUNWEAVER CONTROL`, owner 0, 32/32 world-ring samples, winner -1, and zero console
+  errors. VS-2A opponent remains in the same bundle. `desktop.html` is the laptop preview route.
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
   (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
