@@ -33,8 +33,11 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
 - Managed image generation for the two faction asset boards failed before charging with a Nous/FAL
   charge-intent fetch timeout (three attempts). Asset path switched to the existing deterministic
   startup-rasterized pixel pipeline; this does not block gameplay closure.
-- One Luna Max-fast focused audit is running with an 8-real-minute in-match cap. Long exploratory
-  playtests are retired; future seam checks stay at 5–10 minutes and final pacing uses fast QA.
+- Luna Max-fast VS0 audit completed at the exact 8-real-minute cap: real Worker income and Yard
+  construction succeeded; no visible Yard→technology/production handoff appeared, so no combat
+  unit or terminal path was reached; console errors 0. Biggest blocker = VS-1. Evidence/report:
+  `/home/bobbyranka/workspace/evidence/starhaven-vs0-audit/`. Long exploratory playtests are
+  retired; future seam checks stay at 5–10 minutes and final pacing uses fast QA.
 - M0 COMPLETE: explicit `Boot -> MainMenu -> MatchSetup -> Loading -> Playing -> TacticalPause /
   Victory / Defeat -> Results` state machine; no writable menu/gameplay booleans remain.
 - Deterministic `?qa=` registry covers 9 primary and 4 supplemental routes with fixed seed, camera,
