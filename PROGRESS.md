@@ -11,9 +11,9 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
 
 | Role | Who |
 | --- | --- |
-| Orchestrator — directs / reviews / scope-controls | Sol Max |
-| Repository implementer — one bounded task at a time | Ox Alpha Max |
-| Image-only critic — 3 independent critiques at important gates, visible categories only | DeepSeek V4 Flash Vision Max |
+| Orchestrator — directs / reviews / scope-controls | Bottymcbotface (lead) |
+| Blind visual critic — image-only, 3 critiques at gates, categories only | `gpt-5.6-sol` effort max via `tasks/codex-linux-run.sh sol <brief> <log> -i <shot>` (ChatGPT sub) |
+| Repository implementer — one bounded task at a time | `gpt-5.6-luna` effort max fast via `tasks/codex-linux-run.sh luna <brief> <log>` (ChatGPT sub); opencode free tier as fallback |
 
 ## Now
 
