@@ -196,6 +196,20 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   needs bobby's token or a Mac-side `npm run deploy`.
 - **Sol max usage directive:** bobby directed heavy Sol use (70% weekly left before reset);
   Sol now also runs design-support memos (M5 roster mapping memo dispatched in parallel).
+- **M5-A roster freeze + labels COMPLETE** (`87844a8`, Luna builder, lead-verified):
+  docs/M5_ARMY.md applied — stat deltas for Scout/Fighter/Ravager/Prism, ×1.8
+  vs-buildings modifier moved Siege→Prism, rift-engineering train boost scoped to Prism,
+  Siege/Shade refused at `tryTrain` and never spawned by AI, faction labels everywhere
+  (Wind Strider / Grav-Skimmer / Lumen Guard / Rift Guard / Solar Strider / Burden Walker).
+  All suites green (`test:m0/m2*/m3/m4/m5`, build). New `test:m5` suite (28 asserts).
+- qa:m2-opening now RUNS on this box for the first time (was Mac-only: needed Google
+  Chrome + hardware GL): chromium fallback, try/catch around setPointerCapture
+  (synthetic pointers throw NotFoundError), software-GL frame gate = sim-share per the
+  qa-m2-ai precedent. Full opening long-press proof PASSes: selection survives, Move
+  order lands within 0 world units of target, sim share 2.71 ms < 8 ms budget.
+  Evidence: `/home/bobbyranka/workspace/evidence/starhaven-m5-army/`.
+- **Next:** M5-B visual/label sweep on the running game + Sol blind gate on M5; then M6
+  touch controls per `docs/FIRST_PLAYABLE.md`.
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
   (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
