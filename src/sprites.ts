@@ -9,6 +9,15 @@ import { STARHOLD_PALETTE as P } from './palette';
 export type Rgba = readonly [number, number, number, number];
 export const MAG: Rgba = [255, 0, 255, 255];
 
+// VS-4 — the combat strip is intentionally independent of the legacy 32px atlas.
+export const COMBAT_CELL = 64;
+export const COMBAT_COLS = 16;
+export const COMBAT_ROWS = 4;
+export const COMBAT_LIVE_POSES = 2;
+export const COMBAT_AUTHORED_DIRS = [0, 1, 2, 6, 7] as const;
+export const COMBAT_WIDTH = COMBAT_CELL * COMBAT_COLS;
+export const COMBAT_HEIGHT = COMBAT_CELL * COMBAT_ROWS;
+
 function rgba(hex: string): Rgba {
   const n = Number.parseInt(hex.slice(1), 16);
   return [((n >> 16) & 0xff), ((n >> 8) & 0xff), (n & 0xff), 255];
@@ -1365,6 +1374,308 @@ export function drawWorker8Dir(civ: number, dir: number, walk: number): Pix {
   return drawWorkerAuth(civ, d, w);
 }
 
+// ── VS-4 combat strip — four authored role silhouettes, 64px source cells ───
+// These colors are deliberately all STARHOLD_PALETTE tokens. MAG is reserved
+// for the tiny team-focus pixels and is replaced by the shader at runtime.
+const COMBAT_INK: Rgba = rgba(P.ink);
+const SUN_CREAM: Rgba = rgba(P.cream);
+const SUN_SAND: Rgba = rgba(P.sand);
+const SUN_GOLD: Rgba = rgba(P.ochre);
+const SUN_AMBER: Rgba = rgba(P.amber);
+const SUN_TEAL: Rgba = rgba(P.leaf);
+const SUN_TEAL_D: Rgba = rgba(P.moss);
+const GRAVE_FOG: Rgba = rgba(P.fog);
+const GRAVE_SLATE: Rgba = rgba(P.slate);
+const GRAVE_STEEL: Rgba = rgba(P.steel);
+const GRAVE_BONE: Rgba = rgba(P.sand);
+const GRAVE_GOLD: Rgba = rgba(P.ochre);
+const GRAVE_CRYSTAL: Rgba = rgba(P.sky);
+const GRAVE_ICE: Rgba = rgba(P.ice);
+const COMBAT_CLEAR: Rgba = [0, 0, 0, 0];
+
+function combatRect(p: Pix, x: number, y: number, w: number, h: number, base: Rgba, hi: Rgba, dark: Rgba): void {
+  p.fillRect(x, y, w, h, COMBAT_INK);
+  if (w < 3 || h < 3) return;
+  p.fillRect(x + 1, y + 1, w - 2, h - 2, base);
+  p.fillRect(x + 1, y + 1, Math.max(1, Math.floor((w - 2) * 0.42)), Math.max(1, Math.floor((h - 2) * 0.34)), hi);
+  p.fillRect(x + 1, y + Math.max(1, h - 3), w - 2, 2, dark);
+}
+
+function combatLeg(p: Pix, x: number, top: number, bottom: number, w: number, base: Rgba, hi: Rgba, dark: Rgba): void {
+  const h = Math.max(2, bottom - top + 1);
+  combatRect(p, x, top, w, h, base, hi, dark);
+  p.fillRect(x - 1, bottom - 1, w + 2, 2, COMBAT_INK);
+}
+
+function combatMagCross(p: Pix, x: number, y: number): void {
+  p.set(x, y, MAG);
+  p.set(x - 1, y, MAG);
+  p.set(x, y + 1, MAG);
+  p.set(x + 1, y + 1, MAG);
+  p.set(x - 1, y + 1, MAG);
+}
+
+function drawLumenGuardCombat(dir: number, pose: number): Pix {
+  const p = Pix.alloc(COMBAT_CELL, COMBAT_CELL);
+  const side = dir === 0;
+  const back = dir === 2;
+  const front = dir === 6;
+  const threeQuarter = dir === 1 || dir === 7;
+  const cx = side ? 31 : threeQuarter ? 33 : 31;
+  const bodyW = side ? 11 : back || front ? 9 : 11;
+  const bodyX = cx - Math.floor(bodyW / 2);
+  const shieldX = side ? 46 : dir === 1 ? 43 : back ? 40 : front ? 41 : 43;
+  const shieldY = back ? 31 : 30;
+  const spearX = side ? 11 : back ? 20 : front ? 21 : dir === 1 ? 18 : 20;
+  const gaitA = pose ? (side || back ? 2 : 1) : 0;
+  const gaitB = pose ? (side || back ? 0 : 2) : 0;
+
+  // Opposite-side spear: its 2px shaft remains continuous from head to boot.
+  p.fillRect(spearX - 1, 8, 2, 46, COMBAT_INK);
+  p.fillRect(spearX, 9, 1, 43, SUN_GOLD);
+  p.fillRect(spearX - 4, 7, 8, 4, COMBAT_INK);
+  p.fillRect(spearX - 2, 8, 4, 2, SUN_AMBER);
+  p.fillRect(spearX - 1, 5, 2, 4, COMBAT_INK);
+  p.set(spearX, 6, SUN_CREAM);
+
+  // Planted legs are painted before the body so their joins stay ink-connected.
+  const legAX = side ? 24 : cx - 6;
+  const legBX = side ? 35 : cx + 2;
+  combatLeg(p, legAX + (pose ? 1 : 0), 40 - gaitA, 56, 4, SUN_TEAL, SUN_CREAM, SUN_TEAL_D);
+  combatLeg(p, legBX - (pose ? 1 : 0), 40 - gaitB, 56, 4, SUN_TEAL_D, SUN_SAND, COMBAT_INK);
+
+  combatRect(p, bodyX - 1, 25, bodyW + 2, 16, SUN_SAND, SUN_CREAM, SUN_TEAL_D);
+  p.fillRect(bodyX, 31, bodyW, 6, SUN_TEAL);
+  p.fillRect(bodyX + 2, 35, bodyW - 4, 4, SUN_SAND);
+  p.fillRect(cx - 4, 11, 8, 9, COMBAT_INK);
+  p.fillRect(cx - 3, 12, 6, 6, SUN_CREAM);
+  p.fillRect(cx - 6, 10, 12, 3, SUN_GOLD);
+  p.fillRect(cx - 3, 16, 6, 3, SUN_TEAL_D);
+  p.fillRect(cx - 1, 19, 2, 7, COMBAT_INK);
+  p.set(cx - 1, 17, SUN_AMBER);
+
+  // Shield arm bridges body to face; the face is deliberately over the torso.
+  linePix(p, bodyX + bodyW - 2, 28, shieldX - 10, shieldY, COMBAT_INK);
+  p.circ(shieldX, shieldY, 12, COMBAT_INK);
+  p.circ(shieldX, shieldY, 10, SUN_GOLD);
+  p.circ(shieldX, shieldY, 8, SUN_CREAM);
+  p.circ(shieldX, shieldY, 5, SUN_AMBER);
+  p.circ(shieldX, shieldY, 3, SUN_SAND);
+  combatMagCross(p, shieldX, shieldY);
+  p.set(shieldX - 7, shieldY - 6, SUN_CREAM);
+  p.set(shieldX + 6, shieldY + 7, SUN_TEAL_D);
+
+  // A second ink bridge makes the spear read as held, never as a detached prop.
+  linePix(p, bodyX + 1, 30, spearX + 1, 30, COMBAT_INK);
+  return p;
+}
+
+function drawSolarStriderCombat(dir: number, pose: number): Pix {
+  const p = Pix.alloc(COMBAT_CELL, COMBAT_CELL);
+  const side = dir === 0;
+  const back = dir === 2;
+  const front = dir === 6;
+  const hullX = side ? 11 : front || back ? 21 : 14;
+  const hullW = side ? 42 : front || back ? 23 : 37;
+  const engineX = side ? 31 : front || back ? 32 : dir === 1 ? 34 : 30;
+  const gait = pose ? 2 : 0;
+  const legXs = side
+    ? [12, 22, 39, 49]
+    : front || back
+      ? [22, 27, 37, 42]
+      : [16, 24, 37, 45];
+  const legW = side ? 5 : 4;
+  const legColors: readonly [Rgba, Rgba, Rgba][] = [
+    [SUN_TEAL, SUN_CREAM, SUN_TEAL_D],
+    [SUN_TEAL_D, SUN_SAND, COMBAT_INK],
+    [SUN_TEAL, SUN_CREAM, SUN_TEAL_D],
+    [SUN_TEAL_D, SUN_SAND, COMBAT_INK],
+  ];
+
+  // Four independent legs leave visible negative space below the hull.
+  for (let i = 0; i < legXs.length; i++) {
+    const lift = pose && (i === 0 || i === 2) ? gait : pose && (i === 1 || i === 3) ? 0 : 0;
+    combatLeg(p, legXs[i], 41, 57 - lift, side ? 4 : legW, legColors[i][0], legColors[i][1], legColors[i][2]);
+    p.set(legXs[i] + 1, 40, COMBAT_INK);
+  }
+
+  p.fillRect(hullX + 3, 28, hullW - 6, 3, COMBAT_INK);
+  p.fillRect(hullX, 31, hullW, 9, COMBAT_INK);
+  p.fillRect(hullX + 2, 32, hullW - 4, 5, front || back ? SUN_CREAM : SUN_TEAL_D);
+  p.fillRect(hullX + 4, 32, hullW - 9, 3, SUN_CREAM);
+  p.fillRect(hullX + 3, 37, hullW - 6, 1, SUN_TEAL);
+  p.fillRect(hullX + 2, 38, hullW - 4, 2, COMBAT_INK);
+
+  // The raised sun disk is a compact engine, not a humanoid head.
+  p.fillRect(engineX - 2, 25, 4, 6, COMBAT_INK);
+  p.fillRect(engineX - 1, 25, 2, 4, SUN_GOLD);
+  p.circ(engineX, 18, 8, COMBAT_INK);
+  p.circ(engineX, 18, 7, SUN_GOLD);
+  p.circ(engineX, 18, 5, SUN_CREAM);
+  p.circ(engineX, 18, 3, SUN_AMBER);
+  combatMagCross(p, engineX, 18);
+
+  // Compact forward emitter; front/back views compress it into the hull face.
+  const emitterRight = side || dir === 1 || dir === 7;
+  const emitterX = emitterRight ? hullX + hullW - 1 : hullX - 4;
+  p.fillRect(emitterRight ? emitterX : emitterX - 1, 34, 4, 4, COMBAT_INK);
+  p.fillRect(emitterRight ? emitterX + 1 : emitterX, 35, 2, 1, SUN_GOLD);
+  p.set(emitterRight ? emitterX + 2 : emitterX - 1, 35, SUN_AMBER);
+  return p;
+}
+
+function drawRiftGuardCombat(dir: number, pose: number): Pix {
+  const p = Pix.alloc(COMBAT_CELL, COMBAT_CELL);
+  const side = dir === 0;
+  const back = dir === 2;
+  const front = dir === 6;
+  const threeQuarter = dir === 1 || dir === 7;
+  const cx = side ? 31 : threeQuarter ? 33 : 31;
+  const shieldX = side ? 19 : dir === 1 ? 38 : back ? 38 : front ? 39 : 37;
+  const shieldW = side ? 15 : 14;
+  const spearX = side ? 50 : dir === 1 ? 22 : back ? 22 : front ? 21 : 23;
+  const bodyW = side ? 10 : 9;
+  const bodyX = cx - Math.floor(bodyW / 2);
+  const gaitA = pose ? (side || front ? 2 : 1) : 0;
+  const gaitB = pose ? (side || front ? 0 : 2) : 0;
+
+  // Crystal spear on the shoulder opposite the tower shield.
+  p.fillRect(spearX - 1, 10, 2, 43, COMBAT_INK);
+  p.fillRect(spearX - 3, 7, 6, 5, COMBAT_INK);
+  p.fillRect(spearX - 2, 8, 4, 3, GRAVE_CRYSTAL);
+
+  combatLeg(p, bodyX, 41 - gaitA, 56, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
+  combatLeg(p, bodyX + 6 - (pose ? 1 : 0), 41 - gaitB, 56, 4, GRAVE_FOG, GRAVE_SLATE, COMBAT_INK);
+  combatRect(p, bodyX - 1, 25, bodyW + 2, 16, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
+  p.fillRect(bodyX, 32, bodyW, 5, GRAVE_FOG);
+  p.fillRect(cx - 4, 11, 8, 10, COMBAT_INK);
+  p.fillRect(cx - 2, 13, 4, 5, GRAVE_SLATE);
+  p.fillRect(cx, 21, 1, 5, COMBAT_INK);
+  p.fillRect(cx - 3, 16, 6, 3, COMBAT_INK);
+  p.fillRect(cx - 2, 16, 4, 1, GRAVE_ICE);
+
+  // Stepped tower shield — no circular silhouette, with three ash/slate planes.
+  const shieldY = 12;
+  p.fillRect(shieldX + 2, shieldY, shieldW - 4, 2, COMBAT_INK);
+  p.fillRect(shieldX, shieldY + 2, 2, 39, COMBAT_INK);
+  p.fillRect(shieldX + shieldW - 2, shieldY + 2, 2, 39, COMBAT_INK);
+  p.fillRect(shieldX + 2, shieldY + 41, shieldW - 4, 2, COMBAT_INK);
+  p.fillRect(shieldX + 3, shieldY + 3, shieldW - 6, 29, GRAVE_SLATE);
+  p.fillRect(shieldX + 3, shieldY + 6, 3, front ? 24 : 25, GRAVE_STEEL);
+  p.fillRect(shieldX + 6, shieldY + 5, shieldW - 9, 26, GRAVE_FOG);
+  p.fillRect(shieldX + 3, shieldY + 38, shieldW - 6, 3, COMBAT_INK);
+  p.fillRect(shieldX + 1, shieldY + 5, 3, 6, GRAVE_BONE);
+  p.fillRect(shieldX + shieldW - 4, shieldY + 7, 3, 6, GRAVE_GOLD);
+  p.fillRect(shieldX + 1, shieldY + 33, 3, 6, GRAVE_GOLD);
+  p.fillRect(shieldX + shieldW - 4, shieldY + 31, 3, 7, GRAVE_BONE);
+  if (front) {
+    p.set(shieldX + 9, shieldY + 20, COMBAT_CLEAR);
+    p.set(shieldX + 9, shieldY + 21, COMBAT_CLEAR);
+  }
+
+  const crystalX = shieldX + Math.floor(shieldW / 2);
+  p.fillRect(crystalX - 4, 28, 8, 10, COMBAT_INK);
+  p.fillRect(crystalX - 2, 27, 4, 12, COMBAT_INK);
+  p.fillRect(crystalX - 2, 29, 4, 7, GRAVE_CRYSTAL);
+  p.set(crystalX, 29, GRAVE_ICE);
+  combatMagCross(p, crystalX, 33);
+  linePix(p, bodyX + (shieldX < cx ? -1 : bodyW + 1), 29, shieldX + (shieldX < cx ? shieldW : 0), 29, COMBAT_INK);
+  linePix(p, bodyX + (shieldX < cx ? bodyW + 1 : -1), 31, spearX + (spearX < cx ? 1 : -1), 31, COMBAT_INK);
+  if (front) {
+    p.set(shieldX + 9, shieldY + 20, COMBAT_CLEAR);
+    p.set(shieldX + 9, shieldY + 21, COMBAT_CLEAR);
+  }
+  return p;
+}
+
+function drawBurdenWalkerCombat(dir: number, pose: number): Pix {
+  const p = Pix.alloc(COMBAT_CELL, COMBAT_CELL);
+  const side = dir === 0;
+  const back = dir === 2;
+  const front = dir === 6;
+  const hullX = side ? 12 : front || back ? 20 : 14;
+  const hullW = side ? 42 : front || back ? 26 : 38;
+  const engineX = side ? 26 : front || back ? 31 : dir === 1 ? 29 : 33;
+  const legXs = side
+    ? [12, 22, 39, 49]
+    : front || back
+      ? [21, 27, 36, 42]
+      : [15, 23, 37, 45];
+  const legW = side ? 6 : front || back ? 6 : 6;
+  const gait = pose ? 2 : 0;
+
+  // Thick block legs stay denser than Solar Strider's narrow supports.
+  for (let i = 0; i < legXs.length; i++) {
+    const lift = pose && (i === 0 || i === 2) ? gait : 0;
+    combatLeg(p, legXs[i], 43, 57 - lift, legW, i % 2 ? GRAVE_FOG : GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
+  }
+
+  p.fillRect(hullX + 3, 29, hullW - 6, 3, COMBAT_INK);
+  p.fillRect(hullX, 31, 2, 10, COMBAT_INK);
+  p.fillRect(hullX + hullW - 2, 31, 2, 10, COMBAT_INK);
+  p.fillRect(hullX + 2, 41, hullW - 4, 2, COMBAT_INK);
+  p.fillRect(hullX + 3, 34, hullW - 6, 4, GRAVE_SLATE);
+  p.fillRect(hullX + 4, 34, hullW - 10, 2, GRAVE_STEEL);
+  p.fillRect(hullX + 3, 37, hullW - 6, 1, GRAVE_FOG);
+  p.set(hullX + 2, 31, COMBAT_INK);
+  p.set(hullX + 2, 34, COMBAT_INK);
+  p.set(hullX + hullW - 3, 31, COMBAT_INK);
+  p.set(hullX + hullW - 3, 34, COMBAT_INK);
+
+  // High-backed rift engine drum/cargo block, connected through the hull top.
+  p.fillRect(engineX - 3, 25, 6, 7, COMBAT_INK);
+  p.fillRect(engineX - 7, 12, 2, 16, COMBAT_INK);
+  p.fillRect(engineX + 5, 12, 2, 16, COMBAT_INK);
+  p.fillRect(engineX - 5, 10, 10, 3, COMBAT_INK);
+  p.fillRect(engineX - 5, 25, 10, 3, COMBAT_INK);
+  p.fillRect(engineX - 3, 15, 6, 9, GRAVE_FOG);
+  p.fillRect(engineX - 3, 14, 2, 8, GRAVE_STEEL);
+  p.fillRect(engineX - 3, 12, 6, 2, GRAVE_BONE);
+  p.fillRect(engineX - 5, 24, 10, 3, GRAVE_GOLD);
+  p.fillRect(engineX - 5, 10, 3, 4, GRAVE_BONE);
+  p.fillRect(engineX + 2, 10, 3, 4, GRAVE_GOLD);
+  p.fillRect(engineX - 3, 17, 6, 7, COMBAT_INK);
+  p.fillRect(engineX - 1, 18, 3, 5, GRAVE_CRYSTAL);
+  p.set(engineX, 18, GRAVE_ICE);
+  combatMagCross(p, engineX, 21);
+
+  // Forward crystal cannon is compact, attached, and points away from the rear block.
+  const forwardRight = side || dir === 1 || dir === 7;
+  const cannonX = forwardRight ? hullX + hullW - 1 : hullX - 5;
+  p.fillRect(forwardRight ? cannonX : cannonX - 4, 33, 7, 6, COMBAT_INK);
+  p.fillRect(forwardRight ? cannonX + 1 : cannonX - 3, 34, 4, 3, GRAVE_GOLD);
+  p.fillRect(forwardRight ? cannonX + 4 : cannonX - 5, 34, 3, 4, COMBAT_INK);
+  p.fillRect(forwardRight ? cannonX + 5 : cannonX - 4, 35, 2, 2, GRAVE_CRYSTAL);
+  p.set(forwardRight ? cannonX + 5 : cannonX - 4, 35, GRAVE_ICE);
+  if (!forwardRight) p.fillRect(cannonX + 3, 35, 3, 1, COMBAT_INK);
+  return p;
+}
+
+function authoredCombatSprite(row: number, dir: number, pose: number): Pix {
+  switch (row) {
+    case 0:
+      return drawLumenGuardCombat(dir, pose);
+    case 1:
+      return drawSolarStriderCombat(dir, pose);
+    case 2:
+      return drawRiftGuardCombat(dir, pose);
+    case 3:
+      return drawBurdenWalkerCombat(dir, pose);
+    default:
+      return Pix.alloc(COMBAT_CELL, COMBAT_CELL);
+  }
+}
+
+/** VS-4 pure source cell. Directions 3/4/5 are exact horizontal mirrors. */
+export function drawCombatSprite(row: number, dir: number, pose: number): Pix {
+  const d = ((Math.floor(dir) % 8) + 8) % 8;
+  const p = Math.max(0, Math.min(COMBAT_LIVE_POSES - 1, Math.floor(pose)));
+  if (d === 3) return authoredCombatSprite(row, 1, p).flipX();
+  if (d === 4) return authoredCombatSprite(row, 0, p).flipX();
+  if (d === 5) return authoredCombatSprite(row, 7, p).flipX();
+  return authoredCombatSprite(row, d, p);
+}
+
 // ── Worker (legacy 32px slot; living workers use 8-dir strip) ───────────────
 function drawWorkerPix(civ: number, frame: number): Pix {
   const p = Pix.alloc(32, 32);
@@ -2103,6 +2414,12 @@ const SCOUT_COLS = CIVS * UNIT_FRAMES;
 
 export interface SpriteAtlas {
   canvas: HTMLCanvasElement;
+  combatCanvas: HTMLCanvasElement;
+  combatCell: number;
+  combatCols: number;
+  combatRows: number;
+  combatWidth: number;
+  combatHeight: number;
   scoutCanvas: HTMLCanvasElement;
   scoutCell: number;
   scoutCols: number;
@@ -2155,6 +2472,12 @@ export function buildSpriteAtlas(): SpriteAtlas {
   const scoutCtx = scoutCanvas.getContext('2d')!;
   scoutCtx.imageSmoothingEnabled = false;
 
+  const combatCanvas = document.createElement('canvas');
+  combatCanvas.width = COMBAT_WIDTH;
+  combatCanvas.height = COMBAT_HEIGHT;
+  const combatCtx = combatCanvas.getContext('2d')!;
+  combatCtx.imageSmoothingEnabled = false;
+
   const blitUnit = (pix: Pix, slot: number) => {
     const col = slot % ATLAS_COLS;
     const row = Math.floor(slot / ATLAS_COLS);
@@ -2178,6 +2501,12 @@ export function buildSpriteAtlas(): SpriteAtlas {
     off.height = pix.h;
     off.getContext('2d')!.putImageData(img, 0, 0);
     scoutCtx.drawImage(off, col * SCOUT_CELL, 0, SCOUT_CELL, SCOUT_CELL);
+  };
+
+  const blitCombat = (pix: Pix, row: number, col: number) => {
+    const img = combatCtx.createImageData(COMBAT_CELL, COMBAT_CELL);
+    img.data.set(pix.d);
+    combatCtx.putImageData(img, col * COMBAT_CELL, row * COMBAT_CELL);
   };
 
   const civs: Civ[] = ['vespari', 'aurion', 'voidmarked'];
@@ -2245,8 +2574,22 @@ export function buildSpriteAtlas(): SpriteAtlas {
     }
   }
 
+  for (let row = 0; row < COMBAT_ROWS; row++) {
+    for (let pose = 0; pose < COMBAT_LIVE_POSES; pose++) {
+      for (let dir = 0; dir < 8; dir++) {
+        blitCombat(drawCombatSprite(row, dir, pose), row, dir + pose * 8);
+      }
+    }
+  }
+
   return {
     canvas,
+    combatCanvas,
+    combatCell: COMBAT_CELL,
+    combatCols: COMBAT_COLS,
+    combatRows: COMBAT_ROWS,
+    combatWidth: COMBAT_WIDTH,
+    combatHeight: COMBAT_HEIGHT,
     scoutCanvas,
     scoutCell: SCOUT_CELL,
     scoutCols: SCOUT_COLS,

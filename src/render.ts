@@ -8,7 +8,7 @@ import type { World } from './sim';
 import { VfxRenderer } from './vfx';
 import { buildTerrainMesh, buildFogMesh, buildHeightTexture } from './terrain';
 import { sampleHeightBilinear } from './height';
-import { SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
+import { COMBAT_BRANCH_MAPPINGS, SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
 import { STARHOLD_PALETTE as P } from './palette';
 import { SEEN_PLAYER } from './discovery';
 import {
@@ -1344,12 +1344,27 @@ function updateProceduralWorkerMesh(root: THREE.Group, e: Ent, dt: number): void
   }
 }
 
+function isCombatLiveEnt(e: Ent): boolean {
+  if (e.hp <= 0 || e.corpseT > 0) return false;
+  return (
+    (e.civ === 'vespari' && (e.kind === Kind.Fighter || e.kind === Kind.Ravager)) ||
+    (e.civ === 'aurion' && (e.kind === Kind.Fighter || e.kind === Kind.Prism))
+  );
+}
+
+function combatWorldScale(e: Ent): readonly [number, number] {
+  if (e.kind === Kind.Fighter) return [1.05, 1.28];
+  if (e.kind === Kind.Ravager) return [1.38, 1.02];
+  return [1.34, 1.24];
+}
+
 export class GameRenderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera: THREE.OrthographicCamera;
   readonly overlay: HTMLCanvasElement;
   readonly octx: CanvasRenderingContext2D;
+  readonly combatBranchMappings = COMBAT_BRANCH_MAPPINGS;
   atlas!: Atlas;
   spriteAtlas!: SpriteAtlas;
   private sdfMesh!: THREE.InstancedMesh;
@@ -1370,6 +1385,8 @@ export class GameRenderer {
   private fogMesh!: THREE.Mesh;
   /** Procedural mesh experiment; append ?mesh=0 to compare the sprite path. */
   readonly proceduralScoutEnabled = new URLSearchParams(window.location.search).get('mesh') !== '0';
+  /** VS-4 forensic switch; combat=0 keeps the legacy atlas branch on the same mesh. */
+  readonly combatEnabled = new URLSearchParams(window.location.search).get('combat') !== '0';
   private heightData!: Uint8Array;
   private mapMesh!: THREE.Mesh;
   private lastCamQ = new THREE.Quaternion();
@@ -1455,6 +1472,13 @@ export class GameRenderer {
     spriteTex.colorSpace = THREE.SRGBColorSpace;
     spriteTex.flipY = true;
     spriteTex.needsUpdate = true;
+    const combatTex = new THREE.CanvasTexture(spriteAtlas.combatCanvas);
+    combatTex.magFilter = THREE.NearestFilter;
+    combatTex.minFilter = THREE.NearestFilter;
+    combatTex.generateMipmaps = false;
+    combatTex.colorSpace = THREE.SRGBColorSpace;
+    combatTex.flipY = true;
+    combatTex.needsUpdate = true;
     const scoutTex = new THREE.CanvasTexture(spriteAtlas.scoutCanvas);
     scoutTex.magFilter = THREE.NearestFilter;
     scoutTex.minFilter = THREE.NearestFilter;
@@ -1474,6 +1498,14 @@ export class GameRenderer {
         uAtlasCols: { value: spriteAtlas.cols },
         uCell: { value: spriteAtlas.cell },
         uHallCell: { value: spriteAtlas.hallCell },
+        uCombatAtlas: { value: combatTex },
+        uCombatAtlasSize: {
+          value: new THREE.Vector2(spriteAtlas.combatWidth, spriteAtlas.combatHeight),
+        },
+        uCombatCell: { value: spriteAtlas.combatCell },
+        uCombatCols: { value: spriteAtlas.combatCols },
+        uCombatRows: { value: spriteAtlas.combatRows },
+        uCombatEnabled: { value: this.combatEnabled ? 1 : 0 },
         uScoutAtlas: { value: scoutTex },
         uScoutAtlasSize: {
           value: new THREE.Vector2(spriteAtlas.scoutWidth, spriteAtlas.scoutHeight),
@@ -1760,6 +1792,7 @@ export class GameRenderer {
         propDrawn++;
       } else {
         const spr = spriteSize(e.kind);
+        const combatLive = this.combatEnabled && isCombatLiveEnt(e);
         const cellsW = e.kind === Kind.Hall ? 2 : 1;
         const cellsH = e.kind === Kind.Hall ? 2 : 1;
         let scaleX: number;
@@ -1769,13 +1802,15 @@ export class GameRenderer {
           const mul = targetH / cellsH;
           scaleX = cellsW * mul * e.facing;
           scaleY = cellsH * mul;
+        } else if (combatLive) {
+          [scaleX, scaleY] = combatWorldScale(e);
         } else if (e.kind === Kind.Worker && e.hp > 0) {
           scaleX = cellsW * 1.55;
           scaleY = cellsH * 2.32;
         } else {
           const corpse = e.hp <= 0 || e.corpseT > 0;
           const unitMul = e.kind === Kind.Worker ? 1.55 : corpse ? 0.82 : 0.96;
-          const facingSign = e.facing >= 4 ? -1 : 1;
+          const facingSign = combatLive ? 1 : e.facing >= 4 ? -1 : 1;
           scaleX = cellsW * unitMul * (e.kind === Kind.Worker ? 1 : facingSign);
           scaleY = cellsH * (e.kind === Kind.Worker ? 1.55 : corpse ? 0.88 : 1.12);
         }
@@ -1785,8 +1820,10 @@ export class GameRenderer {
           ? 1.15
           : e.hp <= 0 || e.corpseT > 0
             ? 0.55
-            : e.kind === Kind.Worker
+          : e.kind === Kind.Worker
               ? 0.9
+              : combatLive
+                ? scaleY * 0.5 + 0.03
               : 0.58;
         this.dummy.position.set(x, groundY + lift, z);
         this.dummy.quaternion.copy(this.lastCamQ);

@@ -1088,7 +1088,7 @@ export class World {
             if (holdFire || !marchThrough) {
               e.vx = e.vz = 0;
               e.path = null;
-              if (holdFire) e.facing = target.x >= e.x ? 1 : -1;
+              if (holdFire) e.facing = dir8(target.x - e.x, target.z - e.z);
               continue;
             }
           }
@@ -1596,8 +1596,8 @@ export class World {
     e.z = clamp(e.z, 0.6, MAP - 0.6);
     if (e.kind === Kind.Worker) {
       if (Math.abs(e.vx) + Math.abs(e.vz) > 0.05) e.facing = dir8(e.vx, e.vz);
-    } else if (Math.abs(e.vx) > 0.05) {
-      e.facing = e.vx >= 0 ? 1 : -1;
+    } else if (Math.abs(e.vx) + Math.abs(e.vz) > 0.05) {
+      e.facing = dir8(e.vx, e.vz);
     }
   }
 

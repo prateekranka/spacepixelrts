@@ -1,0 +1,13 @@
+$ npx tsx tests/vs4-combat-assets.test.ts
+/home/bobbyranka/workspace/spacepixelrts/tests/vs4-combat-assets.test.ts:5
+  COMBAT_AUTHORED_DIRS,
+  ^
+SyntaxError: The requested module '../src/sprites' does not provide an export named 'COMBAT_AUTHORED_DIRS'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:463:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:561:5)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:666:24)
+    at async loadESM (node:internal/process/esm_loader:34:7)
+    at async handleMainPromise (node:internal/modules/run_main:106:12)
+Node.js v26.7.0
+
+exit code: 1
