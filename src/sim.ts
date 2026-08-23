@@ -59,6 +59,15 @@ export interface Link {
   severedUntil: number;
 }
 
+/** VS-2B — read-only snapshot of Central Lumen Field ownership. */
+export interface LumenState {
+  owner: -1 | 0 | 1;
+  capturing: -1 | 0 | 1;
+  progress: number;
+  contested: boolean;
+  pulseRemaining: readonly [number, number];
+}
+
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
 const DC = [1, 1, 1, 1, 1.4142, 1.4142, 1.4142, 1.4142];
@@ -72,6 +81,11 @@ const MARSHAL_FORWARD_Z = MAP - 16;
 const PATH_COMMIT_ORE = 400;
 const PATH_COMMIT_CHARGE = 80;
 const PATH_COMMIT_CHANNEL = 40;
+/** VS-2B — central objective contract. */
+const LUMEN_CAPTURE_RADIUS = 4.5;
+const LUMEN_CAPTURE_SECONDS = 5;
+const LUMEN_PULSE_SECONDS = 4;
+const LUMEN_PULSE_INTERVAL = 30;
 /** M3-A base Solar link re-form delay after a sever, in ticks; solar-ascendancy halves it. */
 const LINK_SEVER_TICKS = 300;
 /** VS-2A — AI reaction cadence changes only with the selected difficulty. */
@@ -164,6 +178,13 @@ export class World {
   private marshalPeelQ: number[] = [];
   private marshalPeelI = 0;
   private sparkHead = 0;
+  private lumenOwner: -1 | 0 | 1 = -1;
+  private lumenCapturing: -1 | 0 | 1 = -1;
+  private lumenProgress = 0;
+  private lumenContested = false;
+  private lumenPulseRemaining: [number, number] = [0, 0];
+  private lumenChargeAccum: [number, number] = [0, 0];
+  private lumenOwnedAccum: [number, number] = [0, 0];
 
   constructor() {
     for (let i = 0; i < MAX_ENTS; i++) {
@@ -187,6 +208,7 @@ export class World {
     this.seed = seed;
     this.tick = 0;
     this.winner = -1;
+    this.resetLumen();
     this.bolts.length = 0;
     for (let i = 0; i < MAX_SPARKS; i++) this.sparks[i].active = false;
     this.sparkHead = 0;
@@ -432,6 +454,17 @@ export class World {
     return this.teams[team]?.ageT ?? 0;
   }
 
+  /** VS-2B — return a defensive, read-only-through-method Lumen snapshot. */
+  lumenState(): LumenState {
+    return {
+      owner: this.lumenOwner,
+      capturing: this.lumenCapturing,
+      progress: this.lumenProgress,
+      contested: this.lumenContested,
+      pulseRemaining: [this.lumenPulseRemaining[0], this.lumenPulseRemaining[1]],
+    };
+  }
+
   tryTrain(building: Ent, kind: Kind): boolean {
     if (kind === Kind.Siege || kind === Kind.Shade) return false;
     if (!building.alive || !isBuilding(building.kind)) return false;
@@ -516,6 +549,7 @@ export class World {
     this.moveSeparate();
     this.stepBolts();
     this.stepSparks();
+    this.stepLumen();
     this.updateFog();
     this.stepFlags();
     if (this.scriptedMarshalEnabled) {
@@ -1708,6 +1742,87 @@ export class World {
     }
   }
 
+  private resetLumen(): void {
+    this.lumenOwner = -1;
+    this.lumenCapturing = -1;
+    this.lumenProgress = 0;
+    this.lumenContested = false;
+    this.lumenPulseRemaining[0] = 0;
+    this.lumenPulseRemaining[1] = 0;
+    this.lumenChargeAccum[0] = 0;
+    this.lumenChargeAccum[1] = 0;
+    this.lumenOwnedAccum[0] = 0;
+    this.lumenOwnedAccum[1] = 0;
+  }
+
+  /** VS-2B — deterministic Central Lumen capture, income, and pulse accounting. */
+  private stepLumen(): void {
+    for (let team = 0; team < 2; team++) {
+      this.lumenPulseRemaining[team] = Math.max(0, this.lumenPulseRemaining[team] - DT);
+    }
+
+    let playerPresent = false;
+    let rivalPresent = false;
+    const radius2 = LUMEN_CAPTURE_RADIUS * LUMEN_CAPTURE_RADIUS;
+    const landmark = this.landmarks.find((entry) => entry.id === 'central-lumen-field');
+    if (landmark) {
+      for (let i = 0; i < MAX_ENTS; i++) {
+        const e = this.ents[i];
+        if (
+          !e.alive ||
+          e.hp <= 0 ||
+          (e.kind !== Kind.Fighter && e.kind !== Kind.Ravager && e.kind !== Kind.Prism)
+        ) continue;
+        if (dist2(e.x, e.z, landmark.x, landmark.z) > radius2) continue;
+        if (e.team === 0) playerPresent = true;
+        else if (e.team === 1) rivalPresent = true;
+      }
+    }
+
+    const bothPresent = playerPresent && rivalPresent;
+    this.lumenContested = bothPresent;
+    if (!playerPresent && !rivalPresent) {
+      this.lumenCapturing = -1;
+      this.lumenProgress = 0;
+    } else if (bothPresent) {
+      this.lumenCapturing = -1;
+      this.lumenProgress = 0;
+    } else {
+      const team: 0 | 1 = playerPresent ? 0 : 1;
+      if (this.lumenOwner === team) {
+        this.lumenCapturing = -1;
+        this.lumenProgress = 0;
+      } else {
+        if (this.lumenCapturing !== team) {
+          this.lumenCapturing = team;
+          this.lumenProgress = 0;
+        }
+        this.lumenProgress = Math.min(LUMEN_CAPTURE_SECONDS, this.lumenProgress + DT);
+        if (this.lumenProgress + 1e-9 >= LUMEN_CAPTURE_SECONDS) {
+          this.lumenOwner = team;
+          this.lumenCapturing = -1;
+          this.lumenProgress = 0;
+          this.lumenChargeAccum[team] = 0;
+          this.lumenOwnedAccum[team] = 0;
+        }
+      }
+    }
+
+    if (this.lumenOwner !== 0 && this.lumenOwner !== 1) return;
+    const owner: 0 | 1 = this.lumenOwner;
+    const eco = this.teams[owner];
+    this.lumenChargeAccum[owner] += DT;
+    while (this.lumenChargeAccum[owner] + 1e-9 >= 1) {
+      this.lumenChargeAccum[owner] -= 1;
+      eco.energy += 1;
+    }
+    this.lumenOwnedAccum[owner] += DT;
+    while (this.lumenOwnedAccum[owner] + 1e-9 >= LUMEN_PULSE_INTERVAL) {
+      this.lumenOwnedAccum[owner] -= LUMEN_PULSE_INTERVAL;
+      this.lumenPulseRemaining[owner] = LUMEN_PULSE_SECONDS;
+    }
+  }
+
   private updateFog(): void {
     if (!this.fogOfWarEnabled) {
       this.visible[0].fill(1);
@@ -1752,6 +1867,11 @@ export class World {
           }
         }
       }
+    }
+    for (let team = 0; team < 2; team++) {
+      if (this.lumenPulseRemaining[team] <= 0) continue;
+      this.visible[team].fill(1);
+      this.explored[team].fill(1);
     }
     for (let team = 0; team < 2; team++) {
       this.markVisibleEntitiesDiscovered(team);

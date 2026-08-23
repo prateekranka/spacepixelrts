@@ -44,10 +44,15 @@ export class Hud {
   private pauseEl: HTMLButtonElement;
   private boostsEl: HTMLDivElement;
   private civPickEl: HTMLElement;
+  private lumenPanelEl!: HTMLElement;
+  private lumenLabelEl!: HTMLElement;
+  private lumenBarEl!: HTMLElement;
+  private lumenPulseEl!: HTMLElement;
   private guidanceEl: HTMLElement;
   private guidanceTargetEl: HTMLElement;
   private cmdsSig = '';
   private civSig = '';
+  private lumenSig = '';
   private guidanceSig = '';
 
   constructor(host: HTMLElement) {
@@ -217,6 +222,7 @@ export class Hud {
     );
     this.idlewEl.classList.toggle('pulse', idlePulse);
     this.drawCivPick(world);
+    this.drawLumen(world);
     this.drawMini(world, input);
     this.drawCard(world, input);
     this.drawGuidance(world, input);
@@ -234,13 +240,66 @@ export class Hud {
 
   private renderCivPick(player: Civ | null, rival: Civ | null): void {
     if (!player || !rival) {
-      this.civPickEl.innerHTML = '<span class="picker-label">1v1 matchup</span>';
+      this.civPickEl.innerHTML = `
+        <span class="picker-label">1v1 matchup</span>
+        <div id="lumen-objective" class="lumen-panel" hidden>
+          <strong class="lumen-label"></strong>
+          <div class="lumen-bar" aria-hidden="true" hidden><i></i></div>
+          <small class="lumen-pulse" hidden></small>
+        </div>`;
+      this.bindLumenPanel();
       return;
     }
     this.civPickEl.innerHTML = `
       <span class="picker-label">1v1 matchup</span>
       <span class="civ-tile ${player} on"><strong>${CIV_NAME[player]}</strong><small>You</small></span>
-      <span class="civ-tile ${rival} rival"><strong>${CIV_NAME[rival]}</strong><small>Rival</small></span>`;
+      <span class="civ-tile ${rival} rival"><strong>${CIV_NAME[rival]}</strong><small>Rival</small></span>
+      <div id="lumen-objective" class="lumen-panel" hidden>
+        <strong class="lumen-label"></strong>
+        <div class="lumen-bar" aria-hidden="true" hidden><i></i></div>
+        <small class="lumen-pulse" hidden></small>
+      </div>`;
+    this.bindLumenPanel();
+  }
+
+  private bindLumenPanel(): void {
+    this.lumenPanelEl = this.civPickEl.querySelector('#lumen-objective')!;
+    this.lumenLabelEl = this.lumenPanelEl.querySelector('.lumen-label')!;
+    this.lumenBarEl = this.lumenPanelEl.querySelector('.lumen-bar')!;
+    this.lumenPulseEl = this.lumenPanelEl.querySelector('.lumen-pulse')!;
+    this.lumenSig = '';
+  }
+
+  private drawLumen(world: World): void {
+    const landmark = world.landmarks.find((entry) => entry.id === 'central-lumen-field');
+    const seen = landmark !== undefined && (landmark.discoveredBy & SEEN_PLAYER) !== 0;
+    if (!seen) {
+      this.lumenPanelEl.hidden = true;
+      this.lumenSig = '';
+      return;
+    }
+    const state = world.lumenState();
+    const faction = (team: number): string => team === 0 ? 'SUNWEAVER' : 'GRAVEMARK';
+    let label = 'LUMEN · NEUTRAL';
+    if (state.contested) label = 'LUMEN · CONTESTED';
+    else if (state.capturing >= 0) label = `LUMEN · CAPTURING — ${faction(state.capturing)}`;
+    else if (state.owner === 0) label = 'LUMEN · SUNWEAVER CONTROL';
+    else if (state.owner === 1) label = 'LUMEN · GRAVEMARK CONTROL';
+    const pulseSeconds = state.pulseRemaining[0] > 0 ? Math.ceil(state.pulseRemaining[0]) : 0;
+    const signature = `${label}|${state.capturing}|${pulseSeconds}`;
+    this.lumenPanelEl.hidden = false;
+    if (signature !== this.lumenSig) {
+      this.lumenSig = signature;
+      this.lumenLabelEl.textContent = label;
+      this.lumenPulseEl.textContent = pulseSeconds > 0 ? `VISION PULSE · ${pulseSeconds}s` : '';
+      this.lumenPulseEl.hidden = pulseSeconds <= 0;
+    }
+    const capturing = state.capturing >= 0 && !state.contested;
+    this.lumenBarEl.hidden = !capturing;
+    if (capturing) {
+      const pct = Math.max(0, Math.min(100, (state.progress / 5) * 100));
+      (this.lumenBarEl.firstElementChild as HTMLElement).style.width = `${pct}%`;
+    }
   }
 
   private drawGuidance(world: World, input: Input): void {
@@ -571,7 +630,8 @@ export class Hud {
     }
     for (const landmark of world.landmarks) {
       if ((landmark.discoveredBy & SEEN_PLAYER) === 0) continue;
-      drawLandmarkMarker(ctx, landmark.x * sx, landmark.z * sz, landmark.kind);
+      const lumenOwner = landmark.id === 'central-lumen-field' ? world.lumenState().owner : -1;
+      drawLandmarkMarker(ctx, landmark.x * sx, landmark.z * sz, landmark.kind, lumenOwner);
     }
     const cam = input.pan;
     const rw = (input.halfH * 2 * (viewAspect())) / MAP * w;
@@ -604,24 +664,27 @@ function drawLandmarkMarker(
   x: number,
   y: number,
   kind: LandmarkKind,
+  owner: -1 | 0 | 1 = -1,
 ): void {
   ctx.lineWidth = 1;
   switch (kind) {
     case 'central-objective': {
       const outer = 7.5;
       const inner = 4.4;
+      const ring = owner === 1 ? P.ice : P.amber;
+      const diamond = owner === 0 ? P.lime : owner === 1 ? P.sky : P.cream;
       ctx.save();
       ctx.fillStyle = `${P.ink}cc`;
-      ctx.strokeStyle = P.amber;
+      ctx.strokeStyle = ring;
       ctx.lineWidth = 2;
-      ctx.shadowColor = P.amber;
+      ctx.shadowColor = ring;
       ctx.shadowBlur = 6;
       ctx.beginPath();
       ctx.arc(x, y, outer, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
       ctx.shadowBlur = 0;
-      ctx.fillStyle = P.cream;
+      ctx.fillStyle = diamond;
       ctx.strokeStyle = P.ink;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -783,6 +846,14 @@ const HUD_CSS = `
 #civpick .civ-tile.voidmarked{background:linear-gradient(135deg,${P.plum} 0%,${P.moss} 100%)}
 #civpick .civ-tile.on{border-color:${P.amber};box-shadow:0 0 0 1px #000,0 0 18px ${P.amber}66,inset 0 0 0 2px ${P.amber}55}
 #civpick .civ-tile.rival{border-color:${P.ice}99}
+#civpick .lumen-panel{box-sizing:border-box;width:156px;max-width:156px;padding:7px 8px;border:1px solid ${P.amber}99;border-radius:2px;background:${P.ink}f2;color:${P.cream};pointer-events:none;box-shadow:0 4px 16px #0008}
+#civpick .lumen-panel[hidden]{display:none}
+#civpick .lumen-panel strong{display:block;min-width:0;color:${P.amber};font-size:12px;font-weight:700;line-height:14px;letter-spacing:.04em;overflow-wrap:anywhere;text-transform:uppercase}
+#civpick .lumen-bar{display:block;width:100%;height:6px;min-height:6px;margin-top:5px;background:#ffffff22;border-radius:1px;overflow:hidden}
+#civpick .lumen-bar[hidden]{display:none}
+#civpick .lumen-bar i{display:block;width:0;height:6px;background:${P.amber};border-radius:1px}
+#civpick .lumen-pulse{display:block;margin-top:5px;color:${P.ice};font-size:12px;font-weight:600;line-height:14px;letter-spacing:.04em}
+#civpick .lumen-pulse[hidden]{display:none}
 #hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;opacity:.45;pointer-events:none;white-space:nowrap}
 #guidance{position:fixed;left:50%;top:calc(68px + env(safe-area-inset-top,0px));transform:translateX(-50%);box-sizing:border-box;width:min(460px,calc(100vw - 380px));margin:0;padding:8px 16px 9px;border:2px solid ${P.amber};background:linear-gradient(${P.night}f0,${P.ink}ec);box-shadow:0 0 0 2px #000,0 6px 18px #0008,inset 0 0 14px #0007;text-align:center;pointer-events:none;z-index:6;font-size:12px;line-height:1.35}
 #guidance strong{display:block;color:${P.amber};font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 10px ${P.sand}55}
