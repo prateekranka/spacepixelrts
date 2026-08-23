@@ -1568,6 +1568,41 @@ export class GameRenderer {
     this.scene.add(this.fogMesh);
   }
 
+  resetWorld(world: World): void {
+    this.disposeTerrain();
+    this.disposeFog();
+    this.buildMap(world);
+
+    const fogHeight = buildHeightTexture(world);
+    this.fogMesh = buildFogMesh(fogHeight);
+    const fogMat = this.fogMesh.material as THREE.ShaderMaterial;
+    fogMat.uniforms.uFog.value = this.fogTex;
+    this.fogMesh.visible = world.fogOfWarEnabled;
+    this.scene.add(this.fogMesh);
+
+    this.fogData.fill(0);
+    this.fogTex.needsUpdate = true;
+    this.proceduralScout.visible = false;
+    for (const worker of this.proceduralWorkers.values()) {
+      this.scene.remove(worker);
+      worker.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry.dispose();
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const material of materials) material.dispose();
+      });
+    }
+    this.proceduralWorkers.clear();
+    this.drawnEntIds.clear();
+    this.proceduralScoutDrawn = 0;
+    this.proceduralWorkerDrawn = 0;
+    this.lastDrawn = 0;
+    this.lastVfx = 0;
+    this.lastDrawnMs = 0;
+    this.octx.clearRect(0, 0, this.overlay.width, this.overlay.height);
+  }
+
   resize(w: number, h: number): void {
     this.renderer.setSize(w, h, false);
     this.overlay.width = w;
@@ -1905,6 +1940,32 @@ export class GameRenderer {
     this.heightData = world.height;
     this.mapMesh = buildTerrainMesh(world);
     this.scene.add(this.mapMesh);
+  }
+
+  private disposeTerrain(): void {
+    if (!this.mapMesh) return;
+    this.scene.remove(this.mapMesh);
+    const material = this.mapMesh.material as THREE.ShaderMaterial;
+    const disposed = new Set<THREE.Texture>();
+    for (const uniform of Object.values(material.uniforms)) {
+      const texture = uniform.value as THREE.Texture;
+      if (texture?.isTexture && !disposed.has(texture)) {
+        disposed.add(texture);
+        texture.dispose();
+      }
+    }
+    this.mapMesh.geometry.dispose();
+    material.dispose();
+  }
+
+  private disposeFog(): void {
+    if (!this.fogMesh) return;
+    this.scene.remove(this.fogMesh);
+    const material = this.fogMesh.material as THREE.ShaderMaterial;
+    const heightTexture = material.uniforms.uHeight?.value as THREE.Texture;
+    if (heightTexture?.isTexture) heightTexture.dispose();
+    this.fogMesh.geometry.dispose();
+    material.dispose();
   }
 
   private buildStars(): void {

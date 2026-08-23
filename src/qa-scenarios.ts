@@ -98,7 +98,7 @@ export const QA_SCENARIOS: readonly QaScenario[] = [
     gravemarkSwappedConfig(),
   ),
   makeScenario('battle', 'Playing', PLAYING_SEQUENCE, { id: 'cam-frontline-clash', x: 36, z: 38, halfH: 32 }, true),
-  makeScenario('victory', 'Victory', VICTORY_SEQUENCE, { id: 'cam-victory-overlook', x: 56, z: 56, halfH: 40 }, true),
+  makeScenario('victory', 'Victory', VICTORY_SEQUENCE, { id: 'cam-victory-overlook', x: 56, z: 56, halfH: 40 }, false),
   makeScenario('loading', 'Loading', LOADING_SEQUENCE, { id: 'cam-loading-hold', x: 36, z: 36, halfH: 26 }, false),
   makeScenario('tactical-pause', 'TacticalPause', TACTICAL_PAUSE_SEQUENCE, { id: 'cam-tactical-freeze', x: 36, z: 36, halfH: 33 }, false),
   makeScenario('defeat', 'Defeat', DEFEAT_SEQUENCE, { id: 'cam-defeat-aftermath', x: 12, z: 12, halfH: 38 }, false),

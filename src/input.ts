@@ -41,6 +41,7 @@ export class Input {
   private pressTimer: number | null = null;
   private pressFired = false;
   private multiPointerGesture = false;
+  private interactive = true;
 
   constructor(
     readonly host: HTMLElement,
@@ -66,6 +67,39 @@ export class Input {
     host.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
+  setInteractive(enabled: boolean): void {
+    this.interactive = enabled;
+    if (enabled) return;
+    this.cancelLongPress();
+    this.pointers.clear();
+    this.dragging = false;
+    this.panning = false;
+    this.box = null;
+    this.pressFired = false;
+    this.multiPointerGesture = false;
+  }
+
+  resetForMatch(): void {
+    this.selected.clear();
+    this.groups = [[], [], [], []];
+    this.place = null;
+    this.commandMode = null;
+    this.box = null;
+    this.dragging = false;
+    this.panning = false;
+    this.pointers.clear();
+    this.cancelLongPress();
+    this.lastTap = 0;
+    this.lastTapId = -1;
+    this.pinch0 = 0;
+    this.moved = false;
+    this.downX = 0;
+    this.downY = 0;
+    this.pressFired = false;
+    this.multiPointerGesture = false;
+    Input.keys.clear();
+  }
+
   tick(dt: number): void {
     const keys = Input.keys;
     const sp = this.halfH * 1.6 * dt;
@@ -81,6 +115,7 @@ export class Input {
   }
 
   commandAt(kind: 'move' | 'stop' | 'attack' | 'gather' | 'idleworker'): void {
+    if (!this.interactive) return;
     if (kind === 'stop') {
       for (const id of this.selected) {
         const e = this.world.ents[id];
@@ -115,6 +150,7 @@ export class Input {
 
   /** Focus and select the player scout so it is controllable from the opening view. */
   focusScout(): void {
+    if (!this.interactive) return;
     const scout = this.world.ents.find(
       (e) => e.alive && e.team === 0 && e.kind === Kind.Scout && e.hp > 0 && e.vis,
     );
@@ -130,6 +166,7 @@ export class Input {
 
   /** Focus the player's completed Nexus so research is reachable without a building pick. */
   focusHall(): boolean {
+    if (!this.interactive) return false;
     const hall = this.world.ents.find(
       (e) => e.alive && e.team === 0 && e.kind === Kind.Hall && e.hp > 0 && e.progress >= 1,
     );
@@ -146,6 +183,7 @@ export class Input {
   }
 
   private onDown(e: PointerEvent): void {
+    if (!this.interactive) return;
     const el = e.target as HTMLElement;
     if (el.closest('#start-screen')) return;
     if (el.closest('#topbar, #bottom, #civpick')) return;
@@ -530,6 +568,7 @@ export class Input {
   }
 
   private onKey(e: KeyboardEvent): void {
+    if (!this.interactive) return;
     if (e.code === 'Space') {
       e.preventDefault();
       this.commandAt('stop');

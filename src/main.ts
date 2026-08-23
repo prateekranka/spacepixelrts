@@ -105,39 +105,57 @@ function applyCamera(): void {
 }
 
 function prepareMatch(config: MatchConfig): void {
-  if (world) throw new Error('M0 supports one initialized match per page load');
-  const nextWorld = new World();
-  nextWorld.civ[0] = toLegacyCiv(config.playerFaction);
-  nextWorld.civ[1] = toLegacyCiv(config.aiFaction);
-  nextWorld.fogOfWarEnabled = config.fogOfWar;
-  nextWorld.aiDifficulty = config.difficulty;
-  nextWorld.reset(config.seed >>> 0);
+  if (!world || !view || !input || !hud) {
+    const nextWorld = new World();
+    nextWorld.civ[0] = toLegacyCiv(config.playerFaction);
+    nextWorld.civ[1] = toLegacyCiv(config.aiFaction);
+    nextWorld.fogOfWarEnabled = config.fogOfWar;
+    nextWorld.aiDifficulty = config.difficulty;
+    nextWorld.reset(config.seed >>> 0);
 
-  const nextView = new GameRenderer(host);
-  nextView.init(nextWorld);
-  nextView.resize(host.clientWidth, host.clientHeight);
+    const nextView = new GameRenderer(host);
+    nextView.init(nextWorld);
+    nextView.resize(host.clientWidth, host.clientHeight);
 
-  nextWorld.onHit = () => {
+    nextWorld.onHit = () => {
+      sfx.hit();
+      hitSfx++;
+    };
+    nextWorld.onMuzzle = () => sfx.muzzle();
+
+    const nextInput = new Input(host, nextWorld, nextView, sfx);
+    const nextHud = new Hud(host);
+    nextHud.bind(
+      nextWorld,
+      nextInput,
+      nextView,
+      () => dispatchAppEvent('TOGGLE_PAUSE'),
+      (event) => dispatchAppEvent(event),
+    );
+    nextHud.setPaused(false);
+    nextHud.setVisible(!uiHidden);
+
+    world = nextWorld;
+    view = nextView;
+    input = nextInput;
+    hud = nextHud;
+  } else {
+    world.civ[0] = toLegacyCiv(config.playerFaction);
+    world.civ[1] = toLegacyCiv(config.aiFaction);
+    world.fogOfWarEnabled = config.fogOfWar;
+    world.aiDifficulty = config.difficulty;
+    world.reset(config.seed >>> 0);
+    view.resetWorld(world);
+    input.resetForMatch();
+    hud.resetForMatch();
+  }
+
+  if (!world || !input || !hud) throw new Error('Starhaven match lifecycle incomplete');
+  world.onHit = () => {
     sfx.hit();
     hitSfx++;
   };
-  nextWorld.onMuzzle = () => sfx.muzzle();
-
-  const nextInput = new Input(host, nextWorld, nextView, sfx);
-  const nextHud = new Hud(host);
-  nextHud.bind(
-    nextWorld,
-    nextInput,
-    nextView,
-    () => dispatchAppEvent('TOGGLE_PAUSE'),
-  );
-  nextHud.setPaused(false);
-  nextHud.setVisible(!uiHidden);
-
-  world = nextWorld;
-  view = nextView;
-  input = nextInput;
-  hud = nextHud;
+  world.onMuzzle = () => sfx.muzzle();
   hitSfx = 0;
   acc = 0;
   terminalStateDispatched = false;
@@ -183,6 +201,8 @@ function syncPresentation(transition: TransitionResult): void {
   document.documentElement.dataset.appState = transition.to;
   const paused = transition.to === 'TacticalPause';
   hud?.setPaused(paused);
+  hud?.setAppState(transition.to, activeConfig.difficulty);
+  input?.setInteractive(transition.to === 'Playing' || transition.to === 'TacticalPause');
   if (transition.to === 'Loading') {
     startScreen?.destroy();
     startScreen = null;
@@ -317,14 +337,19 @@ function frame(now: number): void {
 
   if (input && (flow.state === 'Playing' || flow.state === 'TacticalPause')) input.tick(raw);
   if (flow.canAdvanceSimulation && world && !qaFrozen) {
-    acc += raw * activeConfig.speed;
-    let steps = 0;
-    while (acc >= DT && steps < 5) {
-      world.step();
-      acc -= DT;
-      steps++;
-    }
     checkTerminalState();
+    if (flow.canAdvanceSimulation) {
+      acc += raw * activeConfig.speed;
+      let steps = 0;
+      while (flow.canAdvanceSimulation && acc >= DT && steps < 5) {
+        world.step();
+        acc -= DT;
+        steps++;
+        checkTerminalState();
+      }
+    } else {
+      acc = 0;
+    }
   } else {
     acc = 0;
   }
@@ -350,9 +375,11 @@ interface StarhavenQaProbe {
   readonly scenario: string | null;
   readonly config: MatchConfig;
   readonly scenarios: readonly string[];
+  readonly scenarioScaffolds: readonly { id: string; scaffold: boolean }[];
   readonly resetCount: number;
   readonly tick: number;
   readonly winner: number;
+  readonly stats: ReturnType<World['matchStats']> | null;
   readonly fps: number;
   readonly p99FrameMs: number;
   readonly draws: number | null;
@@ -422,9 +449,11 @@ function publish(): void {
     scenario: activeScenario?.id ?? null,
     config: cloneMatchConfig(activeConfig),
     scenarios: QA_SCENARIOS.map((scenario) => scenario.id),
+    scenarioScaffolds: QA_SCENARIOS.map((scenario) => ({ id: scenario.id, scaffold: scenario.scaffold })),
     resetCount: matchResetCount,
     tick: world?.tick ?? 0,
     winner: world?.winner ?? -1,
+    stats: world?.matchStats() ?? null,
     fps: fpsSmoothed,
     p99FrameMs: Math.round(p99FrameMs * 100) / 100,
     draws: rendererInfo?.drawn ?? null,

@@ -68,6 +68,18 @@ export interface LumenState {
   pulseRemaining: readonly [number, number];
 }
 
+export interface MatchTeamStats {
+  resources: { ore: number; gas: number; energy: number };
+  unitsTrained: number;
+  unitsLost: number;
+  coreDamage: number;
+}
+
+export interface MatchStats {
+  tick: number;
+  teams: readonly [MatchTeamStats, MatchTeamStats];
+}
+
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
 const DC = [1, 1, 1, 1, 1.4142, 1.4142, 1.4142, 1.4142];
@@ -185,6 +197,11 @@ export class World {
   private lumenPulseRemaining: [number, number] = [0, 0];
   private lumenChargeAccum: [number, number] = [0, 0];
   private lumenOwnedAccum: [number, number] = [0, 0];
+  private matchStatsData: [MatchTeamStats, MatchTeamStats] = [
+    this.makeMatchTeamStats(),
+    this.makeMatchTeamStats(),
+  ];
+  private matchStatsTracking = false;
 
   constructor() {
     for (let i = 0; i < MAX_ENTS; i++) {
@@ -204,7 +221,28 @@ export class World {
     }
   }
 
+  private makeMatchTeamStats(): MatchTeamStats {
+    return {
+      resources: { ore: 0, gas: 0, energy: 0 },
+      unitsTrained: 0,
+      unitsLost: 0,
+      coreDamage: 0,
+    };
+  }
+
+  private resetMatchStats(): void {
+    this.matchStatsData[0] = this.makeMatchTeamStats();
+    this.matchStatsData[1] = this.makeMatchTeamStats();
+  }
+
+  private recordGathered(team: number, resource: 'ore' | 'gas' | 'energy', amount: number): void {
+    if (!this.matchStatsTracking || (team !== 0 && team !== 1) || amount <= 0) return;
+    this.matchStatsData[team].resources[resource] += amount;
+  }
+
   reset(seed = 0x5eed): void {
+    this.matchStatsTracking = false;
+    this.resetMatchStats();
     this.seed = seed;
     this.tick = 0;
     this.winner = -1;
@@ -257,8 +295,29 @@ export class World {
     this.pendingPath = [null, null, null, null];
     this.genMap();
     this.spawnScenario();
+    this.matchStatsTracking = true;
     this.recountPop();
     this.updateFog();
+  }
+
+  matchStats(): MatchStats {
+    return {
+      tick: this.tick,
+      teams: [
+        {
+          resources: { ...this.matchStatsData[0].resources },
+          unitsTrained: this.matchStatsData[0].unitsTrained,
+          unitsLost: this.matchStatsData[0].unitsLost,
+          coreDamage: this.matchStatsData[0].coreDamage,
+        },
+        {
+          resources: { ...this.matchStatsData[1].resources },
+          unitsTrained: this.matchStatsData[1].unitsTrained,
+          unitsLost: this.matchStatsData[1].unitsLost,
+          coreDamage: this.matchStatsData[1].coreDamage,
+        },
+      ],
+    };
   }
 
   spawn(kind: Kind, civ: Civ, team: number, x: number, z: number): Ent | null {
@@ -306,6 +365,9 @@ export class World {
     e.dissolveT = 0;
     e.corpseT = 0;
     if (kind === Kind.Hall) e.hp = st.hp;
+    if (this.matchStatsTracking && (team === 0 || team === 1) && isUnit(kind)) {
+      this.matchStatsData[team].unitsTrained++;
+    }
     return e;
   }
 
@@ -318,6 +380,7 @@ export class World {
   kill(e: Ent): void {
     if (!e.alive) return;
     if (isUnit(e.kind)) {
+      const wasLiving = e.hp > 0;
       e.hp = 0;
       e.dissolveT = DISSOLVE_DUR;
       e.corpseT = STAIN_DUR;
@@ -325,6 +388,9 @@ export class World {
       e.path = null;
       e.tid = -1;
       e.order = Ord.Idle;
+      if (wasLiving && this.matchStatsTracking && (e.team === 0 || e.team === 1)) {
+        this.matchStatsData[e.team].unitsLost++;
+      }
       this.recountPop();
       return;
     }
@@ -531,6 +597,7 @@ export class World {
   }
 
   step(): void {
+    if (this.winner !== -1) return;
     this.tick++;
     this.hash.clear();
     for (let i = 0; i < MAX_ENTS; i++) {
@@ -1092,9 +1159,16 @@ export class World {
       e.order = Ord.Return;
       if (dist2(e.x, e.z, hall.x, hall.z) < (hall.radius + 0.55) ** 2) {
         const eco = this.teams[e.team];
-        if (e.cargoType === Tile.Ore) eco.ore += e.cargo;
-        else if (e.cargoType === Tile.Gas) eco.gas += e.cargo;
-        else eco.energy += e.cargo;
+        if (e.cargoType === Tile.Ore) {
+          eco.ore += e.cargo;
+          this.recordGathered(e.team, 'ore', e.cargo);
+        } else if (e.cargoType === Tile.Gas) {
+          eco.gas += e.cargo;
+          this.recordGathered(e.team, 'gas', e.cargo);
+        } else {
+          eco.energy += e.cargo;
+          this.recordGathered(e.team, 'energy', e.cargo);
+        }
         e.cargo = 0;
         e.order = Ord.Gather;
       } else this.steer(e, hall.x, hall.z, st.spd);
@@ -1162,6 +1236,7 @@ export class World {
     }
     const eco = this.teams[e.team];
     eco.energy += 1;
+    this.recordGathered(e.team, 'energy', 1);
     node.hp -= 1;
     e.cooldown = 0.4;
     if (node.hp <= 0) {
@@ -1224,8 +1299,13 @@ export class World {
       while (n.rigAccum >= iv && n.hp > 0) {
         n.rigAccum -= iv;
         n.hp = Math.max(0, n.hp - 0.5);
-        if (n.cargoType === Tile.Ore) eco.ore += 1;
-        else eco.gas += 1;
+        if (n.cargoType === Tile.Ore) {
+          eco.ore += 1;
+          this.recordGathered(n.rigTeam, 'ore', 1);
+        } else {
+          eco.gas += 1;
+          this.recordGathered(n.rigTeam, 'gas', 1);
+        }
       }
       if (n.hp <= 0) this.kill(n);
     }
@@ -1334,7 +1414,8 @@ export class World {
   }
 
   /** M3-B B4 — a finished rig absorbs damage before the base node does. */
-  private damageRigAware(t: Ent, dmg: number): void {
+  private damageRigAware(t: Ent, dmg: number, attackerTeam = -1): void {
+    const hpBefore = t.hp;
     if (t.kind === Kind.Resource && t.rigTeam >= 0 && t.rigProgress >= 1) {
       t.rigHp -= dmg;
       if (t.rigHp <= 0) {
@@ -1347,6 +1428,16 @@ export class World {
       return;
     }
     t.hp -= dmg;
+    if (
+      t.kind === Kind.Hall &&
+      this.matchStatsTracking &&
+      (attackerTeam === 0 || attackerTeam === 1) &&
+      (t.team === 0 || t.team === 1) &&
+      t.team !== attackerTeam
+    ) {
+      const removed = Math.max(0, Math.min(Math.max(0, hpBefore), hpBefore - t.hp));
+      this.matchStatsData[attackerTeam].coreDamage += removed;
+    }
   }
 
   private tryStrike(e: Ent, t: Ent, st: typeof STATS[number]): void {
@@ -1360,7 +1451,7 @@ export class World {
       (e.civ === 'aurion' ? 0.92 : 1) *
       this.openingDmgMul(e, t);
     if (st.melee) {
-      this.damageRigAware(t, applied * bonus);
+      this.damageRigAware(t, applied * bonus, e.team);
       if (t.team === 1 && this.tick < 240) t.hitFlash = 0.45;
       this.spawnSpark(t.x, t.z, 1, e.civ);
       this.onHit?.();
@@ -1453,7 +1544,7 @@ export class World {
         if (e.kind === Kind.Worker) continue;
         if (e.kind === Kind.Shade && e.stealth > 0.6) continue;
         if (dist2(b.x, b.z, e.x, e.z) < (e.radius + 0.25) ** 2) {
-          this.damageRigAware(e, b.dmg);
+          this.damageRigAware(e, b.dmg, b.team);
           if (e.team === 1 && this.tick < 240) e.hitFlash = 0.45;
           this.markCombat(e);
           this.spawnSpark(b.x, b.z, 1, b.civ);
@@ -1815,6 +1906,7 @@ export class World {
     while (this.lumenChargeAccum[owner] + 1e-9 >= 1) {
       this.lumenChargeAccum[owner] -= 1;
       eco.energy += 1;
+      this.recordGathered(owner, 'energy', 1);
     }
     this.lumenOwnedAccum[owner] += DT;
     while (this.lumenOwnedAccum[owner] + 1e-9 >= LUMEN_PULSE_INTERVAL) {

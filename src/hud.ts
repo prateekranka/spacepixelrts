@@ -1,6 +1,6 @@
 /** P30 / P31 / P35 — AoE2-style command chrome for landscape iPad. */
 
-import { Kind, MAP, Ord, Tile } from './engine';
+import { DT, Kind, MAP, Ord, Tile } from './engine';
 import type { Civ, Ent } from './engine';
 import {
   CIV_NAME,
@@ -20,7 +20,9 @@ import {
   pathsForCiv,
 } from './content';
 import type { TechPathId } from './content';
-import type { World } from './sim';
+import type { Difficulty } from './match-config';
+import type { AppEvent, AppState } from './app-flow';
+import type { MatchStats, World } from './sim';
 import type { Input } from './input';
 import type { GameRenderer } from './render';
 import { SEEN_PLAYER } from './discovery';
@@ -40,6 +42,8 @@ export class Hud {
   private matchEndEl: HTMLElement;
   private matchTitleEl: HTMLElement;
   private matchSubEl: HTMLElement;
+  private matchContinueEl: HTMLButtonElement;
+  private resultsEl: HTMLElement;
   private idlewEl: HTMLButtonElement;
   private pauseEl: HTMLButtonElement;
   private boostsEl: HTMLDivElement;
@@ -54,6 +58,18 @@ export class Hud {
   private civSig = '';
   private lumenSig = '';
   private guidanceSig = '';
+  private world: World | null = null;
+  private appState: AppState = 'Boot';
+  private difficulty: Difficulty = 'standard';
+  private visibleRequested = true;
+  private continueDispatched = false;
+  private terminalStats: MatchStats | null = null;
+  private terminalTick = 0;
+  private terminalOutcome: 'VICTORY' | 'DEFEAT' | null = null;
+  private terminalCivs: [Civ, Civ] = ['vespari', 'aurion'];
+  private terminalPaths: [TechPathId | null, TechPathId | null] = [null, null];
+  private terminalDifficulty: Difficulty = 'standard';
+  private onAppEvent: ((event: AppEvent) => void) | undefined;
 
   constructor(host: HTMLElement) {
     this.root = document.createElement('div');
@@ -111,8 +127,10 @@ export class Hud {
         <div class="match-panel">
           <h1 id="match-title">VICTORY</h1>
           <p id="match-sub">Enemy Nexus shattered</p>
+          <button type="button" id="match-continue">CONTINUE</button>
         </div>
       </div>
+      <div id="results" hidden aria-live="polite"></div>
     `;
     host.appendChild(this.root);
     this.minimap = this.root.querySelector('#minimap')!;
@@ -125,12 +143,26 @@ export class Hud {
     this.matchEndEl = this.root.querySelector('#match-end')!;
     this.matchTitleEl = this.root.querySelector('#match-title')!;
     this.matchSubEl = this.root.querySelector('#match-sub')!;
+    this.matchContinueEl = this.root.querySelector('#match-continue')!;
+    this.resultsEl = this.root.querySelector('#results')!;
     this.idlewEl = this.root.querySelector('#idlew')!;
     this.pauseEl = this.root.querySelector('#pause-toggle')!;
     this.boostsEl = this.root.querySelector('#boosts')!;
     this.civPickEl = this.root.querySelector('#civpick')!;
     this.guidanceEl = this.root.querySelector('#guidance')!;
     this.guidanceTargetEl = this.root.querySelector('#guidance-target')!;
+    this.matchContinueEl.addEventListener('click', () => {
+      if (this.continueDispatched || (this.appState !== 'Victory' && this.appState !== 'Defeat')) return;
+      this.continueDispatched = true;
+      this.matchContinueEl.disabled = true;
+      this.onAppEvent?.('CONTINUE');
+    });
+    this.resultsEl.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest('button[data-results-action]') as HTMLButtonElement | null;
+      if (!button || this.appState !== 'Results') return;
+      const action = button.dataset.resultsAction as AppEvent | undefined;
+      if (action === 'REMATCH' || action === 'MAIN_MENU') this.onAppEvent?.(action);
+    });
     this.injectCss();
     this.renderCivPick(null, null);
   }
@@ -140,12 +172,16 @@ export class Hud {
     input: Input,
     view: GameRenderer,
     onPauseToggle: () => void,
+    onAppEvent?: (event: AppEvent) => void,
   ): void {
+    this.world = world;
+    this.onAppEvent = onAppEvent;
     this.root.querySelector('#idlew')!.addEventListener('click', () => input.commandAt('idleworker'));
     this.root.querySelector('#scout-focus')!.addEventListener('click', () => input.focusScout());
     this.pauseEl.addEventListener('click', () => onPauseToggle());
     // M3-C — Sunweaver boost toggles: one active at a time, click again to turn off.
     this.boostsEl.addEventListener('click', (e) => {
+      if (this.appState !== 'Playing' && this.appState !== 'TacticalPause') return;
       const btn = (e.target as HTMLElement).closest('button[data-boost]') as HTMLButtonElement | null;
       if (!btn) return;
       const kind = Number(btn.dataset.boost!);
@@ -170,7 +206,40 @@ export class Hud {
   }
 
   setVisible(visible: boolean): void {
-    this.root.hidden = !visible;
+    this.visibleRequested = visible;
+    this.applyRootVisibility();
+  }
+
+  setAppState(state: AppState, difficulty: Difficulty = this.difficulty): void {
+    const wasTerminal = this.appState === 'Victory' || this.appState === 'Defeat';
+    this.appState = state;
+    this.difficulty = difficulty;
+    const isTerminal = state === 'Victory' || state === 'Defeat';
+    if (isTerminal && !wasTerminal) {
+      this.captureTerminal(state);
+      this.continueDispatched = false;
+      this.matchContinueEl.disabled = false;
+    }
+    this.root.classList.toggle('results-mode', state === 'Results');
+    this.matchEndEl.hidden = !isTerminal;
+    this.resultsEl.hidden = state !== 'Results';
+    if (state === 'Results') this.renderResults();
+    this.applyRootVisibility();
+  }
+
+  resetForMatch(): void {
+    this.selectedResetSignatures();
+    this.matchEndEl.hidden = true;
+    this.resultsEl.hidden = true;
+    this.root.classList.remove('results-mode');
+    this.appState = 'Loading';
+    this.continueDispatched = false;
+    this.matchContinueEl.disabled = false;
+    this.terminalStats = null;
+    this.terminalTick = 0;
+    this.terminalOutcome = null;
+    this.terminalPaths = [null, null];
+    this.applyRootVisibility();
   }
 
   setPaused(paused: boolean): void {
@@ -181,6 +250,7 @@ export class Hud {
   }
 
   draw(world: World, input: Input, fps: number): void {
+    if (this.appState === 'Results') return;
     const eco = world.teams[0];
     if (input.commandMode === 'move') this.hintEl.textContent = 'MOVE ARMED · Tap ground';
     else if (input.commandMode === 'attack') this.hintEl.textContent = 'ATTACK ARMED · Tap target or ground';
@@ -226,7 +296,7 @@ export class Hud {
     this.drawMini(world, input);
     this.drawCard(world, input);
     this.drawGuidance(world, input);
-    this.drawMatchEnd(world);
+    this.drawMatchEnd();
   }
 
   private drawCivPick(world: World): void {
@@ -347,19 +417,92 @@ export class Hud {
     this.guidanceTargetEl.querySelector<HTMLElement>('span')!.textContent = target.label;
   }
 
-  private drawMatchEnd(world: World): void {
-    if (world.winner === -1) {
+  private applyRootVisibility(): void {
+    const matchState =
+      this.appState === 'Playing' ||
+      this.appState === 'TacticalPause' ||
+      this.appState === 'Victory' ||
+      this.appState === 'Defeat' ||
+      this.appState === 'Results';
+    this.root.hidden = !this.visibleRequested || !matchState;
+  }
+
+  private selectedResetSignatures(): void {
+    this.cmdsSig = '';
+    this.civSig = '';
+    this.lumenSig = '';
+    this.guidanceSig = '';
+    this.guidanceTargetEl.hidden = true;
+    this.resultsEl.innerHTML = '';
+  }
+
+  private captureTerminal(state: 'Victory' | 'Defeat'): void {
+    if (!this.world) return;
+    this.terminalStats = this.world.matchStats();
+    this.terminalTick = this.world.tick;
+    this.terminalOutcome = state === 'Victory' ? 'VICTORY' : 'DEFEAT';
+    this.terminalCivs = [this.world.civ[0], this.world.civ[1]];
+    this.terminalPaths = [this.world.techPathOf(0), this.world.techPathOf(1)];
+    this.terminalDifficulty = this.difficulty;
+  }
+
+  private renderResults(): void {
+    const stats = this.terminalStats ?? this.world?.matchStats() ?? {
+      tick: this.terminalTick,
+      teams: [
+        { resources: { ore: 0, gas: 0, energy: 0 }, unitsTrained: 0, unitsLost: 0, coreDamage: 0 },
+        { resources: { ore: 0, gas: 0, energy: 0 }, unitsTrained: 0, unitsLost: 0, coreDamage: 0 },
+      ] as const,
+    };
+    const outcome = this.terminalOutcome ?? (this.appState === 'Victory' ? 'VICTORY' : 'DEFEAT');
+    const pathName = (path: TechPathId | null): string =>
+      path === null ? 'No path chosen' : TECH_PATHS.find((entry) => entry.id === path)?.name ?? path;
+    const difficulty = this.terminalDifficulty.charAt(0).toUpperCase() + this.terminalDifficulty.slice(1);
+    const resources = (team: (typeof stats.teams)[number]): string =>
+      `${team.resources.ore | 0} / ${team.resources.gas | 0} / ${team.resources.energy | 0}`;
+    const duration = formatDuration(stats.tick * DT);
+    const player = stats.teams[0];
+    const rival = stats.teams[1];
+    const playerName = CIV_NAME[this.terminalCivs[0]];
+    const rivalName = CIV_NAME[this.terminalCivs[1]];
+    this.resultsEl.innerHTML = `
+      <section id="results-panel" aria-label="Match results">
+        <p class="results-kicker">MATCH COMPLETE // HELIOS RIFT</p>
+        <h1 id="results-outcome">${outcome}</h1>
+        <p id="results-duration">${duration}</p>
+        <p id="results-matchup">${playerName} vs ${rivalName} · ${difficulty}</p>
+        <div class="results-columns" aria-hidden="true">
+          <span></span><strong>${playerName}</strong><strong>${rivalName}</strong>
+        </div>
+        <div class="results-table" role="table" aria-label="Match comparison">
+          <div class="results-row" data-results-row="resources"><span>RESOURCES GATHERED<small>Ore / Volatiles / Charge</small></span><b>${resources(player)}</b><b>${resources(rival)}</b></div>
+          <div class="results-row" data-results-row="trained"><span>UNITS TRAINED</span><b>${player.unitsTrained}</b><b>${rival.unitsTrained}</b></div>
+          <div class="results-row" data-results-row="lost"><span>UNITS LOST</span><b>${player.unitsLost}</b><b>${rival.unitsLost}</b></div>
+          <div class="results-row" data-results-row="damage"><span>CORE DAMAGE</span><b>${formatStat(player.coreDamage)}</b><b>${formatStat(rival.coreDamage)}</b></div>
+          <div class="results-row" data-results-row="path"><span>TECHNOLOGY PATH</span><b>${pathName(this.terminalPaths[0])}</b><b>${pathName(this.terminalPaths[1])}</b></div>
+        </div>
+        <div class="results-actions">
+          <button type="button" data-results-action="REMATCH">PLAY AGAIN</button>
+          <button type="button" data-results-action="MAIN_MENU">MAIN MENU</button>
+        </div>
+      </section>`;
+  }
+
+  private drawMatchEnd(): void {
+    if (this.appState !== 'Victory' && this.appState !== 'Defeat') {
       this.matchEndEl.hidden = true;
       return;
     }
     this.matchEndEl.hidden = false;
-    const win = world.winner === 0;
+    const win = this.appState === 'Victory';
     this.matchEndEl.className = win ? 'win' : 'lose';
     this.matchTitleEl.textContent = win ? 'VICTORY' : 'DEFEAT';
     this.matchSubEl.textContent = win ? 'Enemy Nexus shattered' : 'Your Nexus is ash';
+    this.matchContinueEl.disabled = this.continueDispatched;
   }
 
   private handle(cmd: string, world: World, input: Input): void {
+    if (this.appState !== 'Playing' && this.appState !== 'TacticalPause' && cmd !== 'tech-focus') return;
     if (cmd === 'idleworker') input.commandAt('idleworker');
     if (cmd === 'stop') input.commandAt('stop');
     if (cmd === 'move') {
@@ -655,6 +798,17 @@ export class Hud {
   }
 }
 
+function formatDuration(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds + 1e-9));
+  const minutes = Math.floor(whole / 60);
+  const remainder = whole % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+}
+
+function formatStat(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 function viewAspect(): number {
   return window.innerWidth / Math.max(1, window.innerHeight);
 }
@@ -863,14 +1017,35 @@ const HUD_CSS = `
 #guidance-target[hidden]{display:none}
 #guidance-target[data-offscreen="true"]{border-radius:4px;background:${P.ink}b8}
 #guidance-target span{position:absolute;left:50%;top:calc(100% + 5px);transform:translateX(-50%);padding:2px 5px;border:1px solid ${P.amber};background:${P.ink}e8;color:${P.cream};font-size:12px;font-weight:700;letter-spacing:.12em;line-height:1.1;white-space:nowrap;text-shadow:0 1px 0 #000}
-#match-end{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;z-index:8}
-#match-end .match-panel{padding:18px 28px 16px;border:3px solid ${P.amber};background:linear-gradient(${P.night}f2,${P.ink}f0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;min-width:280px}
+#hud.results-mode #topbar,#hud.results-mode #bottom,#hud.results-mode #civpick,#hud.results-mode #hint,#hud.results-mode #guidance,#hud.results-mode #guidance-target{display:none}
+#match-end{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:8;background:rgba(1,4,10,.72)}
+#match-end[hidden],#results[hidden]{display:none}
+#match-end .match-panel{box-sizing:border-box;width:min(430px,calc(100vw - 48px));padding:26px 30px 28px;border:3px solid ${P.amber};background:linear-gradient(${P.night}f2,${P.ink}f0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;pointer-events:auto}
 #match-end.win .match-panel{border-color:${P.leaf};box-shadow:0 0 32px ${P.leaf}44,0 12px 40px #000a,inset 0 0 24px #0006}
 #match-end.lose .match-panel{border-color:${P.red};box-shadow:0 0 32px ${P.red}44,0 12px 40px #000a,inset 0 0 24px #0006}
 #match-title{margin:0 0 8px;font-size:28px;letter-spacing:.18em;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 16px ${P.amber}66}
 #match-end.win #match-title{color:${P.lime};text-shadow:0 2px 0 #000,0 0 20px ${P.leaf}88}
 #match-end.lose #match-title{color:${P.coral};text-shadow:0 2px 0 #000,0 0 20px ${P.red}88}
 #match-sub{margin:0;font-size:13px;letter-spacing:.08em;opacity:.82;text-transform:uppercase}
+#match-continue,.results-actions button{margin-top:24px;min-width:180px;min-height:44px;padding:8px 18px;border:1px solid ${P.amber};border-radius:2px;background:${P.deep};color:${P.cream};font:inherit;font-size:16px;font-weight:700;letter-spacing:.12em;cursor:pointer}
+#match-continue:hover,.results-actions button:hover{background:${P.plum}}
+#match-continue:disabled{opacity:.55;cursor:default}
+#results{position:absolute;inset:0;display:grid;place-items:center;pointer-events:auto;z-index:8;padding:28px;box-sizing:border-box;background:radial-gradient(circle at 50% 38%,#17283b 0%,${P.ink} 64%)}
+#results-panel{box-sizing:border-box;width:min(760px,100%);max-height:calc(100vh - 56px);overflow:auto;padding:30px 36px 28px;border:2px solid ${P.amber};background:linear-gradient(${P.night}f4,${P.ink}f2);box-shadow:0 0 0 2px #000,0 18px 60px #000b,inset 0 0 28px #0007;text-align:center}
+.results-kicker{margin:0;color:${P.amber};font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+#results-outcome{margin:12px 0 0;color:${P.lime};font-size:36px;letter-spacing:.18em;text-transform:uppercase}
+#results-outcome:where(:not(:empty)){text-shadow:0 2px 0 #000,0 0 20px ${P.leaf}66}
+#results-duration{margin:7px 0 0;color:${P.cream};font-size:25px;font-weight:700;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+#results-matchup{margin:8px 0 26px;color:${P.ice};font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.results-columns,.results-row{display:grid;grid-template-columns:minmax(180px,1.35fr) minmax(120px,1fr) minmax(120px,1fr);gap:14px;align-items:center}
+.results-columns{padding:0 14px 7px;border-bottom:1px solid ${P.amber}88;color:${P.amber};font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.results-row{min-height:48px;padding:8px 14px;border-bottom:1px solid #ffffff1c;text-align:left}
+.results-row>span{color:${P.cream};font-size:12px;font-weight:700;letter-spacing:.08em}
+.results-row>span small{display:block;margin-top:3px;color:${P.muted};font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:none}
+.results-row>b{color:${P.ice};font-size:15px;font-weight:700;line-height:1.25;text-align:center;overflow-wrap:anywhere}
+.results-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:24px}
+.results-actions button{margin-top:0}
+@media (max-width:640px){#results{padding:12px}.results-columns,.results-row{grid-template-columns:minmax(130px,1.2fr) minmax(80px,1fr) minmax(80px,1fr);gap:8px}.results-row{padding:8px 6px}.results-row>b{font-size:13px}#results-panel{padding:22px 12px}}
 @media (orientation:portrait){
   #rotate-gate{display:flex !important}
   #hud,canvas{visibility:hidden}
