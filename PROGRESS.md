@@ -267,14 +267,20 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   Fresh Sol Max-fast blind gate on five 1366×1024 composited states: **PASS**. Named non-blocking
   debt: lower deck crowding near viewport edge. Evidence:
   `/home/bobbyranka/workspace/evidence/starhaven-vs1-target/`. VS-1 is deployed.
-- **VS-2A honest AI doctrine FROZEN / ACTIVE** (`docs/VS2A_HONEST_AI.md`): measured honest
-  Gravemark economy reaches 891 Ore / 816 Volatiles / 70 Charge at minute 4 and needs no grant.
-  Piece adds legal one-Yard construction, normal 400/80 path channel, 2+2 mixed army, true
-  unexplored-frontier scouting, center rally, and discovered-Core attack. Difficulty affects only
-  decision cadence. Strict RED→GREEN plus fixed-seed 1366×1024 fast-step browser proof required;
-  no HUD/render/assets changes. R1 implementation (`125744c`, local/unpushed) passed code gates but
-  FAILed lead pacing: path at 1:36 and Core attack at 2:46 violated the 8–17 minute conflict window.
-  R2 contract adds 4:30 path floor, 8:00 attack floor, and attack-ready center hold.
+- **VS-2A honest AI doctrine COMPLETE** (`125744c` + pacing repair `a755aeb`): AI uses
+  ordinary Worker construction for one Yard plus one required Habitat, commits the faction path
+  through the normal 400/80 + 40s channel, trains an exact 2 Fighter + 2 unique first force through
+  normal costs/times, scouts true unexplored frontier, holds center with AttackMove, and targets the
+  player Core only after discovery and the 8:00 floor. Difficulty changes decision cadence only.
+  R1 at 2:46 correctly FAILed lead pacing; R2 final fixed-seed Standard milestones: path 4:30,
+  lock 5:10, 2+2 ready 6:14, Core attack 8:00. No grants (max positive step gain 9), hidden/pre-floor
+  Core targets 0, retired units 0, scripted marshal false, console errors 0; SwiftShader sim share
+  0.65ms <8ms. Lead reran VS2A QA/test, progression/touch QA, all m0–m5 gates, build: PASS.
+  Observer screenshots exposed the same real sim state without changing production fog. Fresh Sol
+  Max-fast blind gate: **PASS**. Named gap: final four combat silhouettes, already locked as VS-4.
+  Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs2a-r2-lead/` and
+  `/home/bobbyranka/workspace/evidence/starhaven-vs2a-observer/`. Next: VS-2B Central Lumen
+  ownership/income/pulse.
 - **Production live at VS-1** (`e36d48e`, `assets/main-CPZobgDv.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live browser readback at
   1366×1024 confirms Yard `150 Ore · 20 Charge`, no-selection `TECHNOLOGY PATH`, both path
