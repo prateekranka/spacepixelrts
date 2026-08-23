@@ -281,11 +281,11 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs2a-r2-lead/` and
   `/home/bobbyranka/workspace/evidence/starhaven-vs2a-observer/`. Next: VS-2B Central Lumen
   ownership/income/pulse.
-- **Production live at VS-1** (`e36d48e`, `assets/main-CPZobgDv.js`): deployed to the
-  existing `spacepixelrts` Pages project on production branch `main`. Live browser readback at
-  1366×1024 confirms Yard `150 Ore · 20 Charge`, no-selection `TECHNOLOGY PATH`, both path
-  choices at `400 Ore · 80 Charge`, state Playing, and zero console errors. `desktop.html` remains
-  the non-orientation-gated laptop preview route.
+- **Production live at VS-2A** (`5833429`, `assets/main-LvBGVAyw.js`): deployed to the
+  existing `spacepixelrts` Pages project on production branch `main`. Live production QA readback
+  at tick 9650 confirms Standard AI, scripted marshal false, one Yard, one Habitat, Iron Colossus,
+  2 Rift Guards + 2 Burden Walkers, discovered player Core, four legal Core targets, and zero
+  console errors. `desktop.html` remains the non-orientation-gated laptop preview route.
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
   (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
