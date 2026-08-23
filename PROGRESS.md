@@ -290,7 +290,14 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   minimap marker with zero WebGL calls. Lead replay: 32/32 all states, player/rival exact +10 Charge,
   pulse 30s/4s, sim share <0.8ms, winner -1, console 0, all VS2/M0–M5/build gates PASS. Fresh Sol
   R2 blind gate: **PASS**. Named non-blocking debt: thin capture progress. Evidence:
-  `/home/bobbyranka/workspace/evidence/starhaven-vs2b-r2-lead/`. Next: VS-3 terminal/results.
+  `/home/bobbyranka/workspace/evidence/starhaven-vs2b-r2-lead/`.
+- **VS-3 terminal/results/same-page replay FROZEN / ACTIVE**
+  (`docs/VS3_TERMINAL_RESULTS.md`): real winner stops sim; touch/keyboard CONTINUE reaches a
+  deterministic comparison Results panel; Play Again resets the same World/View/Input/Hud with no
+  duplicate listeners/canvases; second match may change seed/factions; Main Menu exits cleanly.
+  World tracks gathered resources, units trained/lost, and actual Core damage. Victory/defeat/results
+  routes become real. Strict tracer-bullet TDD + one bounded win→rematch→defeat→menu browser proof.
+  No app-flow transition, AI, objective, combat balance, terrain algorithm, or asset work.
 - **Production live at VS-2B** (`02ace06`, `assets/main-DYc8EcJQ.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live production readback
   spawned one legal Lumen Guard fixture, stepped normal sim to ownership, then confirmed

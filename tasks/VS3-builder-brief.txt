@@ -1,0 +1,73 @@
+# VS3 Builder — terminal/results/same-page replay (strict TDD)
+
+Read FIRST:
+1. DIRECTIVE.md
+2. docs/VERTICAL_SLICE_SPRINT.md
+3. docs/VS3_TERMINAL_RESULTS.md (frozen; implement exactly)
+4. src/main.ts prepareMatch/syncPresentation/frame/QA publish
+5. src/app-flow.ts + tests/app-flow.test.ts (transitions are locked)
+6. src/hud.ts terminal markup/drawMatchEnd/CSS
+7. src/input.ts constructor state
+8. src/render.ts init/buildMap/fog
+9. src/sim.ts reset/spawn/gather/rig/solar/Lumen/train/damage/kill
+10. src/qa-scenarios.ts and recent browser QA patterns
+
+Owned production exactly:
+- src/sim.ts
+- src/input.ts
+- src/render.ts
+- src/hud.ts
+- src/main.ts
+- src/qa-scenarios.ts
+- tests/vs3-results.test.ts (new)
+- scripts/qa-vs3-results.mjs (new)
+- package.json test:vs3 + qa:vs3
+- tasks/VS3-red.log (force-add)
+No app-flow transition/content/AI/objective mechanics/stats balance/terrain algorithm/sprite/assets/dependencies.
+
+Strict RED→GREEN tracer bullets:
+- Write first missing stats/reset assertion; run unchanged RED; save full initial RED transcript.
+- Implement only that seam, then add next failing behavior.
+- Continue stats -> terminal/results -> reset APIs -> two-match browser flow.
+- Do not write all imagined tests then all code.
+
+Key implementation rules:
+- MatchStats defensive snapshots, tracking armed only after spawnScenario.
+- Count all positive Worker-return/Solar-link/rig/Lumen income; spending/drains excluded.
+- count post-reset unit spawns trained; unit corpse begins lost once; no buildings/resources.
+- Core damage actual HP removed, overkill capped, melee+bolt/turret attacker team.
+- terminal state freezes tick/stats and exposes one CONTINUE.
+- Results exact comparison rows/copy/buttons from spec.
+- REMATCH and MAIN_MENU remain existing AppFlow events.
+- same World/View/Input/Hud reused; zero duplicate listeners/canvases.
+- GameRenderer.resetWorld disposes only owned old terrain/fog resources, preserves shared atlas/fog data.
+- Input.resetForMatch clears all transient gesture/order/key state.
+- Hud.resetForMatch + setAppState control terminal/results and hide normal chrome in Results.
+- prepareMatch object creation once, resetCount once per match.
+- victory/defeat/results scaffold=false.
+
+Browser proof must use no direct winner/stats/app-state writes. Legal fixture may set Core starting HP before an
+ordinary attack, spawn combat units, set ordinary orders/positions, and use tryTrain/gather Return. Prove one win,
+Play Again, changed faction+seed second match, one set of objects, one defeat, Main Menu. Keep total interaction
+under 5 real minutes; fast-step sim directly where safe.
+
+Run:
+npm run test:vs3
+npm run qa:vs3 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs3-results
+npm run test:vs2b
+npm run qa:vs2b -- --out /tmp/vs3-vs2b
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs3-vs2a
+npm run qa:progression-handoff -- --out /tmp/vs3-progression
+npm run qa:touch-contract -- --out /tmp/vs3-touch
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit prefix `VS3:`. Do not push/deploy. Report RED, stats facts, terminal tick proof, two-match reset facts,
+capture paths, perf, all gates, SHA, deviations.
