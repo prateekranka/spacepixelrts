@@ -63,18 +63,20 @@ export class Hud {
           </div>
         </div>
         <div id="res">
-          <span data-k="ore"><i></i><b id="ore">0</b><small>Ore</small></span>
-          <span data-k="gas"><i></i><b id="gas">0</b><small>Vol</small></span>
-          <span data-k="nrg"><i></i><b id="nrg">0</b><small>Chg</small></span>
-          <span data-k="pop"><i></i><b id="pop">0/0</b><small>Pop</small></span>
+          <span data-k="ore"><i></i><b id="ore">0</b><small>ORE</small></span>
+          <span data-k="gas"><i></i><b id="gas">0</b><small>VOLATILES</small></span>
+          <span data-k="nrg"><i></i><b id="nrg">0</b><small>CHARGE</small></span>
+          <span class="resource-divider" aria-hidden="true"></span>
+          <span data-k="pop"><i></i><b id="pop">0/0</b><small>POPULATION</small></span>
         </div>
         <div id="meta">
-          <button type="button" id="scout-focus">Recon unit</button>
-          <button type="button" id="idlew">Idle worker</button>
+          <button type="button" id="scout-focus">FIND WIND STRIDER</button>
+          <button type="button" id="idlew">FIND IDLE WORKER</button>
           <div id="boosts" aria-label="Energy boosts" hidden>
-            <button type="button" id="boost-prod" data-boost="1" title="Production: faster training, drains 8 chg/s">Prod</button>
-            <button type="button" id="boost-vision" data-boost="2" title="Vision: +2.5 sight, drains 5 chg/s">Vision</button>
-            <button type="button" id="boost-shield" data-boost="3" title="Shields: building regen, drains 6 chg/s">Shield</button>
+            <strong class="boost-title">CHARGE ABILITIES · ONE ACTIVE</strong>
+            <button type="button" id="boost-prod" data-boost="1" title="Drains 8 Charge/s"><strong>▶ Fast Training</strong><small>Drains 8 Charge/s</small></button>
+            <button type="button" id="boost-vision" data-boost="2" title="Drains 5 Charge/s"><strong>▶ Far Sight</strong><small>Drains 5 Charge/s</small></button>
+            <button type="button" id="boost-shield" data-boost="3" title="Drains 6 Charge/s"><strong>▶ Building Repair</strong><small>Drains 6 Charge/s</small></button>
           </div>
           <button type="button" id="pause-toggle" aria-label="Pause simulation" title="Pause simulation">Ⅱ</button>
           <div id="zoom" aria-label="Zoom controls">
@@ -91,7 +93,7 @@ export class Hud {
           <div id="portrait"></div>
           <div id="selinfo">
             <h2 id="seltitle">Nothing selected</h2>
-            <p id="selstats">Tap a unit. Drag a box. Hold or right-click to order.</p>
+            <div id="selstats">Tap a unit. Drag a box. Hold or right-click to order.</div>
           </div>
         </div>
         <div id="cmds"></div>
@@ -181,13 +183,25 @@ export class Hud {
     (this.root.querySelector('#pop') as HTMLElement).textContent = `${eco.pop}/${eco.cap}`;
     (this.root.querySelector('#civname') as HTMLElement).textContent = CIV_NAME[world.civ[0]];
     (this.root.querySelector('#doctrine') as HTMLElement).textContent = CIV_PROFILE[world.civ[0]].doctrine;
-    (this.root.querySelector('#scout-focus') as HTMLElement).textContent = labelOf(Kind.Scout, world.civ[0]);
+    const scoutFocus = this.root.querySelector('#scout-focus') as HTMLButtonElement;
+    const scoutName = labelOf(Kind.Scout, world.civ[0]);
+    scoutFocus.textContent = `FIND ${scoutName.toUpperCase()}`;
+    scoutFocus.title = scoutName;
     // M3-C — boost strip only for Sunweaver; active button lit.
     this.boostsEl.hidden = world.civ[0] !== 'vespari';
     if (!this.boostsEl.hidden) {
       const active = world.boosts[0];
+      const boostNames: Record<number, string> = {
+        1: 'Fast Training',
+        2: 'Far Sight',
+        3: 'Building Repair',
+      };
       for (const btn of this.boostsEl.querySelectorAll('button[data-boost]')) {
-        btn.classList.toggle('active', Number((btn as HTMLElement).dataset.boost) === active);
+        const button = btn as HTMLButtonElement;
+        const boost = Number(button.dataset.boost);
+        const isActive = boost === active;
+        button.classList.toggle('active', isActive);
+        button.querySelector('strong')!.textContent = `${isActive ? '■ End' : '▶'} ${boostNames[boost]}`;
       }
     }
     this.fpsEl.textContent = `${fps} FPS`;
@@ -305,10 +319,6 @@ export class Hud {
       input.place = Number(cmd.slice(6)) as Kind;
       this.hintEl.textContent = 'Tap the field to plant the structure.';
     }
-    if (cmd.startsWith('group-')) {
-      const g = Number(cmd.slice(6));
-      input.selected = new Set(input.groups[g]);
-    }
   }
 
   private drawCard(world: World, input: Input): void {
@@ -326,11 +336,28 @@ export class Hud {
     const e = world.ents[ids[0]];
     const name = ids.length > 1 ? `${ids.length} selected` : labelOf(e.kind, e.civ);
     this.cardEl.textContent = name;
-    const st = STATS[e.kind];
-    this.statsEl.textContent =
-      ids.length > 1
-        ? ids.map((id) => labelOf(world.ents[id].kind, world.ents[id].civ)).slice(0, 6).join(' · ')
-        : `HP ${e.hp | 0}/${e.maxHp}  ·  Atk ${st.atk}  ·  Range ${st.range}  ·  Sight ${st.los}`;
+    if (ids.length > 1) {
+      const counts = new Map<string, number>();
+      for (const id of ids) {
+        const selected = world.ents[id];
+        const label = labelOf(selected.kind, selected.civ);
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+      }
+      this.statsEl.innerHTML = `<div class="selection-counts">${[...counts]
+        .map(([label, count]) => `<span><b>${count}×</b><small>${label}</small></span>`)
+        .join('')}</div>`;
+    } else {
+      const st = STATS[e.kind];
+      this.statsEl.innerHTML = `
+        <dl class="stat-grid">
+          <div><small>HP</small><b>${e.hp | 0}/${e.maxHp | 0}</b></div>
+          <div><small>ATTACK</small><b>${st.atk}</b></div>
+          <div><small>RANGE</small><b>${st.range}</b></div>
+          <div><small>SPEED</small><b>${st.spd}</b></div>
+          <div><small>SIGHT</small><b>${st.los}</b></div>
+          <div><small>ORDER</small><b>${orderLabel(e.order)}</b></div>
+        </dl>`;
+    }
     portrait.className = 'unit-plate';
     portrait.style.background = civPlateBg(e.civ);
     this.renderCmds(world, input, e);
@@ -365,10 +392,10 @@ export class Hud {
     };
     const btns: CmdButton[] = [];
     if (ent === null) {
-      btns.push({ cmd: 'idleworker', label: 'Idle worker', sub: 'find drone' });
-      btns.push({ cmd: 'move', label: 'Move', sub: 'tap field', disabled: true });
-      btns.push({ cmd: 'attack', label: 'Attack', sub: 'hold field', disabled: true });
-      btns.push({ cmd: 'stop', label: 'Stop', sub: 'halt order', disabled: true });
+      btns.push({ cmd: 'idleworker', label: 'FIND IDLE WORKER', sub: 'find drone' });
+      btns.push({ cmd: 'move', label: 'MOVE', sub: 'Tap ground to move', disabled: true });
+      btns.push({ cmd: 'attack', label: 'ATTACK', sub: 'Tap target to attack', disabled: true });
+      btns.push({ cmd: 'stop', label: 'STOP', sub: 'Cancel orders', disabled: true });
     } else if (kind === Kind.Hall) {
       // M4-B — the one irreversible technology-path choice lives on the Nexus deck.
       const committed = world.techPathOf(0);
@@ -418,17 +445,12 @@ export class Hud {
       btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: `${STATS[Kind.Barracks].ore} ore` });
       btns.push({ cmd: `build-${Kind.Hall}`, label: hallName(civ), sub: `${STATS[Kind.Hall].ore} ore` });
       btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: `${STATS[Kind.UniqueB].ore} ore` });
-      btns.push({ cmd: 'stop', label: 'Stop', sub: 'halt order' });
+      btns.push({ cmd: 'stop', label: 'STOP', sub: 'Cancel orders' });
     } else if (kind !== null) {
-      btns.push({ cmd: 'move', label: 'Move', sub: 'tap field' });
-      btns.push({ cmd: 'attack', label: 'Attack', sub: 'hold field' });
-      btns.push({ cmd: 'stop', label: 'Stop', sub: 'halt order' });
+      btns.push({ cmd: 'move', label: 'MOVE', sub: 'Tap ground to move' });
+      btns.push({ cmd: 'attack', label: 'ATTACK', sub: 'Tap target to attack' });
+      btns.push({ cmd: 'stop', label: 'STOP', sub: 'Cancel orders' });
     }
-    btns.push(
-      { cmd: 'group-0', label: 'I', sub: 'group' },
-      { cmd: 'group-1', label: 'II', sub: 'group' },
-      { cmd: 'group-2', label: 'III', sub: 'group' },
-    );
     const sig =
       `${kind ?? 'none'}|${input.place}|` +
       btns
@@ -444,11 +466,11 @@ export class Hud {
         const placeOn = b.cmd.startsWith('build-') && input.place === Number(b.cmd.slice(6));
         const cls = (b.classes ?? ['verb', placeOn ? 'on' : ''].filter(Boolean)).join(' ');
         const dis = b.disabled ? ' disabled' : '';
-        const sub = b.sub === undefined ? '' : `<small>${b.sub}</small>`;
+        const sub = b.sub === undefined ? '' : `<small class="sub">${b.sub}</small>`;
         const detail =
           b.detail === undefined
             ? ''
-            : `<small${b.detailClass ? ` class="${b.detailClass}"` : ''}>${b.detail}</small>`;
+            : `<small class="detail${b.detailClass ? ` ${b.detailClass}` : ''}">${b.detail}</small>`;
         const bar =
           b.barPct === undefined
             ? ''
@@ -626,6 +648,16 @@ function civPlateBg(civ: Civ): string {
   return `linear-gradient(145deg,${P.sienna} 0%,${P.rust} 100%)`;
 }
 
+function orderLabel(order: Ord): string {
+  if (order === Ord.Move) return 'Moving';
+  if (order === Ord.Attack) return 'Attacking';
+  if (order === Ord.Gather) return 'Gathering';
+  if (order === Ord.Return) return 'Returning';
+  if (order === Ord.Build) return 'Building';
+  if (order === Ord.AttackMove) return 'Attack-moving';
+  return 'Idle';
+}
+
 const HUD_CSS = `
 #hud{position:fixed;inset:0;pointer-events:none;color:${P.cream};font-family:"Trebuchet MS","Segoe UI",sans-serif;z-index:5}
 #game,#overlay{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -634,10 +666,11 @@ const HUD_CSS = `
 #topbar{position:absolute;left:0;right:0;top:0;box-sizing:border-box;height:calc(56px + env(safe-area-inset-top,0px));min-height:56px;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);display:flex;align-items:stretch;background:linear-gradient(${P.night}ee,${P.ink}f2);border-bottom:2px solid ${P.amber};box-shadow:0 8px 24px #0008}
 #brand{display:flex;gap:10px;align-items:center;padding:0 14px;min-width:210px}
 #brand .sigil{color:${P.amber};font-size:22px}
-#brand strong{display:block;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
-#brand em{display:block;font-style:normal;font-size:10px;opacity:.55;letter-spacing:.18em;text-transform:uppercase}
+#brand strong{display:block;color:${P.cream};font-size:18px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+#brand em{display:block;font-style:normal;font-size:12px;font-weight:500;opacity:.85;letter-spacing:.18em;text-transform:uppercase}
 #res{display:flex;flex:1;justify-content:center;gap:22px;align-items:center}
-#res span{display:flex;align-items:center;gap:8px;min-width:90px}
+#res>span:not(.resource-divider){display:flex;align-items:center;gap:8px;min-width:90px}
+#res .resource-divider{display:block;width:2px;min-width:2px;height:30px;margin:0 2px;background:${P.amber};opacity:.85;box-shadow:0 0 8px ${P.amber}66}
 #res i{width:12px;height:12px;display:block;box-shadow:0 0 0 1px #0008}
 #res [data-k=ore] i{background:${P.sand}}
 #res [data-k=gas] i{background:${P.sky}}
@@ -648,12 +681,15 @@ const HUD_CSS = `
 #res [data-k=gas] b{color:${P.ice};text-shadow:0 0 10px ${P.sky}55}
 #res [data-k=nrg] b{color:${P.cream};text-shadow:0 0 10px ${P.ochre}55}
 #res [data-k=pop] b{color:${P.lime};text-shadow:0 0 10px ${P.leaf}55}
-#res small{opacity:.55;font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+#res small{opacity:.85;font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase}
 #meta{display:flex;align-items:center;gap:12px;padding:0 14px}
-#meta b{font-variant-numeric:tabular-nums;font-size:13px;opacity:.7}
+#meta b{font-variant-numeric:tabular-nums;font-size:12px;font-weight:500;opacity:.85}
 #meta b.low{color:${P.coral};opacity:1}
-#boosts{display:flex;gap:6px}
-#boosts button{background:rgba(28,28,38,.72);border:1px solid #3a3a4c;color:#cfd4dc;font-size:13px;min-height:40px;min-width:64px;padding:4px 12px;border-radius:4px;cursor:pointer;letter-spacing:.03em}
+#boosts{position:absolute;top:calc(100% + 6px);right:14px;z-index:6;box-sizing:border-box;width:420px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;align-items:stretch}
+#boosts .boost-title{grid-column:1 / -1;color:${P.cream};font-size:12px;font-weight:500;line-height:14px;letter-spacing:.08em;opacity:.85;white-space:nowrap}
+#boosts button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;background:rgba(28,28,38,.92);border:1px solid #3a3a4c;color:${P.cream};min-height:44px;min-width:0;padding:4px 8px;border-radius:4px;cursor:pointer;letter-spacing:.03em;text-align:left}
+#boosts button strong{font-size:18px;font-weight:700;line-height:20px}
+#boosts button small{font-size:14px;font-weight:600;line-height:16px;opacity:.9}
 #boosts button:hover{border-color:#7fa7b8}
 #boosts button.active{background:${P.amber};border-color:${P.amber};color:#171326;font-weight:700}
 #scout-focus,#idlew,#pause-toggle,#zoom button,#cmds button{background:${P.deep};color:${P.cream};border:1px solid ${P.amber}88;border-radius:2px;min-height:44px;min-width:44px;padding:6px 10px;font:inherit;cursor:pointer}
@@ -661,7 +697,7 @@ const HUD_CSS = `
 #pause-toggle{font-size:17px;line-height:1;padding:4px 8px}
 #pause-toggle.paused{border-color:${P.coral};color:${P.coral};box-shadow:0 0 14px ${P.coral}55,inset 0 0 8px ${P.coral}22}
 #zoom{display:flex;align-items:center;gap:4px}
-#zoom span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
+#zoom span{font-size:12px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;opacity:.85}
 #zoom button{font-size:20px;line-height:1;padding:4px 10px}
 #idlew.pulse{animation:idlew-pulse 1.05s ease-in-out infinite;border-color:${P.amber};box-shadow:0 0 14px ${P.amber}aa,inset 0 0 10px ${P.amber}33}
 @keyframes idlew-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:1;box-shadow:0 0 22px ${P.amber}cc,inset 0 0 14px ${P.amber}55}}
@@ -673,47 +709,58 @@ const HUD_CSS = `
 #portrait.civ-plate::before{content:"";position:absolute;inset:14%;border:2px solid ${P.amber};transform:rotate(45deg);box-shadow:0 0 14px ${P.amber}66,inset 0 0 8px ${P.amber}44}
 #portrait.civ-plate::after{content:"◆";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:${P.amber};text-shadow:0 0 12px ${P.amber}88}
 #portrait.unit-plate::before{content:"";position:absolute;inset:0;border:1px solid ${P.amber}44}
-#seltitle{margin:0 0 6px;font-size:16px;letter-spacing:.04em}
-#selstats{margin:0;font-size:12px;opacity:.75;line-height:1.35;max-width:42ch}
+#seltitle{margin:0 0 6px;color:${P.cream};font-size:18px;font-weight:700;letter-spacing:.04em}
+#selstats{margin:0;font-size:12px;font-weight:500;opacity:.85;line-height:1.35;max-width:42ch}
+#selstats .stat-grid{display:grid;grid-template-columns:repeat(3,minmax(56px,1fr));gap:6px 10px;margin:0}
+#selstats .stat-grid>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+#selstats .stat-grid small{font-size:12px;font-weight:500;letter-spacing:.08em;opacity:.85}
+#selstats .stat-grid b{font-size:18px;font-weight:700;line-height:1;color:${P.cream};white-space:nowrap}
+#selstats .selection-counts{display:flex;flex-wrap:wrap;gap:6px 12px}
+#selstats .selection-counts span{display:flex;align-items:baseline;gap:5px}
+#selstats .selection-counts b{font-size:18px;font-weight:700;color:${P.cream}}
+#selstats .selection-counts small{font-size:14px;font-weight:600;opacity:.9}
 #cmds{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;align-content:center;min-height:0;padding:6px}
 #cmds button.verb{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;text-align:left;min-height:44px;min-width:44px;padding:8px 10px}
 #cmds button.verb.on{border-color:${P.amber};background:linear-gradient(${P.sienna},${P.deep});box-shadow:inset 0 0 0 2px ${P.amber},0 0 10px ${P.amber}44}
 #cmds button.verb:disabled{opacity:.38;cursor:not-allowed;filter:saturate(.55);border-color:${P.amber}44}
-#cmds button.verb strong{font-size:13px;letter-spacing:.02em}
-#cmds small{opacity:.55;font-size:10px;letter-spacing:.04em}
+#cmds button.verb strong{color:${P.cream};font-size:18px;font-weight:700;letter-spacing:.02em;line-height:20px}
+#cmds small{display:block;letter-spacing:.04em}
+#cmds small.sub{font-size:14px;font-weight:600;line-height:16px;opacity:.9}
+#cmds small.detail{font-size:12px;font-weight:500;line-height:14px;opacity:.85}
 #cmds button.choice{grid-column:1 / -1;box-sizing:border-box;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;width:100%;height:auto;min-height:88px;min-width:44px;padding:8px 10px;background:${P.deep};border:1px solid ${P.amber};border-radius:2px;color:${P.cream};text-align:left}
 #cmds button.choice>strong,#cmds button.choice>small,#cmds button.choice>.bar-track{flex:0 0 auto}
-#cmds button.choice strong{font-size:15px;line-height:18px;letter-spacing:.03em}
-#cmds button.choice small{font-size:12px;line-height:15px;opacity:1}
+#cmds button.choice strong{color:${P.cream};font-size:18px;font-weight:700;line-height:20px;letter-spacing:.03em}
+#cmds button.choice small.sub{font-size:14px;font-weight:600;line-height:16px;opacity:.9}
+#cmds button.choice small.detail{font-size:12px;font-weight:500;line-height:14px;opacity:.85}
 #cmds button.choice.unaffordable{opacity:.68;filter:saturate(.55)}
 #cmds button.choice.unaffordable .cost{color:${P.coral}}
 #cmds button.choice.channel{border-color:${P.amber}}
-.countdown{margin:0;color:${P.amber};font-size:13px;font-weight:700;line-height:15px;text-transform:uppercase}
+.countdown{margin:0;color:${P.amber};font-size:12px;font-weight:500;line-height:14px;opacity:.85;text-transform:uppercase}
 #cmds button.choice.locked{background:${P.amber};border:1px solid ${P.amber};color:#171326}
 #cmds button.choice.locked strong{color:#171326}
-#cmds button.choice.locked small{color:#171326;opacity:.75}
+#cmds button.choice.locked small{color:#171326;opacity:.85}
 #cmds button.choice:disabled{cursor:not-allowed}
 .bar-track{position:relative;display:block;width:100%;height:10px;min-height:10px;margin:0;background:#ffffff22;border-radius:2px;overflow:hidden}
 .bar{position:absolute;left:0;top:0;height:10px;min-height:10px;background:${P.amber};border-radius:2px}
 #civpick{position:absolute;left:calc(10px + env(safe-area-inset-left,0px));top:calc(68px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:6}
-#civpick .picker-label{padding:0 4px;color:${P.amber};font-size:9px;letter-spacing:.14em;text-transform:uppercase;opacity:.78}
+#civpick .picker-label{padding:0 4px;color:${P.amber};font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
 #civpick .civ-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:132px;min-height:48px;padding:8px 12px;border:2px solid ${P.amber}66;border-radius:2px;background:${P.ink}f0;color:${P.cream};font:inherit;cursor:default;text-align:left;box-shadow:0 4px 16px #0006}
-#civpick .civ-tile strong{font-size:12px;letter-spacing:.06em;text-transform:uppercase;line-height:1.2}
-#civpick .civ-tile small{opacity:.6;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+#civpick .civ-tile strong{font-size:18px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.2}
+#civpick .civ-tile small{opacity:.9;font-size:14px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
 #civpick .civ-tile.vespari{background:linear-gradient(135deg,${P.sienna} 0%,${P.rust} 100%)}
 #civpick .civ-tile.aurion{background:linear-gradient(135deg,${P.sky} 0%,${P.ink} 100%)}
 #civpick .civ-tile.voidmarked{background:linear-gradient(135deg,${P.plum} 0%,${P.moss} 100%)}
 #civpick .civ-tile.on{border-color:${P.amber};box-shadow:0 0 0 1px #000,0 0 18px ${P.amber}66,inset 0 0 0 2px ${P.amber}55}
 #civpick .civ-tile.rival{border-color:${P.ice}99}
-#hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.45;pointer-events:none;white-space:nowrap}
+#hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;opacity:.45;pointer-events:none;white-space:nowrap}
 #guidance{position:fixed;left:50%;top:calc(68px + env(safe-area-inset-top,0px));transform:translateX(-50%);box-sizing:border-box;width:min(460px,calc(100vw - 380px));margin:0;padding:8px 16px 9px;border:2px solid ${P.amber};background:linear-gradient(${P.night}f0,${P.ink}ec);box-shadow:0 0 0 2px #000,0 6px 18px #0008,inset 0 0 14px #0007;text-align:center;pointer-events:none;z-index:6;font-size:12px;line-height:1.35}
 #guidance strong{display:block;color:${P.amber};font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 10px ${P.sand}55}
-#guidance span{display:block;margin-top:3px;color:${P.cream};font-size:11px;letter-spacing:.03em;opacity:.8}
+#guidance span{display:block;margin-top:3px;color:${P.cream};font-size:12px;font-weight:500;letter-spacing:.03em;opacity:.85}
 #guidance span:empty{display:none}
 #guidance-target{position:fixed;width:46px;height:46px;box-sizing:border-box;transform:translate(-50%,-50%);border:2px solid ${P.amber};border-radius:50%;box-shadow:0 0 0 2px #000b,0 0 14px ${P.amber}88,inset 0 0 0 3px #0008;pointer-events:none;z-index:7}
 #guidance-target[hidden]{display:none}
 #guidance-target[data-offscreen="true"]{border-radius:4px;background:${P.ink}b8}
-#guidance-target span{position:absolute;left:50%;top:calc(100% + 5px);transform:translateX(-50%);padding:2px 5px;border:1px solid ${P.amber};background:${P.ink}e8;color:${P.cream};font-size:9px;font-weight:700;letter-spacing:.12em;line-height:1;white-space:nowrap;text-shadow:0 1px 0 #000}
+#guidance-target span{position:absolute;left:50%;top:calc(100% + 5px);transform:translateX(-50%);padding:2px 5px;border:1px solid ${P.amber};background:${P.ink}e8;color:${P.cream};font-size:12px;font-weight:700;letter-spacing:.12em;line-height:1.1;white-space:nowrap;text-shadow:0 1px 0 #000}
 #match-end{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;z-index:8}
 #match-end .match-panel{padding:18px 28px 16px;border:3px solid ${P.amber};background:linear-gradient(${P.night}f2,${P.ink}f0);box-shadow:0 0 0 2px #000,0 12px 40px #000a,inset 0 0 24px #0006;text-align:center;min-width:280px}
 #match-end.win .match-panel{border-color:${P.leaf};box-shadow:0 0 32px ${P.leaf}44,0 12px 40px #000a,inset 0 0 24px #0006}

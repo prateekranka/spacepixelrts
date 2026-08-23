@@ -1,0 +1,43 @@
+# M5-D Builder Brief — scene brightness + copy round 2
+
+Critic verdict on M5-C: FAIL. Two named gaps:
+A. THE SCENE IS TOO DARK — "dramatically too dark, burying terrain, units, and
+   actionable targets." This is now the single biggest gap. (Prior rounds fixed
+   the deck; the playfield itself fails instant-read.)
+B. Residual copy nits: "Then tap ground/target" still placeholder-ish;
+   "TEMPORARY CHARGE ABILITIES · ONE ACTIVE" cramped/colliding; "FIND SCOUT"
+   generic vs faction flavor.
+
+Read FIRST: src/render.ts lighting (~line 1495-1510, HemisphereLight 1.45,
+scoutKey DirectionalLight 2.5), palette.ts (ink #0B0A12, night #171326),
+src/hud.ts (boost cluster markup ~line 74-80, move/attack subs).
+
+Scope: ONLY src/render.ts + src/hud.ts (+ qa/test string updates if needed).
+Do NOT touch sim logic, tests' behavioral asserts.
+
+## A. SCENE BRIGHTNESS (primary)
+Goal: units and walkable terrain read instantly against background, without
+washing out the night-space mood.
+1. Raise HemisphereLight 1.45 -> 2.1.
+2. Raise scoutKey DirectionalLight 2.5 -> 3.2 and widen its coverage
+   (increase shadow camera frustum if shadows clip).
+3. Add a faint amber fill PointLight over the central field if the mid-map
+   still reads dark at default camera (judgment call, keep subtle, intensity <= 0.6).
+4. Clear color stays P.ink; do NOT gray the space background.
+5. Verify with a pixel check: in scripts/qa-m2-opening.mjs after the existing
+   screenshot, add a manifest.checks.sceneLuma: mean luminance of the CENTER
+   region (25%-75% both axes) of the capture must exceed 28/255 (it is ~15 now).
+   Use the analyzePng-style loop already imported there.
+
+## B. COPY (secondary)
+6. Move/Attack sub-lines become 'Tap ground to move' / 'Tap target to attack'
+   (labels MOVE/ATTACK unchanged). STOP keeps 'Cancel orders'.
+7. Boost cluster title shortens to 'CHARGE ABILITIES · ONE ACTIVE'.
+8. FIND SCOUT becomes faction-aware: labelOf(Kind.Scout, civ) uppercased
+   ('FIND WIND STRIDER' / 'FIND GRAV-SKIMMER'); keep id + width tolerance.
+
+## C. VERIFY
+npm run build && npm run test:m0 && npm run test:m2 && npm run test:m5 &&
+node scripts/qa-m2-opening.mjs --out /tmp/m5d-qa
+Paste tails. Report files changed + the new sceneLuma value.
+Leave tree dirty.

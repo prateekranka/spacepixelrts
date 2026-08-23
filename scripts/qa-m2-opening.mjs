@@ -170,11 +170,25 @@ function analyzePng(file) {
   }
   const litRatio = count > 0 ? lit / count : 0;
   if (max <= 6 || litRatio < 0.002) throw new Error(`${path.basename(file)} is black or empty`);
+  const x0 = Math.floor(png.width * 0.25);
+  const x1 = Math.ceil(png.width * 0.75);
+  const y0 = Math.floor(png.height * 0.25);
+  const y1 = Math.ceil(png.height * 0.75);
+  let centerLuma = 0;
+  let centerCount = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const index = (y * png.width + x) * 4;
+      centerLuma += 0.2126 * png.data[index] + 0.7152 * png.data[index + 1] + 0.0722 * png.data[index + 2];
+      centerCount++;
+    }
+  }
   return {
     width: png.width,
     height: png.height,
     maxLuma: Math.round(max * 100) / 100,
     litRatio: Math.round(litRatio * 10000) / 10000,
+    sceneLuma: Math.round((centerLuma / Math.max(1, centerCount)) * 100) / 100,
   };
 }
 
@@ -409,7 +423,10 @@ async function main() {
       throw new Error(`p99 ${perfProbe.p99FrameMs}ms exceeds budget ${P99_BUDGET_MS}ms`);
     }
     await page.screenshot({ path: shotPath, type: 'png' });
-    manifest.captures.scoutLongPress = { file: path.basename(shotPath), image: analyzePng(shotPath) };
+    const image = analyzePng(shotPath);
+    manifest.captures.scoutLongPress = { file: path.basename(shotPath), image };
+    manifest.checks.sceneLuma = image.sceneLuma;
+    if (!(image.sceneLuma > 28)) throw new Error(`center scene luma ${image.sceneLuma} <= 28`);
 
     manifest.ok = manifest.errors.length === 0;
   } catch (error) {
@@ -426,7 +443,7 @@ async function main() {
     const manifestPath = path.join(out, 'manifest.json');
     fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     console.log('--- qa-m2-opening summary ---');
-    console.log(`ok=${manifest.ok} p99=${manifest.checks.p99FrameMs ?? 'n/a'}ms`);
+    console.log(`ok=${manifest.ok} p99=${manifest.checks.p99FrameMs ?? 'n/a'}ms sceneLuma=${manifest.checks.sceneLuma ?? 'n/a'}`);
     console.log(`manifest=${manifestPath}`);
     if (manifest.errors.length) {
       console.log('errors:');

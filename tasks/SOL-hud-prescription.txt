@@ -1,0 +1,16 @@
+You are the HUD design lead for a pixel-art space RTS (Starhaven). The blind critic has failed the command deck twice for reading like "a developer control surface": cryptic toggles ("Prod +", "I / army 1"), awkward two-step copy ("Attack — hold, then tap target"), tiny helper text, and an unexplained control cluster.
+
+Produce a PRESCRIPTION (no code) for the bottom command deck + top resource bar that reaches Age of Empires II DE clarity within our constraints:
+- Touch-first, 1366x1024 landscape, 44px minimum tap targets.
+- Dark panel, amber accent, cream text; no new colors.
+- Deck is one grid row; choice tiles span full width when present.
+- No icons exist yet — text-only buttons. You may specify simple geometric glyphs from Unicode (◆ ▶ ■ ✕ ↺) where they help.
+Deliver, each item one line:
+1. RESOURCE BAR: exact caption set and any grouping change.
+2. BOOST TOGGLES: exact visible labels that read as temporary energy abilities.
+3. GROUP BUTTONS: what to show instead of I/II/army N (or argue to remove them from v1).
+4. MOVE/ATTACK/STOP: exact button labels + sub-lines that teach the two-step touch gesture in <=3 words per line.
+5. IDLE WORKER + SCOUT FOCUS: exact labels.
+6. SELECTION PANEL: what to do with the wasted space (stat layout).
+7. HIERARCHY RULE: one size/weight/opacity scale for primary/sub/detail text.
+Be decisive; pick one option per item, no menus of alternatives.

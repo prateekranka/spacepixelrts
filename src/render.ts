@@ -1497,10 +1497,13 @@ export class GameRenderer {
 
     // Lighting is scoped to the procedural experiment. Existing terrain and
     // sprite shaders do not consume scene lights, so this does not alter them.
-    this.scene.add(new THREE.HemisphereLight(P.ice, P.night, 1.45));
-    const scoutKey = new THREE.DirectionalLight(P.amber, 2.5);
+    this.scene.add(new THREE.HemisphereLight(P.ice, P.night, 2.1));
+    const scoutKey = new THREE.DirectionalLight(P.amber, 3.2);
     scoutKey.position.set(5, 9, 4);
     this.scene.add(scoutKey);
+    const fieldFill = new THREE.PointLight(P.amber, 0.5);
+    fieldFill.position.set(MAP * 0.5, 8, MAP * 0.52);
+    this.scene.add(fieldFill);
     this.proceduralScout = buildProceduralScoutMesh();
     this.proceduralScout.visible = false;
     this.scene.add(this.proceduralScout);
@@ -1969,10 +1972,10 @@ export class GameRenderer {
         d[o + 2] = 28;
         d[o + 3] = 56;
       } else {
-        d[o] = 3;
-        d[o + 1] = 2;
-        d[o + 2] = 8;
-        d[o + 3] = 208;
+        d[o] = 20;
+        d[o + 1] = 16;
+        d[o + 2] = 34;
+        d[o + 3] = 32;
       }
     }
     this.fogTex.needsUpdate = true;

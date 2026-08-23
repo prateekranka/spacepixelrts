@@ -194,6 +194,10 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
 - Deploy: production deploy BLOCKED from this box — wrangler has no OAuth config here and
   non-interactive mode needs CLOUDFLARE_API_TOKEN. Build is committed and pushed; deploy
   needs bobby's token or a Mac-side `npm run deploy`.
+  (Update 2026-08-23: FIXED — bobby supplied a Cloudflare token; token in
+  `~/.cloudflare-token` (0600). `npx wrangler pages deploy dist --project-name=spacepixelrts
+  --branch=main` deploys to production. M4-B/M5 build live at spacepixelrts.pages.dev,
+  bundle game-CKgLgIm0.js.)
 - **Sol max usage directive:** bobby directed heavy Sol use (70% weekly left before reset);
   Sol now also runs design-support memos (M5 roster mapping memo dispatched in parallel).
 - **M5-A roster freeze + labels COMPLETE** (`87844a8`, Luna builder, lead-verified):

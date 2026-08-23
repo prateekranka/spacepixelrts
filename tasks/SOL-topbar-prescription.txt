@@ -1,0 +1,14 @@
+You are the HUD design lead for Starhaven (pixel-art space RTS). The top HUD strip keeps failing blind review as "cramped and overlapping — debug-complete, not polished." Fix the LAYOUT with a prescription.
+
+Current top strip (single row, 1366px wide): faction plate + name, then ORE / VOLATILES / CHARGE / POPULATION counters with icons, then Scout-focus + Find-Idle-Worker buttons, then a 3-button boost cluster with a title line, then pause + zoom + FPS. Below it floats a centered guidance banner. The selection panel is bottom-left, command deck bottom-right.
+
+Constraints: touch-first 1366x1024; 44px min tap targets; dark panel, amber accent, cream text; text-only (Unicode glyphs allowed); no new colors.
+
+Give ONE decisive layout (no alternatives):
+1. ZONES: how to partition the top strip (what goes where, left-to-right), including where the boost cluster lives and whether the guidance banner stays floating or docks.
+2. SPACING RULE: exact gaps/padding so nothing collides at 1366px (numbers).
+3. WHAT TO CUT: anything currently shown that should move elsewhere or vanish in v1.
+4. FPS + ZOOM + PAUSE: keep, shrink, or relocate?
+5. SELECTION PORTRAIT: one concrete fix for "uninformative portrait."
+6. TEXT FLOOR: confirm the 12px floor is enough or raise it.
+Each item 1-3 lines. Be concrete with px values.

@@ -1,0 +1,42 @@
+# M5-C Builder Brief — apply Sol's HUD prescription verbatim
+
+Sol's prescription is accepted as frozen. Apply every item exactly. Read FIRST:
+src/hud.ts (topbar markup ~line 60-100, renderCmds ~line 338-460, CSS ~line 600-710),
+scripts/qa-m2-opening.mjs, tests/m2-guidance.test.ts (copy asserts).
+
+Scope: ONLY src/hud.ts (+ qa script/test string updates if they assert old copy).
+
+1. RESOURCE BAR: captions ORE / VOLATILES / CHARGE / POPULATION (uppercase smalls).
+   First three keep their current grouping; insert an amber divider span before POP,
+   and POP caption reads 'POPULATION'. Keep data-k attributes.
+2. BOOST CLUSTER: add a cluster title element `TEMPORARY CHARGE ABILITIES · ONE ACTIVE`
+   above the three buttons; labels become:
+   - '▶ Fast Training' sub-line/title 'Drains 8 Charge/s'
+   - '▶ Far Sight' / 'Drains 5 Charge/s'
+   - '▶ Building Repair' / 'Drains 6 Charge/s'
+   Active state: label prefix becomes '■ End' (e.g. '■ End Fast Training') with the
+   existing .active amber fill. Keep ids + data-boost values.
+3. GROUP BUTTONS: DELETE the I/II/III group buttons from the deck markup and their
+   cmd handlers ('group-0/1/2') — v1 removes them entirely.
+4. MOVE/ATTACK/STOP: labels/subs exactly:
+   - 'MOVE' / 'Then tap ground'
+   - 'ATTACK' / 'Then tap target'
+   - 'STOP' / 'Cancel orders'
+5. TOPBAR CONTROLS: 'Idle worker' -> 'FIND IDLE WORKER'; scout-focus ->
+   'FIND SCOUT' (keep id, keep faction-aware title attr if present).
+6. SELECTION PANEL: single selection shows a 2x3 stat grid:
+   HP | ATTACK | RANGE on row one; SPEED | SIGHT | ORDER on row two
+   (ORDER = current order name, e.g. Moving/Idle/Gathering). Multi-selection keeps
+   per-type counts. Portrait + name stay left. Use a simple definition-list/grid of
+   <small>caption</small><b>value</b> cells; detail text 12px floor.
+7. HIERARCHY SCALE (apply deck-wide):
+   primary 18px/700/#fff-ish cream; sub 14px/600 at 90% opacity;
+   detail 12px/500 at 85%; NOTHING below 12px anywhere in #hud
+   (bump any remaining 9-11px rules to 12px minimum).
+8. qa-m2-opening.mjs: update any exact-string lookups broken by renames
+   (e.g. 'Idle worker' button). Do not weaken checks.
+
+Verify (paste tails): npm run build && npm run test:m0 && npm run test:m2 &&
+npm run test:m5 && node scripts/qa-m2-opening.mjs --out /tmp/m5c-qa
+
+Leave tree dirty. Report files changed, tails, deviations.
