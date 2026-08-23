@@ -10,6 +10,7 @@ import { buildTerrainMesh, buildFogMesh, buildHeightTexture } from './terrain';
 import { sampleHeightBilinear } from './height';
 import { SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
 import { STARHOLD_PALETTE as P } from './palette';
+import { SEEN_PLAYER } from './discovery';
 import {
   WORKER_ACTION_ATTACK,
   WORKER_ACTION_BUILD,
@@ -21,6 +22,10 @@ import {
 export const ISO_YAW = Math.PI / 4;
 export const ISO_PITCH = Math.atan(0.5);
 export const ISO_DIST = 40;
+
+const LUMEN_RING_POINTS = 32;
+const LUMEN_RING_RADIUS = 4.5;
+const LUMEN_PULSE_RADIUS = 5.35;
 
 const VERT = /* glsl */ `
 attribute vec4 iUv;
@@ -1992,6 +1997,8 @@ export class GameRenderer {
     const h = this.overlay.height;
     ctx.clearRect(0, 0, w, h);
 
+    this.drawLumenMarker(world);
+
     if (box) {
       const x = Math.min(box.x0, box.x1);
       const y = Math.min(box.y0, box.y1);
@@ -2134,5 +2141,142 @@ export class GameRenderer {
       ctx.lineWidth = 1;
       ctx.strokeRect(head.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
     }
+  }
+
+  private drawLumenMarker(world: World): void {
+    const landmark = world.landmarks.find((entry) => entry.id === 'central-lumen-field');
+    if (!landmark || (landmark.discoveredBy & SEEN_PLAYER) === 0) return;
+
+    const state = world.lumenState();
+    const team = state.contested ? -1 : state.capturing >= 0 ? state.capturing : state.owner;
+    let ring: string = P.amber;
+    let accent: string = P.cream;
+    if (state.contested) {
+      ring = P.coral;
+      accent = P.coral;
+    } else if (team === 0) {
+      ring = P.lime;
+      accent = P.amber;
+    } else if (team === 1) {
+      ring = P.ice;
+      accent = P.sky;
+    }
+
+    const centerPoint = this.project(
+      landmark.x,
+      this.groundY(landmark.x, landmark.z) + 0.05,
+      landmark.z,
+      this.projectPointScratch,
+    );
+    const centerX = centerPoint.x;
+    const centerY = centerPoint.y;
+    const ctx = this.octx;
+    ctx.save();
+    // The overlay is shared by several effects; make this asset self-contained
+    // and leave no state behind for the entity annotations below it.
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.setLineDash([]);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowBlur = 0;
+
+    this.drawProjectedLumenRing(ctx, landmark.x, landmark.z, LUMEN_RING_RADIUS, 5, P.ink);
+    this.drawProjectedLumenRing(ctx, landmark.x, landmark.z, LUMEN_RING_RADIUS, 2.75, ring);
+
+    if (state.capturing >= 0 && !state.contested && state.progress > 0) {
+      const progress = Math.max(0, Math.min(1, state.progress / 5));
+      this.drawProjectedLumenRing(
+        ctx,
+        landmark.x,
+        landmark.z,
+        LUMEN_RING_RADIUS,
+        3.5,
+        accent,
+        progress,
+      );
+    }
+
+    if (state.pulseRemaining[0] > 0) {
+      ctx.globalAlpha = 0.62;
+      this.drawProjectedLumenRing(ctx, landmark.x, landmark.z, LUMEN_PULSE_RADIUS, 2, P.lime);
+      ctx.globalAlpha = 1;
+    }
+
+    const beaconX = Math.round(centerX);
+    const beaconY = Math.round(centerY);
+    const beaconSize = 7;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(beaconX, beaconY - beaconSize - 3);
+    ctx.lineTo(beaconX, beaconY - 32);
+    ctx.stroke();
+
+    ctx.fillStyle = accent;
+    ctx.strokeStyle = P.ink;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(beaconX, beaconY - beaconSize);
+    ctx.lineTo(beaconX + beaconSize, beaconY);
+    ctx.lineTo(beaconX, beaconY + beaconSize);
+    ctx.lineTo(beaconX - beaconSize, beaconY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const label = 'LUMEN';
+    ctx.font = '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const plateW = Math.ceil(ctx.measureText(label).width) + 12;
+    const plateH = 16;
+    const plateX = Math.round(centerX - plateW / 2);
+    const plateY = Math.round(centerY - 40);
+    ctx.fillStyle = `${P.ink}e8`;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(plateX, plateY, plateW, plateH);
+    ctx.strokeRect(plateX + 0.5, plateY + 0.5, plateW - 1, plateH - 1);
+    ctx.fillStyle = P.cream;
+    ctx.fillText(label, Math.round(centerX), plateY + plateH / 2 + 0.5);
+    ctx.restore();
+  }
+
+  private drawProjectedLumenRing(
+    ctx: CanvasRenderingContext2D,
+    centerX: number,
+    centerZ: number,
+    radius: number,
+    lineWidth: number,
+    color: string,
+    fraction = 1,
+  ): void {
+    const clamped = Math.max(0, Math.min(1, fraction));
+    if (clamped <= 0) return;
+    const complete = clamped >= 1;
+    const segmentCount = complete ? LUMEN_RING_POINTS : Math.floor(clamped * LUMEN_RING_POINTS);
+    const remainder = clamped * LUMEN_RING_POINTS - segmentCount;
+    ctx.beginPath();
+    for (let index = 0; index <= segmentCount; index++) {
+      const turn = complete ? index / LUMEN_RING_POINTS : Math.min(clamped, index / LUMEN_RING_POINTS);
+      const angle = turn * Math.PI * 2;
+      const x = centerX + Math.cos(angle) * radius;
+      const z = centerZ + Math.sin(angle) * radius;
+      const point = this.project(x, this.groundY(x, z) + 0.05, z, this.projectPointScratch);
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    }
+    if (!complete && remainder > 1e-6) {
+      const angle = clamped * Math.PI * 2;
+      const x = centerX + Math.cos(angle) * radius;
+      const z = centerZ + Math.sin(angle) * radius;
+      const point = this.project(x, this.groundY(x, z) + 0.05, z, this.projectPointScratch);
+      ctx.lineTo(point.x, point.y);
+    }
+    if (complete) ctx.closePath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
   }
 }

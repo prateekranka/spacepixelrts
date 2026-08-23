@@ -23,6 +23,13 @@ const SEEN_PLAYER = 1;
 const NAV_TIMEOUT_MS = 30000;
 const PROBE_TIMEOUT_MS = 30000;
 const SERVER_BOOT_TIMEOUT_MS = 120000;
+const OBJECTIVE_RING_POINTS = 32;
+const OBJECTIVE_RADIUS = 4.5;
+const MINIMAP_RING_OFFSET = 10;
+const MINIMAP_RING_RGB = {
+  amber: [240, 193, 90],
+  ice: [183, 209, 208],
+};
 
 function assertThat(condition, message) {
   if (!condition) throw new Error(message);
@@ -30,6 +37,10 @@ function assertThat(condition, message) {
 
 function near(actual, expected, tolerance = DT + 1e-6) {
   return Math.abs(actual - expected) <= tolerance;
+}
+
+function colorNear(pixel, rgb, tolerance = 42) {
+  return pixel[3] > 0 && rgb.every((channel, index) => Math.abs(pixel[index] - channel) <= tolerance);
 }
 
 function parseArgs(argv) {
@@ -235,7 +246,7 @@ async function stepFixtures(page, fixtures, steps) {
 
 async function readLumen(page, fixture) {
   await settleFrames(page);
-  return page.evaluate(({ fixture, map, seenPlayer }) => {
+  return page.evaluate(({ fixture, map, seenPlayer, objectiveRadius, objectiveRingPoints, minimapRingOffset }) => {
     const world = globalThis.__STARHOLD_WORLD__;
     if (!world) throw new Error('__STARHOLD_WORLD__ missing');
     const landmark = world.landmarks.find((entry) => entry.id === 'central-lumen-field');
@@ -247,14 +258,51 @@ async function readLumen(page, fixture) {
     const pulse = panel?.querySelector('.lumen-pulse');
     const minimap = document.querySelector('#minimap');
     const ctx = minimap?.getContext('2d');
+    const view = globalThis.__STARHOLD_VIEW__;
+    const overlay = document.querySelector('#overlay');
+    const overlayCtx = overlay?.getContext('2d');
     const cx = Math.round((fixture.center.x / map) * (minimap?.width ?? 220));
     const cy = Math.round((fixture.center.z / map) * (minimap?.height ?? 220));
-    const pixel = (x, y) => {
+    const pixel = (canvas, canvasCtx, x, y) => {
+      if (!canvasCtx || !canvas) return [0, 0, 0, 0];
+      const px = Math.max(0, Math.min(canvas.width - 1, Math.round(x)));
+      const py = Math.max(0, Math.min(canvas.height - 1, Math.round(y)));
+      return Array.from(canvasCtx.getImageData(px, py, 1, 1).data);
+    };
+    const minimapPixel = (x, y) => {
       if (!ctx || !minimap) return [0, 0, 0, 0];
       const px = Math.max(0, Math.min(minimap.width - 1, x));
       const py = Math.max(0, Math.min(minimap.height - 1, y));
       return Array.from(ctx.getImageData(px, py, 1, 1).data);
     };
+    const objectiveOverlay = {
+      visible: Boolean(landmark && (landmark.discoveredBy & seenPlayer) !== 0),
+      radius: objectiveRadius,
+      points: objectiveRingPoints,
+      projectedCenter: null,
+      samples: [],
+      nonTransparent: 0,
+    };
+    if (view && overlay && overlayCtx && landmark) {
+      const centerGround = view.groundY(fixture.center.x, fixture.center.z);
+      const projectedCenter = view.project(fixture.center.x, centerGround + 0.05, fixture.center.z, { x: 0, y: 0 });
+      objectiveOverlay.projectedCenter = { x: projectedCenter.x, y: projectedCenter.y };
+      for (let index = 0; index < objectiveRingPoints; index++) {
+        const angle = (index / objectiveRingPoints) * Math.PI * 2;
+        const x = fixture.center.x + Math.cos(angle) * objectiveRadius;
+        const z = fixture.center.z + Math.sin(angle) * objectiveRadius;
+        const point = view.project(x, view.groundY(x, z) + 0.05, z, { x: 0, y: 0 });
+        const sample = pixel(overlay, overlayCtx, point.x, point.y);
+        objectiveOverlay.samples.push({ x: Math.round(point.x), y: Math.round(point.y), alpha: sample[3] });
+        if (sample[3] > 0) objectiveOverlay.nonTransparent++;
+      }
+    }
+    const minimapRingSamples = [
+      { direction: 'left', pixel: minimapPixel(cx - minimapRingOffset, cy) },
+      { direction: 'right', pixel: minimapPixel(cx + minimapRingOffset, cy) },
+      { direction: 'up', pixel: minimapPixel(cx, cy - minimapRingOffset) },
+      { direction: 'down', pixel: minimapPixel(cx, cy + minimapRingOffset) },
+    ];
     const farX = Math.floor(fixture.far.x);
     const farZ = Math.floor(fixture.far.z);
     const farTile = farX + farZ * map;
@@ -283,11 +331,22 @@ async function readLumen(page, fixture) {
         pointerEvents: panel ? getComputedStyle(panel).pointerEvents : '',
       },
       minimap: {
-        diamond: pixel(cx, cy),
-        ring: pixel(cx + 7, cy),
+        center: { x: cx, y: cy },
+        diamond: minimapPixel(cx, cy),
+        ring: minimapPixel(cx + 7, cy),
+        ringOffset: minimapRingOffset,
+        ringSamples: minimapRingSamples,
       },
+      objectiveOverlay,
     };
-  }, { fixture: { ...fixture, far: { x: MAP - 3.5, z: MAP - 3.5 } }, map: MAP, seenPlayer: SEEN_PLAYER });
+  }, {
+    fixture: { ...fixture, far: { x: MAP - 3.5, z: MAP - 3.5 } },
+    map: MAP,
+    seenPlayer: SEEN_PLAYER,
+    objectiveRadius: OBJECTIVE_RADIUS,
+    objectiveRingPoints: OBJECTIVE_RING_POINTS,
+    minimapRingOffset: MINIMAP_RING_OFFSET,
+  });
 }
 
 async function capture(page, out, name, camera, manifest, fixture) {
@@ -404,6 +463,7 @@ async function main() {
     const initial = await readLumen(page, fixture);
     assertThat(initial.panel.hidden, 'undiscovered central Lumen panel is visible');
     assertThat(initial.landmark && (initial.landmark.discoveredBy & SEEN_PLAYER) === 0, 'central landmark starts discovered');
+    assertThat(initial.objectiveOverlay.visible === false, 'undiscovered central Lumen marker is visible');
     manifest.checks.undiscovered = initial;
     await capture(page, out, '01-undiscovered', { x: fixture.center.x, z: fixture.center.z, halfH: 24 }, manifest, fixture);
 
@@ -509,6 +569,43 @@ async function main() {
     assertThat(state.winner === -1, `winner changed after pulse: ${state.winner}`);
     manifest.checks.postPulse = { ...state, pulseSteps };
     await capture(page, out, '08-post-pulse', { x: fixture.center.x, z: fixture.center.z, halfH: 24 }, manifest, fixture);
+
+    const discoveredCaptures = Object.entries(manifest.captures)
+      .filter(([, capture]) => capture.state.objectiveOverlay?.visible === true);
+    const overlayFailures = discoveredCaptures
+      .filter(([, capture]) => capture.state.objectiveOverlay.nonTransparent < 20)
+      .map(([name, capture]) => ({
+        name,
+        samples: `${capture.state.objectiveOverlay.nonTransparent}/${capture.state.objectiveOverlay.points}`,
+      }));
+    const minimapRingFailures = discoveredCaptures
+      .filter(([, capture]) => {
+        const expected = capture.state.state.owner === 1 ? MINIMAP_RING_RGB.ice : MINIMAP_RING_RGB.amber;
+        return capture.state.minimap.ringSamples.some(({ pixel }) => !colorNear(pixel, expected));
+      })
+      .map(([name, capture]) => ({
+        name,
+        owner: capture.state.state.owner,
+        samples: capture.state.minimap.ringSamples,
+      }));
+    manifest.checks.objectiveMarker = {
+      radiusWorld: OBJECTIVE_RADIUS,
+      perimeterPoints: OBJECTIVE_RING_POINTS,
+      requiredNonTransparent: 20,
+      discoveredStates: discoveredCaptures.map(([name]) => name),
+      overlaySamples: Object.fromEntries(
+        discoveredCaptures.map(([name, capture]) => [name, `${capture.state.objectiveOverlay.nonTransparent}/${capture.state.objectiveOverlay.points}`]),
+      ),
+      minimapOffset: MINIMAP_RING_OFFSET,
+      minimapRingSamples: Object.fromEntries(
+        discoveredCaptures.map(([name, capture]) => [name, capture.state.minimap.ringSamples]),
+      ),
+      overlayFailures,
+      minimapRingFailures,
+    };
+    assertThat(discoveredCaptures.length === 7, `expected 7 discovered screenshot states, got ${discoveredCaptures.length}`);
+    assertThat(overlayFailures.length === 0, `objective overlay perimeter samples failed: ${JSON.stringify(overlayFailures)}`);
+    assertThat(minimapRingFailures.length === 0, `minimap objective ring samples failed: ${JSON.stringify(minimapRingFailures)}`);
 
     const renderer = await rendererName(page);
     const simStepMs = await measureSim(page, activeFixtures(), 600);

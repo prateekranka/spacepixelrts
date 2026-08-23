@@ -669,14 +669,14 @@ function drawLandmarkMarker(
   ctx.lineWidth = 1;
   switch (kind) {
     case 'central-objective': {
-      const outer = 7.5;
-      const inner = 4.4;
+      const outer = 10.5;
+      const inner = 6;
       const ring = owner === 1 ? P.ice : P.amber;
       const diamond = owner === 0 ? P.lime : owner === 1 ? P.sky : P.cream;
       ctx.save();
       ctx.fillStyle = `${P.ink}cc`;
       ctx.strokeStyle = ring;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.shadowColor = ring;
       ctx.shadowBlur = 6;
       ctx.beginPath();
