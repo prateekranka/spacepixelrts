@@ -1,12 +1,14 @@
 # VS-4 Combat Asset Pack — FROZEN ART CONTRACT
 
-Status: **ACTIVE R2 / FROZEN** after VS-1–3 closed the functional playable loop. These are
-runtime game assets, not concept boards. R1 (`1b4c658`, local/unpushed) passed all 64 pixel/shader/
-performance contracts but fresh Sol failed normal-scale readability: Rift Guard collapsed into a
-near-black bar and Burden Walker merged with terrain. R2 applies the critic's exact measurable
-prescription before any acceptance. The source remains deterministic startup-rasterized pixel code
-in `src/sprites.ts`. The managed image endpoint timed out three times before charging, so it is not a
-production dependency; this pack uses the repository's regenerable pixel pipeline.
+Status: **ACTIVE R3 / FROZEN** after VS-1–3 closed the functional playable loop. These are
+runtime game assets, not concept boards. R1 (`1b4c658`, local/unpushed) passed all pixel/shader/
+performance contracts but failed normal-scale Gravemark readability. R2 (`4b29e68`, local/unpushed)
+raised bright-material share from 26.2% to 38.5%, widened both walkers, extended spears, and raised
+world scale; it still failed the identical blind normal-scale gate because blue units remained too
+small and dark. R3 is the third and final bounded scale/value repair. It applies the critic's exact
+35% scale, 2px faction rim, 16px weapon extension, and 3:1 luminance contract. A further failure
+forces an architecture review instead of R4 tuning. The source remains deterministic
+startup-rasterized pixel code in `src/sprites.ts`.
 
 ## Shared production rules
 
@@ -112,6 +114,26 @@ The following checks are added RED before any R2 source edit:
 
 The R2 visual gate uses the same unlabeled normal-scale lineup and battle framing as R1. No crop-only
 or contact-sheet pass can override a failed normal-scale frame.
+
+## R3 final normal-scale prescription
+
+Add RED checks before R3 source changes:
+
+- exact world scales: Lumen `1.59×1.89`, Solar `2.05×1.54`, Rift `1.67×1.92`, Burden
+  `2.05×1.81` (35% over R2, rounded to 0.01);
+- average Rec.709 luma of every source cell's non-transparent pixels is >=90, defined as 3:1 over
+  quiet Helios terrain luma 30;
+- every cell has a two-pixel exterior material rim: Sun uses amber/cream, Gravemark uses ice/sky;
+  rim pixels are ordinary palette material, never MAG/emissive;
+- guard main-body top remains >=16 and connected weapon pixels reach row0, a >=16px extension;
+- all R1/R2 alpha, source size, connectivity, facing, gait, MAG, mirror, IoU, runtime-MAG, draw-call,
+  performance, and bottom-anchor contracts remain green.
+
+Apply the rim as a deterministic two-pixel dilation into transparent neighbors after each authored
+sprite is painted and before mirrored facings are derived. Do not overwrite internal pixels. It is a
+pixel keyline, not bloom. Compress the two Guard bodies/legs downward/upward as needed so row0 spear
+to final foot stays <=52px. The browser export must retain the exact R1 camera/terrain and report
+per-row average luma and exact instance scales. A third blind FAIL ends scale/value iteration.
 
 ## Export and objective proof
 

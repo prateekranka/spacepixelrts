@@ -1,0 +1,92 @@
+# VS4-R3 Builder — final exact normal-scale prescription (strict TDD)
+
+Read:
+1. docs/VS1_COMBAT_ASSETS.md R3 section (frozen)
+2. current R2 commit 4b29e68
+3. tasks/SOL-vs4-r2-blind-gate.log final verdict/prescription
+4. unchanged-camera `/home/bobbyranka/workspace/evidence/starhaven-vs4-r2-lead/lineup-after.png`
+5. tests/vs4-combat-assets.test.ts and scripts/qa-vs4-combat-assets.mjs
+
+This is the third/final scale-value pass. If the identical blind gate fails, the lead stops tuning this
+architecture. Implement only the exact prescription.
+
+Owned production ONLY:
+- src/sprites.ts
+- src/render.ts
+- tests/vs4-combat-assets.test.ts
+- scripts/qa-vs4-combat-assets.mjs
+- tasks/VS4-R3-red.log (force-add)
+No sim/shader/atlas layout/gameplay/AI/stats/HUD/main/input/content/terrain/dependencies.
+
+Strict RED before source edits:
+1. Extend tests on unchanged R2 and save full tasks/VS4-R3-red.log.
+2. Pure tests:
+   - every cell average Rec.709 luma over alpha pixels >=90 (3:1 over fixed quiet-terrain luma30);
+   - Guard spear reaches row0 and documented/core body top is >=16, a >=16px extension;
+   - two exterior alpha layers are faction rim: Sun rows0/1 use amber/cream; Grave rows2/3 use
+     ice/sky. Determine exterior transparency by flood-fill from cell borders. For final alpha:
+     outer boundary layer and second inward layer each have >=85% allowed rim-color pixels.
+   - retain R1/R2 alpha limits, per-role width/height, connectivity, direction, pose, MAG, mirrors,
+     IoU, source height <=52.
+3. Browser QA expected scales (RED on R2):
+   row0 `[1.59,1.89]`, row1 `[2.05,1.54]`, row2 `[1.67,1.92]`, row3 `[2.05,1.81]`.
+
+GREEN sprite rim:
+- Add deterministic `applyCombatExteriorRim(source,colorA,colorB): Pix` after each authored sprite is
+  painted, BEFORE mirrored directions derive.
+- Preserve original source pixels exactly. Flood-fill transparent pixels connected to the 64px cell
+  border. Fill only exterior-connected transparent pixels within Chebyshev distance 1 with colorA
+  and distance 2 with colorB (or inverse if needed for top-left light). Do not fill enclosed negative
+  spaces or overwrite any nontransparent source pixel.
+- Sun rim: amber outer + cream inner. Gravemark: ice outer + sky inner. These are ordinary material
+  keylines, never MAG, bloom, opacity, blur, or detached particles.
+- Rim must be connected to the silhouette and remain inside 64px.
+
+Guard weapon/body:
+- Both spear tips include connected pixels in row0.
+- Move/compress Guard cowl/torso/legs so the true body core begins at y>=16 and final foot <=51.
+- Keep shield shapes, material identities, pose delta, and one MAG focus.
+- Spear shaft/head remains connected and projects >=16px above torso.
+
+Luminance:
+- Rim plus broader ordinary material planes must make every cell average luma >=90.
+- If rim alone is insufficient, replace remaining broad Gravemark fog/ink interior with slate/steel;
+  do not add MAG or full-body emissive.
+- Do not make Sun and Grave share the same hue family.
+
+Renderer exact scales:
+- Sun Fighter `1.59x1.89`
+- Sun Ravager `2.05x1.54`
+- Grave Fighter `1.67x1.92`
+- Grave Prism `2.05x1.81`
+Keep exact bottom anchoring (`lift=scaleY*0.5+0.03`) and one instanced combat draw.
+
+QA/export:
+- `/home/bobbyranka/workspace/evidence/starhaven-vs4-r3/`
+- same no-UI 1366x1024 camera/terrain/positions as R1/R2; never zoom closer;
+- atlas/contact/lineup/battle/manifest;
+- manifest per-row min/max average luma, two rim-layer shares, alpha dimensions, actual world scales;
+- combat on/off draw calls equal, runtime MAG0, no errors, software sim share<8ms.
+
+Run:
+npm run test:vs4
+npm run qa:vs4 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs4-r3
+npm run test:vs3
+npm run qa:vs3 -- --out /tmp/vs4r3-vs3
+npm run test:vs2b
+npm run qa:vs2b -- --out /tmp/vs4r3-vs2b
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs4r3-vs2a
+npm run qa:progression-handoff -- --out /tmp/vs4r3-progress
+npm run qa:touch-contract -- --out /tmp/vs4r3-touch
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit prefix `VS4-R3:`. Do not push/deploy. Report RED failures, R2→R3 luma/rim/scale metrics,
+exports, draw calls, sim share, regressions, SHA, deviations.
