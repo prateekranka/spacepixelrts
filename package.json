@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host --port 5173 --strictPort",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/gen-desktop.mjs",
     "preview": "vite preview --host --port 4173 --strictPort",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=spacepixelrts",
     "critic": "node scripts/measure.mjs --screenshot critic/out/latest.png",

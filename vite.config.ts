@@ -10,6 +10,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         game: 'index.html',
+        desktop: 'desktop.html',
         townCenter: 'town-center-viewer.html',
       },
     },
