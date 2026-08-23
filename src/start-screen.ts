@@ -120,7 +120,7 @@ export class StartScreen {
             </button>
           </nav>
           <footer class="start-footer">
-            <span>STARHAVEN // HELIOS RIFT</span><span>SCOUT · CLAIM · ADAPT</span>
+            <span>STARHAVEN // HELIOS RIFT</span><span>RECON · CLAIM · ADAPT</span>
           </footer>
         </section>
 
@@ -407,7 +407,7 @@ export class StartScreen {
       content.innerHTML = `
         <p class="panel-lead">Starhaven rewards a clear route across the Helios Rift, not frantic input.</p>
         <ol class="tutorial-list">
-          <li><b>Scout</b><span>Find resources, routes, and the rival before committing workers.</span></li>
+          <li><b>Recon unit</b><span>Find resources, routes, and the rival before committing workers.</span></li>
           <li><b>Claim</b><span>Build an economy that fits your civilization.</span></li>
           <li><b>Adapt</b><span>Choose a technology path and force a fight over shared ground.</span></li>
         </ol>`;

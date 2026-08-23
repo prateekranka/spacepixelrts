@@ -17,7 +17,7 @@ function guidance(selectedIds: Iterable<number>) {
 {
   const g = guidance([]);
   assert.equal(g.id, 'select-scout');
-  assert.equal(g.primary, 'Select your scout');
+  assert.equal(g.primary, 'Select your recon unit');
   assert.equal(g.secondary, undefined);
 }
 
@@ -27,7 +27,7 @@ function guidance(selectedIds: Iterable<number>) {
   assert.ok(worker);
   const g = guidance([worker.id]);
   assert.equal(g.id, 'select-scout');
-  assert.equal(g.primary, 'Select your scout');
+  assert.equal(g.primary, 'Select your recon unit');
 }
 
 // Scout — selecting the player scout gives explore-signal.
@@ -72,6 +72,6 @@ assert.ok(resetCentral);
 assert.equal(resetCentral.discoveredBy & SEEN_PLAYER, 0);
 const g = guidance([]);
 assert.equal(g.id, 'select-scout');
-assert.equal(g.primary, 'Select your scout');
+assert.equal(g.primary, 'Select your recon unit');
 
 console.log('M2 guidance tests: PASS');

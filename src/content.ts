@@ -101,24 +101,24 @@ export const STATS: Record<number, Stats> = {
     ore: 50, gas: 0, energy: 0, train: 7, pop: 1, melee: true, building: false,
   },
   [Kind.Scout]: {
-    hp: 32, spd: 3.15, atk: 3, range: 0.8, los: 9.5, radius: 0.26,
-    ore: 40, gas: 0, energy: 10, train: 6, pop: 1, melee: true, building: false,
+    hp: 40, spd: 3.15, atk: 5, range: 0.8, los: 9.5, radius: 0.26,
+    ore: 40, gas: 0, energy: 15, train: 6, pop: 1, melee: true, building: false,
   },
   [Kind.Fighter]: {
-    hp: 78, spd: 2.05, atk: 10, range: 3.1, los: 6, radius: 0.32,
-    ore: 60, gas: 0, energy: 20, train: 9, pop: 1, melee: false, building: false,
+    hp: 96, spd: 1.85, atk: 10, range: 3.1, los: 6, radius: 0.32,
+    ore: 70, gas: 0, energy: 20, train: 10, pop: 2, melee: false, building: false,
   },
   [Kind.Siege]: {
     hp: 55, spd: 1.15, atk: 30, range: 6.2, los: 5, radius: 0.42,
     ore: 90, gas: 40, energy: 20, train: 16, pop: 2, melee: false, building: false,
   },
   [Kind.Ravager]: {
-    hp: 96, spd: 2.35, atk: 13, range: 0.95, los: 5.5, radius: 0.36,
-    ore: 75, gas: 30, energy: 10, train: 12, pop: 2, melee: true, building: false,
+    hp: 96, spd: 2.35, atk: 15, range: 0.95, los: 5.5, radius: 0.36,
+    ore: 90, gas: 35, energy: 20, train: 16, pop: 2, melee: true, building: false,
   },
   [Kind.Prism]: {
-    hp: 150, spd: 1.15, atk: 20, range: 5.6, los: 6.5, radius: 0.4,
-    ore: 110, gas: 45, energy: 30, train: 18, pop: 2, melee: false, building: false,
+    hp: 165, spd: 0.95, atk: 24, range: 6.2, los: 7, radius: 0.48,
+    ore: 110, gas: 45, energy: 30, train: 20, pop: 3, melee: false, building: false,
   },
   [Kind.Shade]: {
     hp: 48, spd: 2.75, atk: 8, range: 3.4, los: 10.5, radius: 0.28,
@@ -174,8 +174,8 @@ export function workerName(_civ: Civ): string {
   return 'Worker';
 }
 
-export function fighterName(_civ: Civ): string {
-  return 'Fighter';
+export function fighterName(civ: Civ): string {
+  return civ === 'vespari' ? 'Lumen Guard' : 'Rift Guard';
 }
 
 export function labelOf(kind: Kind, civ: Civ): string {
@@ -185,10 +185,10 @@ export function labelOf(kind: Kind, civ: Civ): string {
   if (kind === Kind.UniqueB) return uniqueName(civ);
   if (kind === Kind.Worker) return workerName(civ);
   if (kind === Kind.Fighter) return fighterName(civ);
-  if (kind === Kind.Ravager) return 'Solar Lance';
-  if (kind === Kind.Prism) return 'Glacier Titan';
+  if (kind === Kind.Ravager) return 'Solar Strider';
+  if (kind === Kind.Prism) return 'Burden Walker';
   if (kind === Kind.Shade) return 'Spore Rider';
-  if (kind === Kind.Scout) return 'Scout';
+  if (kind === Kind.Scout) return civ === 'vespari' ? 'Wind Strider' : 'Grav-Skimmer';
   if (kind === Kind.Siege) return 'Breaker';
   return 'Unknown';
 }
@@ -233,7 +233,7 @@ export const TECH_PATHS: readonly TechPathInfo[] = [
     id: 'sky-dominion',
     civ: 'vespari',
     name: 'Sky Dominion',
-    blurb: 'Ships move 12% faster · Scouts see 2 farther',
+    blurb: 'Ships move 12% faster · Wind Striders see 2 farther',
   },
   {
     id: 'iron-colossus',
@@ -245,7 +245,7 @@ export const TECH_PATHS: readonly TechPathInfo[] = [
     id: 'rift-engineering',
     civ: 'aurion',
     name: 'Rift Engineering',
-    blurb: 'Ranged reach +1 · Breakers train 30% faster',
+    blurb: 'Ranged reach +1 · Burden Walkers train 30% faster',
   },
 ];
 
@@ -269,7 +269,7 @@ export interface PathEffects {
   rigExtractSec: number;
   /** rift-engineering — flat non-melee attack range bonus. */
   rangedRangeBonus: number;
-  /** rift-engineering — Siege-kind train time multiplier. */
+  /** rift-engineering — Prism-kind train time multiplier. */
   siegeTrainMul: number;
 }
 

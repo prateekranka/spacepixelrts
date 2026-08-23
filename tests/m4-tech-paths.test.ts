@@ -350,19 +350,19 @@ function yardOf(w: World, team: number) {
     assert.ok(prism, 'prism spawns');
     prism.order = Ord.Attack;
     prism.cooldown = 0;
-    const target = w.spawn(Kind.Fighter, 'vespari', 1, 66.4, 60);
+    const target = w.spawn(Kind.Fighter, 'vespari', 1, 67, 60);
     assert.ok(target, 'target spawns');
     prism.tid = target.id;
     w.step();
     return w.bolts.some((b) => b.team === 0);
   }
-  assert.equal(boltAtRange(false), false, 'base Prism cannot reach 6.4 tiles');
-  assert.equal(boltAtRange(true), true, 'rift-engineering Prism strikes at 6.4 tiles');
+  assert.equal(boltAtRange(false), false, 'base Prism cannot reach 7 tiles');
+  assert.equal(boltAtRange(true), true, 'rift-engineering Prism strikes at 7 tiles');
 }
 
-// ---- rift-engineering: Siege train time x0.7 ------------------------------------------
+// ---- rift-engineering: Prism train time x0.7 ------------------------------------------
 {
-  const trainSiege = (path: TechPathId): number => {
+  const trainPrism = (path: TechPathId): number => {
     const w = new World();
     w.civ[0] = 'aurion';
     w.reset(SEED);
@@ -371,13 +371,13 @@ function yardOf(w: World, team: number) {
     w.teams[0].ore = 500;
     w.teams[0].gas = 200;
     w.teams[0].energy = 200;
-    assert.ok(w.tryTrain(yard, Kind.Siege));
+    assert.ok(w.tryTrain(yard, Kind.Prism));
     return yard.trainT;
   };
-  const plain = trainSiege('iron-colossus');
-  const rift = trainSiege('rift-engineering');
-  assert.ok(Math.abs(plain - 16) < 1e-9, `other paths keep 16 s (got ${plain})`);
-  assert.ok(Math.abs(rift - 11.2) < 1e-9, `rift Siege trains 11.2 s (got ${rift})`);
+  const plain = trainPrism('iron-colossus');
+  const rift = trainPrism('rift-engineering');
+  assert.ok(Math.abs(plain - 20) < 1e-9, `other paths keep 20 s (got ${plain})`);
+  assert.ok(Math.abs(rift - 14) < 1e-9, `rift Prism trains 14 s (got ${rift})`);
 }
 
 // ---- enemy marshal commits doctrine instantly at tick 240 ------------------------------

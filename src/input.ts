@@ -121,7 +121,13 @@ export class Input {
     if (el.closest('#start-screen')) return;
     if (el.closest('#topbar, #bottom, #civpick')) return;
     this.sfx.resume();
-    this.host.setPointerCapture(e.pointerId);
+    // Synthetic pointer events (QA drivers, some browsers) throw NotFoundError here
+    // because their pointerId is not active. Capture is an optimization; never fatal.
+    try {
+      this.host.setPointerCapture(e.pointerId);
+    } catch {
+      /* pointer not active — proceed without capture */
+    }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.moved = false;
     this.downX = e.clientX;

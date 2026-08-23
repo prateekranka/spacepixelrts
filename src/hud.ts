@@ -69,7 +69,7 @@ export class Hud {
           <span data-k="pop"><i></i><b id="pop">0/0</b><small>Pop</small></span>
         </div>
         <div id="meta">
-          <button type="button" id="scout-focus">Scout</button>
+          <button type="button" id="scout-focus">Recon unit</button>
           <button type="button" id="idlew">Idle worker</button>
           <div id="boosts" aria-label="Energy boosts" hidden>
             <button type="button" id="boost-prod" data-boost="1" title="Production: faster training, drains 8 chg/s">Prod</button>
@@ -181,6 +181,7 @@ export class Hud {
     (this.root.querySelector('#pop') as HTMLElement).textContent = `${eco.pop}/${eco.cap}`;
     (this.root.querySelector('#civname') as HTMLElement).textContent = CIV_NAME[world.civ[0]];
     (this.root.querySelector('#doctrine') as HTMLElement).textContent = CIV_PROFILE[world.civ[0]].doctrine;
+    (this.root.querySelector('#scout-focus') as HTMLElement).textContent = labelOf(Kind.Scout, world.civ[0]);
     // M3-C — boost strip only for Sunweaver; active button lit.
     this.boostsEl.hidden = world.civ[0] !== 'vespari';
     if (!this.boostsEl.hidden) {
@@ -242,7 +243,7 @@ export class Hud {
       const scout = world.ents.find(
         (entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Scout,
       );
-      if (scout) target = { x: scout.x, y: 0.8, z: scout.z, label: 'SCOUT' };
+      if (scout) target = { x: scout.x, y: 0.8, z: scout.z, label: labelOf(Kind.Scout, world.civ[0]).toUpperCase() };
     } else if (g.id === 'explore-signal') {
       const signal = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
       if (signal) target = { x: signal.x, y: 0.6, z: signal.z, label: 'SIGNAL' };
@@ -405,13 +406,12 @@ export class Hud {
         }
       }
       btns.push(trainBtn(Kind.Worker, workerName(civ), undefined, channeling));
-      btns.push(trainBtn(Kind.Scout, 'Scout', undefined, channeling));
+      btns.push(trainBtn(Kind.Scout, labelOf(Kind.Scout, civ), undefined, channeling));
       btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: `${STATS[Kind.House].ore} ore` });
       btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: `${STATS[Kind.Barracks].ore} ore` });
       btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: `${STATS[Kind.UniqueB].ore} ore` });
     } else if (kind === Kind.Barracks) {
       btns.push(trainBtn(Kind.Fighter, fighterName(civ)));
-      btns.push(trainBtn(Kind.Siege, 'Breaker'));
       btns.push(trainBtn(uniqueUnit(civ), labelOf(uniqueUnit(civ), civ)));
     } else if (kind === Kind.Worker) {
       btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: `${STATS[Kind.House].ore} ore` });

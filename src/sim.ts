@@ -64,9 +64,8 @@ const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
 const DC = [1, 1, 1, 1, 1.4142, 1.4142, 1.4142, 1.4142];
 /** Scripted marshal wave trains faster off-screen (DESIGN §6). */
 const MARSHAL_FIGHTER_TRAIN = 1;
-const MARSHAL_SIEGE_TRAIN = 4;
 const MARSHAL_PEEL_STAGGER_TICKS = 3;
-/** Enemy forward pad — siege rally / head-start spawn (off opening crop). */
+/** Enemy forward pad — marshal rally (off opening crop). */
 const MARSHAL_FORWARD_X = MAP - 18;
 const MARSHAL_FORWARD_Z = MAP - 16;
 /** M4 decision 2 — Nexus path commit cost and channel seconds. */
@@ -130,7 +129,6 @@ export class World {
   private marshalPeelBuilt = false;
   private marshalPeelQ: number[] = [];
   private marshalPeelI = 0;
-  private marshalSiegeSpawned = false;
   private sparkHead = 0;
 
   constructor() {
@@ -194,7 +192,6 @@ export class World {
     this.marshalPeelBuilt = false;
     this.marshalPeelQ = [];
     this.marshalPeelI = 0;
-    this.marshalSiegeSpawned = false;
     this.aiT = 0;
     this.discoveryLog.length = 0;
     this.landmarks = makeHeliosLandmarks();
@@ -402,6 +399,7 @@ export class World {
   }
 
   tryTrain(building: Ent, kind: Kind): boolean {
+    if (kind === Kind.Siege || kind === Kind.Shade) return false;
     if (!building.alive || !isBuilding(building.kind)) return false;
     if (building.trainT > 0) return false;
     const st = STATS[kind];
@@ -414,7 +412,8 @@ export class World {
     eco.gas -= st.gas;
     eco.energy -= st.energy;
     building.trainKind = kind;
-    building.trainT = st.train * pathEffects(eco.techPath).siegeTrainMul;
+    const trainMul = kind === Kind.Prism ? pathEffects(eco.techPath).siegeTrainMul : 1;
+    building.trainT = st.train * trainMul;
     return true;
   }
 
@@ -1277,7 +1276,7 @@ export class World {
     const bonus = t.civ === 'aurion' ? 0.85 : 1; // compact armor
     const applied =
       dmg *
-      (isBuilding(t.kind) && e.kind === Kind.Siege ? 1.8 : 1) *
+      (isBuilding(t.kind) && e.kind === Kind.Prism ? 1.8 : 1) *
       (e.civ === 'aurion' ? 0.92 : 1) *
       this.openingDmgMul(e, t);
     if (st.melee) {
@@ -1751,6 +1750,7 @@ export class World {
 
   private shouldMarshalPeel(e: Ent): boolean {
     if (!e.alive || e.team !== 1 || !isUnit(e.kind) || e.kind === Kind.Worker) return false;
+    if (e.kind === Kind.Siege || e.kind === Kind.Shade) return false;
     if (this.isRaidingPlayerHall(e)) return false;
     if (this.openingClashEnt(e)) return true;
     if (e.order === Ord.Idle) return true;
@@ -1812,14 +1812,6 @@ export class World {
         }
       }
     }
-    if (this.tick === 250 && !this.marshalSiegeSpawned) {
-      this.marshalSiegeSpawned = true;
-      const s = this.spawn(Kind.Siege, this.civ[1], 1, MARSHAL_FORWARD_X, MARSHAL_FORWARD_Z);
-      if (s) {
-        s.order = Ord.Idle;
-        this.queueMarshalPeel(s);
-      }
-    }
     this.pumpMarshalTraining();
   }
 
@@ -1830,7 +1822,6 @@ export class World {
     let barracks: Ent | null = null;
     let workers = 0;
     let fighters = 0;
-    let sieges = 0;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team !== 1) continue;
@@ -1838,22 +1829,8 @@ export class World {
       if (e.kind === Kind.Barracks) barracks = e;
       if (e.kind === Kind.Worker) workers++;
       if (e.kind === Kind.Fighter && e.hp > 0) fighters++;
-      if (e.kind === Kind.Siege && e.hp > 0) sieges++;
     }
     if (!barracks) return;
-    const stS = STATS[Kind.Siege];
-    if (
-      barracks.trainT <= 0 &&
-      gateOpen(eco, Kind.Siege) &&
-      sieges < 1 &&
-      eco.pop + stS.pop <= eco.cap &&
-      eco.ore >= stS.ore &&
-      eco.gas >= stS.gas &&
-      eco.energy >= stS.energy
-    ) {
-      this.tryMarshalTrain(barracks, Kind.Siege);
-      return;
-    }
     const stF = STATS[Kind.Fighter];
     const room = eco.pop + stF.pop <= eco.cap;
     const pay = eco.ore >= stF.ore && eco.energy >= stF.energy;
@@ -1869,8 +1846,6 @@ export class World {
     if (building.team === 1 && this.tick >= 240) {
       if (kind === Kind.Fighter) {
         building.trainT = Math.min(building.trainT, MARSHAL_FIGHTER_TRAIN);
-      } else if (kind === Kind.Siege) {
-        building.trainT = Math.min(building.trainT, MARSHAL_SIEGE_TRAIN);
       }
     }
     return true;
@@ -1912,7 +1887,9 @@ export class World {
       if (e.kind === Kind.Hall) hall = e;
       if (e.kind === Kind.Barracks) barracks = e;
       if (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism) fighters++;
-      if (isUnit(e.kind) && e.kind !== Kind.Worker) military++;
+      if (e.kind === Kind.Scout || e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism) {
+        military++;
+      }
       if (e.kind === Kind.Worker) {
         workers++;
         if (e.order === Ord.Idle) {
@@ -1924,7 +1901,10 @@ export class World {
       this.tryTrain(hall, Kind.Worker);
     }
     if (barracks && barracks.trainT <= 0 && eco.pop < eco.cap) {
-      const k = fighters > 6 && eco.gas >= 45 ? uniqueUnit(this.civ[1]) : Kind.Fighter;
+      const unique = uniqueUnit(this.civ[1]);
+      const k = fighters > 6 && eco.gas >= 45 && unique !== Kind.Siege && unique !== Kind.Shade
+        ? unique
+        : Kind.Fighter;
       if (
         this.tick < 240 &&
         gateOpen(eco, k) &&

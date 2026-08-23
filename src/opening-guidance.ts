@@ -31,7 +31,7 @@ const CHOOSE_PATH: OpeningGuidance = {
   primary: 'Choose a technology path',
   secondary: 'Select your Nexus and commit one of two doctrines',
 };
-const SELECT_SCOUT: OpeningGuidance = { id: 'select-scout', primary: 'Select your scout' };
+const SELECT_SCOUT: OpeningGuidance = { id: 'select-scout', primary: 'Select your recon unit' };
 const EXPLORE_SIGNAL: OpeningGuidance = { id: 'explore-signal', primary: 'Explore the nearby signal' };
 const OBJECTIVE_FOUND: OpeningGuidance = {
   id: 'objective-found',
