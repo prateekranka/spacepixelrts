@@ -1,0 +1,34 @@
+
+> spacepixelrts@0.1.0 test:vs2-ai
+> tsx tests/vs2-ai-doctrine.test.ts
+
+VS2A AI doctrine RED: 29 failure(s)
+- default World.aiDifficulty is Standard
+- Cadet AI cadence is 2.6s (52 steps)
+- Standard AI cadence is 1.4s (28 steps)
+- Veteran AI cadence is 0.8s (16 steps)
+- Standard doctrine: exactly one legal Yard placement succeeds (got 0)
+- Standard doctrine: AI makes a tryPlace call for the Yard
+- Standard doctrine: the legal Yard placement uses the Yard kind
+- Standard doctrine: exactly one alive AI Yard exists (got 0)
+- Standard doctrine: Yard follows incomplete -> complete Worker construction
+- Standard doctrine: Yard deducts exactly 150 Ore
+- Standard doctrine: Yard deducts exactly 0 Volatiles
+- Standard doctrine: Yard deducts exactly 20 Charge
+- Standard doctrine: Yard position is observable
+- Standard doctrine: exactly one legal path commit succeeds (got 0)
+- Standard doctrine: AI makes exactly one tryCommitPath call (got 0)
+- Standard doctrine: AI commits iron-colossus
+- Standard doctrine: path deducts exactly 400 Ore
+- Standard doctrine: path deducts exactly 80 Charge
+- Standard doctrine: path locks after the normal channel
+- Standard doctrine: completed Yard trains through tryTrain
+- Standard doctrine: first field force has at least two Fighters (got 0)
+- Standard doctrine: first field force has at least two 5s (got 0)
+- Standard doctrine: Yard rally is the Central Lumen Field
+- Standard doctrine: mixed production is present rather than one unit type
+- Standard doctrine: every Scout target is unexplored, open, and frontier-adjacent
+- Standard doctrine: AI Scout legitimately discovers the player Core
+- Standard doctrine: Core attack starts only after discovery (-1 -> -1)
+- Standard doctrine: first Core attack has a four-unit field force (got 0)
+- Standard doctrine: player Core retains its AI discovery latch

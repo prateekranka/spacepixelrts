@@ -23,6 +23,7 @@ import {
 } from './engine';
 import type { Bolt, Civ, Ent, Spark, TeamEco } from './engine';
 import type { TechPathId } from './content';
+import type { Difficulty } from './match-config';
 import {
   BUILD_HP_START,
   CIV_PROFILE,
@@ -35,7 +36,6 @@ import {
   isUnit,
   pathEffects,
   pathsForCiv,
-  uniqueUnit,
 } from './content';
 import {
   OPENING_CENTER,
@@ -74,6 +74,34 @@ const PATH_COMMIT_CHARGE = 80;
 const PATH_COMMIT_CHANNEL = 40;
 /** M3-A base Solar link re-form delay after a sever, in ticks; solar-ascendancy halves it. */
 const LINK_SEVER_TICKS = 300;
+/** VS-2A — AI reaction cadence changes only with the selected difficulty. */
+const AI_CADENCE_SECONDS: Record<Difficulty, number> = {
+  cadet: 2.6,
+  standard: 1.4,
+  veteran: 0.8,
+};
+/** VS-2A — deterministic Yard ring, tested in array order. */
+const AI_YARD_RING_OFFSETS = [
+  { dx: -3.4, dz: -3.4 },
+  { dx: 0, dz: -4.4 },
+  { dx: 3.4, dz: -3.4 },
+  { dx: 4.4, dz: 0 },
+  { dx: 3.4, dz: 3.4 },
+  { dx: 0, dz: 4.4 },
+  { dx: -3.4, dz: 3.4 },
+  { dx: -4.4, dz: 0 },
+] as const;
+/** VS-2A — one honest housing pad for the four-unit compact force. */
+const AI_HOUSE_RING_OFFSETS = [
+  { dx: 3.4, dz: -3.4 },
+  { dx: -3.4, dz: 3.4 },
+  { dx: 0, dz: -4.4 },
+  { dx: 4.4, dz: 0 },
+  { dx: 0, dz: 4.4 },
+  { dx: -4.4, dz: 0 },
+  { dx: -3.4, dz: -3.4 },
+  { dx: 3.4, dz: 3.4 },
+] as const;
 
 export class World {
   readonly ents: Ent[] = Array.from({ length: MAX_ENTS }, makeEnt);
@@ -94,6 +122,8 @@ export class World {
   fogOfWarEnabled = true;
   /** M2-D — legacy scripted marshal cheats are off by default (docs/M2_D_AI_KNOWLEDGE.md). */
   scriptedMarshalEnabled = false;
+  /** VS-2A — public difficulty input; it changes cadence only. */
+  aiDifficulty: Difficulty = 'standard';
   /** M3-A — Sunweaver Solar collection links (docs/M3_ECONOMIES.md). */
   readonly links: Link[] = [];
   /** M3-C — per-team active boost: 0 off · 1 production · 2 vision · 3 shields. */
@@ -429,6 +459,10 @@ export class World {
     eco.energy -= st.energy;
     const built = this.spawn(kind, this.civ[team], team, x, z);
     if (!built) return false;
+    if (team === 1 && kind === Kind.Barracks) {
+      built.rallyX = OPENING_CENTER.x;
+      built.rallyZ = OPENING_CENTER.z;
+    }
     built.progress = BUILD_HP_START;
     built.hp = Math.max(1, st.hp * BUILD_HP_START);
     b.order = Ord.Build;
@@ -1238,7 +1272,13 @@ export class World {
           e.trainT = 0;
           const u = this.spawn(e.trainKind, e.civ, e.team, e.rallyX, e.rallyZ);
           if (u) {
-            if (e.team === 1 && this.tick >= 240 && isUnit(u.kind) && u.kind !== Kind.Worker) {
+            if (
+              this.scriptedMarshalEnabled &&
+              e.team === 1 &&
+              this.tick >= 240 &&
+              isUnit(u.kind) &&
+              u.kind !== Kind.Worker
+            ) {
               u.order = Ord.Idle;
               this.queueMarshalPeel(u);
             } else {
@@ -1465,6 +1505,7 @@ export class World {
       const o = this.ents[id];
       if (!o.alive || o.hp <= 0 || o.team === e.team) continue;
       if (o.kind === Kind.Resource) continue;
+      if (e.team === 1 && o.team === 0 && o.kind === Kind.Hall && (o.seenBy & SEEN_RIVAL) === 0) continue;
       if (o.kind === Kind.Shade && o.stealth > 0.55) continue;
       const d = dist2(e.x, e.z, o.x, o.z);
       if (d < bestD) {
@@ -1873,81 +1914,213 @@ export class World {
 
   private stepAi(): void {
     this.aiT += DT;
-    if (this.aiT < 1.4) return;
+    if (this.aiT + 1e-9 < AI_CADENCE_SECONDS[this.aiDifficulty]) return;
     this.aiT = 0;
     const eco = this.teams[1];
     let hall: Ent | null = null;
-    let barracks: Ent | null = null;
-    let fighters = 0;
+    let yard: Ent | null = null;
     let workers = 0;
-    let military = 0;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team !== 1) continue;
       if (e.kind === Kind.Hall) hall = e;
-      if (e.kind === Kind.Barracks) barracks = e;
-      if (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism) fighters++;
-      if (e.kind === Kind.Scout || e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism) {
-        military++;
-      }
-      if (e.kind === Kind.Worker) {
-        workers++;
-        if (e.order === Ord.Idle) {
-          e.order = Ord.Gather;
-        }
-      }
+      if (e.kind === Kind.Barracks) yard = e;
+      if (e.kind === Kind.Worker) workers++;
     }
-    if (hall && hall.trainT <= 0 && workers < 8 && eco.ore >= 50 && eco.pop < eco.cap) {
-      this.tryTrain(hall, Kind.Worker);
+
+    // VS-2A — the only way the rival creates its Yard is the public placement seam.
+    if (!yard && hall && hall.progress >= 1 && hall.hp > 0) {
+      this.tryAiPlaceYard(hall);
+      yard = this.ents.find((e) => e.alive && e.team === 1 && e.kind === Kind.Barracks) ?? null;
     }
-    if (barracks && barracks.trainT <= 0 && eco.pop < eco.cap) {
-      const unique = uniqueUnit(this.civ[1]);
-      const k = fighters > 6 && eco.gas >= 45 && unique !== Kind.Siege && unique !== Kind.Shade
-        ? unique
-        : Kind.Fighter;
-      if (
-        this.tick < 240 &&
-        gateOpen(eco, k) &&
-        eco.ore >= STATS[k].ore &&
-        eco.gas >= STATS[k].gas &&
-        eco.energy >= STATS[k].energy
-      ) {
-        this.tryTrain(barracks, k);
-      } else if (
-        this.tick < 240 &&
-        this.tick >= 28 &&
-        military < 5 &&
-        eco.ore >= STATS[Kind.Scout].ore &&
-        eco.energy >= STATS[Kind.Scout].energy
-      ) {
-        this.tryTrain(barracks, Kind.Scout);
-      }
-    }
+
+    // The opening four Workers plus one Scout need one honest House for a 2+2 force.
     if (
       hall &&
-      hall.trainT <= 0 &&
-      workers >= 8 &&
-      this.tick < 240 &&
-      this.tick >= 28 &&
-      military < 5 &&
-      eco.pop + STATS[Kind.Scout].pop <= eco.cap &&
-      eco.ore >= STATS[Kind.Scout].ore &&
-      eco.energy >= STATS[Kind.Scout].energy
+      yard &&
+      !this.ents.some((e) => e.alive && e.team === 1 && e.kind === Kind.House)
     ) {
-      this.tryTrain(hall, Kind.Scout);
+      this.tryAiPlaceHouse(hall);
     }
+
+    // Keep the opening Worker count stable so the population cap can hold the compact army.
+    if (hall && hall.trainT <= 0 && workers < 4 && eco.ore >= STATS[Kind.Worker].ore && eco.pop < eco.cap) {
+      this.tryTrain(hall, Kind.Worker);
+    }
+
+    if (yard && yard.progress >= 1) {
+      this.tryAiCommitPath(hall, yard);
+      this.tryAiTrainMix(yard);
+    }
+
+    // Idle Workers return to the normal gather loop after construction decisions.
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (e.alive && e.team === 1 && e.kind === Kind.Worker && e.order === Ord.Idle) e.order = Ord.Gather;
+    }
+
     // M2-D R3/R4 — deterministic scouting and sight-based target invalidation.
     this.stepAiScout();
     this.stepAiTargetInvalidation();
     // M3-B B5 — Gravemark AI assigns idle workers to raise rigs on discovered nodes.
     this.stepAiRigs();
+    this.stepAiFieldOrders();
     // M3-C C3 — Sunweaver AI boost policy: production while training, vision while scouting.
     if (this.civ[1] === 'vespari') {
       const trainingMilitary =
-        (barracks !== null && barracks.trainT > 0) || (hall !== null && hall.trainT > 0);
+        (yard !== null && yard.trainT > 0) || (hall !== null && hall.trainT > 0);
       if (trainingMilitary && eco.energy > 80) this.boosts[1] = 1;
       else if (this.tick < 1800 && eco.energy > 30) this.boosts[1] = 2;
       else this.boosts[1] = 0;
+    }
+  }
+
+  /** VS-2A — choose an unloaded Worker, preferring Idle then Gather, without interrupting Build. */
+  private aiBuilderWorker(): Ent | null {
+    let idle: Ent | null = null;
+    let gatherer: Ent | null = null;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1 || e.kind !== Kind.Worker || e.cargo !== 0 || e.order === Ord.Build) continue;
+      if (e.order === Ord.Idle) {
+        idle ??= e;
+        if (!this.aiNearestResourceIsSolar(e)) return e;
+      }
+      if (e.order === Ord.Gather && gatherer === null) gatherer = e;
+    }
+    return idle ?? gatherer;
+  }
+
+  private aiNearestResourceIsSolar(e: Ent): boolean {
+    const target = e.tid >= 0 ? this.ents[e.tid] : null;
+    const node = target?.alive && target.kind === Kind.Resource
+      ? target
+      : this.nearestResourceForTeam(1, e.x, e.z);
+    return node?.cargoType === Tile.Solar;
+  }
+
+  /** VS-2A — one legal placement from a frozen ring; tryPlace is called only after canPlace. */
+  private tryAiPlaceFromRing(
+    kind: Kind,
+    center: { x: number; z: number },
+    offsets: readonly { dx: number; dz: number }[],
+  ): boolean {
+    const st = STATS[kind];
+    const eco = this.teams[1];
+    if (eco.ore < st.ore || eco.gas < st.gas || eco.energy < st.energy) return false;
+    const builder = this.aiBuilderWorker();
+    if (!builder) return false;
+    for (const offset of offsets) {
+      const x = center.x + offset.dx;
+      const z = center.z + offset.dz;
+      if (!this.canPlace(x, z, st.radius)) continue;
+      return this.tryPlace(1, kind, x, z, builder.id);
+    }
+    return false;
+  }
+
+  /** VS-2A — one Yard maximum, built by a real Worker near the completed Core. */
+  private tryAiPlaceYard(hall: Ent): boolean {
+    if (this.ents.some((e) => e.alive && e.team === 1 && e.kind === Kind.Barracks)) return false;
+    return this.tryAiPlaceFromRing(Kind.Barracks, hall, AI_YARD_RING_OFFSETS);
+  }
+
+  /** VS-2A — the existing cap needs one normal House for the compact 2+2 force. */
+  private tryAiPlaceHouse(hall: Ent): boolean {
+    const unique = this.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism;
+    const desiredArmyPop = STATS[Kind.Fighter].pop * 2 + STATS[unique].pop * 2;
+    if (this.teams[1].pop + desiredArmyPop <= this.teams[1].cap) return false;
+    if (this.ents.some((e) => e.alive && e.team === 1 && e.kind === Kind.House)) return false;
+    return this.tryAiPlaceFromRing(Kind.House, hall, AI_HOUSE_RING_OFFSETS);
+  }
+
+  /** VS-2A — legal path entry; the normal 40-second channel owns the eventual write. */
+  private tryAiCommitPath(hall: Ent | null, yard: Ent): boolean {
+    const eco = this.teams[1];
+    if (
+      !hall ||
+      hall.progress < 1 ||
+      hall.hp <= 0 ||
+      hall.trainT > 0 ||
+      yard.progress < 1 ||
+      eco.ageT > 0 ||
+      eco.techPath !== null ||
+      eco.epoch !== 0 ||
+      eco.ore < PATH_COMMIT_ORE ||
+      eco.energy < PATH_COMMIT_CHARGE
+    ) {
+      return false;
+    }
+    const path: TechPathId = this.civ[1] === 'vespari' ? 'sky-dominion' : 'iron-colossus';
+    return this.tryCommitPath(1, path);
+  }
+
+  private aiCountKindAndQueued(kind: Kind): number {
+    let count = 0;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1) continue;
+      if (e.kind === kind && e.hp > 0) count++;
+      if (e.trainT > 0 && e.trainKind === kind) count++;
+    }
+    return count;
+  }
+
+  private aiCanTrain(yard: Ent, kind: Kind): boolean {
+    const st = STATS[kind];
+    const eco = this.teams[1];
+    return yard.alive && yard.progress >= 1 && yard.trainT <= 0 && gateOpen(eco, kind)
+      && eco.ore >= st.ore && eco.gas >= st.gas && eco.energy >= st.energy
+      && eco.pop + st.pop <= eco.cap;
+  }
+
+  /** VS-2A — lower living+queued side first, with a legal affordability fallback. */
+  private tryAiTrainMix(yard: Ent): boolean {
+    if (this.teams[1].ageT > 0) return false;
+    const unique = this.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism;
+    const fighters = this.aiCountKindAndQueued(Kind.Fighter);
+    const uniques = this.aiCountKindAndQueued(unique);
+    const preferred = fighters <= uniques ? Kind.Fighter : unique;
+    const fallback = preferred === Kind.Fighter ? unique : Kind.Fighter;
+    if (this.aiCanTrain(yard, preferred)) return this.tryTrain(yard, preferred);
+    if (this.aiCanTrain(yard, fallback)) return this.tryTrain(yard, fallback);
+    return false;
+  }
+
+  private orderAiMove(e: Ent, x: number, z: number): void {
+    e.order = Ord.Move;
+    e.tx = x;
+    e.tz = z;
+    e.tid = -1;
+    e.path = this.pathfind(e.x, e.z, x, z);
+    e.pathI = 0;
+  }
+
+  /** VS-2A — rally the field at center until a discovered Core and four-unit force exist. */
+  private stepAiFieldOrders(): void {
+    const hall = this.ents.find((e) => e.alive && e.team === 0 && e.kind === Kind.Hall && e.hp > 0);
+    const field = this.ents.filter(
+      (e) => e.alive && e.hp > 0 && e.team === 1
+        && (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism),
+    );
+    const coreDiscovered = hall !== undefined && (hall.seenBy & SEEN_RIVAL) !== 0;
+    if (hall && coreDiscovered && field.length >= 4) {
+      for (const unit of field) {
+        if (unit.order !== Ord.AttackMove || unit.tid !== hall.id) this.orderAttackMoveHall(unit, hall);
+      }
+      return;
+    }
+    for (const unit of field) {
+      if (dist2(unit.x, unit.z, OPENING_CENTER.x, OPENING_CENTER.z) < 0.28 * 0.28) {
+        this.orderAiMove(unit, OPENING_CENTER.x, OPENING_CENTER.z);
+      } else if (
+        unit.order !== Ord.Move ||
+        unit.tid !== -1 ||
+        Math.abs(unit.tx - OPENING_CENTER.x) > 0.01 ||
+        Math.abs(unit.tz - OPENING_CENTER.z) > 0.01
+      ) {
+        this.orderAiMove(unit, OPENING_CENTER.x, OPENING_CENTER.z);
+      }
     }
   }
 
@@ -1976,6 +2149,9 @@ export class World {
       const eligible =
         e.order === Ord.Gather && e.cargo === 0 && !this.openingTableauWorker(e);
       if (!eligible) continue;
+      // Keep one ordinary discovered-resource gatherer on Solar so Charge for
+      // the legal path and normal Yard training is earned, never granted.
+      if (this.aiNearestResourceIsSolar(e)) continue;
       if (builders >= 2) return;
       const node = this.nearestUnriggedNode(e.x, e.z, claimed);
       if (!node) return;
@@ -2010,24 +2186,45 @@ export class World {
     return best;
   }
 
-  /** M2-D R3 — send an idle rival Scout to the nearest explored-but-not-visible tile. */
+  /** VS-2A — send an idle rival Scout to the nearest deterministic unexplored frontier tile. */
   private stepAiScout(): void {
     const scout = this.ents.find(
       (e) => e.alive && e.team === 1 && e.kind === Kind.Scout && e.order === Ord.Idle,
     );
     if (!scout) return;
     const exp = this.explored[1];
-    const vis = this.visible[1];
     let bestX = -1;
     let bestZ = -1;
-    let bestD = Infinity;
+    let bestTravel = Infinity;
+    let bestProgress = Infinity;
+    let bestIndex = Infinity;
     for (let z = 0; z < MAP; z++) {
       for (let x = 0; x < MAP; x++) {
         const idx = x + z * MAP;
-        if (exp[idx] === 0 || vis[idx] !== 0) continue;
-        const d = dist2(x + 0.5, z + 0.5, MAP / 2, MAP / 2);
-        if (d < bestD) {
-          bestD = d;
+        if (exp[idx] !== 0 || this.block[idx] !== 0) continue;
+        let frontier = false;
+        for (let dz = -1; dz <= 1 && !frontier; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dz === 0) continue;
+            const xx = x + dx;
+            const zz = z + dz;
+            if (xx < 0 || zz < 0 || xx >= MAP || zz >= MAP) continue;
+            if (exp[xx + zz * MAP] !== 0) {
+              frontier = true;
+              break;
+            }
+          }
+        }
+        if (!frontier) continue;
+        const travel = dist2(scout.x, scout.z, x + 0.5, z + 0.5);
+        const progress = dist2(x + 0.5, z + 0.5, 10.5, 10.5);
+        if (
+          travel < bestTravel ||
+          (travel === bestTravel && (progress < bestProgress || (progress === bestProgress && idx < bestIndex)))
+        ) {
+          bestTravel = travel;
+          bestProgress = progress;
+          bestIndex = idx;
           bestX = x;
           bestZ = z;
         }

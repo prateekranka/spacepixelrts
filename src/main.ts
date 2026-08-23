@@ -110,6 +110,7 @@ function prepareMatch(config: MatchConfig): void {
   nextWorld.civ[0] = toLegacyCiv(config.playerFaction);
   nextWorld.civ[1] = toLegacyCiv(config.aiFaction);
   nextWorld.fogOfWarEnabled = config.fogOfWar;
+  nextWorld.aiDifficulty = config.difficulty;
   nextWorld.reset(config.seed >>> 0);
 
   const nextView = new GameRenderer(host);
