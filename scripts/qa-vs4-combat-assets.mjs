@@ -2,6 +2,7 @@
 /** VS-4 — deterministic combat-strip export and runtime proof. */
 
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import fs from 'node:fs';
 import net from 'node:net';
@@ -39,6 +40,57 @@ const RIM_COLORS = [
   { outer: [183, 209, 208], inner: [127, 167, 184] },
   { outer: [183, 209, 208], inner: [127, 167, 184] },
 ];
+
+const FROZEN_R3_CELL_SHA256 = {
+  '0:0:0': 'd7741fab23ede149007a0799fe5c72fc9b5239f57e31bcae9b5e222f82957867',
+  '0:0:1': 'f0570dbeeb99814e04cfc5378fe8f4ded31f94362cdf2adb2f23bca006b90ee1',
+  '0:1:0': 'abcb42e56565b7cebdf12a0ead8a7dda4b437df75c31dad55ff263d8ac65d78e',
+  '0:1:1': '9b8a7787456ebd2f4d356ef6475e7c1a20bdc94454fdd303fb0e1d5e28a16073',
+  '0:2:0': '95051ce2a89a70f0ecfe7e78fad93633ac187e7b4e860bdaf700dd4fddca90c3',
+  '0:2:1': 'f0caceda3d9f0404f56aed84c28ec146d9c081be0949cc12db64718f26624317',
+  '0:3:0': '1ea11ded1350ed0512e459a7fbc0a6c110165f9683c632f18efb4d1673f6a1ec',
+  '0:3:1': 'b46c042dc3b8ca4bdb3afdeb220e26735b7759e6d1ff56beec941c9c8f236b67',
+  '0:4:0': '7dfc91b629d2ed1ddb7341154b2640c5a7209c02040fcb172cf5585b7ab2f0c0',
+  '0:4:1': '697663070098e81d9bd2919928e6a8a43ae92f9666eb3fe2f2179f3634955c96',
+  '0:5:0': 'f06a6bca3ae089d339dd87b15f45546c12a60480f99309f50532cd7378989376',
+  '0:5:1': 'fd1647320a5007b4400b44774f80231489c8350ee1bf8a3a2da86cf44adbff57',
+  '0:6:0': '5cfafcc0f89f6b93cdc707a8fb6bff3ce190635902e60bf8faecb11aea53d1fb',
+  '0:6:1': '3e1b24b64422992d7b7fe9914da160eca3d1b248f224e7af26ce4e5380e149fe',
+  '0:7:0': 'e76eb04d74d5707c992668867d11f8fbd1bf111ab71762d324274cbbd9912ce6',
+  '0:7:1': '161482b9eb4eb686076286c9094d6aef7ea14ef9eb39636a6f478622291327fb',
+  '1:0:0': '09cc1118e0dac599af575896b13080811a7f5d87439ce94557b8a2e0fb74a71b',
+  '1:0:1': '2bc28f9b0ef9a9f8609899270d8f34031809a3d21bd378ab61afa930cc0dd0a4',
+  '1:1:0': '53be7e31405ebab3afc15e53a9a0eb4899092dc4ce457641eb46df58389b33fa',
+  '1:1:1': '6b033117ff7d87453421c3182fcd7b3de01a33699c9466762c1e751a0bc73200',
+  '1:2:0': '88767a73da68cc9ea992668cbae7e5ad0cfea1e2e7f4ed8e182a82a19c0e341e',
+  '1:2:1': '69f1b8add69edd1bfa9bd27105af2a68a91b255b7a0a46dc853b6e0cb41ef95a',
+  '1:3:0': '55642e2d078deee9d84ef6692af7ad31f14e0dff111b162374fa24180fd360b8',
+  '1:3:1': 'ee94bf4d0cb3eeeb3b27b359af888a982afb0cb735472623bb8ee1d1e4467b3d',
+  '1:4:0': '2824426327c954786c2da9caa5314956ba6ae45fefceda1e656a2c09677163e3',
+  '1:4:1': 'ebbded433156f48e87a9ced93c0a123d3239e903f80e24437d4562a1ca924291',
+  '1:5:0': 'fd029555b067bf1bcda319de0510f3f1a09f86aebb42258dd2080c292db9dfc9',
+  '1:5:1': '16843912ba473f530945cc32c2ccf187b7d63a79ad79da201479c19d37787308',
+  '1:6:0': '88767a73da68cc9ea992668cbae7e5ad0cfea1e2e7f4ed8e182a82a19c0e341e',
+  '1:6:1': '69f1b8add69edd1bfa9bd27105af2a68a91b255b7a0a46dc853b6e0cb41ef95a',
+  '1:7:0': '79d53ccecbdcbbc20df502fc5b7b083c1440f7ca33506aa41a825e311c5a8faa',
+  '1:7:1': '67d61e78c3217c5ee405809545f2d2f7c7ce8cb5396cb523a2f2db335cce6795',
+  '3:0:0': 'c4fd63b3313fc5919de9441a8ba71dc69a717b712fb41bc9bc0535d72bda88eb',
+  '3:0:1': '7a743db67c4180797d1fb8495ae2b7541856291b4f1be8840ce1039301795a8e',
+  '3:1:0': 'b6ded6efd2cae76946d688bf44646035da0ad1125d9821b3e2088ed4e4972af8',
+  '3:1:1': 'f9f717ba56f7cb8df43bd91f7ac69e529ffb3346dfc2d862ea165eea676562bd',
+  '3:2:0': 'ca0322156cb71e94756b3b2b4e2f840e8f8c55d5d831de6b846c2308e7709c45',
+  '3:2:1': '08f381a002321d0cd8acce11a6e015e6eb4a78ba9fea229cadfaa4f1c1c70111',
+  '3:3:0': '9279ad48cfbe8ee2a56e1c91fd456b1def2b432c73040deea5e026a3680027e5',
+  '3:3:1': 'b11044a9b467cf2ac4d2e8c6029780809ede0feb21f6803e8d306873cdc86c10',
+  '3:4:0': 'f41f25ce1fdce9fb02b33184117e74286285ca00857c84206b4bf3bb87693625',
+  '3:4:1': '1fb3ee813f327004b431a3380120ca1af8211f6252d56a81121cfd6cf158e3b0',
+  '3:5:0': 'c1537b428225743f635b8bf5969afda80da29d12b92307605f84741c0b9b4bea',
+  '3:5:1': '7021e526eb5b48f7c23878c7dabdb1731724c0ce8e54f6fb64afeb0ec81e2e1b',
+  '3:6:0': 'ca0322156cb71e94756b3b2b4e2f840e8f8c55d5d831de6b846c2308e7709c45',
+  '3:6:1': '08f381a002321d0cd8acce11a6e015e6eb4a78ba9fea229cadfaa4f1c1c70111',
+  '3:7:0': 'de10a4500f40e7625b0f774f5cfd830069ce7f2e386fbef7f37b6ac157c66080',
+  '3:7:1': '750fa277bef4c8f563fd17db9a17595e366e26ddfdb6d99db71f790610c892a6',
+};
 
 function assertThat(condition, message) {
   if (!condition) throw new Error(message);
@@ -223,6 +275,296 @@ function exteriorLayerShares(png, originX, originY, row) {
   };
 }
 
+function cellRgba(png, originX, originY, x, y) {
+  const index = ((originX + x) + (originY + y) * png.width) * 4;
+  return [png.data[index], png.data[index + 1], png.data[index + 2], png.data[index + 3]];
+}
+
+function cellAlpha(png, originX, originY, x, y) {
+  return cellRgba(png, originX, originY, x, y)[3] > 0;
+}
+
+function cellIsRimColor(png, originX, originY, x, y, row) {
+  const rgba = cellRgba(png, originX, originY, x, y);
+  const colors = RIM_COLORS[row];
+  return (rgba[0] === colors.outer[0] && rgba[1] === colors.outer[1] && rgba[2] === colors.outer[2])
+    || (rgba[0] === colors.inner[0] && rgba[1] === colors.inner[1] && rgba[2] === colors.inner[2]);
+}
+
+function cellCoreMask(png, originX, originY, row) {
+  const exteriorRim = new Uint8Array(CELL * CELL);
+  const queue = [];
+  const traversable = (x, y) => !cellAlpha(png, originX, originY, x, y) || cellIsRimColor(png, originX, originY, x, y, row);
+  for (let y = 0; y < CELL; y++) {
+    for (let x = 0; x < CELL; x++) {
+      if (x !== 0 && y !== 0 && x !== CELL - 1 && y !== CELL - 1) continue;
+      const index = x + y * CELL;
+      if (traversable(x, y) && !exteriorRim[index]) {
+        exteriorRim[index] = 1;
+        queue.push(index);
+      }
+    }
+  }
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const index = queue[cursor];
+    const x = index % CELL;
+    const y = Math.floor(index / CELL);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= CELL || ny >= CELL) continue;
+      const next = nx + ny * CELL;
+      if (!exteriorRim[next] && traversable(nx, ny)) {
+        exteriorRim[next] = 1;
+        queue.push(next);
+      }
+    }
+  }
+  const mask = new Uint8Array(CELL * CELL);
+  for (let y = 0; y < CELL; y++) {
+    for (let x = 0; x < CELL; x++) {
+      if (cellAlpha(png, originX, originY, x, y) && !(exteriorRim[x + y * CELL] && cellIsRimColor(png, originX, originY, x, y, row))) {
+        mask[x + y * CELL] = 1;
+      }
+    }
+  }
+  return mask;
+}
+
+function maskBox(mask, minX, minY, maxX, maxY) {
+  let count = 0;
+  let boxMinX = maxX + 1;
+  let boxMinY = maxY + 1;
+  let boxMaxX = minX - 1;
+  let boxMaxY = minY - 1;
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      if (!mask[x + y * CELL]) continue;
+      count++;
+      boxMinX = Math.min(boxMinX, x);
+      boxMinY = Math.min(boxMinY, y);
+      boxMaxX = Math.max(boxMaxX, x);
+      boxMaxY = Math.max(boxMaxY, y);
+    }
+  }
+  return count ? { count, minX: boxMinX, minY: boxMinY, maxX: boxMaxX, maxY: boxMaxY } : null;
+}
+
+function boxWidth(box) {
+  return box ? box.maxX - box.minX + 1 : 0;
+}
+
+function boxHeight(box) {
+  return box ? box.maxY - box.minY + 1 : 0;
+}
+
+function maskComponents(mask, minX, minY, maxX, maxY) {
+  const seen = new Uint8Array(CELL * CELL);
+  const components = [];
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const start = x + y * CELL;
+      if (seen[start] || !mask[start]) continue;
+      const queue = [start];
+      seen[start] = 1;
+      let count = 0;
+      let componentMinX = x;
+      let componentMinY = y;
+      let componentMaxX = x;
+      let componentMaxY = y;
+      for (let cursor = 0; cursor < queue.length; cursor++) {
+        const index = queue[cursor];
+        const qx = index % CELL;
+        const qy = Math.floor(index / CELL);
+        count++;
+        componentMinX = Math.min(componentMinX, qx);
+        componentMinY = Math.min(componentMinY, qy);
+        componentMaxX = Math.max(componentMaxX, qx);
+        componentMaxY = Math.max(componentMaxY, qy);
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = qx + dx;
+            const ny = qy + dy;
+            if (nx < minX || ny < minY || nx > maxX || ny > maxY) continue;
+            const next = nx + ny * CELL;
+            if (!seen[next] && mask[next]) {
+              seen[next] = 1;
+              queue.push(next);
+            }
+          }
+        }
+      }
+      components.push({ count, minX: componentMinX, minY: componentMinY, maxX: componentMaxX, maxY: componentMaxY });
+    }
+  }
+  return components;
+}
+
+function boxCoordinates(mask, minX, minY, maxX, maxY) {
+  const result = [];
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) if (mask[x + y * CELL]) result.push([x, y]);
+  }
+  return result;
+}
+
+function hasCorePath(mask, starts, ends) {
+  const target = new Uint8Array(CELL * CELL);
+  for (const [x, y] of ends) target[x + y * CELL] = 1;
+  const seen = new Uint8Array(CELL * CELL);
+  const queue = [];
+  for (const [x, y] of starts) {
+    const index = x + y * CELL;
+    if (!seen[index] && mask[index]) {
+      seen[index] = 1;
+      queue.push(index);
+    }
+  }
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const index = queue[cursor];
+    if (target[index]) return true;
+    const x = index % CELL;
+    const y = Math.floor(index / CELL);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= CELL || ny >= CELL) continue;
+        const next = nx + ny * CELL;
+        if (!seen[next] && mask[next]) {
+          seen[next] = 1;
+          queue.push(next);
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function polearmSpan(starts, ends) {
+  let best = { distance: 0, dx: 0, dy: 0, slope: 0 };
+  for (const [sx, sy] of starts) {
+    for (const [ex, ey] of ends) {
+      const dx = Math.abs(ex - sx);
+      const dy = Math.abs(ey - sy);
+      const distance = Math.hypot(dx, dy);
+      if (distance > best.distance) best = { distance, dx, dy, slope: dx ? dy / dx : Number.POSITIVE_INFINITY };
+    }
+  }
+  return best;
+}
+
+function normalizedRow2Cell(png, originX, originY, dir) {
+  const actualMask = cellCoreMask(png, originX, originY, 2);
+  const mirrored = dir === 3 || dir === 4 || dir === 5;
+  const mask = new Uint8Array(CELL * CELL);
+  const pixel = (x, y) => cellRgba(png, originX, originY, mirrored ? CELL - 1 - x : x, y);
+  for (let y = 0; y < CELL; y++) {
+    for (let x = 0; x < CELL; x++) {
+      const actualX = mirrored ? CELL - 1 - x : x;
+      mask[x + y * CELL] = actualMask[actualX + y * CELL];
+    }
+  }
+  return { mask, pixel };
+}
+
+function matchesRgb(rgba, color) {
+  return rgba[0] === color[0] && rgba[1] === color[1] && rgba[2] === color[2];
+}
+
+function longestIceRun(cell) {
+  const ice = RIM_COLORS[2].outer;
+  let longest = 0;
+  for (let y = 16; y <= 27; y++) {
+    let run = 0;
+    for (let x = 29; x <= 40; x++) {
+      const matches = cell.mask[x + y * CELL] && matchesRgb(cell.pixel(x, y), ice);
+      run = matches ? run + 1 : 0;
+      longest = Math.max(longest, run);
+    }
+  }
+  return longest;
+}
+
+function analyzeRow2Cell(png, originX, originY, dir, pose) {
+  const normalizedDir = dir === 3 ? 1 : dir === 4 ? 0 : dir === 5 ? 7 : dir;
+  const cell = normalizedRow2Cell(png, originX, originY, dir);
+  const failures = [];
+  const require = (condition, message) => { if (!condition) failures.push(message); };
+  const mask = cell.mask;
+  const head = maskBox(mask, 29, 16, 40, 27);
+  const headComponents = maskComponents(mask, 29, 16, 40, 27);
+  const headLargest = Math.max(0, ...headComponents.map((component) => component.count));
+  const visorWidth = longestIceRun(cell);
+  require(head && boxWidth(head) === 12 && boxHeight(head) === 12, `dir ${dir} pose ${pose} head ${head ? `${boxWidth(head)}x${boxHeight(head)}` : 'empty'}, expected 12x12`);
+  require(headLargest >= 80, `dir ${dir} pose ${pose} head connected ${headLargest}, expected >=80`);
+  require(visorWidth >= 6, `dir ${dir} pose ${pose} visor ${visorWidth}px, expected >=6px`);
+  const torso = maskBox(mask, 25, 27, 46, 43);
+  require(torso && boxWidth(torso) >= 18 && boxHeight(torso) >= 16 && torso.count >= 180, `dir ${dir} pose ${pose} torso ${torso ? `${boxWidth(torso)}x${boxHeight(torso)} ${torso.count}px` : 'empty'}, expected >=18x16/180px`);
+  const leftComponents = maskComponents(mask, 24, 42, 33, 51);
+  const rightComponents = maskComponents(mask, 36, 42, 45, 51);
+  const leftLeg = leftComponents.reduce((best, component) => !best || boxWidth(component) > boxWidth(best) ? component : best, null);
+  const rightLeg = rightComponents.reduce((best, component) => !best || boxWidth(component) > boxWidth(best) ? component : best, null);
+  require(leftLeg && boxWidth(leftLeg) >= 6 && boxHeight(leftLeg) >= 6, `dir ${dir} pose ${pose} left leg is not a separate >=6px-wide mass`);
+  require(rightLeg && boxWidth(rightLeg) >= 6 && boxHeight(rightLeg) >= 6, `dir ${dir} pose ${pose} right leg is not a separate >=6px-wide mass`);
+  const centerGap = maskBox(mask, 33, 45, 36, 51)?.count ?? 0;
+  require(centerGap === 0, `dir ${dir} pose ${pose} leg center gap ${centerGap}px, expected 0`);
+  const shield = maskBox(mask, 8, 19, 26, 49);
+  require(shield && boxWidth(shield) >= 16 && boxHeight(shield) >= 29, `dir ${dir} pose ${pose} shield ${shield ? `${boxWidth(shield)}x${boxHeight(shield)}` : 'empty'}, expected >=16x29`);
+  require(!shield || (shield.minX >= 8 && shield.maxX <= 26 && shield.minY >= 19 && shield.maxY <= 49), `dir ${dir} pose ${pose} shield leaves x8..26/y19..49`);
+  const braceRows = [];
+  let bracePixels = 0;
+  for (let y = 29; y <= 36; y++) {
+    let rowPixels = 0;
+    for (let x = 25; x <= 26; x++) if (mask[x + y * CELL]) rowPixels++;
+    if (rowPixels) {
+      braceRows.push(y);
+      bracePixels += rowPixels;
+    }
+  }
+  require(braceRows.length >= 2 && braceRows.length <= 3 && bracePixels >= 4 && bracePixels <= 6, `dir ${dir} pose ${pose} shield brace ${bracePixels}px/${braceRows.length} rows, expected 2-3px`);
+  const headShieldAccents = [...Array(12 * 12).keys()].reduce((count, offset) => {
+    const x = 29 + offset % 12;
+    const y = 16 + Math.floor(offset / 12);
+    const rgba = cell.pixel(x, y);
+    return count + (matchesRgb(rgba, [214, 185, 138]) || matchesRgb(rgba, [208, 154, 78]) || matchesRgb(rgba, MAG) ? 1 : 0);
+  }, 0);
+  require(headShieldAccents === 0, `dir ${dir} pose ${pose} shield accent overlaps head center (${headShieldAccents}px)`);
+  const grip = boxCoordinates(mask, 41, 29, 46, 35);
+  const corridorNear = maskBox(mask, 47, 22, 51, 28);
+  const corridorFar = maskBox(mask, 53, 11, 57, 18);
+  const tip = boxCoordinates(mask, 60, 0, 63, 6);
+  require(grip.length > 0, `dir ${dir} pose ${pose} polearm grip is empty`);
+  require(tip.length > 0, `dir ${dir} pose ${pose} polearm tip is empty`);
+  require(corridorNear && corridorFar, `dir ${dir} pose ${pose} polearm corridor is incomplete`);
+  const span = polearmSpan(grip, tip);
+  const connected = hasCorePath(mask, grip, tip);
+  require(connected, `dir ${dir} pose ${pose} polearm grip-to-tip path is disconnected`);
+  require(span.distance >= 32 && span.dx >= 16 && span.slope >= 0.8 && span.slope <= 2.0, `dir ${dir} pose ${pose} polearm span ${span.distance.toFixed(2)}px/dx${span.dx}/slope${span.slope.toFixed(2)}`);
+  return {
+    dir,
+    pose,
+    normalizedDir,
+    failures,
+    head: { pixels: head?.count ?? 0, bbox: [boxWidth(head), boxHeight(head)], connected: headLargest, visor: visorWidth },
+    torso: { pixels: torso?.count ?? 0, bbox: [boxWidth(torso), boxHeight(torso)] },
+    legs: { left: leftLeg ? [boxWidth(leftLeg), boxHeight(leftLeg)] : null, right: rightLeg ? [boxWidth(rightLeg), boxHeight(rightLeg)] : null, gapPixels: centerGap },
+    shield: { pixels: shield?.count ?? 0, bbox: [boxWidth(shield), boxHeight(shield)], bracePixels, braceRows: braceRows.length, headShieldAccents },
+    polearm: { gripPixels: grip.length, corridorNear: corridorNear?.count ?? 0, corridorFar: corridorFar?.count ?? 0, tipPixels: tip.length, distance: span.distance, horizontal: span.dx, slope: span.slope, connected },
+  };
+}
+
+function cellSha256(png, originX, originY) {
+  const bytes = Buffer.alloc(CELL * CELL * 4);
+  for (let y = 0; y < CELL; y++) {
+    const sourceStart = ((originX) + (originY + y) * png.width) * 4;
+    bytes.set(png.data.subarray(sourceStart, sourceStart + CELL * 4), y * CELL * 4);
+  }
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
 function analyzeCombatRows(file) {
   const png = PNG.sync.read(fs.readFileSync(file));
   assertThat(png.width === 1024 && png.height === 256, 'combat atlas dimensions changed while measuring rows');
@@ -256,9 +598,12 @@ function analyzeCombatRows(file) {
       }
       assertThat(alphaPixels > 0, `combat atlas row ${row} column ${column} is empty while measuring rows`);
       const rim = exteriorLayerShares(png, column * CELL, row * CELL, row);
+      const dir = column % 8;
+      const pose = Math.floor(column / 8);
+      const anatomy = row === 2 ? analyzeRow2Cell(png, column * CELL, row * CELL, dir, pose) : null;
       cells.push({
-        dir: column % 8,
-        pose: Math.floor(column / 8),
+        dir,
+        pose,
         alphaPixels,
         alphaWidth: maxX - minX + 1,
         alphaHeight: maxY - minY + 1,
@@ -266,6 +611,8 @@ function analyzeCombatRows(file) {
         brightMaterialShare: Math.round((brightPixels / alphaPixels) * 10000) / 10000,
         rimOuterShare: Math.round(rim.outer * 10000) / 10000,
         rimInnerShare: Math.round(rim.inner * 10000) / 10000,
+        sha256: cellSha256(png, column * CELL, row * CELL),
+        ...(anatomy ? { anatomy } : {}),
       });
     }
     const widths = cells.map((cell) => cell.alphaWidth);
@@ -274,6 +621,12 @@ function analyzeCombatRows(file) {
     const averageLumas = cells.map((cell) => cell.averageLuma);
     const rimOuterShares = cells.map((cell) => cell.rimOuterShare);
     const rimInnerShares = cells.map((cell) => cell.rimInnerShare);
+    const anatomy = row === 2
+      ? {
+          cells: cells.map((cell) => ({ ...cell.anatomy, sha256: cell.sha256 })),
+          failures: cells.flatMap((cell) => cell.anatomy?.failures ?? []),
+        }
+      : null;
     rows.push({
       row,
       alphaWidth: { min: Math.min(...widths), max: Math.max(...widths) },
@@ -282,10 +635,25 @@ function analyzeCombatRows(file) {
       brightMaterialShare: { min: Math.min(...brightShares), max: Math.max(...brightShares) },
       rimOuterShare: { min: Math.min(...rimOuterShares), max: Math.max(...rimOuterShares) },
       rimInnerShare: { min: Math.min(...rimInnerShares), max: Math.max(...rimInnerShares) },
+      anatomy,
       cells,
     });
   }
-  return { lumaThreshold: R3_LUMA_FLOOR, rimThreshold: 0.85, brightMaterialThreshold: 65, rows };
+  const frozenFailures = [];
+  for (const row of [0, 1, 3]) {
+    for (const cell of rows[row].cells) {
+      const key = `${row}:${cell.dir}:${cell.pose}`;
+      if (cell.sha256 !== FROZEN_R3_CELL_SHA256[key]) frozenFailures.push(`${key} ${cell.sha256} !== ${FROZEN_R3_CELL_SHA256[key]}`);
+    }
+  }
+  return {
+    lumaThreshold: R3_LUMA_FLOOR,
+    rimThreshold: 0.85,
+    brightMaterialThreshold: 65,
+    frozenRows: { cells: 48, failures: frozenFailures, pass: frozenFailures.length === 0 },
+    row2Anatomy: rows[2].anatomy,
+    rows,
+  };
 }
 
 function attachErrors(page, manifest, label) {
@@ -598,13 +966,15 @@ async function main() {
       expectedSourceMagenta: true,
     };
     manifest.checks.sourceMetrics = exportData.sourceMetrics;
+    manifest.checks.frozenRows = exportData.sourceMetrics.frozenRows;
+    manifest.checks.row2Anatomy = exportData.sourceMetrics.row2Anatomy;
     const sourceReadabilityFailures = exportData.sourceMetrics.rows.flatMap((row) => row.cells.flatMap((cell) => {
       const failures = [];
       if (cell.averageLuma < R3_LUMA_FLOOR) failures.push(`row ${row.row} dir ${cell.dir} pose ${cell.pose} average luma ${cell.averageLuma}, expected >=${R3_LUMA_FLOOR}`);
       if (cell.rimOuterShare < 0.85) failures.push(`row ${row.row} dir ${cell.dir} pose ${cell.pose} outer rim ${cell.rimOuterShare}, expected >=0.85`);
       if (cell.rimInnerShare < 0.85) failures.push(`row ${row.row} dir ${cell.dir} pose ${cell.pose} inner rim ${cell.rimInnerShare}, expected >=0.85`);
       return failures;
-    }));
+    })).concat(exportData.sourceMetrics.row2Anatomy?.failures ?? []);
     manifest.checks.sourceReadability = {
       averageLuma: { min: Math.min(...exportData.sourceMetrics.rows.map((row) => row.averageLuma.min)), max: Math.max(...exportData.sourceMetrics.rows.map((row) => row.averageLuma.max)) },
       rimOuterShare: { min: Math.min(...exportData.sourceMetrics.rows.map((row) => row.rimOuterShare.min)), max: Math.max(...exportData.sourceMetrics.rows.map((row) => row.rimOuterShare.max)) },
@@ -645,8 +1015,8 @@ async function main() {
       allExact: worldScales.every((mapping) => mapping.pass),
     };
     assertThat(
-      sourceReadabilityFailures.length === 0 && worldScales.every((mapping) => mapping.pass),
-      `VS4 R3 source/scale contract failed: ${JSON.stringify({ sourceReadabilityFailures, worldScales })}`,
+      sourceReadabilityFailures.length === 0 && exportData.sourceMetrics.frozenRows.pass && worldScales.every((mapping) => mapping.pass),
+      `VS4 R3/VS4A source/scale contract failed: ${JSON.stringify({ sourceReadabilityFailures, frozenRows: exportData.sourceMetrics.frozenRows, worldScales })}`,
     );
     const lineupPath = path.join(out, 'lineup-after.png');
     await exportPage.screenshot({ path: lineupPath, type: 'png' });

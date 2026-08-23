@@ -1391,7 +1391,6 @@ const GRAVE_BONE: Rgba = rgba(P.sand);
 const GRAVE_GOLD: Rgba = rgba(P.ochre);
 const GRAVE_CRYSTAL: Rgba = rgba(P.sky);
 const GRAVE_ICE: Rgba = rgba(P.ice);
-const COMBAT_CLEAR: Rgba = [0, 0, 0, 0];
 
 /**
  * Add the two-pixel material keyline around the exterior of a combat cell.
@@ -1613,67 +1612,103 @@ function drawSolarStriderCombat(dir: number, pose: number): Pix {
 
 function drawRiftGuardCombat(dir: number, pose: number): Pix {
   const p = Pix.alloc(COMBAT_CELL, COMBAT_CELL);
-  const side = dir === 0;
   const back = dir === 2;
   const front = dir === 6;
+  const side = dir === 0;
   const threeQuarter = dir === 1 || dir === 7;
-  const cx = side ? 31 : threeQuarter ? 33 : 31;
-  const shieldX = side ? 19 : dir === 1 ? 38 : back ? 38 : front ? 39 : 37;
-  const shieldW = side ? 15 : 14;
-  const spearX = side ? 50 : front ? 20 : 21;
-  const bodyW = side ? 10 : 9;
-  const bodyX = cx - Math.floor(bodyW / 2);
-  const gaitA = pose ? (side || front ? 2 : 1) : 0;
-  const gaitB = pose ? (side || front ? 0 : 2) : 0;
+  const shieldX = 9;
+  const weaponShift = back ? -1 : front || dir === 7 || side ? 1 : 0;
+  const gripX = 43 + weaponShift;
+  const tipX = 61 + weaponShift;
+  const shieldBase = back ? GRAVE_ICE : side ? GRAVE_FOG : GRAVE_SLATE;
+  const shieldLeftPlane = back ? GRAVE_ICE : side ? GRAVE_FOG : GRAVE_STEEL;
+  const shieldRightPlane = back ? GRAVE_ICE : side ? GRAVE_FOG : GRAVE_SLATE;
+  const chestBase = back ? GRAVE_ICE : side ? GRAVE_FOG : front ? GRAVE_STEEL : GRAVE_SLATE;
+  const chestLight = back ? GRAVE_ICE : GRAVE_STEEL;
+  const chestShadow = back ? GRAVE_ICE : front ? GRAVE_SLATE : side ? GRAVE_FOG : GRAVE_FOG;
 
-  // Crystal spear on the shoulder opposite the tower shield. The connected
-  // ice/slate head starts in row 0 and stays outside the rectangular shield.
-  p.fillRect(spearX - 1, 0, 2, 50, COMBAT_INK);
-  p.fillRect(spearX, 1, 1, 48, GRAVE_STEEL);
-  p.fillRect(spearX - 2, 0, 4, 9, COMBAT_INK);
-  p.fillRect(spearX - 1, 1, 2, 7, GRAVE_CRYSTAL);
-  p.set(spearX, 0, GRAVE_ICE);
+  // Nine-pixel crystal head and a connected two-pixel diagonal shaft. The
+  // tip is outside the body/shield and the line remains diagonal in every
+  // authored facing instead of collapsing into the former vertical spear.
+  linePix(p, gripX, 33, tipX, 4, COMBAT_INK);
+  linePix(p, gripX + 1, 33, tipX + 1, 4, COMBAT_INK);
+  linePix(p, gripX, 32, tipX, 3, GRAVE_STEEL);
+  p.set(tipX, 0, COMBAT_INK);
+  p.set(tipX - 1, 0, COMBAT_INK);
+  p.fillRect(tipX - 1, 1, 3, 2, COMBAT_INK);
+  p.set(tipX - 2, 2, COMBAT_INK);
+  p.set(tipX + 2, 2, COMBAT_INK);
+  p.set(tipX, 1, GRAVE_ICE);
+  p.fillRect(tipX - 1, 2, 3, 1, GRAVE_CRYSTAL);
 
-  combatLeg(p, bodyX - (pose ? 1 : 0), 38 - gaitA, 49, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
-  combatLeg(p, bodyX + 6 - (pose ? 1 : 0), 38 - gaitB, 49, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
-  combatRect(p, bodyX - 1, 28, bodyW + 2, 12, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
-  p.fillRect(bodyX, 32, bodyW, 5, GRAVE_STEEL);
-  p.fillRect(cx - 4, 16, 8, 10, COMBAT_INK);
-  p.fillRect(cx - 2, 18, 4, 5, GRAVE_SLATE);
-  p.fillRect(cx, 26, 1, 3, COMBAT_INK);
-  p.fillRect(cx - 3, 21, 6, 3, COMBAT_INK);
-  p.fillRect(cx - 2, 21, 4, 1, GRAVE_ICE);
-
-  // Stepped tower shield — no circular silhouette, with three ash/slate planes.
-  const shieldY = 8;
-  p.fillRect(shieldX + 2, shieldY, shieldW - 4, 2, COMBAT_INK);
-  p.fillRect(shieldX, shieldY + 2, 2, 39, COMBAT_INK);
-  p.fillRect(shieldX + shieldW - 2, shieldY + 2, 2, 39, COMBAT_INK);
-  p.fillRect(shieldX + 2, shieldY + 40, shieldW - 4, 2, COMBAT_INK);
-  p.fillRect(shieldX + 3, shieldY + 3, shieldW - 6, 29, GRAVE_SLATE);
-  p.fillRect(shieldX + 3, shieldY + 6, 3, front ? 24 : 25, GRAVE_STEEL);
-  p.fillRect(shieldX + 6, shieldY + 5, shieldW - 9, 26, GRAVE_STEEL);
-  p.fillRect(shieldX + 3, shieldY + 38, shieldW - 6, 3, COMBAT_INK);
-  p.fillRect(shieldX + 1, shieldY + 5, 3, 6, GRAVE_BONE);
-  p.fillRect(shieldX + shieldW - 4, shieldY + 7, 3, 6, GRAVE_GOLD);
-  p.fillRect(shieldX + 1, shieldY + 33, 3, 6, GRAVE_GOLD);
-  p.fillRect(shieldX + shieldW - 4, shieldY + 31, 3, 7, GRAVE_BONE);
-  if (front) {
-    p.set(shieldX + 9, shieldY + 20, COMBAT_CLEAR);
-    p.set(shieldX + 9, shieldY + 21, COMBAT_CLEAR);
+  // Exactly 12×12 ink hood/head, with a broad six-pixel ice visor.
+  p.fillRect(29, 16, 12, 12, COMBAT_INK);
+  p.fillRect(30, 17, 10, 10, GRAVE_SLATE);
+  p.fillRect(31, 18, 8, 3, GRAVE_STEEL);
+  p.fillRect(32, 21, 6, 2, GRAVE_ICE);
+  p.fillRect(30, 23, 10, 4, GRAVE_SLATE);
+  p.fillRect(34, 27, 2, 2, COMBAT_INK);
+  if (back) {
+    p.fillRect(30, 17, 10, 4, GRAVE_ICE);
+    p.fillRect(30, 23, 10, 4, GRAVE_ICE);
   }
 
-  const crystalX = shieldX + Math.floor(shieldW / 2);
-  p.fillRect(crystalX - 4, 28, 8, 10, COMBAT_INK);
-  p.fillRect(crystalX - 2, 27, 4, 12, COMBAT_INK);
-  p.fillRect(crystalX - 2, 29, 4, 7, GRAVE_CRYSTAL);
-  p.set(crystalX, 29, GRAVE_ICE);
-  combatMagCross(p, crystalX, 33);
-  linePix(p, bodyX + (shieldX < cx ? -1 : bodyW + 1), 31, shieldX + (shieldX < cx ? shieldW : 0), 31, COMBAT_INK);
-  linePix(p, bodyX + (shieldX < cx ? bodyW + 1 : -1), 32, spearX + (spearX < cx ? 1 : -1), 32, COMBAT_INK);
-  if (front) {
-    p.set(shieldX + 9, shieldY + 20, COMBAT_CLEAR);
-    p.set(shieldX + 9, shieldY + 21, COMBAT_CLEAR);
+  // A broad 18×17 chest keeps both shoulders and hips readable beside the
+  // near-side shield; material planes avoid the old narrow vertical bar.
+  p.fillRect(27, 27, 18, 17, COMBAT_INK);
+  p.fillRect(28, 28, 16, 14, chestBase);
+  p.fillRect(29, 29, 6, 5, chestLight);
+  p.fillRect(36, 29, 7, 5, chestLight);
+  p.fillRect(28, 34, 16, 5, chestBase);
+  p.fillRect(29, 34, 5, 5, chestLight);
+  p.fillRect(37, 34, 6, 5, chestShadow);
+  p.fillRect(28, 39, 16, 3, chestShadow);
+  p.fillRect(30, 39, 12, 2, chestLight);
+  // Separate six-pixel legs. Feet stay on their own side of the transparent
+  // center gap; pose 1 advances the opposite/right foot by one pixel.
+  const leftLegX = pose ? 26 : 27;
+  const rightLegX = pose ? 39 : 38;
+  const legBase = back ? GRAVE_ICE : GRAVE_SLATE;
+  const legHighlight = back ? GRAVE_STEEL : GRAVE_STEEL;
+  combatRect(p, leftLegX, 42, 6, 8, legBase, legHighlight, COMBAT_INK);
+  combatRect(p, rightLegX, 42, 6, 8, legBase, legHighlight, COMBAT_INK);
+  const leftFootX = pose ? 25 : 26;
+  p.fillRect(leftFootX, 49, 7, 1, COMBAT_INK);
+  p.fillRect(leftFootX + 1, 49, 5, 1, GRAVE_STEEL);
+  const rightFootX = pose ? 39 : 38;
+  p.fillRect(rightFootX, 49, 7, 1, COMBAT_INK);
+  p.fillRect(rightFootX + 1, 49, 5, 1, GRAVE_STEEL);
+
+  // Stepped 16×29 tower shield on the camera-near/left side. The only link
+  // to the chest is a two-pixel brace across x25..26.
+  p.fillRect(shieldX + 2, 20, 12, 1, COMBAT_INK);
+  p.fillRect(shieldX + 1, 21, 14, 1, COMBAT_INK);
+  p.fillRect(shieldX, 22, 16, 25, COMBAT_INK);
+  p.fillRect(shieldX + 1, 47, 14, 1, COMBAT_INK);
+  p.fillRect(shieldX + 2, 48, 12, 1, COMBAT_INK);
+  p.fillRect(shieldX + 1, 22, 14, 25, shieldBase);
+  p.fillRect(shieldX + 2, 24, 5, 20, shieldLeftPlane);
+  p.fillRect(shieldX + 8, 24, 5, 20, shieldRightPlane);
+  p.fillRect(shieldX + 2, 40, 12, 5, GRAVE_STEEL);
+  p.fillRect(shieldX + 1, 24, 3, 5, GRAVE_BONE);
+  p.fillRect(shieldX + 12, 26, 3, 5, GRAVE_GOLD);
+  p.fillRect(shieldX + 1, 39, 3, 5, GRAVE_GOLD);
+  p.fillRect(shieldX + 12, 38, 3, 6, GRAVE_BONE);
+  const crystalX = shieldX + 8;
+  p.fillRect(crystalX - 3, 29, 6, 10, COMBAT_INK);
+  p.fillRect(crystalX - 1, 30, 2, 8, GRAVE_CRYSTAL);
+  p.set(crystalX, 31, GRAVE_ICE);
+  combatMagCross(p, crystalX, 34);
+  p.fillRect(24, 32, 4, 2, COMBAT_INK);
+
+  // Reassert the diagonal grip over the chest plane; it lands in the locked
+  // 41..46×29..35 grip region and remains connected to the shaft.
+  p.fillRect(gripX - 2, 31, 6, 4, COMBAT_INK);
+  p.fillRect(gripX, 32, 3, 2, GRAVE_BONE);
+  p.set(gripX + 1, 33, GRAVE_ICE);
+  if (threeQuarter) {
+    p.fillRect(29, 30, 3, 4, GRAVE_STEEL);
+    p.fillRect(40, 35, 3, 4, GRAVE_SLATE);
   }
   return p;
 }
