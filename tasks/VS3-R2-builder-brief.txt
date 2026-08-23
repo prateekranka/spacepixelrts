@@ -1,0 +1,64 @@
+# VS3-R2 Builder — real combat loss + defeat result truth
+
+Read:
+1. docs/VS3_TERMINAL_RESULTS.md amended R2 lines
+2. current commit 9324cd5
+3. tests/vs3-results.test.ts combat/loss tests
+4. src/sim.ts damageRigAware/tryStrike/stepBolts/kill
+5. src/hud.ts renderResults/results CSS
+6. scripts/qa-vs3-results.mjs
+
+Frozen root causes:
+- Ordinary damage reduces victim HP <=0 before `kill(victim)`, so `const wasLiving = e.hp > 0`
+  is false and a real combat death records zero loss.
+- Results outcome CSS is always lime, so Defeat Results lie visually.
+
+Owned only:
+- src/sim.ts
+- src/hud.ts
+- tests/vs3-results.test.ts
+- scripts/qa-vs3-results.mjs
+- tasks/VS3-R2-red.log (force-add)
+No main/input/render/flow/scenarios/package/content/AI/objective/combat balance changes.
+
+Strict RED first:
+1. Add a test that spawns opposing combat units, gives a victim positive 1 HP, kills it through
+   ordinary attack/bolt stepping, then expects exactly one victim-team unitsLost. Repeated kill
+   remains one. Run `npm run test:vs3` on unchanged production and save output; expected 0 vs 1.
+2. Extend browser QA to require Victory Results `#results-panel.win` and lime/leaf computed outcome;
+   Defeat Results `#results-panel.lose`, coral/red computed outcome, and different colors. Current
+   Defeat must fail. Save browser RED in the same transcript.
+3. Only then production edits.
+
+Fix:
+- unit first-death test is corpse/dissolve transition (`corpseT<=0 && dissolveT<=0` before mutation),
+  not pre-kill HP; team0/1 only; one increment; buildings/resources zero.
+- Results panel gets explicit `win` or `lose` class from frozen outcome.
+- `.win #results-outcome` lime/leaf; `.lose #results-outcome` coral/red and red border/glow.
+- No copy/table/layout changes.
+
+Evidence:
+- Fast-step each ordinary match to at least 1:00 sim time before legal Core attack, so victory and
+  defeat Results show nonzero MM:SS. Do not write tick/winner/stats/app state.
+- Preserve <=5 real minutes, one World/View/Input/Hud, resetCount=2, all exact stat/lifecycle checks.
+
+Run:
+npm run test:vs3
+npm run qa:vs3 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs3-r2
+npm run test:vs2b
+npm run qa:vs2b -- --out /tmp/vs3r2-vs2b
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs3r2-vs2a
+npm run qa:progression-handoff -- --out /tmp/vs3r2-progression
+npm run qa:touch-contract -- --out /tmp/vs3r2-touch
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit `VS3-R2:`. Do not push/deploy. Report REDs, real loss=1, outcome colors/classes, nonzero
+durations, lifecycle facts, gates, SHA, deviations.

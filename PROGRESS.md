@@ -298,6 +298,11 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   World tracks gathered resources, units trained/lost, and actual Core damage. Victory/defeat/results
   routes become real. Strict tracer-bullet TDD + one bounded win→rematch→defeat→menu browser proof.
   No app-flow transition, AI, objective, combat balance, terrain algorithm, or asset work.
+  R1 implementation (`9324cd5`, local/unpushed) passed the two-match browser flow and regressions,
+  but lead RED found real combat deaths record `unitsLost=0` because loss tracking checks HP after
+  damage already crossed zero. Lead visual review also found Defeat Results reused the green victory
+  outcome. R2 is limited to real-combat loss accounting, defeat result state styling, and nonzero
+  QA evidence durations.
 - **Production live at VS-2B** (`02ace06`, `assets/main-DYc8EcJQ.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live production readback
   spawned one legal Lumen Guard fixture, stepped normal sim to ownership, then confirmed

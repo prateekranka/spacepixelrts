@@ -34,6 +34,8 @@ When the real World winner triggers the existing transition:
 
 - kicker `MATCH COMPLETE // HELIOS RIFT`;
 - outcome `VICTORY` or `DEFEAT`;
+- Victory uses lime/leaf outcome and border treatment; Defeat uses coral/red outcome and border
+  treatment. A Defeat Results panel must never reuse the green victory hierarchy;
 - duration `MM:SS` from terminal World.tick × DT;
 - player faction vs rival faction and selected difficulty;
 - two comparison columns, canonical faction names;
@@ -130,7 +132,9 @@ Required test behaviors:
 1. initial/reset stats are zero and defensive;
 2. post-reset spawn increments trained once; initial spawns remain zero;
 3. Worker return, Solar link, rig, and Lumen income enter the correct resource buckets;
-4. unit death increments lost exactly once; building/resource death does not;
+4. ordinary melee/ranged combat that crosses a unit from positive HP to corpse counts exactly one
+   loss even though `kill` is entered after HP reaches zero; repeat kill calls, building death, and
+   resource death count zero additional losses;
 5. melee and bolt Core damage record actual HP removed and cap overkill;
 6. reset clears all stats and preserves existing gameplay state contracts;
 7. AppFlow terminal/results/rematch/menu remain legal and sim gate remains Playing-only;
@@ -145,12 +149,15 @@ Run one bounded two-match sequence:
 
 1. Playing: create nonzero gathered/trained/core-damage facts through ordinary sim methods;
 2. damage enemy Core to death through a legal attack fixture;
-3. assert Victory, stable terminal tick, visible/focusable `CONTINUE`, no world mutation while stopped;
-4. click Continue; assert Results, exact MM:SS and stat rows, hidden game HUD, 44px buttons;
+3. assert Victory, stable nonzero terminal tick/duration, visible/focusable `CONTINUE`, no world
+   mutation while stopped;
+4. click Continue; assert Results, exact MM:SS and stat rows, hidden game HUD, 44px buttons,
+   lime/leaf victory treatment;
 5. click Play Again; assert MatchSetup; start a second deterministic match with changed seed/factions;
 6. assert Playing, `resetCount=2`, tick near zero, winner -1, stats zero, selection/modes cleared,
    exactly one #game/#overlay/#hud, changed terrain/height signature, console 0;
-7. damage player Core through legal rival attack; assert Defeat -> Continue -> Results;
+7. fast-step a nonzero second duration, damage player Core through legal rival attack; assert Defeat
+   -> Continue -> Results with coral/red treatment and no green outcome;
 8. click Main Menu; assert MainMenu, one start screen, no HUD overlay leak;
 9. primary 13 QA routes still unique and no scenario scaffold for victory/defeat/results;
 10. software GL sim share <8ms; hardware p99 <8ms.
