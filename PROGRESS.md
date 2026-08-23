@@ -302,7 +302,15 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   winner/stats/input reset, changed terrain, terminal ticks frozen, one object/canvas set, console 0,
   sim share <0.9ms; all VS1/VS2/M0–M5/build gates PASS. Fresh Sol Max-fast terminal/results gate:
   **PASS**, no material gap. Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs3-r2-lead/`.
-  The complete functional vertical slice now exists. Next: VS-4 four-unit combat asset pack.
+  The complete functional vertical slice now exists.
+- **VS-4 four-unit combat asset pack FROZEN / ACTIVE** (`docs/VS1_COMBAT_ASSETS.md`): one
+  shared 1024×256, 64px-cell, 8-facing ×2-pose combat strip replaces only live Lumen Guard, Solar
+  Strider, Rift Guard, and Burden Walker frames; legacy corpse/dissolve and other ids stay stable.
+  Code-generated from the locked Sunweaver ivory/gold/teal and Gravemark basalt/obsidian/blue-crystal
+  language. One shared shader sampler, zero draw-call increase. Baseline normal-scale lineup frozen at
+  `/home/bobbyranka/workspace/evidence/starhaven-vs4-baseline/`; current roles are not reliably
+  distinguishable without labels. Strict pixel metrics, contact sheet, lineup, battle frame, and
+  fresh blind Sol gate required.
 - **Production live at complete VS-3 loop** (`4ba70b6`, `assets/main-BK34aqQF.js`): deployed to
   existing `spacepixelrts` Pages production branch `main`. Live readback used an ordinary attack to
   set winner 0 and Core damage 2, then confirmed Victory→Continue→Results (`win`, two buttons)→Play

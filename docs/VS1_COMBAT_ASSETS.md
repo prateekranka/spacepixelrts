@@ -1,8 +1,9 @@
 # VS-4 Combat Asset Pack — FROZEN ART CONTRACT
 
-Status: queued after VS-1–3 close the playable loop. These are runtime game assets, not concept
-boards. The source remains deterministic startup-rasterized pixel code in `src/sprites.ts` unless
-a later explicit migration changes the pipeline.
+Status: **ACTIVE / FROZEN** after VS-1–3 closed the functional playable loop. These are runtime
+game assets, not concept boards. The source remains deterministic startup-rasterized pixel code in
+`src/sprites.ts`. The managed image endpoint timed out three times before charging, so it is not a
+production dependency; this pack uses the repository's regenerable pixel pipeline.
 
 ## Shared production rules
 
@@ -58,6 +59,35 @@ Guard.
 Massive high-backed quadruped industrial walker. Four thick block legs, short heavy hull, raised
 rift-engine drum/cargo block, forward crystal cannon. Width ~1.4× height but visually taller and
 heavier than Solar Strider. Emissive focus is the engine crystal, not all seams.
+
+## Locked runtime architecture
+
+Keep the existing 32px unit/building atlas stable. Add one separate combat strip to `SpriteAtlas`:
+
+- `combatCanvas`: 1024×256 RGBA;
+- cell 64px, 16 columns (`8 facings × 2 live poses`), four rows;
+- row 0: Sunweaver Fighter / Lumen Guard;
+- row 1: Sunweaver Ravager / Solar Strider;
+- row 2: Gravemark Fighter / Rift Guard;
+- row 3: Gravemark Prism / Burden Walker;
+- pose 0 serves idle/live frame 0; pose 1 serves walk frames 1/2 and attack frame 3;
+- corpse/dissolve frames 4–6 stay on the tested legacy atlas;
+- other internal civ/kind combinations stay legacy.
+
+`SDF_FRAG` samples this strip only for the four live combinations. It receives one shared
+NearestFilter texture and adds no mesh/material/draw call. Extend `SpriteAtlas`/renderer uniforms;
+do not add per-unit textures.
+
+Moving combat units preserve real world 8-dir facing with the existing exported `dir8`; this is
+presentation state only. Existing legacy billboards may keep their horizontal mirror behavior.
+Normal-world scale:
+
+- Guards: ~1.05 wide × 1.28 high;
+- Solar Strider: ~1.38 wide × 1.02 high;
+- Burden Walker: ~1.34 wide × 1.24 high.
+
+Export pure `drawCombatSprite(row, dir, pose): Pix` for Node metric tests. Authored directions are
+E/NE/N/S/SE; W/NW/SW are exact mirrored counterparts.
 
 ## Export and objective proof
 
