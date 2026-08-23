@@ -1,0 +1,44 @@
+# M4-B-r4 Builder Brief — final legibility pass
+
+Critic failed r3 again: progress hairline invisible, glow reads as hover,
+locked tile too close to a selected option, blurbs vague. Objective pixel
+measurement confirms the bar paints only ~2px tall despite CSS height 6px.
+
+Read FIRST: src/hud.ts Hall branch (search "M4-B"), .choice/.bar CSS (~line 675),
+src/content.ts TECH_PATHS blurbs, scripts/qa-m4.mjs assertions that reference
+'Committing ·', 'Path set', '.bar'.
+
+Scope: ONLY src/hud.ts, src/content.ts, scripts/qa-m4.mjs.
+
+Exact changes:
+
+1. BAR FIX (root cause unknown — enforce hard): .bar-track{display:block;
+   width:100%;height:10px;min-height:10px;margin-top:6px;background:#fff2;
+   border-radius:2px;overflow:hidden} .bar{position:absolute;left:0;top:0;
+   height:10px;min-height:10px;background:${P.amber};border-radius:2px}.
+   Move the bar ABOVE the detail line (order: strong name, bar, blurb small,
+   countdown/cost small) so the eye hits it first.
+2. CHANNEL STATE: delete the .channel box-shadow glow rule entirely. Keep
+   border ${P.amber}. Countdown line becomes uppercase via CSS
+   (.countdown{font-size:13px;font-weight:700}) — text content unchanged
+   ('Committing · Ns') so existing QA regexes hold.
+3. LOCKED TILE INVERSION: .choice.locked{background:${P.amber};
+   border:1px solid ${P.amber};color:#171326} plus
+   .choice.locked strong{color:#171326} .choice.locked small{color:#171326;
+   opacity:.75}. Remove the old gradient/background rules. Text lines stay
+   ('◆ Path set for this skirmish' / 'Combat units unlocked').
+4. BLURBS in content.ts TECH_PATHS (numbers mirror PATH_EFFECTS exactly):
+   - solar-ascendancy: 'Links regrow 2x faster - boosts cost 25% less'
+   - sky-dominion: 'Ships move 12% faster - Scouts see 2 farther'
+   - iron-colossus: 'Rigs absorb 50% more damage - extract 33% faster'
+   - rift-engineering: 'Ranged reach +1 - Breakers train 30% faster'
+   Use the middle dot separator like current blurbs do (match existing style),
+   not hyphens; the strings above show '-' only because this brief is ASCII.
+5. qa-m4.mjs: if any assertion references removed styles (gradient/glow),
+   update it; assert instead that the committed tile's computed background
+   color differs strongly from the choice-unaffordable tile (e.g. parse
+   getComputedStyle backgroundColor of .choice.locked — must be opaque amber,
+   alpha 1). Keep every other assertion intact.
+
+Verify (paste tails): npm run build && npm run test:m4 && npm run test:m0 && npm run qa:m4
+Leave tree dirty. Report files changed, tails, deviations.

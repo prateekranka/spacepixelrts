@@ -1,0 +1,15 @@
+You are the design-support critic for a pixel-art space RTS (Starhaven). The next milestone after M4 (technology paths, in flight) is M5: frozen four-unit compact rosters.
+
+Contract excerpt (docs/FIRST_PLAYABLE.md §M5):
+- Sunweaver: Worker, Wind Strider, Lumen Guard, Solar Strider.
+- Gravemark: Worker, Grav-Skimmer, Rift Guard, Burden Walker.
+- Exactly four unit types per faction; roles distinct and readable (one anchor role per unit).
+
+Current shared roster (internal kinds): Worker, Scout, Fighter, Siege, Ravager(Solar Lance), Prism(Glacier Titan), Shade(Spore Rider). Stats table has HP/spd/atk/range/los/radius/ore/gas/energy/train/pop/melee per kind. Current labels: Ravager='Solar Lance', Prism='Glacier Titan', Shade='Spore Rider', Siege='Breaker'.
+
+TASK — produce a mapping + spec memo:
+1. Map each M5 roster name to an existing internal Kind (reuse mechanics; renames are presentation-level). One line each with rationale grounded in the current stat block.
+2. Flag any roster name that has NO sensible existing-Kind host and say what minimal new behavior would be needed (prefer none).
+3. Propose the stat deltas needed so each faction's three combat units have distinct anchor roles (e.g. skirmisher / anchor / siege) while keeping total faction power roughly equal between Sunweaver and Gravemark.
+4. List the player-facing label changes and where they live (src/content.ts labelOf / uniqueUnit etc.).
+Keep it under 60 lines. No code. This is a memo for the lead to freeze as docs/M5_ARMY.md.

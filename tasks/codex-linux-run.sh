@@ -47,4 +47,4 @@ CODEX_HOME="$CODEX_HOME_DIR" "$CODEX_BIN" exec \
   "$@" \
   "$(cat "$BRIEF")" \
   2>&1 | tee -a "$LOG"
-return "${PIPESTATUS[0]}" 2>/dev/null || exit "${PIPESTATUS[0]}"
+exit "${PIPESTATUS[0]}"

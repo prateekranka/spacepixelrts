@@ -1,0 +1,47 @@
+# M4-B-r3 Builder Brief — unmistakable channel/locked states after critic FAIL #2
+
+Critic verdict r2: FAIL. Named gaps: (1) channel glow could be hover/selection —
+needs an unmistakable commitment-progress signal; (2) locked tile looks merely
+disabled; (3) outcome text too small / low contrast; (4) blurbs assume game
+knowledge ("Severed links re-form", "boosts drain less charge").
+
+Read FIRST: src/hud.ts Hall branch (search "M4-B") + .choice CSS (~line 675),
+src/content.ts TECH_PATHS, scripts/qa-m4.mjs, tests/m4-tech-paths.test.ts.
+
+## Scope — touch ONLY src/hud.ts, src/content.ts, scripts/qa-m4.mjs,
+## tests/m4-tech-paths.test.ts (assert-count only if a blurb assert exists).
+
+Exact changes:
+
+1. CHANNEL STATE = progress bar. In renderCmds, when building the channeling
+   choice tile, compute pct = Math.round((1 - channel / 40) * 100) (channel =
+   seconds REMAINING). Emit inside that button an extra element:
+   `<i class="bar" style="width:${pct}%"></i>` wrapped in a
+   `<span class="bar-track">`. CSS: .bar-track{position:relative;display:block;
+   width:100%;height:6px;margin-top:4px;background:#0007;border-radius:1px;
+   overflow:hidden} .bar{position:absolute;left:0;top:0;bottom:0;background:
+   ${P.amber};box-shadow:0 0 8px ${P.amber}}. Keep the `Committing · Ns`
+   countdown line too. The bar makes "in progress" readable without the glow;
+   keep the glow as reinforcement.
+2. LOCKED STATE = filled, not dimmed. Replace `.choice.locked` opacity rule:
+   background:linear-gradient(${P.amber}2e,${P.amber}18);
+   border:1px solid ${P.amber};color:${P.cream}. The locked tile keeps
+   `◆ Path set for this skirmish` and gains a second small line
+   `Combat units unlocked` in .countdown styling (amber). Remove opacity:.8.
+3. TEXT SIZE/CONTRAST: `#cmds button.choice small{opacity:.78...}` →
+   font-size:12px;opacity:.9. `#cmds button.choice strong` 14px→15px.
+   `.cost` and `.countdown` keep their colors but drop any extra opacity.
+4. BLURBS (content.ts TECH_PATHS, keep ids/names):
+   - solar-ascendancy: 'Cut tethers heal back fast · boosts cost less'
+   - sky-dominion: 'Faster ships · scouts see farther'
+   - iron-colossus: 'Tougher rigs · extract ore faster'
+   - rift-engineering: 'Attacks reach farther · Breakers build faster'
+5. qa-m4.mjs: extend assertions — during channel assert a `.bar` element exists
+   and its style width grows between two samples (or at least width%>0);
+   committed state asserts the locked tile contains 'Path set' AND
+   'Combat units unlocked'. Screenshots regenerated.
+
+## Verify (all must pass, paste tails)
+npm run build && npm run test:m4 && npm run test:m0 && npm run qa:m4
+
+Leave tree dirty. Report files changed, tails, deviations.

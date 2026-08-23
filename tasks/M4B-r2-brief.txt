@@ -1,0 +1,55 @@
+# M4-B-r2 Builder Brief — choice-tile redesign after critic FAIL
+
+Critic verdict on the first cut: FAIL. Causes: (a) the two technology-path
+buttons render inside the standard ~96px command grid, so label + effect +
+cost overflow and collide; (b) channeling vs committed states differ only by
+tiny low-contrast text; (c) "locked", "chg" wording unclear.
+
+You fix the HUD layer. Read FIRST:
+1. src/hud.ts — renderCmds() and the Hall branch (search "M4-B"), plus the
+   #cmds / .verb CSS block near line 620-645.
+2. src/sim.ts — tryCommitPath, techPathOf, pathChannelT, and the private
+   pendingPath array.
+3. tests/m4-tech-paths.test.ts (do not weaken any existing assert).
+
+## Scope — touch ONLY
+- src/sim.ts        (add ONE read-only accessor, nothing else)
+- src/hud.ts        (tiles + states + CSS)
+- tests/m4-tech-paths.test.ts  (append asserts for the new accessor)
+- scripts/qa-m4.mjs (extend proof: assert new classes/states visible)
+
+## Exact changes
+1. sim.ts: add `pendingPathOf(team: number): TechPathId | null` returning the
+   team's pending commit path (null when none). No other sim edits.
+2. hud.ts Hall panel, uncommitted + affordable: render the two faction paths as
+   FULL-WIDTH stacked tiles at the TOP of #cmds (class `choice`), each with:
+   strong = path name; small line 1 = blurb; small line 2 = cost
+   `400 ore · 80 charge`. Below them, the normal deck keeps Worker / Scout /
+   Habitat / Yard / Sunwell as today.
+3. Tile states (must be visually distinct at arm's length):
+   - unaffordable: cost line colored ${P.coral}, tile dimmed but readable;
+   - channeling: the PENDING tile (world.pendingPathOf(0)) shows
+     `Committing · ${Math.ceil(channel)}s` in place of its cost line and gets
+     class `channel`; the OTHER faction's tile is hidden entirely;
+     if pending is somehow null during a channel, fall back to both tiles
+     showing the countdown;
+   - committed: single full-width tile class `locked`, name + `◆ Path set for
+     this skirmish` as its small line, disabled.
+4. CSS in the hud stylesheet block: `.choice` spans all columns
+   (grid-column: 1 / -1), min-height 52px, stronger border than .verb
+   (${P.amber} solid 1px, radius 2px kept); `.choice.channel` adds
+   box-shadow glow using ${P.amber}; `.choice.locked` uses opacity .8 and
+   border-color ${P.amber}44. Keep every min-height/min-width tap rule intact.
+5. Wording sweep: use the word "charge" not "chg" inside the two choice tiles
+   (other deck buttons may stay as-is). No epoch/age words anywhere (existing
+   qa-m4 grep must still pass).
+6. tests append: pendingPathOf returns the committed-to id during the channel
+   window and null before commit starts and after the channel completes.
+7. qa-m4.mjs additions: after clicking a path button assert
+   `.choice.channel` exists and shows `Committing ·`; after settle assert the
+   `.choice.locked` tile exists with the chosen path name; screenshots updated.
+
+## Verify (run all, paste tails)
+npm run build && npm run test:m4 && npm run test:m0 && npm run test:m3 && npm run qa:m4
+
+Leave tree dirty. Report files changed, verification tails, deviations.

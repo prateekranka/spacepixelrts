@@ -21,6 +21,7 @@
     "test:m2-ai": "tsx tests/m2-ai-knowledge.test.ts",
     "test:m4": "tsx tests/m4-tech-paths.test.ts",
     "qa:m3-economies": "node scripts/qa-m3-economies.mjs",
+    "qa:m4": "node scripts/qa-m4.mjs",
     "test:m3": "tsx tests/m3-economies.test.ts && tsx tests/m3-rigs.test.ts && tsx tests/m3-boosts.test.ts"
   },
   "dependencies": {

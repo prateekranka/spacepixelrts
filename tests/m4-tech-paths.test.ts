@@ -416,4 +416,17 @@ function yardOf(w: World, team: number) {
   assert.equal(w.pathChannelT(0), 0, 'reset clears channel');
 }
 
+// ---- pending path accessor: only exposes the in-flight choice -----------------------
+{
+  const w = new World();
+  w.reset(SEED);
+  assert.equal(w.pendingPathOf(0), null, 'no pending path before commit');
+  w.teams[0].ore = 500;
+  w.teams[0].energy = 120;
+  assert.ok(w.tryCommitPath(0, 'solar-ascendancy'), 'pending accessor commit accepted');
+  assert.equal(w.pendingPathOf(0), 'solar-ascendancy', 'pending path is visible during channel');
+  for (let i = 0; i < CHANNEL_STEPS; i++) w.step();
+  assert.equal(w.pendingPathOf(0), null, 'pending path clears after channel completes');
+}
+
 console.log('M4-A tech path tests: PASS');

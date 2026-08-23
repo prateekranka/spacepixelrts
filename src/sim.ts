@@ -364,21 +364,6 @@ export class World {
     }
   }
 
-  tryAgeUp(team: number): boolean {
-    const eco = this.teams[team];
-    if (eco.epoch !== 0 || eco.ageT > 0) return false;
-    if (eco.ore < 400 || eco.energy < 80) return false;
-    for (let i = 0; i < MAX_ENTS; i++) {
-      const e = this.ents[i];
-      if (!e.alive || e.team !== team || e.kind !== Kind.Hall) continue;
-      if (e.trainT > 0) return false;
-    }
-    eco.ore -= 400;
-    eco.energy -= 80;
-    eco.ageT = 40;
-    return true;
-  }
-
   /** M4 decision 2/3 — begin the irreversible Nexus path commit; rejects leave no trace. */
   tryCommitPath(team: number, path: TechPathId): boolean {
     if (team < 0 || team >= this.teams.length) return false;
@@ -404,6 +389,11 @@ export class World {
   /** M4 — committed path of a team (null before the commit channel completes). */
   techPathOf(team: number): TechPathId | null {
     return this.teams[team]?.techPath ?? null;
+  }
+
+  /** M4 — path currently being committed by a team, before it locks in. */
+  pendingPathOf(team: number): TechPathId | null {
+    return this.pendingPath[team] ?? null;
   }
 
   /** M4 — seconds remaining on the active commit channel (0 when idle or done). */

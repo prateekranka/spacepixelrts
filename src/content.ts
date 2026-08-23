@@ -206,15 +206,6 @@ export const POP_HALL = 10;
 export const GATHER_MAX = 8;
 export const BUILD_HP_START = 0.08;
 
-export const EPOCH_NAME = ['Spark', 'Orbit', 'Dominion', 'Apex'] as const;
-
-/** Minimum epoch to train a unit from the Yard (DESIGN §4). Legacy — M4-B removes. */
-export function minTrainEpoch(kind: Kind): number {
-  if (kind === Kind.Fighter || kind === Kind.Shade) return 1;
-  if (kind === Kind.Siege || kind === Kind.Ravager || kind === Kind.Prism) return 2;
-  return 0;
-}
-
 // ---- M4 — technology paths (docs/M4_TECH_PATHS.md) ---------------------------------
 
 export type TechPathId =
@@ -236,25 +227,25 @@ export const TECH_PATHS: readonly TechPathInfo[] = [
     id: 'solar-ascendancy',
     civ: 'vespari',
     name: 'Solar Ascendancy',
-    blurb: 'Severed links re-form in half the time; boosts drain less charge.',
+    blurb: 'Tethers regrow 2x faster · Boost costs reduced 25%',
   },
   {
     id: 'sky-dominion',
     civ: 'vespari',
     name: 'Sky Dominion',
-    blurb: 'Combat units move faster; Scouts see farther.',
+    blurb: 'Ships move 12% faster · Scouts see 2 farther',
   },
   {
     id: 'iron-colossus',
     civ: 'aurion',
     name: 'Iron Colossus',
-    blurb: 'Extraction rigs stand tougher and pump resources faster.',
+    blurb: 'Rigs absorb 50% more damage · extract 33% faster',
   },
   {
     id: 'rift-engineering',
     civ: 'aurion',
     name: 'Rift Engineering',
-    blurb: 'Ranged weapons reach farther; Breakers train faster.',
+    blurb: 'Ranged reach +1 · Breakers train 30% faster',
   },
 ];
 

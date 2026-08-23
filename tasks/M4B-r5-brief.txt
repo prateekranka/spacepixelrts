@@ -1,0 +1,39 @@
+# M4-B-r5 Builder Brief — apply Sol's measured fix spec exactly
+
+Root cause (pixel-measured by critic): `.choice` tiles inherit ~44-52px height
+from `.verb` sizing while the choice content stack needs ~62px, and
+`justify-content:center` centers the overflow -> title ink crosses the top
+border, countdown crosses the bottom border. Fix = make the tile grow.
+
+Read FIRST: src/hud.ts Hall branch ("M4-B"), .choice CSS block (~line 675-697),
+scripts/qa-m4.mjs assertions mentioning 'Committing ·', 'Path set', '.bar'.
+
+Scope: ONLY src/hud.ts + scripts/qa-m4.mjs (if an assert breaks).
+
+Exact changes (critic's spec, verbatim numbers):
+
+1. `#cmds button.choice`:
+   box-sizing:border-box; display:flex; flex-direction:column;
+   align-items:stretch; justify-content:flex-start; gap:4px;
+   width:100%; height:auto; min-height:88px; padding:8px 10px;
+   background stays dark panel; border:1px solid ${P.amber}; color:${P.cream}.
+   Remove any old min-height:52px rule for .choice.
+2. Children flex none:
+   `#cmds button.choice>strong,#cmds button.choice>small,#cmds button.choice>.bar-track{flex:0 0 auto}`
+3. `#cmds button.choice strong{font-size:15px;line-height:18px}`
+4. `.bar-track`: keep position:relative;display:block;width:100%;
+   height:10px;min-height:10px BUT margin:0 (gap handles spacing);
+   background:#ffffff22 (composites near #463D55 on panel);border-radius:2px;
+   overflow:hidden. Keep `.bar{position:absolute;left:0;top:0;height:10px;
+   min-height:10px;background:${P.amber};border-radius:2px}`.
+5. `#cmds button.choice small{font-size:12px;line-height:15px;opacity:1}`
+   `.countdown{margin:0;color:${P.amber};font-size:13px;font-weight:700;
+   line-height:15px;text-transform:uppercase}`.
+6. DOM order already correct (strong, bar, blurb small, countdown small) — verify.
+7. qa-m4.mjs: update ONLY assertions that break from taller tiles (e.g.
+   viewport-height math). Do not weaken the banned-word, bar-advance,
+   double-commit, or locked-tile checks. Add one new check: computed
+   min-height of a .choice tile == 88px.
+
+Verify (paste tails): npm run build && npm run test:m4 && npm run test:m0 && npm run qa:m4
+Leave tree dirty. Report files changed, tails, deviations.
