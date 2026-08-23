@@ -291,18 +291,18 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   pulse 30s/4s, sim share <0.8ms, winner -1, console 0, all VS2/M0–M5/build gates PASS. Fresh Sol
   R2 blind gate: **PASS**. Named non-blocking debt: thin capture progress. Evidence:
   `/home/bobbyranka/workspace/evidence/starhaven-vs2b-r2-lead/`.
-- **VS-3 terminal/results/same-page replay FROZEN / ACTIVE**
-  (`docs/VS3_TERMINAL_RESULTS.md`): real winner stops sim; touch/keyboard CONTINUE reaches a
-  deterministic comparison Results panel; Play Again resets the same World/View/Input/Hud with no
-  duplicate listeners/canvases; second match may change seed/factions; Main Menu exits cleanly.
-  World tracks gathered resources, units trained/lost, and actual Core damage. Victory/defeat/results
-  routes become real. Strict tracer-bullet TDD + one bounded win→rematch→defeat→menu browser proof.
-  No app-flow transition, AI, objective, combat balance, terrain algorithm, or asset work.
-  R1 implementation (`9324cd5`, local/unpushed) passed the two-match browser flow and regressions,
-  but lead RED found real combat deaths record `unitsLost=0` because loss tracking checks HP after
-  damage already crossed zero. Lead visual review also found Defeat Results reused the green victory
-  outcome. R2 is limited to real-combat loss accounting, defeat result state styling, and nonzero
-  QA evidence durations.
+- **VS-3 terminal/results/same-page replay COMPLETE** (`9324cd5` + truth repair `4c272e7`):
+  real Core death freezes World/AppFlow; touch/keyboard CONTINUE reaches a deterministic two-column
+  Results panel; Play Again resets the same World/View/Input/Hud with one listener/canvas set and
+  changed seed/factions; second match Defeat exits cleanly to one Main Menu. Stats defensively track
+  every positive income source, post-reset units trained, real combat deaths once, and actual capped
+  Core damage. R1 passed flow but lead RED found combat `unitsLost=0` and green Defeat Results. R2
+  RED captured 0!=1 plus missing outcome class; GREEN proves melee/bolt loss=1, repeat death=0,
+  Victory lime/leaf, Defeat coral/red, exact nonzero 01:00 durations. Lead replay: resetCount=2,
+  winner/stats/input reset, changed terrain, terminal ticks frozen, one object/canvas set, console 0,
+  sim share <0.9ms; all VS1/VS2/M0–M5/build gates PASS. Fresh Sol Max-fast terminal/results gate:
+  **PASS**, no material gap. Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs3-r2-lead/`.
+  The complete functional vertical slice now exists. Next: VS-4 four-unit combat asset pack.
 - **Production live at VS-2B** (`02ace06`, `assets/main-DYc8EcJQ.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live production readback
   spawned one legal Lumen Guard fixture, stepped normal sim to ownership, then confirmed

@@ -1,0 +1,22 @@
+# VS-3 Fresh Blind Terminal and Results Gate
+
+Judge only the four attached 1366×1024 composited screenshots from the actual running Starhaven build: Victory terminal, Victory Results, Defeat terminal, Defeat Results. Do not inspect source/tests/logs or prior reports.
+
+This is a reference-grade RTS gameplay-flow gate. The 01:00 durations are deterministic QA fixture durations; judge their presentation, not match pacing.
+
+PASS only if:
+- each terminal preserves the final battlefield but gives outcome/Continue clear priority;
+- Continue is an obvious touch target;
+- Results has clear outcome, duration, matchup, comparison rows, and Play Again/Main Menu;
+- Victory and Defeat use unmistakably different positive/negative treatment;
+- no ordinary game HUD leaks into Results;
+- information is readable at 1366×1024 without clutter or ambiguity.
+
+Output exactly:
+VERDICT: PASS or FAIL
+VICTORY TERMINAL: one sentence
+VICTORY RESULTS: one sentence
+DEFEAT TERMINAL: one sentence
+DEFEAT RESULTS: one sentence
+TOUCH FLOW: one sentence
+SINGLE BIGGEST GAP: one sentence
