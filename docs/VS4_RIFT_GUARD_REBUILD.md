@@ -1,6 +1,7 @@
 # VS-4A — Rift Guard Sprite Architecture Rebuild
 
-Status: **ACTIVE / FROZEN**. Parent: `docs/VS1_COMBAT_ASSETS.md`.
+Status: **COMPLETE / ACCEPTED** (`d8cc5ed`). Parent: `docs/VS1_COMBAT_ASSETS.md`.
+Fresh Sol passed the identical normal-scale lineup after this rebuild.
 
 ## Why this is a rebuild, not R4 tuning
 

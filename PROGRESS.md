@@ -303,16 +303,18 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   sim share <0.9ms; all VS1/VS2/M0–M5/build gates PASS. Fresh Sol Max-fast terminal/results gate:
   **PASS**, no material gap. Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs3-r2-lead/`.
   The complete functional vertical slice now exists.
-- **VS-4A Rift Guard architecture rebuild ACTIVE** (`docs/VS4_RIFT_GUARD_REBUILD.md`):
-  R3 (`892d96c`, local/unpushed) landed exact scales, 100% two-layer amber/ice rims, average cell
-  luma 95.7–156.7 (>=3:1), 16px spear extension, direction delta 38+, draw calls 5/5, runtime
-  MAG 0, sim share ~1.45ms, and all regressions. Evidence:
-  `/home/bobbyranka/workspace/evidence/starhaven-vs4-r3-lead/`. Fresh Sol identical-camera gate:
-  **FAIL only Rift Guard anatomy**; faction separation, Lumen Guard, Solar Strider, and Burden Walker
-  read. Architecture review found the vertical spear + 40px tower shield + narrow torso fuse into a
-  cabinet column. Scale/value iteration is stopped. VS-4A replaces only row2 core with explicit
-  12×12 head, >=18px torso, two 6px separated legs, detached-side 16×29 shield, and >=32px diagonal
-  polearm projecting >=16px. Atlas/shader/rim/scale/other rows remain locked.
+- **VS-4 / VS-4A four-unit combat asset pack COMPLETE** (`1b4c658`, `4b29e68`, `892d96c`,
+  `d8cc5ed`): one shared 1024×256 64px atlas supplies 8 facings ×2 live poses for Lumen Guard,
+  Solar Strider, Rift Guard, and Burden Walker; corpse/dissolve stays legacy. R3 locked exact world
+  scales, two-layer amber/ice material rims, average cell luma 95.7–156.7 (>=3:1), 100% rim layers,
+  draw calls 5/5, runtime MAG0, and sim share ~1.4ms. Three normal-scale losses isolated Rift Guard's
+  cabinet composition; architecture rebuild replaced only row2 with a 12×12 head, 22×17 torso,
+  separated legs, 18×30 shield, and connected 39.8–40.8px diagonal polearm. 48/48 other-row hashes
+  remain byte-frozen; 16/16 row2 anatomy cells pass; all regressions/build pass. Fresh Sol identical
+  unlabeled 1366×1024 gate: **PASS** — factions immediate, both guards armed, walkers distinct.
+  Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs4a-lead/` and
+  `/home/bobbyranka/workspace/evidence/starhaven-vs4a-rift/`. Next: one bounded production whole-match
+  integrator because match-length pacing is the explicit test target.
 - **Production live at complete VS-3 loop** (`4ba70b6`, `assets/main-BK34aqQF.js`): deployed to
   existing `spacepixelrts` Pages production branch `main`. Live readback used an ordinary attack to
   set winner 0 and Core damage 2, then confirmed Victory→Continue→Results (`win`, two buttons)→Play

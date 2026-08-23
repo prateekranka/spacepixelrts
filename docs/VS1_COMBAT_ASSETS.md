@@ -1,16 +1,11 @@
 # VS-4 Combat Asset Pack — FROZEN ART CONTRACT
 
-Status: **ACTIVE R3 / FROZEN** after VS-1–3 closed the functional playable loop. These are
-runtime game assets, not concept boards. R1 (`1b4c658`, local/unpushed) passed all pixel/shader/
-performance contracts but failed normal-scale Gravemark readability. R2 (`4b29e68`, local/unpushed)
-raised bright-material share from 26.2% to 38.5%, widened both walkers, extended spears, and raised
-world scale; it still failed the identical blind normal-scale gate because blue units remained too
-small and dark. R3 is the third and final bounded scale/value repair. It applies the critic's exact
-35% scale, 2px faction rim, 16px weapon extension, and 3:1 luminance contract. Those contracts
-landed and R3 still failed only the Rift Guard anatomy read. Architecture review is complete:
-`docs/VS4_RIFT_GUARD_REBUILD.md` replaces that row's cabinet composition with explicit humanoid
-anatomy and a diagonal weapon; it is not a fourth scale/value pass. The source remains deterministic
-startup-rasterized pixel code in `src/sprites.ts`.
+Status: **COMPLETE / ACCEPTED**. VS-1–3 closed the functional playable loop; R1–R3 built and
+measured the shared directional atlas; VS-4A (`d8cc5ed`) replaced the failed Rift Guard source
+architecture. Fresh Sol Max-fast passed the identical unlabeled 1366×1024 normal-scale gate:
+orange-gold and cyan-steel factions are immediate; both infantry read as armed guards; both walkers
+read as distinct machines. Runtime source remains deterministic startup-rasterized pixel code in
+`src/sprites.ts`.
 
 ## Shared production rules
 
