@@ -165,6 +165,27 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
 - Evidence: `/home/bobbyranka/workspace/evidence/starhaven-m3-economies/`.
 - **Next:** M4 two-way technology choice per `docs/FIRST_PLAYABLE.md`.
 
+## M4 — technology paths (in progress)
+
+- `docs/M4_TECH_PATHS.md` FROZEN (`7559532`): one irreversible per-faction commit between
+  two paths (Sunweaver solar-ascendancy / sky-dominion; Gravemark iron-colossus /
+  rift-engineering). Commit is a Nexus research (400 ore + 80 charge, 40 s channel,
+  Hall blocked while channeling). Eight path effects in one `PATH_EFFECTS` table.
+  Internal `epoch`/`ageT` storage kept per vocab doc; player-facing epoch language banned.
+- **M4-A sim core COMPLETE** (`b845af2`, builder via opencode x-preview-f-free, lead-verified):
+  `tryCommitPath` (civ-path validation, atomic deduct, irreversible), `techPathOf`,
+  `pathChannelT`, Yard gate rewritten to `gateOpen`, all eight effects wired at their
+  mechanic sites, enemy marshal instant doctrine commit at tick 240 replaces the old
+  `epoch = 2` jump (write deleted). New `tests/m4-tech-paths.test.ts` (100 asserts).
+  Lead re-ran every suite: `test:m0`, `test:m2`, `test:m2-ai`, `test:m3`, `test:m4`,
+  build — all green. Known leftover for M4-B: dead legacy adapters (`tryAgeUp`,
+  `EPOCH_NAME`, `minTrainEpoch`) still exported until the HUD sweep removes them.
+- **M4-B HUD choice UI + guidance sweep** dispatched (opencode builder): two path buttons /
+  channel countdown / locked readout, guidance nudge, `qa:m4` headless proof with a
+  banned-word grep gate, evidence to `/home/bobbyranka/workspace/evidence/starhaven-m4-tech-paths/`.
+- GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
+  auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
+
 ## Historical
 
 Pre-First-Playable town-center art campaign (Sunweaver Town Center structural rebuild,
