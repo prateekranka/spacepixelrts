@@ -212,8 +212,18 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   qa-m2-ai precedent. Full opening long-press proof PASSes: selection survives, Move
   order lands within 0 world units of target, sim share 2.71 ms < 8 ms budget.
   Evidence: `/home/bobbyranka/workspace/evidence/starhaven-m5-army/`.
-- **Next:** M5-B visual/label sweep on the running game + Sol blind gate on M5; then M6
-  touch controls per `docs/FIRST_PLAYABLE.md`.
+- **M5-C/D HUD prescription + scene brightness COMPLETE** (`e95d63c`): Sol's topbar
+  prescription applied verbatim (resource captions ORE/VOLATILES/CHARGE/POPULATION,
+  charge-ability cluster with ▶/■ toggle labels, group buttons removed from v1,
+  MOVE-then-tap copy, FIND IDLE WORKER / FIND SCOUT, selection stat grid, 12px text floor).
+  Scene lighting raised for instant-read: hemisphere 2.1, key 3.2, central amber fill;
+  fog veil lifted. Objective gate added: center-region `sceneLuma > 28` in qa-m2-opening
+  (was 12.2 pre-fix, now 28.3). Sol round on M5-C FAILed on darkness; M5-D fixed the named
+  gap; next Sol re-gate pending.
+- **Production matches working tree** (`game-C12P1XJ5.js`): force-deployed twice — first the
+  M5-A/M4-B state bobby was viewing, then this build. `desktop.html` route deployed too:
+  strips the portrait rotate-gate so non-iPad browsers render full landscape UI
+  (`https://spacepixelrts.pages.dev/desktop.html`).
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
   (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
