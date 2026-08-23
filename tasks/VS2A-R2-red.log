@@ -1,0 +1,10 @@
+
+> spacepixelrts@0.1.0 test:vs2-ai
+> tsx tests/vs2-ai-doctrine.test.ts
+
+VS2A AI doctrine RED: 5 failure(s)
+- Standard doctrine: first legal path commit is in the 4:30–7:30 window (got tick 2856)
+- Standard doctrine: pre-8:00 force holds center with AttackMove and tid=-1
+- Standard doctrine: no combat unit targets the player Core before the 8:00 attack floor
+- Standard doctrine: first Core target is in the 8:00–12:00 window (got tick 4956)
+- Standard doctrine: first Core attack is by 12:00 (got tick 4956)

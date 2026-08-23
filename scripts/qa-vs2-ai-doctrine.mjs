@@ -14,7 +14,11 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const VIEWPORT = { width: 1366, height: 1024 };
 const EXPECTED_SEED = 0x5eed;
 const SIM_HZ = 20;
-const MINUTE_12_TICKS = 12 * 60 * SIM_HZ;
+const MAX_TICKS = 21600;
+const AI_PATH_EARLIEST_TICK = Math.round(4.5 * 60 * SIM_HZ);
+const AI_PATH_LATEST_TICK = Math.round(7.5 * 60 * SIM_HZ);
+const AI_ATTACK_EARLIEST_TICK = Math.round(8 * 60 * SIM_HZ);
+const AI_ATTACK_LATEST_TICK = Math.round(12 * 60 * SIM_HZ);
 const STEP_CHUNK = 30;
 const P99_BUDGET_MS = 8;
 const HONEST_STEP_GAIN_BOUND = 96;
@@ -25,6 +29,10 @@ const ORD = { Attack: 2, AttackMove: 6 };
 const NAV_TIMEOUT_MS = 30000;
 const PROBE_TIMEOUT_MS = 30000;
 const SERVER_BOOT_TIMEOUT_MS = 120000;
+
+function minuteAt(tick) {
+  return Math.round((tick / SIM_HZ / 60) * 100) / 100;
+}
 
 function parseArgs(argv) {
   const result = {};
@@ -175,7 +183,7 @@ async function stageCamera(page, camera) {
 }
 
 async function readWorld(page) {
-  return page.evaluate(({ kinds, orders, center, seenRival }) => {
+  return page.evaluate(({ kinds, orders, center, seenRival, attackEarliestTick }) => {
     const world = globalThis.__STARHOLD_WORLD__;
     if (!world) throw new Error('__STARHOLD_WORLD__ missing');
     const eco = world.teams[1];
@@ -227,14 +235,23 @@ async function readWorld(page) {
         kind: e.kind,
         order: e.order,
         tid: e.tid,
+        tx: e.tx,
+        tz: e.tz,
         x: e.x,
         z: e.z,
         centerDistance: Math.hypot(e.x - center.x, e.z - center.z),
       })),
+      centerAttackMoves: force.filter(
+        (e) => e.order === orders.AttackMove
+          && e.tid === -1
+          && Math.abs(e.tx - center.x) < 1e-9
+          && Math.abs(e.tz - center.z) < 1e-9,
+      ).length,
       attackTargets: attackTargets.map((e) => ({ id: e.id, kind: e.kind, order: e.order, tid: e.tid })),
       hiddenCoreTargets,
+      beforeAttackFloorCoreTargets: world.tick < attackEarliestTick ? attackTargets.length : 0,
     };
-  }, { kinds: KIND, orders: ORD, center: CENTER, seenRival: SEEN_RIVAL });
+  }, { kinds: KIND, orders: ORD, center: CENTER, seenRival: SEEN_RIVAL, attackEarliestTick: AI_ATTACK_EARLIEST_TICK });
 }
 
 async function stepWorld(page, steps) {
@@ -296,7 +313,8 @@ async function main() {
       viewport: VIEWPORT,
       seed: EXPECTED_SEED,
       difficulty: 'standard',
-      maxTicks: MINUTE_12_TICKS,
+      maxTicks: MAX_TICKS,
+      simHz: SIM_HZ,
       directWorldFastStepOnly: true,
     },
     checks: {},
@@ -343,57 +361,76 @@ async function main() {
     const initialExplored = audit.explored;
     let maxPositiveStepGain = 0;
     let hiddenCoreTargetEver = 0;
+    let beforeAttackFloorCoreTargetEver = 0;
     const milestones = {
       yard: null,
       yardComplete: null,
-      channel: null,
+      pathStart: null,
       pathLocked: null,
+      forceReady: null,
       mixedCenter: null,
       discoveredCoreAttack: null,
     };
     let yardSeen = false;
     let pathSeen = false;
+    let forceReadySeen = false;
     let mixedSeen = false;
     let attackSeen = false;
     let previousCoreSeen = audit.hall ? (audit.hall.seenBy & SEEN_RIVAL) !== 0 : false;
     const snapshot = (value) => JSON.parse(JSON.stringify(value));
 
-    while (audit.tick < MINUTE_12_TICKS && (!milestones.yard || !milestones.channel || !milestones.mixedCenter || !milestones.discoveredCoreAttack)) {
+    while (audit.tick < MAX_TICKS && (!milestones.yard || !milestones.pathStart || !milestones.pathLocked || !milestones.forceReady || !milestones.mixedCenter || !milestones.discoveredCoreAttack)) {
       const stepped = await stepWorld(page, STEP_CHUNK);
       maxPositiveStepGain = Math.max(maxPositiveStepGain, stepped.maxPositiveGain);
       audit = await readWorld(page);
       hiddenCoreTargetEver += audit.hiddenCoreTargets;
+      beforeAttackFloorCoreTargetEver += audit.beforeAttackFloorCoreTargets;
       const coreSeen = audit.hall ? (audit.hall.seenBy & SEEN_RIVAL) !== 0 : false;
 
       if (!yardSeen && audit.yard) {
         yardSeen = true;
-        milestones.yard = { tick: audit.tick, state: snapshot(audit) };
+        milestones.yard = { tick: audit.tick, minute: minuteAt(audit.tick), state: snapshot(audit) };
         await capture(page, out, 'yard-construction', { x: 56, z: 56, halfH: 20 }, manifest, audit);
       }
       if (!milestones.yardComplete && audit.yard?.progress >= 1) {
-        milestones.yardComplete = { tick: audit.tick, state: snapshot(audit) };
+        milestones.yardComplete = { tick: audit.tick, minute: minuteAt(audit.tick), state: snapshot(audit) };
         await capture(page, out, 'yard-complete', { x: 56, z: 56, halfH: 20 }, manifest, audit);
       }
       if (!pathSeen && audit.channelT > 0 && audit.pendingPath === 'iron-colossus') {
         pathSeen = true;
-        milestones.channel = { tick: audit.tick, state: snapshot(audit) };
+        milestones.pathStart = { tick: audit.tick, minute: minuteAt(audit.tick), state: snapshot(audit) };
         await capture(page, out, 'path-channel', { x: 56, z: 56, halfH: 20 }, manifest, audit);
       }
       if (!milestones.pathLocked && audit.path === 'iron-colossus' && audit.channelT === 0) {
-        milestones.pathLocked = { tick: audit.tick, state: snapshot(audit) };
+        milestones.pathLocked = { tick: audit.tick, minute: minuteAt(audit.tick), state: snapshot(audit) };
       }
-      if (!mixedSeen && audit.counts.fighter >= 2 && audit.counts.unique >= 2) {
+      if (!forceReadySeen && audit.counts.fighter >= 2 && audit.counts.unique >= 2) {
+        forceReadySeen = true;
+        milestones.forceReady = { tick: audit.tick, minute: minuteAt(audit.tick), state: snapshot(audit) };
+      }
+      if (
+        !mixedSeen
+        && audit.tick < AI_ATTACK_EARLIEST_TICK
+        && audit.counts.fighter >= 2
+        && audit.counts.unique >= 2
+        && audit.force.length >= 4
+        && audit.centerAttackMoves === audit.force.length
+        && audit.attackTargets.length === 0
+      ) {
         mixedSeen = true;
         milestones.mixedCenter = {
           tick: audit.tick,
+          minute: minuteAt(audit.tick),
           state: snapshot(audit),
           centerUnits: audit.force.filter((unit) => unit.centerDistance <= 8).length,
+          centerAttackMoves: audit.centerAttackMoves,
+          coreTargetCount: audit.attackTargets.length,
         };
         await capture(page, out, 'mixed-center-force', { x: CENTER.x, z: CENTER.z, halfH: 24 }, manifest, audit);
       }
-      if (!attackSeen && audit.attackTargets.length >= 4 && coreSeen) {
+      if (!attackSeen && audit.tick >= AI_ATTACK_EARLIEST_TICK && audit.attackTargets.length >= 4 && coreSeen) {
         attackSeen = true;
-        milestones.discoveredCoreAttack = { tick: audit.tick, state: snapshot(audit) };
+        milestones.discoveredCoreAttack = { tick: audit.tick, minute: minuteAt(audit.tick), state: snapshot(audit) };
         await capture(page, out, 'discovered-core-attack', { x: 36, z: 34, halfH: 30 }, manifest, audit);
       }
       if (!previousCoreSeen && coreSeen) {
@@ -417,11 +454,21 @@ async function main() {
     const finalAudit = await readWorld(page);
     maxPositiveStepGain = Math.max(maxPositiveStepGain, 0);
     manifest.checks.milestones = milestones;
+    manifest.checks.timing = {
+      pathStart: milestones.pathStart ? { tick: milestones.pathStart.tick, minute: milestones.pathStart.minute } : null,
+      pathLocked: milestones.pathLocked ? { tick: milestones.pathLocked.tick, minute: milestones.pathLocked.minute } : null,
+      forceReady: milestones.forceReady ? { tick: milestones.forceReady.tick, minute: milestones.forceReady.minute } : null,
+      discoveredCoreAttack: milestones.discoveredCoreAttack
+        ? { tick: milestones.discoveredCoreAttack.tick, minute: milestones.discoveredCoreAttack.minute }
+        : null,
+    };
     manifest.checks.final = {
       ...finalAudit,
       initialExplored,
+      minute: minuteAt(finalAudit.tick),
       maxPositiveStepGain,
       hiddenCoreTargetEver,
+      beforeAttackFloorCoreTargetEver,
       renderer,
       softwareGl,
       simStepMs,
@@ -431,18 +478,31 @@ async function main() {
     manifest.checks.noGrantProof = {
       maxPositiveStepGain,
       hiddenCoreTargetEver,
+      beforeAttackFloorCoreTargetEver,
       bound: HONEST_STEP_GAIN_BOUND,
       scriptedMarshalEnabled: finalAudit.scriptedMarshalEnabled,
       retiredKinds: { sieges: finalAudit.counts.sieges, shades: finalAudit.counts.shades },
+      beforeAttackFloorCoreTargets: finalAudit.beforeAttackFloorCoreTargets,
       directWorldMutation: false,
     };
 
     if (!milestones.yard || !milestones.yardComplete) throw new Error('AI Yard construction milestone missed');
-    if (!milestones.channel || !milestones.pathLocked) throw new Error('AI path channel/lock milestone missed');
-    if (!milestones.mixedCenter) throw new Error('mixed Fighter/unique force milestone missed');
+    if (!milestones.pathStart || !milestones.pathLocked) throw new Error('AI path channel/lock milestone missed');
+    if (!milestones.forceReady) throw new Error('mixed Fighter/unique force-ready milestone missed');
+    if (!milestones.mixedCenter) throw new Error('pre-8:00 mixed center force milestone missed');
     if (!milestones.discoveredCoreAttack) throw new Error('discovered-Core attack milestone missed');
     for (const [name, milestone] of Object.entries(milestones)) {
-      if (milestone && milestone.tick > MINUTE_12_TICKS) throw new Error(`${name} missed minute 12 at tick ${milestone.tick}`);
+      if (milestone && milestone.tick > AI_ATTACK_LATEST_TICK) throw new Error(`${name} missed minute 12 at tick ${milestone.tick}`);
+    }
+    if (milestones.pathStart.tick < AI_PATH_EARLIEST_TICK || milestones.pathStart.tick > AI_PATH_LATEST_TICK) {
+      throw new Error(`path start outside 4:30–7:30 at tick ${milestones.pathStart.tick}`);
+    }
+    if (milestones.forceReady.tick > AI_ATTACK_EARLIEST_TICK) throw new Error(`2+2 force missed 8:00 at tick ${milestones.forceReady.tick}`);
+    if (milestones.mixedCenter.tick >= AI_ATTACK_EARLIEST_TICK) throw new Error(`mixed center capture is not before 8:00 at tick ${milestones.mixedCenter.tick}`);
+    if (milestones.mixedCenter.centerAttackMoves !== milestones.mixedCenter.state.force.length) throw new Error('mixed center force is not all AttackMove to center');
+    if (milestones.mixedCenter.coreTargetCount !== 0) throw new Error('mixed center force has a Core target');
+    if (milestones.discoveredCoreAttack.tick < AI_ATTACK_EARLIEST_TICK || milestones.discoveredCoreAttack.tick > AI_ATTACK_LATEST_TICK) {
+      throw new Error(`discovered-Core attack outside 8:00–12:00 at tick ${milestones.discoveredCoreAttack.tick}`);
     }
     if (finalAudit.difficulty !== 'standard') throw new Error(`AI difficulty != standard (${finalAudit.difficulty})`);
     if (finalAudit.scriptedMarshalEnabled !== false) throw new Error('scripted marshal must remain disabled');
@@ -450,6 +510,7 @@ async function main() {
     if (maxPositiveStepGain > HONEST_STEP_GAIN_BOUND) throw new Error(`positive economy jump ${maxPositiveStepGain} exceeds honest bound ${HONEST_STEP_GAIN_BOUND}`);
     if (finalAudit.explored <= initialExplored) throw new Error(`AI exploration did not grow (${initialExplored} -> ${finalAudit.explored})`);
     if (hiddenCoreTargetEver > 0 || finalAudit.hiddenCoreTargets > 0) throw new Error('hidden player Core target observed');
+    if (beforeAttackFloorCoreTargetEver > 0 || finalAudit.beforeAttackFloorCoreTargets > 0) throw new Error('pre-floor player Core target observed');
     if (manifest.errors.length > 0) throw new Error(`browser errors: ${manifest.errors.length}`);
     const frameBudget = softwareGl
       ? { mode: 'sim-share (software GL)', simStepMs, simShareMs: Math.round(simStepMs * 5 * 10000) / 10000, renderP99RecordedNotGated: perfProbe.p99FrameMs, renderer }

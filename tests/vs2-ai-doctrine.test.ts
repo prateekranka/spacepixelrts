@@ -8,10 +8,14 @@ import type { Difficulty } from '../src/match-config';
 import { World } from '../src/sim';
 
 const SEED = 0x5eed;
-const MINUTE_10_STEPS = Math.round((10 * 60) / DT);
+const MINUTE_12_STEPS = Math.round((12 * 60) / DT);
 const CADENCE_STEPS = Math.round(80 / DT);
 const HONEST_STEP_GAIN_BOUND = 96;
 const CENTER = { x: MAP * 0.5, z: MAP * 0.52 };
+const AI_PATH_EARLIEST_TICK = Math.round((4.5 * 60) / DT);
+const AI_PATH_LATEST_TICK = Math.round((7.5 * 60) / DT);
+const AI_ATTACK_EARLIEST_TICK = Math.round((8 * 60) / DT);
+const AI_ATTACK_LATEST_TICK = Math.round((12 * 60) / DT);
 const failures: string[] = [];
 
 type WorldWithDifficulty = World & { aiDifficulty?: Difficulty };
@@ -61,6 +65,11 @@ interface FrontierSample {
   adjacentExplored: boolean;
 }
 
+interface CenterHoldSnapshot {
+  tick: number;
+  units: { id: number; order: Ord; tid: number; tx: number; tz: number }[];
+}
+
 interface DoctrineRun {
   world: World;
   placements: PlacementCall[];
@@ -74,12 +83,16 @@ interface DoctrineRun {
   yardPosition: { x: number; z: number } | null;
   yardFirstSeenTick: number;
   yardCompleteTick: number;
+  forceReadyTick: number;
+  preAttackCenterHold: CenterHoldSnapshot | null;
   firstCoreDiscoveryTick: number;
+  firstCoreTargetTick: number;
   firstAttackTick: number;
   firstAttackForce: number;
   maxFighters: number;
   maxUniques: number;
   hiddenCoreTargetTicks: number[];
+  beforeAttackFloorCoreTargetTicks: number[];
   retiredKinds: Kind[];
 }
 
@@ -221,19 +234,23 @@ function cadenceFirstTrainTick(difficulty: Difficulty): number {
   return first;
 }
 
-function runDoctrine(difficulty: Difficulty, steps = MINUTE_10_STEPS): DoctrineRun {
+function runDoctrine(difficulty: Difficulty, steps = MINUTE_12_STEPS): DoctrineRun {
   const world = new World() as WorldWithDifficulty;
   world.aiDifficulty = difficulty;
   world.reset(SEED);
   const instrumentation = installInstrumentation(world);
   const frontier: FrontierSample[] = [];
   const hiddenCoreTargetTicks: number[] = [];
+  const beforeAttackFloorCoreTargetTicks: number[] = [];
   const exploredAtStart = exploredTiles(world);
   let maxPositiveStepGain = 0;
   let previousScoutTarget = '';
   let yardFirstSeenTick = -1;
   let yardCompleteTick = -1;
+  let forceReadyTick = -1;
+  let preAttackCenterHold: CenterHoldSnapshot | null = null;
   let firstCoreDiscoveryTick = -1;
+  let firstCoreTargetTick = -1;
   let firstAttackTick = -1;
   let firstAttackForce = 0;
   let maxFighters = 0;
@@ -292,13 +309,35 @@ function runDoctrine(difficulty: Difficulty, steps = MINUTE_10_STEPS): DoctrineR
 
     const force = alive(world, 1, Kind.Fighter).length
       + alive(world, 1, world.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism).length;
+    const field = world.ents.filter(
+      (e) => e.alive && e.hp > 0 && e.team === 1
+        && (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism),
+    );
     maxFighters = Math.max(maxFighters, alive(world, 1, Kind.Fighter).length);
     maxUniques = Math.max(maxUniques, alive(world, 1, world.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism).length);
+    if (forceReadyTick < 0 && alive(world, 1, Kind.Fighter).length >= 2
+      && alive(world, 1, world.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism).length >= 2) {
+      forceReadyTick = world.tick;
+    }
+    if (preAttackCenterHold === null && world.tick < AI_ATTACK_EARLIEST_TICK && field.length >= 4) {
+      preAttackCenterHold = {
+        tick: world.tick,
+        units: field.map((unit) => ({
+          id: unit.id,
+          order: unit.order,
+          tid: unit.tid,
+          tx: unit.tx,
+          tz: unit.tz,
+        })),
+      };
+    }
     for (const unit of world.ents) {
       if (!unit.alive || unit.team !== 1 || (unit.kind !== Kind.Fighter && unit.kind !== Kind.Ravager && unit.kind !== Kind.Prism)) continue;
       const target = unit.tid >= 0 ? world.ents[unit.tid] : null;
       if (!target || target.id !== hall?.id) continue;
       if (!coreSeen) hiddenCoreTargetTicks.push(world.tick);
+      if (world.tick < AI_ATTACK_EARLIEST_TICK) beforeAttackFloorCoreTargetTicks.push(world.tick);
+      if (firstCoreTargetTick < 0) firstCoreTargetTick = world.tick;
       if (firstAttackTick < 0 && (unit.order === Ord.Attack || unit.order === Ord.AttackMove)) {
         firstAttackTick = world.tick;
         firstAttackForce = force;
@@ -331,12 +370,16 @@ function runDoctrine(difficulty: Difficulty, steps = MINUTE_10_STEPS): DoctrineR
     yardPosition,
     yardFirstSeenTick,
     yardCompleteTick,
+    forceReadyTick,
+    preAttackCenterHold,
     firstCoreDiscoveryTick,
+    firstCoreTargetTick,
     firstAttackTick,
     firstAttackForce,
     maxFighters,
     maxUniques,
     hiddenCoreTargetTicks,
+    beforeAttackFloorCoreTargetTicks,
     retiredKinds,
   };
 }
@@ -375,6 +418,10 @@ function validateRun(run: DoctrineRun, label: string): void {
   expect(commitSuccesses.length === 1, `${label}: exactly one legal path commit succeeds (got ${commitSuccesses.length})`);
   expect(run.commits.length === 1, `${label}: AI makes exactly one tryCommitPath call (got ${run.commits.length})`);
   expect(commitSuccesses[0]?.path === expectedPath, `${label}: AI commits ${expectedPath}`);
+  expect(
+    commitSuccesses[0]?.tick >= AI_PATH_EARLIEST_TICK && commitSuccesses[0]?.tick <= AI_PATH_LATEST_TICK,
+    `${label}: first legal path commit is in the 4:30–7:30 window (got tick ${commitSuccesses[0]?.tick ?? -1})`,
+  );
   expect(commitSuccesses[0]?.delta.ore === 400, `${label}: path deducts exactly 400 Ore`);
   expect(commitSuccesses[0]?.delta.energy === 80, `${label}: path deducts exactly 80 Charge`);
   expect(world.techPathOf(1) === expectedPath, `${label}: path locks after the normal channel`);
@@ -390,6 +437,21 @@ function validateRun(run: DoctrineRun, label: string): void {
   }
   expect(fighters >= 2, `${label}: first field force has at least two Fighters (got ${fighters})`);
   expect(uniques >= 2, `${label}: first field force has at least two ${unique}s (got ${uniques})`);
+  expect(run.forceReadyTick >= 0 && run.forceReadyTick <= AI_ATTACK_EARLIEST_TICK, `${label}: first 2+2 force is ready by 8:00 (got tick ${run.forceReadyTick})`);
+  expect(run.preAttackCenterHold !== null, `${label}: a >=4 force snapshot exists before the 8:00 attack floor`);
+  if (run.preAttackCenterHold) {
+    expect(run.preAttackCenterHold.tick < AI_ATTACK_EARLIEST_TICK, `${label}: center hold snapshot is before 8:00`);
+    expect(run.preAttackCenterHold.units.length >= 4, `${label}: center hold snapshot has a four-unit force`);
+    expect(
+      run.preAttackCenterHold.units.every(
+        (unit) => unit.order === Ord.AttackMove
+          && unit.tid === -1
+          && Math.abs(unit.tx - CENTER.x) < 1e-9
+          && Math.abs(unit.tz - CENTER.z) < 1e-9,
+      ),
+      `${label}: pre-8:00 force holds center with AttackMove and tid=-1`,
+    );
+  }
   expect(run.retiredKinds.length === 0, `${label}: no retired Siege/ Shade units exist`);
   const yard = yards[0];
   expect(!!yard && Math.abs(yard.rallyX - CENTER.x) < 1e-9 && Math.abs(yard.rallyZ - CENTER.z) < 1e-9, `${label}: Yard rally is the Central Lumen Field`);
@@ -401,8 +463,14 @@ function validateRun(run: DoctrineRun, label: string): void {
   expect(run.exploredAtEnd > run.exploredAtStart, `${label}: explored area continues growing (${run.exploredAtStart} -> ${run.exploredAtEnd})`);
 
   expect(run.hiddenCoreTargetTicks.length === 0, `${label}: no combat unit targets the player Core before SEEN_RIVAL discovery`);
+  expect(run.beforeAttackFloorCoreTargetTicks.length === 0, `${label}: no combat unit targets the player Core before the 8:00 attack floor`);
   expect(run.firstCoreDiscoveryTick >= 0, `${label}: AI Scout legitimately discovers the player Core`);
+  expect(
+    run.firstCoreTargetTick >= AI_ATTACK_EARLIEST_TICK && run.firstCoreTargetTick <= AI_ATTACK_LATEST_TICK,
+    `${label}: first Core target is in the 8:00–12:00 window (got tick ${run.firstCoreTargetTick})`,
+  );
   expect(run.firstAttackTick > run.firstCoreDiscoveryTick, `${label}: Core attack starts only after discovery (${run.firstCoreDiscoveryTick} -> ${run.firstAttackTick})`);
+  expect(run.firstAttackTick >= AI_ATTACK_EARLIEST_TICK && run.firstAttackTick <= AI_ATTACK_LATEST_TICK, `${label}: first Core attack is by 12:00 (got tick ${run.firstAttackTick})`);
   expect(run.firstAttackForce >= 4, `${label}: first Core attack has a four-unit field force (got ${run.firstAttackForce})`);
   expect(!!hall && (hall.seenBy & SEEN_RIVAL) !== 0, `${label}: player Core retains its AI discovery latch`);
 }
@@ -424,8 +492,11 @@ validateRun(standard, 'Standard doctrine');
 const repeat = runDoctrine('standard');
 expect(JSON.stringify(standard.yardPosition) === JSON.stringify(repeat.yardPosition), 'same seed+difficulty keeps the Yard position deterministic');
 expect(standard.world.techPathOf(1) === repeat.world.techPathOf(1), 'same seed+difficulty keeps the path deterministic');
+expect(standard.commits.find((call) => call.ok)?.tick === repeat.commits.find((call) => call.ok)?.tick, 'same seed+difficulty keeps path commit tick deterministic');
+expect(standard.forceReadyTick === repeat.forceReadyTick, 'same seed+difficulty keeps 2+2 force-ready tick deterministic');
 expect(alive(standard.world, 1, Kind.Fighter).length === alive(repeat.world, 1, Kind.Fighter).length, 'same seed+difficulty keeps Fighter count deterministic');
 expect(alive(standard.world, 1, standard.world.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism).length === alive(repeat.world, 1, repeat.world.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism).length, 'same seed+difficulty keeps unique count deterministic');
+expect(standard.firstCoreTargetTick === repeat.firstCoreTargetTick, 'same seed+difficulty keeps first Core target tick deterministic');
 expect(standard.firstAttackTick === repeat.firstAttackTick, 'same seed+difficulty keeps first Core attack tick deterministic');
 
 if (failures.length > 0) {

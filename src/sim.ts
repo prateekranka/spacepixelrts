@@ -80,6 +80,10 @@ const AI_CADENCE_SECONDS: Record<Difficulty, number> = {
   standard: 1.4,
   veteran: 0.8,
 };
+/** VS-2A-R2 — the rival may legally commit its technology path from 4:30. */
+const AI_PATH_EARLIEST_TICK = Math.round((4.5 * 60) / DT);
+/** VS-2A-R2 — the rival may target the discovered player Core from 8:00. */
+const AI_ATTACK_EARLIEST_TICK = Math.round((8 * 60) / DT);
 /** VS-2A — deterministic Yard ring, tested in array order. */
 const AI_YARD_RING_OFFSETS = [
   { dx: -3.4, dz: -3.4 },
@@ -1281,6 +1285,8 @@ export class World {
             ) {
               u.order = Ord.Idle;
               this.queueMarshalPeel(u);
+            } else if (e.team === 1 && this.tick < AI_ATTACK_EARLIEST_TICK) {
+              this.orderAiAttackMoveCenter(u);
             } else {
               u.order = Ord.AttackMove;
               u.tx = e.rallyX + (e.team === 0 ? 1 : -1);
@@ -2038,6 +2044,7 @@ export class World {
   private tryAiCommitPath(hall: Ent | null, yard: Ent): boolean {
     const eco = this.teams[1];
     if (
+      this.tick < AI_PATH_EARLIEST_TICK ||
       !hall ||
       hall.progress < 1 ||
       hall.hp <= 0 ||
@@ -2087,12 +2094,13 @@ export class World {
     return false;
   }
 
-  private orderAiMove(e: Ent, x: number, z: number): void {
-    e.order = Ord.Move;
-    e.tx = x;
-    e.tz = z;
+  /** VS-2A-R2 — keep a combat-ready field force on the shared center before the attack floor. */
+  private orderAiAttackMoveCenter(e: Ent): void {
+    e.order = Ord.AttackMove;
+    e.tx = OPENING_CENTER.x;
+    e.tz = OPENING_CENTER.z;
     e.tid = -1;
-    e.path = this.pathfind(e.x, e.z, x, z);
+    e.path = this.pathfind(e.x, e.z, OPENING_CENTER.x, OPENING_CENTER.z);
     e.pathI = 0;
   }
 
@@ -2104,7 +2112,7 @@ export class World {
         && (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism),
     );
     const coreDiscovered = hall !== undefined && (hall.seenBy & SEEN_RIVAL) !== 0;
-    if (hall && coreDiscovered && field.length >= 4) {
+    if (hall && coreDiscovered && field.length >= 4 && this.tick >= AI_ATTACK_EARLIEST_TICK) {
       for (const unit of field) {
         if (unit.order !== Ord.AttackMove || unit.tid !== hall.id) this.orderAttackMoveHall(unit, hall);
       }
@@ -2112,14 +2120,14 @@ export class World {
     }
     for (const unit of field) {
       if (dist2(unit.x, unit.z, OPENING_CENTER.x, OPENING_CENTER.z) < 0.28 * 0.28) {
-        this.orderAiMove(unit, OPENING_CENTER.x, OPENING_CENTER.z);
+        this.orderAiAttackMoveCenter(unit);
       } else if (
-        unit.order !== Ord.Move ||
+        unit.order !== Ord.AttackMove ||
         unit.tid !== -1 ||
         Math.abs(unit.tx - OPENING_CENTER.x) > 0.01 ||
         Math.abs(unit.tz - OPENING_CENTER.z) > 0.01
       ) {
-        this.orderAiMove(unit, OPENING_CENTER.x, OPENING_CENTER.z);
+        this.orderAiAttackMoveCenter(unit);
       }
     }
   }
