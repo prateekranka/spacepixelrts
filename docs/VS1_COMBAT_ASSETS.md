@@ -6,8 +6,10 @@ performance contracts but failed normal-scale Gravemark readability. R2 (`4b29e6
 raised bright-material share from 26.2% to 38.5%, widened both walkers, extended spears, and raised
 world scale; it still failed the identical blind normal-scale gate because blue units remained too
 small and dark. R3 is the third and final bounded scale/value repair. It applies the critic's exact
-35% scale, 2px faction rim, 16px weapon extension, and 3:1 luminance contract. A further failure
-forces an architecture review instead of R4 tuning. The source remains deterministic
+35% scale, 2px faction rim, 16px weapon extension, and 3:1 luminance contract. Those contracts
+landed and R3 still failed only the Rift Guard anatomy read. Architecture review is complete:
+`docs/VS4_RIFT_GUARD_REBUILD.md` replaces that row's cabinet composition with explicit humanoid
+anatomy and a diagonal weapon; it is not a fourth scale/value pass. The source remains deterministic
 startup-rasterized pixel code in `src/sprites.ts`.
 
 ## Shared production rules

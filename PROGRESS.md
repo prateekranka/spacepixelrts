@@ -303,17 +303,16 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   sim share <0.9ms; all VS1/VS2/M0–M5/build gates PASS. Fresh Sol Max-fast terminal/results gate:
   **PASS**, no material gap. Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs3-r2-lead/`.
   The complete functional vertical slice now exists.
-- **VS-4 four-unit combat asset pack R3 FINAL ACTIVE** (`docs/VS1_COMBAT_ASSETS.md`): R1
-  (`1b4c658`) built the shared 64px 8-facing pack; R2 (`4b29e68`) raised bright-material share to
-  38.5–64.2%, walker widths to 45+/47+, exact world scales, 100% connectivity, draw calls 5/5,
-  runtime MAG 0, sim share ~1.42ms, and all regressions. Evidence:
-  `/home/bobbyranka/workspace/evidence/starhaven-vs4-r2-lead/`. Fresh Sol blind identical-camera
-  gate still **FAIL**: blue infantry remained a narrow cabinet and both blue bodies merged with
-  terrain. Exact R3 prescription: 35% scale (`1.59×1.89`, `2.05×1.54`, `1.67×1.92`,
-  `2.05×1.81`), two-pixel amber/ice exterior material rims, Guard spear >=16px beyond body, and
-  every cell average luma >=90 = 3:1 over terrain luma30. This is the third/final scale-value repair;
-  another normal-scale FAIL forces architecture review, not R4 tuning. Baseline:
-  `/home/bobbyranka/workspace/evidence/starhaven-vs4-baseline/`.
+- **VS-4A Rift Guard architecture rebuild ACTIVE** (`docs/VS4_RIFT_GUARD_REBUILD.md`):
+  R3 (`892d96c`, local/unpushed) landed exact scales, 100% two-layer amber/ice rims, average cell
+  luma 95.7–156.7 (>=3:1), 16px spear extension, direction delta 38+, draw calls 5/5, runtime
+  MAG 0, sim share ~1.45ms, and all regressions. Evidence:
+  `/home/bobbyranka/workspace/evidence/starhaven-vs4-r3-lead/`. Fresh Sol identical-camera gate:
+  **FAIL only Rift Guard anatomy**; faction separation, Lumen Guard, Solar Strider, and Burden Walker
+  read. Architecture review found the vertical spear + 40px tower shield + narrow torso fuse into a
+  cabinet column. Scale/value iteration is stopped. VS-4A replaces only row2 core with explicit
+  12×12 head, >=18px torso, two 6px separated legs, detached-side 16×29 shield, and >=32px diagonal
+  polearm projecting >=16px. Atlas/shader/rim/scale/other rows remain locked.
 - **Production live at complete VS-3 loop** (`4ba70b6`, `assets/main-BK34aqQF.js`): deployed to
   existing `spacepixelrts` Pages production branch `main`. Live readback used an ordinary attack to
   set winner 0 and Core damage 2, then confirmed Victory→Continue→Results (`win`, two buttons)→Play
