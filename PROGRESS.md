@@ -180,9 +180,22 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   Lead re-ran every suite: `test:m0`, `test:m2`, `test:m2-ai`, `test:m3`, `test:m4`,
   build — all green. Known leftover for M4-B: dead legacy adapters (`tryAgeUp`,
   `EPOCH_NAME`, `minTrainEpoch`) still exported until the HUD sweep removes them.
-- **M4-B HUD choice UI + guidance sweep** dispatched (opencode builder): two path buttons /
-  channel countdown / locked readout, guidance nudge, `qa:m4` headless proof with a
-  banned-word grep gate, evidence to `/home/bobbyranka/workspace/evidence/starhaven-m4-tech-paths/`.
+- **M4-B HUD choice UI + guidance sweep** COMPLETE (`baeab86`, deployed attempt below):
+  five-round critic loop — r1 FAIL (text overflow in 96px grid), r2 FAIL (states
+  indistinct), r3 FAIL (progress hairline + hover-like glow + vague blurbs),
+  r4 forensic round located the true root cause: `.choice` tiles inherited ~52px verb
+  height against a 62px content stack, centered, so ink crossed both borders. r5 applied
+  Sol's measured spec verbatim (88px min-height flex tile, gap 4px, bar margin 0,
+  countdown line-height 15px). Fresh Sol gate: **PASS** ("choice, timed commitment, and
+  locked confirmation are unmistakably distinct"). Lead pixel-verified no clipping
+  (15px/32px border clearance) and correct bar paint (10px, 7% fill).
+  `qa:m4` green: banned-word sweep, bar advance, double-commit rejection, locked readout.
+  Evidence: `/home/bobbyranka/workspace/evidence/starhaven-m4-tech-paths/`.
+- Deploy: production deploy BLOCKED from this box — wrangler has no OAuth config here and
+  non-interactive mode needs CLOUDFLARE_API_TOKEN. Build is committed and pushed; deploy
+  needs bobby's token or a Mac-side `npm run deploy`.
+- **Sol max usage directive:** bobby directed heavy Sol use (70% weekly left before reset);
+  Sol now also runs design-support memos (M5 roster mapping memo dispatched in parallel).
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
 
