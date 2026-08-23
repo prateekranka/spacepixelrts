@@ -218,8 +218,16 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   MOVE-then-tap copy, FIND IDLE WORKER / FIND SCOUT, selection stat grid, 12px text floor).
   Scene lighting raised for instant-read: hemisphere 2.1, key 3.2, central amber fill;
   fog veil lifted. Objective gate added: center-region `sceneLuma > 28` in qa-m2-opening
-  (was 12.2 pre-fix, now 28.3). Sol round on M5-C FAILed on darkness; M5-D fixed the named
-  gap; next Sol re-gate pending.
+  (was 12.2 pre-fix, now 28.3). Sol round on M5-C FAILed on darkness; M5-D fixed that
+  named gap. Fresh Sol re-gate still FAILed: topbar/ability/objective hierarchy collides.
+  Visual-only iteration is paused while the critics test the actual game loop.
+- **Blind gameplay gate IN PROGRESS (three independent Sol Max fast players, production UI only):**
+  1. first-time 1366×1024 player — full menu→match, minimum 10 real minutes;
+  2. 1024×768 touch-emulated player — selection/pan/zoom/pause/economy/combat;
+  3. expert RTS systems player — minimum 15 real minutes, timeline at 2/5/10/15 min.
+  No critic may inspect source, QA URLs, hidden state, or mutate the sim. Evidence/report roots:
+  `/home/bobbyranka/workspace/evidence/starhaven-blind-{gameplay,touch,systems}-sol/`.
+  Gameplay findings, not the next milestone number, decide the next implementation piece.
 - **Production matches working tree** (`game-C12P1XJ5.js`): force-deployed twice — first the
   M5-A/M4-B state bobby was viewing, then this build. `desktop.html` route deployed too:
   strips the portrait rotate-gate so non-iPad browsers render full landscape UI

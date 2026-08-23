@@ -1,0 +1,26 @@
+# BLIND TOUCH-FIRST GAMEPLAY CRITIC — STARHAVEN
+
+Play the actual production game at https://spacepixelrts.pages.dev/desktop.html as a first-time touch player.
+
+Blindness: do not inspect source, docs, tests, bundles, network payloads, QA URLs, `__STARHOLD_*`, or hidden state. Use only visible UI and real browser touch/pointer input. DOM reads may locate visible controls only.
+
+Browser: fresh Playwright context, viewport 1024×768, deviceScaleFactor 1, hasTouch true, isMobile true. No mouse unless the browser cannot express a required action; document any fallback.
+
+Evidence directory: `/home/bobbyranka/workspace/evidence/starhaven-blind-touch-sol/`. Save 01-menu.png, 02-setup.png, 03-opening.png, 04-touch-economy.png, 05-touch-combat.png, 06-late.png, interaction-log.md, report.md. Use composited screenshots.
+
+Play for at least 10 real minutes or until a hard blocker. Start through main menu/setup. Test by touch: select recon unit, three movement orders, pan, pinch/zoom if possible, worker gather, worker build, tactical pause/resume, technology path reachability, unit training, mixed selection, attack, re-selection under pressure. Try to continue toward victory/defeat. Never cheat resources or sim time.
+
+After play, report:
+# Blind Touch Gameplay Critique
+## Session facts
+## Touch contract table
+Rows: tap selection, tap destination, long-press command, drag selection, pan, zoom, tactical pause, worker actions, technology, combat. Columns PASS/PARTIAL/FAIL + play evidence.
+## Chronological play account
+## Bugs and blockers
+Severity + repro + expected/actual + screenshot.
+## Single biggest touch gap
+## Top 5 fixes
+## Final verdict
+PASS/FAIL and whether this is genuinely iPad-ready.
+
+Save report.md and return it. Be harsh. Functional is not reference-grade.
