@@ -268,10 +268,11 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   debt: lower deck crowding near viewport edge. Evidence:
   `/home/bobbyranka/workspace/evidence/starhaven-vs1-target/`. Next active piece: VS-2A honest AI
   Yard→path→mixed-army doctrine.
-- **Production matches working tree** (`game-C12P1XJ5.js`): force-deployed twice — first the
-  M5-A/M4-B state bobby was viewing, then this build. `desktop.html` route deployed too:
-  strips the portrait rotate-gate so non-iPad browsers render full landscape UI
-  (`https://spacepixelrts.pages.dev/desktop.html`).
+- **Production live at VS-1** (`e36d48e`, `assets/main-CPZobgDv.js`): deployed to the
+  existing `spacepixelrts` Pages project on production branch `main`. Live browser readback at
+  1366×1024 confirms Yard `150 Ore · 20 Charge`, no-selection `TECHNOLOGY PATH`, both path
+  choices at `400 Ore · 80 Charge`, state Playing, and zero console errors. `desktop.html` remains
+  the non-orientation-gated laptop preview route.
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
   (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
