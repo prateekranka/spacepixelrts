@@ -50,10 +50,15 @@ When team 1 has no alive Yard and can pay its exact cost:
 
 One alive Yard maximum. Do not interrupt a Worker already constructing a building.
 
+The opening four Workers, Scout, and first 2+2 force exceed the Core population cap. After the
+Yard is complete, the AI may build exactly one Habitat through the same `canPlace` → `tryPlace` →
+Worker construction path. It may not spawn/complete housing directly or build additional Habitats
+in VS-2A.
+
 ### Honest technology commit
 
-After the Yard is complete, no channel is active, and the exact 400 Ore + 80 Charge is available,
-call the existing `tryCommitPath`:
+After the Yard is complete, **match time is at least 4:30**, no channel is active, and the exact
+400 Ore + 80 Charge is available, call the existing `tryCommitPath`:
 
 - Sunweaver AI: `sky-dominion`;
 - Gravemark AI: `iron-colossus`.
@@ -84,10 +89,12 @@ Fix the Scout frontier target:
 
 Army behavior:
 
-- before the player Core is discovered (`seenBy & SEEN_RIVAL`), combat units rally/hold at the
-  Central Lumen Field;
-- once the Core is discovered, a field force of at least four gets AttackMove orders toward that
-  remembered Core through existing movement/combat code;
+- before the player Core is discovered (`seenBy & SEEN_RIVAL`), combat units use AttackMove to
+  rally/hold at the Central Lumen Field so they can fight anything they legitimately meet;
+- even if the Core is discovered early, the first Core attack cannot begin before **8:00** match
+  time; the force holds center until that floor;
+- at/after 8:00, once the Core is discovered, a field force of at least four gets AttackMove orders
+  toward that remembered Core through existing movement/combat code;
 - never assign an unseen Core id/position;
 - existing sight-loss invalidation remains.
 
@@ -107,16 +114,18 @@ Tests instrument public methods (wrap and call through) to prove the AI uses `tr
 
 1. default Standard, plus 2.6/1.4/0.8 cadence behavior;
 2. exactly one legal incomplete→complete Yard; cost deducted, no spawn shortcut;
-3. correct faction path begins through `tryCommitPath`, deducts 400/80, remains null during the
-   channel, then locks after ~40 seconds;
-4. by minute 10 fixed-seed Standard has >=2 Fighter and >=2 correct unique, zero retired kinds;
+3. correct faction path begins through `tryCommitPath` no earlier than 4:30 and by 7:30,
+   deducts 400/80, remains null during the channel, then locks after ~40 seconds;
+4. by minute 8 fixed-seed Standard has >=2 Fighter and >=2 correct unique, zero retired kinds;
 5. maximum positive resource jump per step stays within an honest multi-deposit bound; no marshal
    floors/grants and `scriptedMarshalEnabled` remains false;
 6. explored tile count continues growing beyond the old stall and Scout targets an unexplored
    frontier;
-7. no combat unit receives the player Core target before discovery;
-8. after legitimate Scout vision discovers the Core, >=4-unit force receives attack-move toward it;
-9. same seed+difficulty produces the same Yard position, path, counts, and first attack tick.
+7. no combat unit receives the player Core target before discovery or before 8:00;
+8. before 8:00, >=4-unit force holds center with AttackMove orders and no Core tid;
+9. after legitimate Scout vision discovers the Core and the 8:00 floor passes, >=4-unit force
+   receives attack-move toward it; first attack is by minute 12;
+10. same seed+difficulty produces the same Yard position, path, counts, and first attack tick.
 
 ## Browser proof
 

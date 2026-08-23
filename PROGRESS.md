@@ -272,7 +272,9 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   Piece adds legal one-Yard construction, normal 400/80 path channel, 2+2 mixed army, true
   unexplored-frontier scouting, center rally, and discovered-Core attack. Difficulty affects only
   decision cadence. Strict RED→GREEN plus fixed-seed 1366×1024 fast-step browser proof required;
-  no HUD/render/assets changes.
+  no HUD/render/assets changes. R1 implementation (`125744c`, local/unpushed) passed code gates but
+  FAILed lead pacing: path at 1:36 and Core attack at 2:46 violated the 8–17 minute conflict window.
+  R2 contract adds 4:30 path floor, 8:00 attack floor, and attack-ready center hold.
 - **Production live at VS-1** (`e36d48e`, `assets/main-CPZobgDv.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live browser readback at
   1366×1024 confirms Yard `150 Ore · 20 Charge`, no-selection `TECHNOLOGY PATH`, both path
