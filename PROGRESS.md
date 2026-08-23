@@ -303,11 +303,12 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   sim share <0.9ms; all VS1/VS2/M0–M5/build gates PASS. Fresh Sol Max-fast terminal/results gate:
   **PASS**, no material gap. Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs3-r2-lead/`.
   The complete functional vertical slice now exists. Next: VS-4 four-unit combat asset pack.
-- **Production live at VS-2B** (`02ace06`, `assets/main-DYc8EcJQ.js`): deployed to the
-  existing `spacepixelrts` Pages project on production branch `main`. Live production readback
-  spawned one legal Lumen Guard fixture, stepped normal sim to ownership, then confirmed
-  `LUMEN · SUNWEAVER CONTROL`, owner 0, 32/32 world-ring samples, winner -1, and zero console
-  errors. VS-2A opponent remains in the same bundle. `desktop.html` is the laptop preview route.
+- **Production live at complete VS-3 loop** (`4ba70b6`, `assets/main-BK34aqQF.js`): deployed to
+  existing `spacepixelrts` Pages production branch `main`. Live readback used an ordinary attack to
+  set winner 0 and Core damage 2, then confirmed Victory→Continue→Results (`win`, two buttons)→Play
+  Again→second Playing. Second match has resetCount 2, winner -1, zero stats, exactly one game canvas,
+  one overlay, one HUD, and zero console errors. VS-1/2 mechanics remain in this bundle.
+  `desktop.html` is the laptop preview route.
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
   (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
