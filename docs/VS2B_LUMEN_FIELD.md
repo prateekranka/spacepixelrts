@@ -90,6 +90,23 @@ The existing minimap central-objective marker remains discovery-gated. Tint its 
 - Sunweaver owner: amber/lime;
 - Gravemark owner: ice/sky.
 
+## World-space objective asset (R2)
+
+The first blind gate failed because the status panel had no spatial link to the field. After
+landmark discovery, `GameRenderer` must draw a projected pixel-sharp objective asset on the overlay:
+
+- a complete 4.5-world-unit ground ring, projected from at least 32 world points;
+- 5px dark under-stroke plus >=2.5px owner/state stroke;
+- neutral amber/cream, Sunweaver lime/amber, Gravemark ice/sky, contested coral;
+- a center diamond beacon and compact `LUMEN` plate anchored to the projected landmark center;
+- capture progress overlays a brighter partial ring from 0→100%;
+- pulse adds one restrained outer pulse ring; no full-screen flash;
+- marker is hidden before discovery and follows pan/zoom exactly;
+- overlay adds zero WebGL draw calls and no sim state.
+
+Enlarge the minimap objective ring so colored pixels remain visible at +/-10 internal-canvas pixels
+from center after CSS scaling. Keep it discovery-gated.
+
 Do not add another topbar resource or modal.
 
 ## Strict RED→GREEN
@@ -127,14 +144,16 @@ Capture and assert:
 6. Gravemark control + minimap ice/sky;
 7. player vision pulse visible and all-map current visibility;
 8. pulse ended, exploration persists, current visibility returns;
-9. exact Charge deltas, winner -1, zero console errors;
-10. software GL gates sim share <8ms; hardware GL p99 <8ms.
+9. projected overlay perimeter has >=20/32 non-transparent ring samples in each discovered state;
+10. minimap owner ring is visible at +/-10 internal-canvas pixels;
+11. exact Charge deltas, winner -1, zero console errors;
+12. software GL gates sim share <8ms; hardware GL p99 <8ms.
 
 Evidence outside repo. Fresh Sol gate judges only objective-state clarity and map/HUD cohesion.
 
 ## Scope / acceptance
 
-Owned files: `src/sim.ts`, `src/hud.ts`, tests/new QA/package. `src/main.ts`, input, render, content,
-stats, assets, AI doctrine, and app flow untouched.
+Owned files: `src/sim.ts`, `src/hud.ts`, `src/render.ts`, tests/new QA/package. `src/main.ts`,
+input, content, stats, combat assets, AI doctrine, and app flow untouched.
 All existing gates/build must pass. Builder commits prefix `VS2B:`; lead reviews actual captures,
 then short Sol gate. Deploy after PASS.

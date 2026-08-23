@@ -284,7 +284,11 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   units capture the discovered center in 5s; owner earns +1 Charge/s and a 4s global vision pulse
   each 30s; contested/empty states preserve owner but reset capture; no alternate victory. Compact
   status/bar lives under matchup tiles and minimap marker tints by owner. Strict TDD + eight-state
-  1366×1024 browser proof; no AI doctrine, assets, stats, input, render, or app-flow work.
+  1366×1024 browser proof; no AI doctrine, combat assets, stats, input, or app-flow work.
+  R1 implementation (`0acf224`, local/unpushed) passed sim/HUD/QA regressions but fresh Sol
+  FAILed one spatial-readability gap: panel states were clear, yet no clear world/minimap marker
+  connected them to the conflict. R2 adds one projected ring/beacon environment asset and a larger
+  minimap marker; objective mechanics stay frozen.
 - **Production live at VS-2A** (`5833429`, `assets/main-LvBGVAyw.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live production QA readback
   at tick 9650 confirms Standard AI, scripted marshal false, one Yard, one Habitat, Iron Colossus,
