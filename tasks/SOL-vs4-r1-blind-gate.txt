@@ -1,0 +1,22 @@
+# VS-4 R1 Fresh Blind Combat Asset Gate
+
+Judge only the attached 1366×1024 actual Starhaven normal-game-scale lineup. Four combat units are shown without labels: two units from one faction and two from the rival faction. Do not inspect code, atlas sheets, tests, filenames, or prior reports.
+
+Blind benchmark against Age of Empires II: DE normal-zoom unit readability.
+
+PASS only if:
+- the two factions are immediately distinct;
+- all four units are distinct by silhouette, not just tiny color pixels;
+- both infantry roles read as armed guards rather than bars/workers;
+- both walker roles read as different non-humanoid machines;
+- materials survive normal zoom and no unit disappears into terrain.
+
+Output exactly:
+VERDICT: PASS or FAIL
+FACTION READ: one sentence
+UNIT A: one sentence
+UNIT B: one sentence
+UNIT C: one sentence
+UNIT D: one sentence
+SINGLE BIGGEST GAP: one sentence
+ONE EXACT PRESCRIPTION: one sentence with measurable visual changes only

@@ -303,14 +303,19 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   sim share <0.9ms; all VS1/VS2/M0–M5/build gates PASS. Fresh Sol Max-fast terminal/results gate:
   **PASS**, no material gap. Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs3-r2-lead/`.
   The complete functional vertical slice now exists.
-- **VS-4 four-unit combat asset pack FROZEN / ACTIVE** (`docs/VS1_COMBAT_ASSETS.md`): one
-  shared 1024×256, 64px-cell, 8-facing ×2-pose combat strip replaces only live Lumen Guard, Solar
-  Strider, Rift Guard, and Burden Walker frames; legacy corpse/dissolve and other ids stay stable.
-  Code-generated from the locked Sunweaver ivory/gold/teal and Gravemark basalt/obsidian/blue-crystal
-  language. One shared shader sampler, zero draw-call increase. Baseline normal-scale lineup frozen at
-  `/home/bobbyranka/workspace/evidence/starhaven-vs4-baseline/`; current roles are not reliably
-  distinguishable without labels. Strict pixel metrics, contact sheet, lineup, battle frame, and
-  fresh blind Sol gate required.
+- **VS-4 four-unit combat asset pack R2 ACTIVE** (`docs/VS1_COMBAT_ASSETS.md`): R1
+  (`1b4c658`, local/unpushed) generated one 1024×256, 64px-cell, 8-facing ×2-pose shared combat
+  strip for Lumen Guard, Solar Strider, Rift Guard, and Burden Walker. All 64 cells passed alpha,
+  97.9% connectivity, 18.35+ direction delta, 4.07–13.96% gait delta, 0.5–0.663% MAG,
+  48–52px height, mirror, and IoU gates; runtime MAG 0; draw calls 5/5; sim share 1.43ms;
+  regressions/build passed. Exports: `/home/bobbyranka/workspace/evidence/starhaven-vs4-lead/`.
+  Fresh Sol blind normal-scale gate: **FAIL**. Sun shield/spear and both walker categories read, but
+  Rift Guard collapsed into a near-black bar and Gravemark materials merged with terrain. Crop
+  metrics confirmed Rift only 11 quantized colors / 4.36% strong-edge density and Burden 22.5%
+  dark fraction. R2 adds RED size/material floors: Guards >=24×44, Walkers >=44×28, spear >=10px
+  beyond body, >=30% alpha pixels at luma>=65, larger world scales, brighter/wider Gravemark planes,
+  same draw/MAG/connectivity contracts. Baseline:
+  `/home/bobbyranka/workspace/evidence/starhaven-vs4-baseline/`.
 - **Production live at complete VS-3 loop** (`4ba70b6`, `assets/main-BK34aqQF.js`): deployed to
   existing `spacepixelrts` Pages production branch `main`. Live readback used an ordinary attack to
   set winner 0 and Core damage 2, then confirmed Victory→Continue→Results (`win`, two buttons)→Play

@@ -1,0 +1,88 @@
+# VS4-R2 Builder — normal-scale silhouette/material readability (strict TDD)
+
+Read:
+1. docs/VS1_COMBAT_ASSETS.md R2 section (frozen)
+2. current R1 commit 1b4c658
+3. tasks/SOL-vs4-r1-blind-gate.log final verdict/prescription
+4. `/home/bobbyranka/workspace/evidence/starhaven-vs4-lead/lineup-after.png`
+5. `/home/bobbyranka/workspace/evidence/starhaven-vs4-lead/contact-sheet.png`
+6. tests/vs4-combat-assets.test.ts and scripts/qa-vs4-combat-assets.mjs
+
+Root cause already isolated:
+- source dimensions mostly pass, but Rift material brightness is 26.2–29.4% at luma>=65 and reads as
+  a black bar at normal scale;
+- Burden material brightness is 29.65–30.3%, min source width 39, and merges with terrain;
+- Solar front/back min source width 31 despite reading better;
+- current world scales are below the critic repair contract.
+
+Owned production ONLY:
+- src/sprites.ts
+- src/render.ts
+- tests/vs4-combat-assets.test.ts
+- scripts/qa-vs4-combat-assets.mjs
+- tasks/VS4-R2-red.log (force-add)
+No sim/sprite shader/atlas layout/gameplay/AI/stats/HUD/main/input/content/terrain/dependencies.
+
+Strict RED before source edits:
+1. Extend pure tests, then run on unchanged R1 and save full tasks/VS4-R2-red.log.
+2. Assertions:
+   - row0/2 every facing alpha bound >=24x44;
+   - row1/3 every facing alpha bound >=44x28;
+   - row0/2 minimum alpha y <=2 and >=4 nontransparent pixels in rows0..2 (spear projects >=10px
+     above body, whose authored top remains >=11);
+   - every row/dir/pose has >=30% alpha pixels with Rec.709 luma >=65;
+   - existing alpha/connectivity/direction/pose/MAG/mirror/IoU/bounds gates remain.
+3. Extend browser QA to assert actual instance matrix absolute scale per mapped unit, then run unchanged
+   R1 and capture expected RED against R2 scales.
+
+GREEN production changes:
+- Lumen spear: extend connected shaft/head into rows0..2; preserve shield/body.
+- Rift Guard:
+  - extend a connected 8–10px ice/slate spearhead clearly outside shield into rows0..2;
+  - widen shield/body only where necessary; replace broad fog/ink interior areas with slate/steel
+    planes so every facing/pose has >=30% bright material;
+  - keep rectangular shield, bone clamps, tiny MAG focus, and >=96% connected component.
+- Burden Walker:
+  - widen front/back hull/leg stance and attached cannon/stabilizers until every facing >=44px;
+  - use broad slate/steel planes on hull and rift engine until every cell >=30% bright material;
+  - retain high back, four thick legs, compact negative space, single MAG focus.
+- Solar Strider:
+  - add connected ivory/gold side stabilizers/outriggers to front/back/3Q views until every facing
+    >=44px; retain low disk-engine quadruped silhouette and negative under-hull space.
+- Keep source cell64, 16 cols, four rows, two poses, exact mirror derivation, no extra particles/text.
+- Update `combatWorldScale` to exact R2 values:
+  row0/civ0 Fighter 1.18x1.40;
+  row1/civ0 Ravager 1.52x1.14;
+  row2/civ1 Fighter 1.24x1.42;
+  row3/civ1 Prism 1.52x1.34.
+  Scale branch must discriminate fighter by civ; do not give both guards one size.
+- Preserve bottom anchoring.
+
+QA/export:
+- write fresh `/home/bobbyranka/workspace/evidence/starhaven-vs4-r2/` atlas/contact/lineup/battle/manifest;
+- same unlabeled normal-scale camera and terrain as R1; do not zoom closer;
+- manifest includes per-row min/max alpha width/height and bright-material share plus actual world scales;
+- draw calls combat on/off equal; runtime magenta zero; software-GL sim share <8ms; console zero.
+
+Run:
+npm run test:vs4
+npm run qa:vs4 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs4-r2
+npm run test:vs3
+npm run qa:vs3 -- --out /tmp/vs4r2-vs3
+npm run test:vs2b
+npm run qa:vs2b -- --out /tmp/vs4r2-vs2b
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs4r2-vs2a
+npm run qa:progression-handoff -- --out /tmp/vs4r2-progress
+npm run qa:touch-contract -- --out /tmp/vs4r2-touch
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit prefix `VS4-R2:`. Do not push/deploy. Report RED failures, before/after metric ranges, export
+paths, actual scale matrix, draw calls, sim share, regressions, SHA, deviations.

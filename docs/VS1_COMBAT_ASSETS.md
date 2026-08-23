@@ -1,8 +1,11 @@
 # VS-4 Combat Asset Pack — FROZEN ART CONTRACT
 
-Status: **ACTIVE / FROZEN** after VS-1–3 closed the functional playable loop. These are runtime
-game assets, not concept boards. The source remains deterministic startup-rasterized pixel code in
-`src/sprites.ts`. The managed image endpoint timed out three times before charging, so it is not a
+Status: **ACTIVE R2 / FROZEN** after VS-1–3 closed the functional playable loop. These are
+runtime game assets, not concept boards. R1 (`1b4c658`, local/unpushed) passed all 64 pixel/shader/
+performance contracts but fresh Sol failed normal-scale readability: Rift Guard collapsed into a
+near-black bar and Burden Walker merged with terrain. R2 applies the critic's exact measurable
+prescription before any acceptance. The source remains deterministic startup-rasterized pixel code
+in `src/sprites.ts`. The managed image endpoint timed out three times before charging, so it is not a
 production dependency; this pack uses the repository's regenerable pixel pipeline.
 
 ## Shared production rules
@@ -80,14 +83,35 @@ do not add per-unit textures.
 
 Moving combat units preserve real world 8-dir facing with the existing exported `dir8`; this is
 presentation state only. Existing legacy billboards may keep their horizontal mirror behavior.
-Normal-world scale:
+`drawCombatSprite(row, dir, pose): Pix` remains the pure exported regeneration/test seam; authored
+directions are E/NE/N/S/SE and W/NW/SW stay exact mirrors.
 
-- Guards: ~1.05 wide × 1.28 high;
-- Solar Strider: ~1.38 wide × 1.02 high;
-- Burden Walker: ~1.34 wide × 1.24 high.
+Normal-world R2 scale (raised only because normal-scale evidence failed):
 
-Export pure `drawCombatSprite(row, dir, pose): Pix` for Node metric tests. Authored directions are
-E/NE/N/S/SE; W/NW/SW are exact mirrored counterparts.
+- Lumen Guard: ~1.18 wide × 1.40 high;
+- Solar Strider: ~1.52 wide × 1.14 high;
+- Rift Guard: ~1.24 wide × 1.42 high;
+- Burden Walker: ~1.52 wide × 1.34 high.
+
+## R2 normal-scale readability floor
+
+The following checks are added RED before any R2 source edit:
+
+- each Guard source alpha bound is at least 24×44px;
+- each Walker source alpha bound is at least 44×28px in every facing;
+- each Guard spear reaches into rows 0–2 while the main body begins at row >=11, so the weapon
+  projects at least 10px beyond the body;
+- at least 30% of every unit's non-transparent pixels have luma >=65 (at least 25 points above
+  quiet Helios terrain); this uses material planes, not added emissive;
+- Rift Guard's shield receives a broad slate/steel plane and its ice spearhead remains visibly
+  outside the shield; Burden Walker's hull/engine receive broad slate/steel planes and a wider
+  front/back footprint;
+- Solar Strider receives connected side stabilizers so front/back bounds meet the 44px Walker floor;
+- source MAG share remains 0.5–5%, runtime MAG remains zero, connectivity/mirror/direction/pose/IoU
+  gates remain green, and draw calls remain unchanged.
+
+The R2 visual gate uses the same unlabeled normal-scale lineup and battle framing as R1. No crop-only
+or contact-sheet pass can override a failed normal-scale frame.
 
 ## Export and objective proof
 
