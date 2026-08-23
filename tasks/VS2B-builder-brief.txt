@@ -1,0 +1,71 @@
+# VS2B Builder — Central Lumen ownership (strict TDD)
+
+Read FIRST:
+1. DIRECTIVE.md
+2. docs/VERTICAL_SLICE_SPRINT.md
+3. docs/VS2B_LUMEN_FIELD.md (frozen; exact contract)
+4. src/sim.ts step/updateFog/reset + VS2A center rally
+5. src/hud.ts draw/renderCivPick/drawMini/HUD_CSS
+6. src/discovery.ts landmark contract
+7. tests/vs2-ai-doctrine.test.ts and scripts/qa-vs2-ai-doctrine.mjs patterns
+
+Owned scope only:
+- src/sim.ts
+- src/hud.ts
+- tests/vs2b-lumen-field.test.ts (new)
+- scripts/qa-vs2b-lumen.mjs (new)
+- package.json (`test:vs2b`, `qa:vs2b`)
+- tasks/VS2B-red.log (force-add)
+No main/input/render/content/stats/assets/AI doctrine/app-flow/dependency changes.
+
+Strict TDD:
+A. Write complete unit test first; run unchanged code RED; save full output to tasks/VS2B-red.log.
+B. Implement minimum sim/HUD.
+C. Browser proof; all regressions; commit yourself.
+
+Exact mechanics:
+- capture radius 4.5 at existing landmark coordinate;
+- qualifying kinds exactly Fighter/Ravager/Prism, alive hp>0 only;
+- owner/capturing -1|0|1, progress seconds [0,5], contested bool;
+- empty/both reset capture progress but owner persists;
+- new non-owner alone captures after full 5s; side change loses progress;
+- owner +1 integer Charge each owned second through accumulator;
+- first 4s global pulse after 30 owned seconds; recapture resets reward accumulators;
+- active pulse may finish if owner changes;
+- updateFog fills current visibility/exploration for pulsing team before discovery/entity visibility
+  resolution; after pulse current fog returns and explored stays;
+- state never changes winner.
+- lumenState() returns a copy/read-only tuple; reset clears all internal state.
+
+HUD:
+- panel inside #civpick under faction tiles; hidden until central landmark SEEN_PLAYER;
+- exact copy in spec; 6px capture bar; optional `VISION PULSE · Ns`;
+- <=156px, min 12px, pointer-transparent;
+- objective minimap marker owner tint; no topbar/bottom-deck additions.
+- avoid per-frame innerHTML unless signature changes.
+
+Browser QA at 1366x1024:
+- exact spawned roster fixtures allowed; no resource/owner/progress/pulse/visibility writes;
+- drive ordinary unit positions/orders + world.step;
+- undiscovered absent, neutral, 50%, player control, contested, rival control, pulse, post-pulse;
+- exact Charge deltas, winner -1, console 0, pixel sample proves minimap tint changes;
+- screenshots composited, evidence outside repo, perf gate.
+
+Run all:
+npm run test:vs2b
+npm run qa:vs2b -- --out /home/bobbyranka/workspace/evidence/starhaven-vs2b-lumen
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs2b-ai
+npm run qa:progression-handoff -- --out /tmp/vs2b-progression
+npm run qa:touch-contract -- --out /tmp/vs2b-touch
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit prefix `VS2B:`. Do not push/deploy. Report commit SHA, RED, state/Charge/pulse facts, visual
+captures, perf, gates, deviations.

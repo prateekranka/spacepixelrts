@@ -279,8 +279,12 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   Observer screenshots exposed the same real sim state without changing production fog. Fresh Sol
   Max-fast blind gate: **PASS**. Named gap: final four combat silhouettes, already locked as VS-4.
   Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs2a-r2-lead/` and
-  `/home/bobbyranka/workspace/evidence/starhaven-vs2a-observer/`. Next: VS-2B Central Lumen
-  ownership/income/pulse.
+  `/home/bobbyranka/workspace/evidence/starhaven-vs2a-observer/`.
+- **VS-2B Central Lumen ownership FROZEN / ACTIVE** (`docs/VS2B_LUMEN_FIELD.md`): combat
+  units capture the discovered center in 5s; owner earns +1 Charge/s and a 4s global vision pulse
+  each 30s; contested/empty states preserve owner but reset capture; no alternate victory. Compact
+  status/bar lives under matchup tiles and minimap marker tints by owner. Strict TDD + eight-state
+  1366×1024 browser proof; no AI doctrine, assets, stats, input, render, or app-flow work.
 - **Production live at VS-2A** (`5833429`, `assets/main-LvBGVAyw.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live production QA readback
   at tick 9650 confirms Standard AI, scripted marshal false, one Yard, one Habitat, Iron Colossus,
