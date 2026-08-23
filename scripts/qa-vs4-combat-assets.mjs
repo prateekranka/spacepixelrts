@@ -15,6 +15,8 @@ const VIEWPORT = { width: 1366, height: 1024 };
 const CELL = 64;
 const MAG = [255, 0, 255, 255];
 const P99_BUDGET_MS = 8;
+const QUIET_TERRAIN_LUMA = 30;
+const R3_LUMA_FLOOR = QUIET_TERRAIN_LUMA * 3;
 const NAV_TIMEOUT_MS = 30000;
 const PROBE_TIMEOUT_MS = 30000;
 const SERVER_BOOT_TIMEOUT_MS = 120000;
@@ -25,10 +27,17 @@ const EXPECTED_MAPPINGS = [
   { kind: 5, civ: 1, row: 3 },
 ];
 const EXPECTED_WORLD_SCALES = [
-  { kind: 2, civ: 0, row: 0, scale: [1.18, 1.40] },
-  { kind: 4, civ: 0, row: 1, scale: [1.52, 1.14] },
-  { kind: 2, civ: 1, row: 2, scale: [1.24, 1.42] },
-  { kind: 5, civ: 1, row: 3, scale: [1.52, 1.34] },
+  { kind: 2, civ: 0, row: 0, scale: [1.59, 1.89] },
+  { kind: 4, civ: 0, row: 1, scale: [2.05, 1.54] },
+  { kind: 2, civ: 1, row: 2, scale: [1.67, 1.92] },
+  { kind: 5, civ: 1, row: 3, scale: [2.05, 1.81] },
+];
+
+const RIM_COLORS = [
+  { outer: [240, 193, 90], inner: [240, 231, 210] },
+  { outer: [240, 193, 90], inner: [240, 231, 210] },
+  { outer: [183, 209, 208], inner: [127, 167, 184] },
+  { outer: [183, 209, 208], inner: [127, 167, 184] },
 ];
 
 function assertThat(condition, message) {
@@ -153,6 +162,67 @@ function analyzePng(file, expectedWidth, expectedHeight) {
   };
 }
 
+function exteriorLayerShares(png, originX, originY, row) {
+  const exterior = new Uint8Array(CELL * CELL);
+  const queue = [];
+  const alphaAt = (x, y) => png.data[((originX + x) + (originY + y) * png.width) * 4 + 3] > 0;
+  for (let y = 0; y < CELL; y++) {
+    for (let x = 0; x < CELL; x++) {
+      if (x !== 0 && y !== 0 && x !== CELL - 1 && y !== CELL - 1) continue;
+      const index = x + y * CELL;
+      if (exterior[index] || alphaAt(x, y)) continue;
+      exterior[index] = 1;
+      queue.push(index);
+    }
+  }
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const index = queue[cursor];
+    const x = index % CELL;
+    const y = Math.floor(index / CELL);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= CELL || ny >= CELL) continue;
+      const next = nx + ny * CELL;
+      if (!exterior[next] && !alphaAt(nx, ny)) {
+        exterior[next] = 1;
+        queue.push(next);
+      }
+    }
+  }
+  const counts = [0, 0];
+  const allowed = [0, 0];
+  const colors = RIM_COLORS[row];
+  for (let y = 0; y < CELL; y++) {
+    for (let x = 0; x < CELL; x++) {
+      if (!alphaAt(x, y)) continue;
+      let layer = 0;
+      for (let radius = 1; radius <= 2 && layer === 0; radius++) {
+        for (let dy = -radius; dy <= radius && layer === 0; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx >= 0 && ny >= 0 && nx < CELL && ny < CELL && exterior[nx + ny * CELL]) {
+              layer = radius;
+              break;
+            }
+          }
+        }
+      }
+      if (layer < 1 || layer > 2) continue;
+      counts[layer - 1]++;
+      const index = ((originX + x) + (originY + y) * png.width) * 4;
+      const matches = (color) => png.data[index] === color[0] && png.data[index + 1] === color[1] && png.data[index + 2] === color[2] && png.data[index + 3] === 255;
+      if (matches(colors.outer) || matches(colors.inner)) allowed[layer - 1]++;
+    }
+  }
+  return {
+    outer: counts[0] ? allowed[0] / counts[0] : 0,
+    inner: counts[1] ? allowed[1] / counts[1] : 0,
+  };
+}
+
 function analyzeCombatRows(file) {
   const png = PNG.sync.read(fs.readFileSync(file));
   assertThat(png.width === 1024 && png.height === 256, 'combat atlas dimensions changed while measuring rows');
@@ -166,6 +236,7 @@ function analyzeCombatRows(file) {
       let minY = CELL;
       let maxX = -1;
       let maxY = -1;
+      let lumaTotal = 0;
       for (let localY = 0; localY < CELL; localY++) {
         for (let localX = 0; localX < CELL; localX++) {
           const x = column * CELL + localX;
@@ -179,31 +250,42 @@ function analyzeCombatRows(file) {
           maxX = Math.max(maxX, localX);
           maxY = Math.max(maxY, localY);
           const luma = 0.2126 * png.data[index] + 0.7152 * png.data[index + 1] + 0.0722 * png.data[index + 2];
+          lumaTotal += luma;
           if (luma >= 65) brightPixels++;
         }
       }
       assertThat(alphaPixels > 0, `combat atlas row ${row} column ${column} is empty while measuring rows`);
+      const rim = exteriorLayerShares(png, column * CELL, row * CELL, row);
       cells.push({
         dir: column % 8,
         pose: Math.floor(column / 8),
         alphaPixels,
         alphaWidth: maxX - minX + 1,
         alphaHeight: maxY - minY + 1,
+        averageLuma: Math.round((lumaTotal / alphaPixels) * 10000) / 10000,
         brightMaterialShare: Math.round((brightPixels / alphaPixels) * 10000) / 10000,
+        rimOuterShare: Math.round(rim.outer * 10000) / 10000,
+        rimInnerShare: Math.round(rim.inner * 10000) / 10000,
       });
     }
     const widths = cells.map((cell) => cell.alphaWidth);
     const heights = cells.map((cell) => cell.alphaHeight);
     const brightShares = cells.map((cell) => cell.brightMaterialShare);
+    const averageLumas = cells.map((cell) => cell.averageLuma);
+    const rimOuterShares = cells.map((cell) => cell.rimOuterShare);
+    const rimInnerShares = cells.map((cell) => cell.rimInnerShare);
     rows.push({
       row,
       alphaWidth: { min: Math.min(...widths), max: Math.max(...widths) },
       alphaHeight: { min: Math.min(...heights), max: Math.max(...heights) },
+      averageLuma: { min: Math.min(...averageLumas), max: Math.max(...averageLumas) },
       brightMaterialShare: { min: Math.min(...brightShares), max: Math.max(...brightShares) },
+      rimOuterShare: { min: Math.min(...rimOuterShares), max: Math.max(...rimOuterShares) },
+      rimInnerShare: { min: Math.min(...rimInnerShares), max: Math.max(...rimInnerShares) },
       cells,
     });
   }
-  return { lumaThreshold: 65, rows };
+  return { lumaThreshold: R3_LUMA_FLOOR, rimThreshold: 0.85, brightMaterialThreshold: 65, rows };
 }
 
 function attachErrors(page, manifest, label) {
@@ -516,6 +598,20 @@ async function main() {
       expectedSourceMagenta: true,
     };
     manifest.checks.sourceMetrics = exportData.sourceMetrics;
+    const sourceReadabilityFailures = exportData.sourceMetrics.rows.flatMap((row) => row.cells.flatMap((cell) => {
+      const failures = [];
+      if (cell.averageLuma < R3_LUMA_FLOOR) failures.push(`row ${row.row} dir ${cell.dir} pose ${cell.pose} average luma ${cell.averageLuma}, expected >=${R3_LUMA_FLOOR}`);
+      if (cell.rimOuterShare < 0.85) failures.push(`row ${row.row} dir ${cell.dir} pose ${cell.pose} outer rim ${cell.rimOuterShare}, expected >=0.85`);
+      if (cell.rimInnerShare < 0.85) failures.push(`row ${row.row} dir ${cell.dir} pose ${cell.pose} inner rim ${cell.rimInnerShare}, expected >=0.85`);
+      return failures;
+    }));
+    manifest.checks.sourceReadability = {
+      averageLuma: { min: Math.min(...exportData.sourceMetrics.rows.map((row) => row.averageLuma.min)), max: Math.max(...exportData.sourceMetrics.rows.map((row) => row.averageLuma.max)) },
+      rimOuterShare: { min: Math.min(...exportData.sourceMetrics.rows.map((row) => row.rimOuterShare.min)), max: Math.max(...exportData.sourceMetrics.rows.map((row) => row.rimOuterShare.max)) },
+      rimInnerShare: { min: Math.min(...exportData.sourceMetrics.rows.map((row) => row.rimInnerShare.min)), max: Math.max(...exportData.sourceMetrics.rows.map((row) => row.rimInnerShare.max)) },
+      failures: sourceReadabilityFailures,
+      pass: sourceReadabilityFailures.length === 0,
+    };
     manifest.checks.runtimeContract = exportData.runtime;
     assertThat(exportData.atlas.width === 1024 && exportData.atlas.height === 256, 'combat atlas dimensions are not 1024x256');
     assertThat(exportData.atlas.cell === 64 && exportData.atlas.cols === 16 && exportData.atlas.rows === 4, 'combat atlas cell grid is not 64/16/4');
@@ -548,7 +644,10 @@ async function main() {
       actual: worldScales,
       allExact: worldScales.every((mapping) => mapping.pass),
     };
-    assertThat(worldScales.every((mapping) => mapping.pass), `actual combat world scales do not match R2: ${JSON.stringify(worldScales)}`);
+    assertThat(
+      sourceReadabilityFailures.length === 0 && worldScales.every((mapping) => mapping.pass),
+      `VS4 R3 source/scale contract failed: ${JSON.stringify({ sourceReadabilityFailures, worldScales })}`,
+    );
     const lineupPath = path.join(out, 'lineup-after.png');
     await exportPage.screenshot({ path: lineupPath, type: 'png' });
     const lineupImage = analyzePng(lineupPath, VIEWPORT.width, VIEWPORT.height);

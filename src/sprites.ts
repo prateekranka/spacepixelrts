@@ -1393,6 +1393,64 @@ const GRAVE_CRYSTAL: Rgba = rgba(P.sky);
 const GRAVE_ICE: Rgba = rgba(P.ice);
 const COMBAT_CLEAR: Rgba = [0, 0, 0, 0];
 
+/**
+ * Add the two-pixel material keyline around the exterior of a combat cell.
+ * The source is never mutated: enclosed transparent pockets and every source
+ * RGBA value remain untouched, while only border-connected transparency is
+ * eligible for the Chebyshev dilation.
+ */
+export function applyCombatExteriorRim(source: Pix, colorA: Rgba, colorB: Rgba): Pix {
+  const result = Pix.alloc(source.w, source.h);
+  result.d.set(source.d);
+  const exterior = new Uint8Array(source.w * source.h);
+  const queue: number[] = [];
+  const alphaAt = (x: number, y: number): boolean => source.d[(x + y * source.w) * 4 + 3] > 0;
+
+  for (let y = 0; y < source.h; y++) {
+    for (let x = 0; x < source.w; x++) {
+      if (x !== 0 && y !== 0 && x !== source.w - 1 && y !== source.h - 1) continue;
+      const index = x + y * source.w;
+      if (exterior[index] || alphaAt(x, y)) continue;
+      exterior[index] = 1;
+      queue.push(index);
+    }
+  }
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const index = queue[cursor];
+    const x = index % source.w;
+    const y = Math.floor(index / source.w);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= source.w || ny >= source.h) continue;
+      const next = nx + ny * source.w;
+      if (!exterior[next] && !alphaAt(nx, ny)) {
+        exterior[next] = 1;
+        queue.push(next);
+      }
+    }
+  }
+
+  for (let y = 0; y < source.h; y++) {
+    for (let x = 0; x < source.w; x++) {
+      const index = x + y * source.w;
+      if (!exterior[index] || alphaAt(x, y)) continue;
+      let distance = 3;
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= source.w || ny >= source.h || !alphaAt(nx, ny)) continue;
+          distance = Math.min(distance, Math.max(Math.abs(dx), Math.abs(dy)));
+        }
+      }
+      if (distance === 1) result.set(x, y, colorA);
+      else if (distance === 2) result.set(x, y, colorB);
+    }
+  }
+  return result;
+}
+
 function combatRect(p: Pix, x: number, y: number, w: number, h: number, base: Rgba, hi: Rgba, dark: Rgba): void {
   p.fillRect(x, y, w, h, COMBAT_INK);
   if (w < 3 || h < 3) return;
@@ -1408,11 +1466,11 @@ function combatLeg(p: Pix, x: number, top: number, bottom: number, w: number, ba
 }
 
 function combatMagCross(p: Pix, x: number, y: number): void {
-  p.set(x, y, MAG);
-  p.set(x - 1, y, MAG);
-  p.set(x, y + 1, MAG);
-  p.set(x + 1, y + 1, MAG);
-  p.set(x - 1, y + 1, MAG);
+  // One compact 3×3 focus keeps the legacy 0.5–5% source-MAG contract after
+  // the two-pixel rim increases each cell's alpha coverage.
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) p.set(x + dx, y + dy, MAG);
+  }
 }
 
 function drawLumenGuardCombat(dir: number, pose: number): Pix {
@@ -1430,33 +1488,33 @@ function drawLumenGuardCombat(dir: number, pose: number): Pix {
   const gaitA = pose ? (side || back ? 2 : 1) : 0;
   const gaitB = pose ? (side || back ? 0 : 2) : 0;
 
-  // Opposite-side spear: its 2px shaft remains continuous from the new
-  // connected tip to the boot. The tip reaches rows 0–2 without moving the
-  // main body above its authored y=11 top.
-  p.fillRect(spearX - 1, 2, 2, 52, COMBAT_INK);
-  p.fillRect(spearX, 3, 1, 49, SUN_GOLD);
-  p.fillRect(spearX - 2, 2, 4, 5, COMBAT_INK);
-  p.fillRect(spearX - 1, 3, 2, 3, SUN_AMBER);
-  p.set(spearX, 2, SUN_CREAM);
+  // Opposite-side spear: its 2px shaft remains continuous from the connected
+  // row-0 tip to the held bridge, leaving a 16px+ weapon extension above the
+  // compressed main body.
+  p.fillRect(spearX - 1, 0, 2, 50, COMBAT_INK);
+  p.fillRect(spearX, 1, 1, 48, SUN_GOLD);
+  p.fillRect(spearX - 2, 0, 4, 5, COMBAT_INK);
+  p.fillRect(spearX - 1, 1, 2, 3, SUN_AMBER);
+  p.set(spearX, 0, SUN_CREAM);
 
   // Planted legs are painted before the body so their joins stay ink-connected.
   const legAX = side ? 24 : cx - 6;
   const legBX = side ? 35 : cx + 2;
-  combatLeg(p, legAX + (pose ? 1 : 0), 40 - gaitA, 53, 4, SUN_TEAL, SUN_CREAM, SUN_TEAL_D);
-  combatLeg(p, legBX - (pose ? 1 : 0), 40 - gaitB, 53, 4, SUN_TEAL_D, SUN_SAND, COMBAT_INK);
+  combatLeg(p, legAX + (pose ? 1 : 0), 38 - gaitA, 49, 4, SUN_TEAL, SUN_CREAM, SUN_TEAL_D);
+  combatLeg(p, legBX - (pose ? 1 : 0), 38 - gaitB, 49, 4, SUN_TEAL_D, SUN_SAND, COMBAT_INK);
 
-  combatRect(p, bodyX - 1, 25, bodyW + 2, 16, SUN_SAND, SUN_CREAM, SUN_TEAL_D);
-  p.fillRect(bodyX, 31, bodyW, 6, SUN_TEAL);
-  p.fillRect(bodyX + 2, 35, bodyW - 4, 4, SUN_SAND);
-  p.fillRect(cx - 4, 11, 8, 9, COMBAT_INK);
-  p.fillRect(cx - 3, 12, 6, 6, SUN_CREAM);
-  p.fillRect(cx - 6, 11, 12, 3, SUN_GOLD);
-  p.fillRect(cx - 3, 16, 6, 3, SUN_TEAL_D);
-  p.fillRect(cx - 1, 19, 2, 7, COMBAT_INK);
-  p.set(cx - 1, 17, SUN_AMBER);
+  combatRect(p, bodyX - 1, 28, bodyW + 2, 12, SUN_SAND, SUN_CREAM, SUN_TEAL_D);
+  p.fillRect(bodyX, 32, bodyW, 5, SUN_TEAL);
+  p.fillRect(bodyX + 2, 36, bodyW - 4, 3, SUN_SAND);
+  p.fillRect(cx - 4, 16, 8, 9, COMBAT_INK);
+  p.fillRect(cx - 3, 17, 6, 6, SUN_CREAM);
+  p.fillRect(cx - 6, 16, 12, 3, SUN_GOLD);
+  p.fillRect(cx - 3, 21, 6, 3, SUN_TEAL_D);
+  p.fillRect(cx - 1, 24, 2, 5, COMBAT_INK);
+  p.set(cx - 1, 22, SUN_AMBER);
 
   // Shield arm bridges body to face; the face is deliberately over the torso.
-  linePix(p, bodyX + bodyW - 2, 28, shieldX - 10, shieldY, COMBAT_INK);
+  linePix(p, bodyX + bodyW - 2, 31, shieldX - 10, shieldY, COMBAT_INK);
   p.circ(shieldX, shieldY, 12, COMBAT_INK);
   p.circ(shieldX, shieldY, 10, SUN_GOLD);
   p.circ(shieldX, shieldY, 8, SUN_CREAM);
@@ -1467,7 +1525,7 @@ function drawLumenGuardCombat(dir: number, pose: number): Pix {
   p.set(shieldX + 6, shieldY + 7, SUN_TEAL_D);
 
   // A second ink bridge makes the spear read as held, never as a detached prop.
-  linePix(p, bodyX + 1, 30, spearX + 1, 30, COMBAT_INK);
+  linePix(p, bodyX + 1, 31, spearX + 1, 31, COMBAT_INK);
   return p;
 }
 
@@ -1568,27 +1626,26 @@ function drawRiftGuardCombat(dir: number, pose: number): Pix {
   const gaitA = pose ? (side || front ? 2 : 1) : 0;
   const gaitB = pose ? (side || front ? 0 : 2) : 0;
 
-  // Crystal spear on the shoulder opposite the tower shield. The 9px
-  // connected ice/slate head projects into rows 0–2 and remains outside the
-  // rectangular shield in every authored view.
-  p.fillRect(spearX - 1, 2, 2, 52, COMBAT_INK);
-  p.fillRect(spearX, 3, 1, 49, GRAVE_STEEL);
-  p.fillRect(spearX - 2, 2, 4, 9, COMBAT_INK);
-  p.fillRect(spearX - 1, 3, 2, 7, GRAVE_CRYSTAL);
-  p.set(spearX, 2, GRAVE_ICE);
+  // Crystal spear on the shoulder opposite the tower shield. The connected
+  // ice/slate head starts in row 0 and stays outside the rectangular shield.
+  p.fillRect(spearX - 1, 0, 2, 50, COMBAT_INK);
+  p.fillRect(spearX, 1, 1, 48, GRAVE_STEEL);
+  p.fillRect(spearX - 2, 0, 4, 9, COMBAT_INK);
+  p.fillRect(spearX - 1, 1, 2, 7, GRAVE_CRYSTAL);
+  p.set(spearX, 0, GRAVE_ICE);
 
-  combatLeg(p, bodyX - (pose ? 1 : 0), 41 - gaitA, 53, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
-  combatLeg(p, bodyX + 6 - (pose ? 1 : 0), 41 - gaitB, 53, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
-  combatRect(p, bodyX - 1, 25, bodyW + 2, 16, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
+  combatLeg(p, bodyX - (pose ? 1 : 0), 38 - gaitA, 49, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
+  combatLeg(p, bodyX + 6 - (pose ? 1 : 0), 38 - gaitB, 49, 4, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
+  combatRect(p, bodyX - 1, 28, bodyW + 2, 12, GRAVE_SLATE, GRAVE_STEEL, COMBAT_INK);
   p.fillRect(bodyX, 32, bodyW, 5, GRAVE_STEEL);
-  p.fillRect(cx - 4, 11, 8, 10, COMBAT_INK);
-  p.fillRect(cx - 2, 13, 4, 5, GRAVE_SLATE);
-  p.fillRect(cx, 21, 1, 5, COMBAT_INK);
-  p.fillRect(cx - 3, 16, 6, 3, COMBAT_INK);
-  p.fillRect(cx - 2, 16, 4, 1, GRAVE_ICE);
+  p.fillRect(cx - 4, 16, 8, 10, COMBAT_INK);
+  p.fillRect(cx - 2, 18, 4, 5, GRAVE_SLATE);
+  p.fillRect(cx, 26, 1, 3, COMBAT_INK);
+  p.fillRect(cx - 3, 21, 6, 3, COMBAT_INK);
+  p.fillRect(cx - 2, 21, 4, 1, GRAVE_ICE);
 
   // Stepped tower shield — no circular silhouette, with three ash/slate planes.
-  const shieldY = 12;
+  const shieldY = 8;
   p.fillRect(shieldX + 2, shieldY, shieldW - 4, 2, COMBAT_INK);
   p.fillRect(shieldX, shieldY + 2, 2, 39, COMBAT_INK);
   p.fillRect(shieldX + shieldW - 2, shieldY + 2, 2, 39, COMBAT_INK);
@@ -1612,8 +1669,8 @@ function drawRiftGuardCombat(dir: number, pose: number): Pix {
   p.fillRect(crystalX - 2, 29, 4, 7, GRAVE_CRYSTAL);
   p.set(crystalX, 29, GRAVE_ICE);
   combatMagCross(p, crystalX, 33);
-  linePix(p, bodyX + (shieldX < cx ? -1 : bodyW + 1), 29, shieldX + (shieldX < cx ? shieldW : 0), 29, COMBAT_INK);
-  linePix(p, bodyX + (shieldX < cx ? bodyW + 1 : -1), 31, spearX + (spearX < cx ? 1 : -1), 31, COMBAT_INK);
+  linePix(p, bodyX + (shieldX < cx ? -1 : bodyW + 1), 31, shieldX + (shieldX < cx ? shieldW : 0), 31, COMBAT_INK);
+  linePix(p, bodyX + (shieldX < cx ? bodyW + 1 : -1), 32, spearX + (spearX < cx ? 1 : -1), 32, COMBAT_INK);
   if (front) {
     p.set(shieldX + 9, shieldY + 20, COMBAT_CLEAR);
     p.set(shieldX + 9, shieldY + 21, COMBAT_CLEAR);
@@ -1700,7 +1757,8 @@ function drawBurdenWalkerCombat(dir: number, pose: number): Pix {
 }
 
 function authoredCombatSprite(row: number, dir: number, pose: number): Pix {
-  switch (row) {
+  const source = (() => {
+    switch (row) {
     case 0:
       return drawLumenGuardCombat(dir, pose);
     case 1:
@@ -1711,7 +1769,11 @@ function authoredCombatSprite(row: number, dir: number, pose: number): Pix {
       return drawBurdenWalkerCombat(dir, pose);
     default:
       return Pix.alloc(COMBAT_CELL, COMBAT_CELL);
-  }
+    }
+  })();
+  return row < 2
+    ? applyCombatExteriorRim(source, SUN_AMBER, SUN_CREAM)
+    : applyCombatExteriorRim(source, GRAVE_ICE, GRAVE_CRYSTAL);
 }
 
 /** VS-4 pure source cell. Directions 3/4/5 are exact horizontal mirrors. */
