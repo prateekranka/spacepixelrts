@@ -15,6 +15,8 @@ export interface Box {
 
 /** Screen-space pick radius (CSS px) — matches ARCHITECTURE.md hit test. */
 const PICK_PX = 28;
+/** Touch target radius for a visible resource node. */
+const RESOURCE_PICK_PX = 44;
 
 /** M2-A: stationary single-pointer hold that must elapse before a Move is issued. */
 const LONG_PRESS_MS = 450;
@@ -23,6 +25,7 @@ export class Input {
   selected = new Set<number>();
   groups: number[][] = [[], [], [], []];
   place: Kind | null = null;
+  commandMode: 'move' | 'attack' | 'gather' | null = null;
   box: Box | null = null;
   halfH = 14;
   readonly pan = { x: 18, z: 22 };
@@ -86,9 +89,17 @@ export class Input {
           e.path = null;
         }
       }
+      this.commandMode = null;
+      return;
+    }
+    if (kind === 'move' || kind === 'attack' || kind === 'gather') {
+      if (!this.hasValidSelection()) return;
+      this.place = null;
+      this.commandMode = kind;
       return;
     }
     if (kind === 'idleworker') {
+      this.commandMode = null;
       this.selected.clear();
       for (const e of this.world.ents) {
         if (e.alive && e.team === 0 && e.kind === Kind.Worker && e.order === Ord.Idle) {
@@ -110,6 +121,7 @@ export class Input {
     if (!scout) return;
     this.selected.clear();
     this.selected.add(scout.id);
+    this.commandMode = null;
     this.pan.x = scout.x;
     this.pan.z = scout.z;
     this.halfH = Math.min(this.halfH, 6.2);
@@ -157,8 +169,14 @@ export class Input {
     }
     this.dragging = true;
     this.box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
-    // M2-A: arm the stationary long-press Move for a lone left pointer.
-    if (e.button === 0 && e.isPrimary && this.place === null && this.selected.size > 0) {
+    // M2-A: arm the stationary long-press context order for a lone left pointer.
+    if (
+      e.button === 0 &&
+      e.isPrimary &&
+      this.place === null &&
+      this.commandMode === null &&
+      this.selected.size > 0
+    ) {
       this.pressTimer = window.setTimeout(() => this.fireLongPress(), LONG_PRESS_MS);
     }
   }
@@ -223,6 +241,7 @@ export class Input {
       this.sfx.select();
     } else if (this.dragging && !this.moved) {
       if (this.place !== null) this.tryPlace(e.clientX, e.clientY);
+      else if (this.commandMode !== null) this.commandTap(e.clientX, e.clientY);
       else this.selectTap(e.clientX, e.clientY);
     }
     this.dragging = false;
@@ -231,7 +250,7 @@ export class Input {
     if (this.pointers.size === 0) this.panning = false;
   }
 
-  /** M2-A: a held stationary single pointer orders the current selection to Move. */
+  /** M2-A/M6-A: a held stationary single pointer uses the shared context resolver. */
   private fireLongPress(): void {
     this.pressTimer = null;
     if (
@@ -243,9 +262,7 @@ export class Input {
     ) {
       return;
     }
-    const w = this.pickWorld(this.downX, this.downY);
-    this.world.issue([...this.selected], Ord.Move, w.x, w.z, -1);
-    this.sfx.move();
+    this.contextOrderAt(this.downX, this.downY, false);
     this.pressFired = true;
   }
 
@@ -257,6 +274,7 @@ export class Input {
   }
 
   private selectTap(cx: number, cy: number): void {
+    this.commandMode = null;
     const w = this.pickWorld(cx, cy);
     const now = performance.now();
     const hit = this.closest(w.x, w.z, 1.35, 0);
@@ -279,6 +297,7 @@ export class Input {
   }
 
   private selectBox(box: Box): void {
+    this.commandMode = null;
     this.selected.clear();
     const x0 = Math.min(box.x0, box.x1);
     const y0 = Math.min(box.y0, box.y1);
@@ -293,21 +312,74 @@ export class Input {
   }
 
   private orderAt(cx: number, cy: number, attackMove: boolean): void {
-    if (this.selected.size === 0) return;
+    this.contextOrderAt(cx, cy, attackMove);
+  }
+
+  private commandTap(cx: number, cy: number): void {
+    const mode = this.commandMode;
+    if (mode === null || !this.hasValidSelection()) return;
     const w = this.pickWorld(cx, cy);
-    const enemy = this.closestEnemyScreen(cx, cy);
-    const node = enemy ? null : this.closestResource(cx, cy, w.x, w.z);
-    const ids = [...this.selected];
-    if (enemy) {
-      this.world.issue(ids, Ord.Attack, enemy.x, enemy.z, enemy.id);
-      this.sfx.attack();
-    } else if (node && node.kind === Kind.Resource) {
+    if (mode === 'gather') {
+      const node = this.closestResource(cx, cy);
+      const ids = this.selectedWorkers();
+      if (!node || ids.length === 0) return;
       this.world.issue(ids, Ord.Gather, node.x, node.z, node.id);
+      this.commandMode = null;
       this.sfx.move();
+      return;
+    }
+    if (mode === 'attack') {
+      const enemy = this.closestEnemyScreen(cx, cy);
+      if (enemy) {
+        this.world.issue([...this.selected], Ord.Attack, enemy.x, enemy.z, enemy.id);
+        this.sfx.attack();
+      } else {
+        this.world.issue([...this.selected], Ord.AttackMove, w.x, w.z, -1);
+        this.sfx.move();
+      }
     } else {
-      this.world.issue(ids, attackMove ? Ord.AttackMove : Ord.Move, w.x, w.z, -1);
+      this.world.issue([...this.selected], Ord.Move, w.x, w.z, -1);
       this.sfx.move();
     }
+    this.commandMode = null;
+  }
+
+  private contextOrderAt(cx: number, cy: number, attackMove: boolean): void {
+    if (!this.hasValidSelection()) return;
+    const w = this.pickWorld(cx, cy);
+    const enemy = this.closestEnemyScreen(cx, cy);
+    if (enemy) {
+      this.world.issue([...this.selected], Ord.Attack, enemy.x, enemy.z, enemy.id);
+      this.commandMode = null;
+      this.sfx.attack();
+      return;
+    }
+    const node = this.closestResource(cx, cy);
+    if (node) {
+      const ids = this.selectedWorkers();
+      if (ids.length === 0) return;
+      this.world.issue(ids, Ord.Gather, node.x, node.z, node.id);
+      this.commandMode = null;
+      this.sfx.move();
+      return;
+    }
+    this.world.issue([...this.selected], attackMove ? Ord.AttackMove : Ord.Move, w.x, w.z, -1);
+    this.commandMode = null;
+    this.sfx.move();
+  }
+
+  private hasValidSelection(): boolean {
+    return [...this.selected].some((id) => {
+      const e = this.world.ents[id];
+      return e.alive && e.team === 0 && isUnit(e.kind);
+    });
+  }
+
+  private selectedWorkers(): number[] {
+    return [...this.selected].filter((id) => {
+      const e = this.world.ents[id];
+      return e.alive && e.team === 0 && e.kind === Kind.Worker;
+    });
   }
 
   private tryPlace(cx: number, cy: number): void {
@@ -344,7 +416,7 @@ export class Input {
     let best = null as (typeof this.world.ents)[0] | null;
     let bestD = PICK_PX * PICK_PX;
     for (const e of this.world.ents) {
-      if (!e.alive || !e.vis || e.team === 0) continue;
+      if (!e.alive || !e.vis || e.team === 0 || e.kind === Kind.Resource) continue;
       const footY = isBuilding(e.kind) ? 1.65 : 0.6;
       const p = this.view.project(e.x, footY, e.z);
       const dx = p.x - px;
@@ -358,18 +430,25 @@ export class Input {
     return best;
   }
 
-  /** Resource gather: modest world radius, but only when the pointer is on the node sprite. */
-  private closestResource(cx: number, cy: number, wx: number, wz: number) {
-    const node = this.closest(wx, wz, 1.5, 3);
-    if (!node || node.kind !== Kind.Resource) return null;
+  /** Resource gather: the touch target is a 44 CSS px screen-space circle. */
+  private closestResource(cx: number, cy: number) {
     const r = this.host.getBoundingClientRect();
     const px = cx - r.left;
     const py = cy - r.top;
-    const p = this.view.project(node.x, 0.05, node.z);
-    const dx = p.x - px;
-    const dy = p.y - py;
-    if (dx * dx + dy * dy > PICK_PX * PICK_PX) return null;
-    return node;
+    let best = null as (typeof this.world.ents)[0] | null;
+    let bestD = RESOURCE_PICK_PX * RESOURCE_PICK_PX;
+    for (const e of this.world.ents) {
+      if (!e.alive || !e.vis || e.kind !== Kind.Resource) continue;
+      const p = this.view.project(e.x, 0.05, e.z);
+      const dx = p.x - px;
+      const dy = p.y - py;
+      const d = dx * dx + dy * dy;
+      if (d <= bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    return best;
   }
 
   private closest(x: number, z: number, r: number, teamFilter: number) {
@@ -443,6 +522,7 @@ export class Input {
     if (g !== undefined) {
       if (e.metaKey || e.ctrlKey) this.groups[g] = [...this.selected];
       else {
+        this.commandMode = null;
         this.selected = new Set(this.groups[g]);
         const first = this.world.ents[this.groups[g][0]];
         if (first?.alive) {

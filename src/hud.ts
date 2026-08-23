@@ -177,6 +177,12 @@ export class Hud {
 
   draw(world: World, input: Input, fps: number): void {
     const eco = world.teams[0];
+    if (input.commandMode === 'move') this.hintEl.textContent = 'MOVE ARMED · Tap ground';
+    else if (input.commandMode === 'attack') this.hintEl.textContent = 'ATTACK ARMED · Tap target or ground';
+    else if (input.commandMode === 'gather') this.hintEl.textContent = 'GATHER ARMED · Tap a resource node';
+    else if (this.hintEl.textContent.includes(' ARMED ·')) {
+      this.hintEl.textContent = 'Landscape command deck · two-finger pan · pinch zoom · box-select to rally the swarm';
+    }
     (this.root.querySelector('#ore') as HTMLElement).textContent = String(eco.ore | 0);
     (this.root.querySelector('#gas') as HTMLElement).textContent = String(eco.gas | 0);
     (this.root.querySelector('#nrg') as HTMLElement).textContent = String(eco.energy | 0);
@@ -298,11 +304,16 @@ export class Hud {
     if (cmd === 'idleworker') input.commandAt('idleworker');
     if (cmd === 'stop') input.commandAt('stop');
     if (cmd === 'move') {
-      /* next terrain click is a move — already default */
+      input.commandAt('move');
+      if (input.commandMode === 'move') this.hintEl.textContent = 'MOVE ARMED · Tap ground';
     }
     if (cmd === 'attack') {
-      /* user uses hold/right-click; flash hint */
-      this.hintEl.textContent = 'Hold or right-click the field to attack-move.';
+      input.commandAt('attack');
+      if (input.commandMode === 'attack') this.hintEl.textContent = 'ATTACK ARMED · Tap target or ground';
+    }
+    if (cmd === 'gather') {
+      input.commandAt('gather');
+      if (input.commandMode === 'gather') this.hintEl.textContent = 'GATHER ARMED · Tap a resource node';
     }
     if (cmd.startsWith('path-')) world.tryCommitPath(0, cmd.slice(5) as TechPathId);
     if (cmd.startsWith('train-')) {
@@ -316,6 +327,7 @@ export class Hud {
       }
     }
     if (cmd.startsWith('build-')) {
+      input.commandMode = null;
       input.place = Number(cmd.slice(6)) as Kind;
       this.hintEl.textContent = 'Tap the field to plant the structure.';
     }
@@ -445,6 +457,7 @@ export class Hud {
       btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: `${STATS[Kind.Barracks].ore} ore` });
       btns.push({ cmd: `build-${Kind.Hall}`, label: hallName(civ), sub: `${STATS[Kind.Hall].ore} ore` });
       btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: `${STATS[Kind.UniqueB].ore} ore` });
+      btns.push({ cmd: 'gather', label: 'GATHER', sub: 'Tap a resource node' });
       btns.push({ cmd: 'stop', label: 'STOP', sub: 'Cancel orders' });
     } else if (kind !== null) {
       btns.push({ cmd: 'move', label: 'MOVE', sub: 'Tap ground to move' });
@@ -452,7 +465,7 @@ export class Hud {
       btns.push({ cmd: 'stop', label: 'STOP', sub: 'Cancel orders' });
     }
     const sig =
-      `${kind ?? 'none'}|${input.place}|` +
+      `${kind ?? 'none'}|${input.place}|${input.commandMode}|` +
       btns
         .map(
           (b) =>
@@ -464,7 +477,8 @@ export class Hud {
     this.cmdsEl.innerHTML = btns
       .map((b) => {
         const placeOn = b.cmd.startsWith('build-') && input.place === Number(b.cmd.slice(6));
-        const cls = (b.classes ?? ['verb', placeOn ? 'on' : ''].filter(Boolean)).join(' ');
+        const commandOn = b.cmd === input.commandMode;
+        const cls = (b.classes ?? ['verb', placeOn || commandOn ? 'on' : ''].filter(Boolean)).join(' ');
         const dis = b.disabled ? ' disabled' : '';
         const sub = b.sub === undefined ? '' : `<small class="sub">${b.sub}</small>`;
         const detail =

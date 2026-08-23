@@ -228,11 +228,16 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
      Yard/tech unreachable, combat/AI unreadable; zero console errors;
   3. expert RTS systems run still finishing its report.
   Evidence/reports: `/home/bobbyranka/workspace/evidence/starhaven-blind-{gameplay,touch,systems}-sol/`.
-- **M6-A touch order truth + first income FROZEN** (`docs/M6_A_TOUCH_ORDER_TRUTH.md`,
-  `5694b28`) from code-traced root causes: MOVE/ATTACK HUD handlers were comments,
-  next tap always called selectTap, long-press hard-coded Move, and Resource team 3 entered
-  enemy-pick before gather. Luna strict TDD builder dispatched: browser QA must go RED on
-  current behavior before input.ts/hud.ts edits; sim.ts stays untouched.
+- **M6-A touch order truth + first income COMPLETE** (`docs/M6_A_TOUCH_ORDER_TRUTH.md`):
+  strict TDD RED saved in `tasks/M6A-red.log` (MOVE button left mode null), then GREEN
+  in input.ts/hud.ts only; sim.ts untouched. Context resolver excludes Resources from enemy
+  picks, resource target is 44 CSS px, armed MOVE/ATTACK/GATHER next-tap modes preserve
+  selection, long-press/right-click share context routing, mixed combat units never Gather.
+  Lead gates: `qa:touch-contract`, all m0–m5 suites, build PASS; zero console errors.
+  Fresh blind touch-only re-gate PASS: MOVE armed→tap→Moving, GATHER armed→resource→Gathering,
+  Volatiles visibly rose 40→48 in honest real time. Evidence/report:
+  `/home/bobbyranka/workspace/evidence/starhaven-m6a-blind-touch/`.
+  Remaining named gap: FIND IDLE WORKER is clipped at 1024×768 (next responsive-HUD piece).
 - **Production matches working tree** (`game-C12P1XJ5.js`): force-deployed twice — first the
   M5-A/M4-B state bobby was viewing, then this build. `desktop.html` route deployed too:
   strips the portrait rotate-gate so non-iPad browsers render full landscape UI
