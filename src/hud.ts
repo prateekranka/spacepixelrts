@@ -40,6 +40,7 @@ export class Hud {
   private matchSubEl: HTMLElement;
   private idlewEl: HTMLButtonElement;
   private pauseEl: HTMLButtonElement;
+  private boostsEl: HTMLDivElement;
   private civPickEl: HTMLElement;
   private guidanceEl: HTMLElement;
   private guidanceTargetEl: HTMLElement;
@@ -68,6 +69,11 @@ export class Hud {
         <div id="meta">
           <button type="button" id="scout-focus">Scout</button>
           <button type="button" id="idlew">Idle worker</button>
+          <div id="boosts" aria-label="Energy boosts" hidden>
+            <button type="button" id="boost-prod" data-boost="1" title="Production: faster training, drains 8 chg/s">Prod</button>
+            <button type="button" id="boost-vision" data-boost="2" title="Vision: +2.5 sight, drains 5 chg/s">Vision</button>
+            <button type="button" id="boost-shield" data-boost="3" title="Shields: building regen, drains 6 chg/s">Shield</button>
+          </div>
           <button type="button" id="pause-toggle" aria-label="Pause simulation" title="Pause simulation">Ⅱ</button>
           <div id="zoom" aria-label="Zoom controls">
             <span>Zoom</span>
@@ -112,6 +118,7 @@ export class Hud {
     this.matchSubEl = this.root.querySelector('#match-sub')!;
     this.idlewEl = this.root.querySelector('#idlew')!;
     this.pauseEl = this.root.querySelector('#pause-toggle')!;
+    this.boostsEl = this.root.querySelector('#boosts')!;
     this.civPickEl = this.root.querySelector('#civpick')!;
     this.guidanceEl = this.root.querySelector('#guidance')!;
     this.guidanceTargetEl = this.root.querySelector('#guidance-target')!;
@@ -128,6 +135,13 @@ export class Hud {
     this.root.querySelector('#idlew')!.addEventListener('click', () => input.commandAt('idleworker'));
     this.root.querySelector('#scout-focus')!.addEventListener('click', () => input.focusScout());
     this.pauseEl.addEventListener('click', () => onPauseToggle());
+    // M3-C — Sunweaver boost toggles: one active at a time, click again to turn off.
+    this.boostsEl.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('button[data-boost]') as HTMLButtonElement | null;
+      if (!btn) return;
+      const kind = Number(btn.dataset.boost!);
+      world.boosts[0] = world.boosts[0] === kind ? 0 : kind;
+    });
     this.root.querySelector('#zoom-out')!.addEventListener('click', () => input.zoomOut());
     this.root.querySelector('#zoom-in')!.addEventListener('click', () => input.zoomIn());
     this.minimap.addEventListener('pointerdown', (e) => {
@@ -165,6 +179,14 @@ export class Hud {
     (this.root.querySelector('#pop') as HTMLElement).textContent = `${eco.pop}/${eco.cap}`;
     (this.root.querySelector('#civname') as HTMLElement).textContent = CIV_NAME[world.civ[0]];
     (this.root.querySelector('#doctrine') as HTMLElement).textContent = CIV_PROFILE[world.civ[0]].doctrine;
+    // M3-C — boost strip only for Sunweaver; active button lit.
+    this.boostsEl.hidden = world.civ[0] !== 'vespari';
+    if (!this.boostsEl.hidden) {
+      const active = world.boosts[0];
+      for (const btn of this.boostsEl.querySelectorAll('button[data-boost]')) {
+        btn.classList.toggle('active', Number((btn as HTMLElement).dataset.boost) === active);
+      }
+    }
     this.fpsEl.textContent = `${fps} FPS`;
     this.fpsEl.className = fps < 55 ? 'low' : '';
     const idlePulse = world.ents.some(
@@ -571,6 +593,10 @@ const HUD_CSS = `
 #meta{display:flex;align-items:center;gap:12px;padding:0 14px}
 #meta b{font-variant-numeric:tabular-nums;font-size:13px;opacity:.7}
 #meta b.low{color:${P.coral};opacity:1}
+#boosts{display:flex;gap:6px}
+#boosts button{background:rgba(28,28,38,.72);border:1px solid #3a3a4c;color:#cfd4dc;font-size:13px;min-height:40px;min-width:64px;padding:4px 12px;border-radius:4px;cursor:pointer;letter-spacing:.03em}
+#boosts button:hover{border-color:#7fa7b8}
+#boosts button.active{background:${P.amber};border-color:${P.amber};color:#171326;font-weight:700}
 #scout-focus,#idlew,#pause-toggle,#zoom button,#cmds button{background:${P.deep};color:${P.cream};border:1px solid ${P.amber}88;border-radius:2px;min-height:44px;min-width:44px;padding:6px 10px;font:inherit;cursor:pointer}
 #scout-focus:hover,#idlew:hover,#pause-toggle:hover,#zoom button:hover,#cmds button:not(:disabled):hover{background:${P.plum}}
 #pause-toggle{font-size:17px;line-height:1;padding:4px 8px}

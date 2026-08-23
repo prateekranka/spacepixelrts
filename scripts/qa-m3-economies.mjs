@@ -165,6 +165,7 @@ async function main() {
   fs.mkdirSync(out, { recursive: true });
   const streamShot = path.join(out, 'm3a-link-streaming.png');
   const severedShot = path.join(out, 'm3a-link-severed.png');
+  const boostShot = path.join(out, 'm3c-boost-production.png');
   const manifest = {
     tool: 'qa-m3-economies',
     startedAt: new Date().toISOString(),
@@ -275,7 +276,38 @@ async function main() {
     await page.screenshot({ path: severedShot, type: 'png' });
     manifest.captures.severed = { file: path.basename(severedShot), image: analyzePng(severedShot) };
 
-    // 3. Frame budget with the software-GL aware gate (qa-m2-ai pattern).
+    // 3. M3-C — Sunweaver boost: toggle production via the sim, verify drain + HUD state.
+    const boosted = await page.evaluate((steps) => {
+      const world = globalThis.__STARHOLD_WORLD__;
+      if (!world) throw new Error('__STARHOLD_WORLD__ missing');
+      const energy0 = world.teams[0].energy;
+      world.boosts[0] = 1;
+      for (let s = 0; s < steps; s++) world.step();
+      return {
+        energy0,
+        energy1: world.teams[0].energy,
+        boost: world.boosts[0],
+        civ0: world.civ[0],
+      };
+    }, STREAM_STEPS);
+    manifest.checks.boost = boosted;
+    if (boosted.civ0 !== 'vespari') throw new Error(`boost check needs Sunweaver player (${boosted.civ0})`);
+    if (boosted.boost !== 1) throw new Error('boost did not stay active');
+    if (!(boosted.energy1 < boosted.energy0)) throw new Error(`boost did not drain (${boosted.energy0} -> ${boosted.energy1})`);
+    await settleFrames(page);
+    const boostUi = await page.evaluate(() => {
+      const strip = document.querySelector('#boosts');
+      if (!strip) throw new Error('#boosts missing');
+      const active = strip.querySelector('button.active');
+      return { hidden: strip.hasAttribute('hidden'), activeId: active?.id ?? null };
+    });
+    manifest.checks.boost.ui = boostUi;
+    if (boostUi.hidden) throw new Error('boost strip hidden for Sunweaver');
+    if (boostUi.activeId !== 'boost-prod') throw new Error(`production not lit (${boostUi.activeId})`);
+    await page.screenshot({ path: boostShot, type: 'png' });
+    manifest.captures.boost = { file: path.basename(boostShot), image: analyzePng(boostShot) };
+
+    // 4. Frame budget with the software-GL aware gate (qa-m2-ai pattern).
     const perf = await page.evaluate(() => {
       const world = globalThis.__STARHOLD_WORLD__;
       for (let i = 0; i < 120; i++) world.step();

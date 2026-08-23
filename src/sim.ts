@@ -437,6 +437,7 @@ export class World {
     this.thinkUnits();
     this.thinkBuildings();
     this.stepRigs();
+    this.stepBoosts();
     this.stepAge();
     this.stepCorpses();
     this.moveSeparate();
@@ -1116,6 +1117,22 @@ export class World {
     }
   }
 
+  /** M3-C C2/C3 — drains active boosts and auto-disables them below 4 energy. */
+  private stepBoosts(): void {
+    const DRAIN = [0, 8, 5, 6];
+    for (let t = 0; t < 2; t++) {
+      const kind = this.boosts[t];
+      if (kind === 0) continue;
+      const eco = this.teams[t];
+      if (eco.energy <= 4) {
+        this.boosts[t] = 0;
+        continue;
+      }
+      eco.energy = Math.max(0, eco.energy - DRAIN[kind] * DT);
+      if (eco.energy < 4) this.boosts[t] = 0;
+    }
+  }
+
   private stepAge(): void {
     for (let t = 0; t < 2; t++) {
       const eco = this.teams[t];
@@ -1136,6 +1153,10 @@ export class World {
       if (e.kind === Kind.Hall && e.civ === 'vespari') {
         // Slow self-repair.
         e.hp = Math.min(e.maxHp, e.hp + DT * 2);
+      }
+      // M3-C — Shields boost regen for this team's finished buildings.
+      if (this.boosts[e.team] === 3) {
+        e.hp = Math.min(e.maxHp, e.hp + DT * 6);
       }
       if (e.kind === Kind.UniqueB && e.civ === 'vespari') {
         this.sporeT[e.team] += DT;
@@ -1159,7 +1180,7 @@ export class World {
       } else e.cooldown = Math.max(0, e.cooldown - DT);
 
       if (e.trainT > 0) {
-        const spd = e.civ === 'vespari' ? 1.2 : 1;
+        const spd = (e.civ === 'vespari' ? 1.2 : 1) * (this.boosts[e.team] === 1 ? 1.8 : 1);
         e.trainT -= DT * spd;
         if (e.trainT <= 0) {
           e.trainT = 0;
@@ -1608,7 +1629,7 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team > 1) continue;
-      const los = STATS[e.kind].los + (e.civ === 'voidmarked' ? 1 : 0);
+      const los = STATS[e.kind].los + (e.civ === 'voidmarked' ? 1 : 0) + (this.boosts[e.team] === 2 ? 2.5 : 0);
       const r = Math.ceil(los);
       const vis = this.visible[e.team];
       const exp = this.explored[e.team];
@@ -1881,6 +1902,14 @@ export class World {
     this.stepAiTargetInvalidation();
     // M3-B B5 — Gravemark AI assigns idle workers to raise rigs on discovered nodes.
     this.stepAiRigs();
+    // M3-C C3 — Sunweaver AI boost policy: production while training, vision while scouting.
+    if (this.civ[1] === 'vespari') {
+      const trainingMilitary =
+        (barracks !== null && barracks.trainT > 0) || (hall !== null && hall.trainT > 0);
+      if (trainingMilitary && eco.energy > 80) this.boosts[1] = 1;
+      else if (this.tick < 1800 && eco.energy > 30) this.boosts[1] = 2;
+      else this.boosts[1] = 0;
+    }
   }
 
   /** M3-B B5 — aurion AI: one idle worker per discovered unrigged ore/gas node, capped. */
