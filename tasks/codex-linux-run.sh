@@ -17,7 +17,7 @@ CODEX_HOME_DIR="$HOME/.codex-linux"
 if [[ "$ROLE" == "sol" ]]; then
   MODEL="gpt-5.6-sol"
   EFFORT="max"
-  FAST="false"
+  FAST="true"
 elif [[ "$ROLE" == "luna" ]]; then
   MODEL="gpt-5.6-luna"
   EFFORT="max"
