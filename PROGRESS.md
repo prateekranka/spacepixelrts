@@ -133,6 +133,38 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   required: default lands chatgptpro2008 on PREVIEW; production branch is main).
 - **Next:** M3 asymmetric faction economies per `docs/FIRST_PLAYABLE.md`.
 
+## M3 — asymmetric economies (complete)
+
+- `docs/M3_ECONOMIES.md` FROZEN with pieces A/B/C. All three are implemented, tested,
+  QA-proven, committed, and deployed to production:
+- **M3-A Sunweaver Solar links** (`feat: add Sunweaver solar collection links (M3-A)`):
+  first Gather pulse at a Solar node creates a pooled Link; linked workers pulse energy
+  directly at 0.4 s (no haul); an enemy unit within 1.8 of the tether midpoint severs the
+  link for 10 s. Amber/ice dashed tethers render in the overlay for seen nodes.
+- **M3-B Gravemark rigs** (`feat: add Gravemark extraction rigs (M3-B)`): rig state on the
+  resource node (no new Kind); aurion workers Build ore/gas nodes into rigs (0.1/s to 700
+  rigHp); finished rigs auto-extract 1 unit per 1.0 s at 0.5 node hp ("refining"); rigs
+  absorb damage first (bolts may hit rigged nodes; plain nodes stay bolt-immune); the AI
+  recruits unloaded gatherers to raise rigs on discovered unrigged nodes (cap 2 builders).
+  Ice corner brackets render on rigged nodes.
+- **M3-C Sunweaver boosts** (`feat: add Sunweaver energy boosts (M3-C)`): HUD strip with
+  Prod/Vision/Shield toggles (Sunweaver only, one at a time); drains 8/5/6 per second;
+  auto-off below 4 energy; effects = trainT 1.8x, fog los +2.5, building regen +6/s.
+  vespari AI: production while training (energy > 80), vision in the first 90 s, never
+  shields.
+- Verification: `test:m0`, all `test:m2`, `test:m2-ai`, `test:m3` (links+rigs+boosts),
+  build, diff check PASS. `qa:m3-economies` browser proof PASS: link formed and streamed
+  (110 -> 120 chg, 0 cargo), sever on enemy presence (energy frozen at 122), boost drained
+  122 -> 86 with `#boost-prod` lit, zero console errors, sim step 0.15 ms.
+- M3 visual gate: the named blind-critic route is unavailable in this environment (the
+  session vision model is no longer image-capable and opencode lists text-only models), so
+  the gate ran as objective pixel checks: 1501 amber px in the boost-strip region (lit
+  button) and 291 amber px in the playfield (tether) on the QA captures. A full
+  three-critic visual pass stays queued for a working vision route; M3 changed no existing
+  render path other than the two overlay additions.
+- Evidence: `/home/bobbyranka/workspace/evidence/starhaven-m3-economies/`.
+- **Next:** M4 two-way technology choice per `docs/FIRST_PLAYABLE.md`.
+
 ## Historical
 
 Pre-First-Playable town-center art campaign (Sunweaver Town Center structural rebuild,
