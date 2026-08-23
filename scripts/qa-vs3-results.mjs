@@ -12,6 +12,7 @@ import { chromium } from 'playwright';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VIEWPORT = { width: 1366, height: 1024 };
 const DT = 1 / 20;
+const MIN_RESULT_TICKS = Math.ceil(60 / DT);
 const KIND = { Worker: 0, Ravager: 4, Hall: 10, Resource: 20 };
 const TILE = { Ore: 3 };
 const ORD = { Gather: 3, Return: 4, Attack: 2 };
@@ -47,6 +48,13 @@ function resolveOut(raw) {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatDuration(tick) {
+  const whole = Math.max(0, Math.floor(tick * DT + 1e-9));
+  const minutes = Math.floor(whole / 60);
+  const seconds = whole % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 function findOpenPort() {
@@ -123,7 +131,7 @@ async function main() {
     await page.goto(`${server.url}/?qa=opening&qa-run=1`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'Playing');
 
-    const fixture = await page.evaluate(({ kinds, tile, ord }) => {
+    const fixture = await page.evaluate(({ kinds, tile, ord, minimumTicks }) => {
       const world = globalThis.__STARHOLD_WORLD__;
       if (!world) throw new Error('__STARHOLD_WORLD__ missing');
       const playerHall = world.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === kinds.Hall);
@@ -140,13 +148,17 @@ async function main() {
       worker.z = worker.pz = playerHall.z;
       worker.order = ord.Return;
       world.step();
+      while (world.tick < minimumTicks) {
+        if (world.winner !== -1) throw new Error(`first match ended before fast-step (${world.winner})`);
+        world.step();
+      }
       rivalHall.hp = 2;
       const attacker = world.spawn(kinds.Ravager, world.civ[0], 0, rivalHall.x + 0.5, rivalHall.z);
       if (!attacker) throw new Error('combat fixture missing');
       world.issue([attacker.id], ord.Attack, rivalHall.x, rivalHall.z, rivalHall.id);
       for (let step = 0; step < 4 && world.winner === -1; step++) world.step();
       return { tick: world.tick, stats: world.matchStats(), winner: world.winner };
-    }, { kinds: KIND, tile: TILE, ord: ORD });
+    }, { kinds: KIND, tile: TILE, ord: ORD, minimumTicks: MIN_RESULT_TICKS });
     assertThat(fixture.winner === 0, `ordinary attack did not win (${fixture.winner})`);
     await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'Victory');
     const terminal = await page.evaluate(() => {
@@ -182,6 +194,10 @@ async function main() {
     await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'Results');
     const results = await page.evaluate(() => {
       const root = document.querySelector('#results');
+      const panel = document.querySelector('#results-panel');
+      const outcome = document.querySelector('#results-outcome');
+      const outcomeStyle = outcome ? getComputedStyle(outcome) : null;
+      const panelStyle = panel ? getComputedStyle(panel) : null;
       const normal = ['#topbar', '#bottom', '#civpick', '#hint', '#guidance'].every((selector) => {
         const element = document.querySelector(selector);
         return element && getComputedStyle(element).display === 'none';
@@ -193,6 +209,12 @@ async function main() {
       return {
         visible: !!root && !root.hasAttribute('hidden'),
         text: root?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        duration: document.querySelector('#results-duration')?.textContent?.trim() ?? '',
+        panelClasses: panel ? [...panel.classList] : [],
+        outcomeColor: outcomeStyle?.color ?? '',
+        outcomeTextShadow: outcomeStyle?.textShadow ?? '',
+        panelBorderColor: panelStyle?.borderTopColor ?? '',
+        panelBoxShadow: panelStyle?.boxShadow ?? '',
         normalHidden: normal,
         buttons,
       };
@@ -203,6 +225,12 @@ async function main() {
     }
     assertThat(results.normalHidden, 'normal game HUD remains visible in Results');
     assertThat(results.buttons.length === 2 && results.buttons.every((button) => button.height >= 44), 'Results action targets are too small');
+    assertThat(results.duration === formatDuration(terminal.tick) && results.duration !== '00:00', `Victory duration is not exact/nonzero (${results.duration}, tick ${terminal.tick})`);
+    assertThat(results.panelClasses.includes('win'), `Victory Results panel classes ${results.panelClasses.join(' ')}`);
+    assertThat(results.outcomeColor === 'rgb(156, 203, 110)', `Victory outcome color ${results.outcomeColor}`);
+    assertThat(results.outcomeTextShadow.includes('78, 138, 90'), `Victory outcome shadow ${results.outcomeTextShadow}`);
+    assertThat(results.panelBorderColor === 'rgb(78, 138, 90)', `Victory panel border ${results.panelBorderColor}`);
+    assertThat(results.panelBoxShadow.includes('78, 138, 90'), `Victory panel glow ${results.panelBoxShadow}`);
     await page.screenshot({ path: path.join(out, 'victory-results.png'), fullPage: true });
 
     await page.evaluate(() => {
@@ -275,8 +303,12 @@ async function main() {
     assertThat(replay.heightChanged, 'second seed did not change terrain height signature');
     await page.screenshot({ path: path.join(out, 'second-playing.png'), fullPage: true });
 
-    const defeatFixture = await page.evaluate(({ kinds, ord }) => {
+    const defeatFixture = await page.evaluate(({ kinds, ord, minimumTicks }) => {
       const world = globalThis.__STARHOLD_WORLD__;
+      while (world.tick < minimumTicks) {
+        if (world.winner !== -1) throw new Error(`second match ended before fast-step (${world.winner})`);
+        world.step();
+      }
       const playerHall = world.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === kinds.Hall);
       if (!playerHall) throw new Error('second player Core missing');
       playerHall.hp = 2;
@@ -288,7 +320,7 @@ async function main() {
       attacker.tz = playerHall.z;
       for (let step = 0; step < 6 && world.winner === -1; step++) world.step();
       return { winner: world.winner, stats: world.matchStats() };
-    }, { kinds: { Hall: KIND.Hall, Ravager: KIND.Ravager }, ord: ORD });
+    }, { kinds: { Hall: KIND.Hall, Ravager: KIND.Ravager }, ord: ORD, minimumTicks: MIN_RESULT_TICKS });
     assertThat(defeatFixture.winner === 1, `ordinary rival attack did not defeat (${defeatFixture.winner})`);
     await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'Defeat');
     const defeatTerminal = await page.evaluate(() => ({
@@ -301,11 +333,30 @@ async function main() {
     await page.screenshot({ path: path.join(out, 'defeat-terminal.png'), fullPage: true });
     await page.click('#match-continue');
     await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'Results');
-    const defeatResults = await page.evaluate(() => ({
-      text: document.querySelector('#results')?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-      visible: !(document.querySelector('#results')?.hasAttribute('hidden') ?? true),
-    }));
+    const defeatResults = await page.evaluate(() => {
+      const panel = document.querySelector('#results-panel');
+      const outcome = document.querySelector('#results-outcome');
+      const outcomeStyle = outcome ? getComputedStyle(outcome) : null;
+      const panelStyle = panel ? getComputedStyle(panel) : null;
+      return {
+        text: document.querySelector('#results')?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        visible: !(document.querySelector('#results')?.hasAttribute('hidden') ?? true),
+        duration: document.querySelector('#results-duration')?.textContent?.trim() ?? '',
+        panelClasses: panel ? [...panel.classList] : [],
+        outcomeColor: outcomeStyle?.color ?? '',
+        outcomeTextShadow: outcomeStyle?.textShadow ?? '',
+        panelBorderColor: panelStyle?.borderTopColor ?? '',
+        panelBoxShadow: panelStyle?.boxShadow ?? '',
+      };
+    });
     assertThat(defeatResults.visible && defeatResults.text.includes('DEFEAT'), 'Defeat Results missing outcome');
+    assertThat(defeatResults.duration === formatDuration(defeatTerminal.tick) && defeatResults.duration !== '00:00', `Defeat duration is not exact/nonzero (${defeatResults.duration}, tick ${defeatTerminal.tick})`);
+    assertThat(defeatResults.panelClasses.includes('lose'), `Defeat Results panel classes ${defeatResults.panelClasses.join(' ')}`);
+    assertThat(defeatResults.outcomeColor === 'rgb(215, 138, 154)', `Defeat outcome color ${defeatResults.outcomeColor}`);
+    assertThat(defeatResults.outcomeTextShadow.includes('184, 75, 69'), `Defeat outcome shadow ${defeatResults.outcomeTextShadow}`);
+    assertThat(defeatResults.panelBorderColor === 'rgb(184, 75, 69)', `Defeat panel border ${defeatResults.panelBorderColor}`);
+    assertThat(defeatResults.panelBoxShadow.includes('184, 75, 69'), `Defeat panel glow ${defeatResults.panelBoxShadow}`);
+    assertThat(defeatResults.outcomeColor !== results.outcomeColor, `Victory and Defeat outcome colors match (${results.outcomeColor})`);
     await page.screenshot({ path: path.join(out, 'defeat-results.png'), fullPage: true });
     await page.click('#results button[data-results-action="MAIN_MENU"]');
     await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'MainMenu');

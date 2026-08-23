@@ -116,6 +116,42 @@ console.log('VS3 spawn stats: PASS');
 console.log('VS3 income stats: PASS');
 
 {
+  const melee = new World();
+  melee.reset(0x5eed);
+  const meleeVictim = melee.spawn(Kind.Fighter, melee.civ[1], 1, 40, 40);
+  const meleeAttacker = melee.spawn(Kind.Ravager, melee.civ[0], 0, 40.5, 40);
+  assert.ok(meleeVictim && meleeAttacker, 'ordinary melee loss fixtures spawn');
+  meleeVictim.hp = 1;
+  meleeAttacker.order = Ord.Attack;
+  meleeAttacker.tid = meleeVictim.id;
+  meleeAttacker.tx = meleeVictim.x;
+  meleeAttacker.tz = meleeVictim.z;
+  melee.step();
+  assert.equal(meleeVictim.hp, 0, 'ordinary melee crosses positive HP to corpse');
+  assert.equal(melee.matchStats().teams[1].unitsLost, 1, 'ordinary melee records victim-team loss');
+  melee.kill(meleeVictim);
+  assert.equal(melee.matchStats().teams[1].unitsLost, 1, 'repeated melee kill does not duplicate loss');
+
+  const bolt = new World();
+  bolt.reset(0x5eed);
+  const boltVictim = bolt.spawn(Kind.Ravager, bolt.civ[1], 1, 40, 40);
+  const boltAttacker = bolt.spawn(Kind.Fighter, bolt.civ[0], 0, 39.2, 40);
+  assert.ok(boltVictim && boltAttacker, 'ordinary bolt loss fixtures spawn');
+  boltVictim.hp = 1;
+  boltAttacker.order = Ord.Attack;
+  boltAttacker.tid = boltVictim.id;
+  boltAttacker.tx = boltVictim.x;
+  boltAttacker.tz = boltVictim.z;
+  bolt.step();
+  assert.equal(boltVictim.hp, 0, 'ordinary bolt crosses positive HP to corpse');
+  assert.equal(bolt.matchStats().teams[1].unitsLost, 1, 'ordinary bolt records victim-team loss');
+  bolt.kill(boltVictim);
+  assert.equal(bolt.matchStats().teams[1].unitsLost, 1, 'repeated bolt kill does not duplicate loss');
+}
+
+console.log('VS3 ordinary combat loss: PASS');
+
+{
   const deaths = new World();
   deaths.reset(0x5eed);
   const worker = deaths.spawn(Kind.Worker, deaths.civ[0], 0, 18, 18);

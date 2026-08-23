@@ -380,7 +380,7 @@ export class World {
   kill(e: Ent): void {
     if (!e.alive) return;
     if (isUnit(e.kind)) {
-      const wasLiving = e.hp > 0;
+      const firstDeath = e.corpseT <= 0 && e.dissolveT <= 0;
       e.hp = 0;
       e.dissolveT = DISSOLVE_DUR;
       e.corpseT = STAIN_DUR;
@@ -388,7 +388,7 @@ export class World {
       e.path = null;
       e.tid = -1;
       e.order = Ord.Idle;
-      if (wasLiving && this.matchStatsTracking && (e.team === 0 || e.team === 1)) {
+      if (firstDeath && this.matchStatsTracking && (e.team === 0 || e.team === 1)) {
         this.matchStatsData[e.team].unitsLost++;
       }
       this.recountPop();

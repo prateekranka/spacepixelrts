@@ -465,8 +465,9 @@ export class Hud {
     const rival = stats.teams[1];
     const playerName = CIV_NAME[this.terminalCivs[0]];
     const rivalName = CIV_NAME[this.terminalCivs[1]];
+    const outcomeClass = outcome === 'VICTORY' ? 'win' : 'lose';
     this.resultsEl.innerHTML = `
-      <section id="results-panel" aria-label="Match results">
+      <section id="results-panel" class="${outcomeClass}" aria-label="Match results">
         <p class="results-kicker">MATCH COMPLETE // HELIOS RIFT</p>
         <h1 id="results-outcome">${outcome}</h1>
         <p id="results-duration">${duration}</p>
@@ -1032,9 +1033,12 @@ const HUD_CSS = `
 #match-continue:disabled{opacity:.55;cursor:default}
 #results{position:absolute;inset:0;display:grid;place-items:center;pointer-events:auto;z-index:8;padding:28px;box-sizing:border-box;background:radial-gradient(circle at 50% 38%,#17283b 0%,${P.ink} 64%)}
 #results-panel{box-sizing:border-box;width:min(760px,100%);max-height:calc(100vh - 56px);overflow:auto;padding:30px 36px 28px;border:2px solid ${P.amber};background:linear-gradient(${P.night}f4,${P.ink}f2);box-shadow:0 0 0 2px #000,0 18px 60px #000b,inset 0 0 28px #0007;text-align:center}
+#results-panel.win{border-color:${P.leaf};box-shadow:0 0 32px ${P.leaf}44,0 0 0 2px #000,0 18px 60px #000b,inset 0 0 28px #0007}
+#results-panel.lose{border-color:${P.red};box-shadow:0 0 32px ${P.red}44,0 0 0 2px #000,0 18px 60px #000b,inset 0 0 28px #0007}
 .results-kicker{margin:0;color:${P.amber};font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
-#results-outcome{margin:12px 0 0;color:${P.lime};font-size:36px;letter-spacing:.18em;text-transform:uppercase}
-#results-outcome:where(:not(:empty)){text-shadow:0 2px 0 #000,0 0 20px ${P.leaf}66}
+#results-outcome{margin:12px 0 0;color:${P.cream};font-size:36px;letter-spacing:.18em;text-transform:uppercase}
+#results-panel.win #results-outcome:where(:not(:empty)){color:${P.lime};text-shadow:0 2px 0 #000,0 0 20px ${P.leaf}66}
+#results-panel.lose #results-outcome:where(:not(:empty)){color:${P.coral};text-shadow:0 2px 0 #000,0 0 20px ${P.red}66}
 #results-duration{margin:7px 0 0;color:${P.cream};font-size:25px;font-weight:700;letter-spacing:.08em;font-variant-numeric:tabular-nums}
 #results-matchup{margin:8px 0 26px;color:${P.ice};font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
 .results-columns,.results-row{display:grid;grid-template-columns:minmax(180px,1.35fr) minmax(120px,1fr) minmax(120px,1fr);gap:14px;align-items:center}
