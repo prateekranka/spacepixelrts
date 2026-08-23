@@ -1,6 +1,6 @@
 /** P20–P23 — civilizations, stats, costs. */
 
-import { Kind, type Civ } from './engine';
+import { Kind, type Civ, type TeamEco } from './engine';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export const CIV_NAME: Record<Civ, string> = {
@@ -208,9 +208,117 @@ export const BUILD_HP_START = 0.08;
 
 export const EPOCH_NAME = ['Spark', 'Orbit', 'Dominion', 'Apex'] as const;
 
-/** Minimum epoch to train a unit from the Yard (DESIGN §4). */
+/** Minimum epoch to train a unit from the Yard (DESIGN §4). Legacy — M4-B removes. */
 export function minTrainEpoch(kind: Kind): number {
   if (kind === Kind.Fighter || kind === Kind.Shade) return 1;
   if (kind === Kind.Siege || kind === Kind.Ravager || kind === Kind.Prism) return 2;
   return 0;
+}
+
+// ---- M4 — technology paths (docs/M4_TECH_PATHS.md) ---------------------------------
+
+export type TechPathId =
+  | 'solar-ascendancy'
+  | 'sky-dominion'
+  | 'iron-colossus'
+  | 'rift-engineering';
+
+export interface TechPathInfo {
+  id: TechPathId;
+  civ: Civ;
+  name: string;
+  blurb: string;
+}
+
+/** One irreversible choice between two paths per faction (CANONICAL_VOCABULARY table). */
+export const TECH_PATHS: readonly TechPathInfo[] = [
+  {
+    id: 'solar-ascendancy',
+    civ: 'vespari',
+    name: 'Solar Ascendancy',
+    blurb: 'Severed links re-form in half the time; boosts drain less charge.',
+  },
+  {
+    id: 'sky-dominion',
+    civ: 'vespari',
+    name: 'Sky Dominion',
+    blurb: 'Combat units move faster; Scouts see farther.',
+  },
+  {
+    id: 'iron-colossus',
+    civ: 'aurion',
+    name: 'Iron Colossus',
+    blurb: 'Extraction rigs stand tougher and pump resources faster.',
+  },
+  {
+    id: 'rift-engineering',
+    civ: 'aurion',
+    name: 'Rift Engineering',
+    blurb: 'Ranged weapons reach farther; Breakers train faster.',
+  },
+];
+
+export function pathsForCiv(civ: Civ): TechPathId[] {
+  return TECH_PATHS.filter((p) => p.civ === civ).map((p) => p.id);
+}
+
+/** M4 decision 4 — every path number lives in this one table; tests assert plumbing. */
+export interface PathEffects {
+  /** solar-ascendancy — link re-form delay scale after a sever. */
+  linkSeverScale: number;
+  /** solar-ascendancy — boost energy drain multiplier. */
+  boostDrainMul: number;
+  /** sky-dominion — non-worker unit move speed multiplier. */
+  combatSpeedMul: number;
+  /** sky-dominion — flat Scout LOS bonus. */
+  scoutLosBonus: number;
+  /** iron-colossus — finished rig HP multiplier. */
+  rigHpMul: number;
+  /** iron-colossus — rig extraction interval, seconds per unit. */
+  rigExtractSec: number;
+  /** rift-engineering — flat non-melee attack range bonus. */
+  rangedRangeBonus: number;
+  /** rift-engineering — Siege-kind train time multiplier. */
+  siegeTrainMul: number;
+}
+
+const NEUTRAL_EFFECTS: PathEffects = {
+  linkSeverScale: 1,
+  boostDrainMul: 1,
+  combatSpeedMul: 1,
+  scoutLosBonus: 0,
+  rigHpMul: 1,
+  rigExtractSec: 1,
+  rangedRangeBonus: 0,
+  siegeTrainMul: 1,
+};
+
+export const PATH_EFFECTS: Record<TechPathId, PathEffects> = {
+  'solar-ascendancy': { ...NEUTRAL_EFFECTS, linkSeverScale: 0.5, boostDrainMul: 0.75 },
+  'sky-dominion': { ...NEUTRAL_EFFECTS, combatSpeedMul: 1.12, scoutLosBonus: 2 },
+  'iron-colossus': { ...NEUTRAL_EFFECTS, rigHpMul: 1.5, rigExtractSec: 0.75 },
+  'rift-engineering': { ...NEUTRAL_EFFECTS, rangedRangeBonus: 1, siegeTrainMul: 0.7 },
+};
+
+/** An uncommitted team plays with the identity numbers. */
+export function pathEffects(path: TechPathId | null): PathEffects {
+  return path ? PATH_EFFECTS[path] : NEUTRAL_EFFECTS;
+}
+
+const GATED_KINDS: readonly Kind[] = [
+  Kind.Fighter,
+  Kind.Siege,
+  Kind.Ravager,
+  Kind.Prism,
+  Kind.Shade,
+];
+
+/** Kinds locked behind a committed technology path (M4 decision 1). */
+export function isPathGated(kind: Kind): boolean {
+  return GATED_KINDS.includes(kind);
+}
+
+/** Gate helper — gated kinds train only once the team has committed. */
+export function gateOpen(eco: Pick<TeamEco, 'techPath'>, kind: Kind): boolean {
+  return !isPathGated(kind) || eco.techPath !== null;
 }

@@ -1,5 +1,7 @@
 /** P10 — deterministic tick, types, spatial hash. */
 
+import type { TechPathId } from './content';
+
 export const TICK_HZ = 20;
 export const DT = 1 / TICK_HZ;
 /** Two sim ticks of dissolve before corpse stain (DESIGN §5.4 #6). */
@@ -106,10 +108,12 @@ export interface TeamEco {
   energy: number;
   pop: number;
   cap: number;
-  /** 0 Spark · 1 Orbit · 2 Dominion · 3 Apex */
+  /** Legacy progression int; M4 writes it to 1 once on path commit for old readers. */
   epoch: number;
-  /** seconds remaining on current age-up research */
+  /** Seconds remaining on the age-up / path-commit channel. */
   ageT: number;
+  /** M4 — committed technology path; null until the commit channel completes. */
+  techPath: TechPathId | null;
 }
 
 export interface Bolt {

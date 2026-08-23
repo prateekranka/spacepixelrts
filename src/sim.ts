@@ -22,6 +22,7 @@ import {
   MAX_SPARKS,
 } from './engine';
 import type { Bolt, Civ, Ent, Spark, TeamEco } from './engine';
+import type { TechPathId } from './content';
 import {
   BUILD_HP_START,
   CIV_PROFILE,
@@ -29,9 +30,11 @@ import {
   POP_HALL,
   POP_HOUSE,
   STATS,
+  gateOpen,
   isBuilding,
   isUnit,
-  minTrainEpoch,
+  pathEffects,
+  pathsForCiv,
   uniqueUnit,
 } from './content';
 import {
@@ -66,6 +69,12 @@ const MARSHAL_PEEL_STAGGER_TICKS = 3;
 /** Enemy forward pad — siege rally / head-start spawn (off opening crop). */
 const MARSHAL_FORWARD_X = MAP - 18;
 const MARSHAL_FORWARD_Z = MAP - 16;
+/** M4 decision 2 — Nexus path commit cost and channel seconds. */
+const PATH_COMMIT_ORE = 400;
+const PATH_COMMIT_CHARGE = 80;
+const PATH_COMMIT_CHANNEL = 40;
+/** M3-A base Solar link re-form delay after a sever, in ticks; solar-ascendancy halves it. */
+const LINK_SEVER_TICKS = 300;
 
 export class World {
   readonly ents: Ent[] = Array.from({ length: MAX_ENTS }, makeEnt);
@@ -76,10 +85,10 @@ export class World {
   readonly explored = [new Uint8Array(MAP * MAP), new Uint8Array(MAP * MAP)];
   readonly visible = [new Uint8Array(MAP * MAP), new Uint8Array(MAP * MAP)];
   readonly teams: TeamEco[] = [
-    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 },
-    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 },
-    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0 },
-    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0 },
+    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0, techPath: null },
+    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0, techPath: null },
+    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0, techPath: null },
+    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0, techPath: null },
   ];
   readonly civ: Civ[] = ['vespari', 'aurion', 'voidmarked', 'vespari'];
   /** Gameplay fog by default; pass `?fog=0` from main for clear-map review. */
@@ -90,6 +99,8 @@ export class World {
   readonly links: Link[] = [];
   /** M3-C — per-team active boost: 0 off · 1 production · 2 vision · 3 shields. */
   readonly boosts: number[] = [0, 0];
+  /** M4 — path chosen for the running commit channel; applied when ageT hits 0. */
+  private pendingPath: (TechPathId | null)[] = [null, null, null, null];
   readonly bolts: Bolt[] = [];
   readonly sparks: Spark[] = [];
   readonly flags: { x: number; z: number; t: number }[] = [];
@@ -164,6 +175,7 @@ export class World {
       cap: 0,
       epoch: 0,
       ageT: 0,
+      techPath: null,
     };
     this.teams[1] = {
       ore: enemyStart.startOre,
@@ -173,6 +185,7 @@ export class World {
       cap: 0,
       epoch: 0,
       ageT: 0,
+      techPath: null,
     };
     this.explored[0].fill(0);
     this.explored[1].fill(0);
@@ -188,6 +201,7 @@ export class World {
     this.links.length = 0;
     this.boosts[0] = 0;
     this.boosts[1] = 0;
+    this.pendingPath = [null, null, null, null];
     this.genMap();
     this.spawnScenario();
     this.recountPop();
@@ -365,20 +379,52 @@ export class World {
     return true;
   }
 
+  /** M4 decision 2/3 — begin the irreversible Nexus path commit; rejects leave no trace. */
+  tryCommitPath(team: number, path: TechPathId): boolean {
+    if (team < 0 || team >= this.teams.length) return false;
+    if (!pathsForCiv(this.civ[team]).includes(path)) return false;
+    const eco = this.teams[team];
+    if (eco.epoch !== 0 || eco.ageT > 0 || eco.techPath !== null) return false;
+    let hallReady = false;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== team || e.kind !== Kind.Hall) continue;
+      if (e.trainT > 0) return false;
+      if (e.hp > 0 && e.progress >= 1) hallReady = true;
+    }
+    if (!hallReady) return false;
+    if (eco.ore < PATH_COMMIT_ORE || eco.energy < PATH_COMMIT_CHARGE) return false;
+    eco.ore -= PATH_COMMIT_ORE;
+    eco.energy -= PATH_COMMIT_CHARGE;
+    eco.ageT = PATH_COMMIT_CHANNEL;
+    this.pendingPath[team] = path;
+    return true;
+  }
+
+  /** M4 — committed path of a team (null before the commit channel completes). */
+  techPathOf(team: number): TechPathId | null {
+    return this.teams[team]?.techPath ?? null;
+  }
+
+  /** M4 — seconds remaining on the active commit channel (0 when idle or done). */
+  pathChannelT(team: number): number {
+    return this.teams[team]?.ageT ?? 0;
+  }
+
   tryTrain(building: Ent, kind: Kind): boolean {
     if (!building.alive || !isBuilding(building.kind)) return false;
     if (building.trainT > 0) return false;
     const st = STATS[kind];
     const eco = this.teams[building.team];
     if (building.kind === Kind.Hall && eco.ageT > 0) return false;
-    if (building.kind === Kind.Barracks && eco.epoch < minTrainEpoch(kind)) return false;
+    if (building.kind === Kind.Barracks && !gateOpen(eco, kind)) return false;
     if (eco.ore < st.ore || eco.gas < st.gas || eco.energy < st.energy) return false;
     if (eco.pop + st.pop > eco.cap) return false;
     eco.ore -= st.ore;
     eco.gas -= st.gas;
     eco.energy -= st.energy;
     building.trainKind = kind;
-    building.trainT = st.train;
+    building.trainT = st.train * pathEffects(eco.techPath).siegeTrainMul;
     return true;
   }
 
@@ -803,6 +849,7 @@ export class World {
 
   private strikeRange(e: Ent, st: (typeof STATS)[number], t: Ent): number {
     let r = st.range + t.radius;
+    if (!st.melee) r += pathEffects(this.teams[e.team].techPath).rangedRangeBonus;
     if (this.tick < 240 && this.openingClashEnt(e) && !st.melee) r += 0.95;
     return r;
   }
@@ -943,7 +990,10 @@ export class World {
           !crossedCenter;
         const gx = target && e.order !== Ord.Move && !openingMarch ? target.x : e.tx;
         const gz = target && e.order !== Ord.Move && !openingMarch ? target.z : e.tz;
-        this.steer(e, gx, gz, st.spd * (1 + e.frenzy * 0.08));
+        // M4 decision 4 — sky-dominion quickens non-worker combat movement.
+        const spdMul =
+          e.kind === Kind.Worker ? 1 : pathEffects(this.teams[e.team].techPath).combatSpeedMul;
+        this.steer(e, gx, gz, st.spd * spdMul * (1 + e.frenzy * 0.08));
         const pathDone = !e.path || e.pathI >= (e.path.length >> 1);
         const reachedGoalTile = pathDone && tileAt(e.x, e.z) === tileAt(e.tx, e.tz);
         if (e.order === Ord.Move && (dist2(e.x, e.z, e.tx, e.tz) < 0.16 || reachedGoalTile)) {
@@ -1044,7 +1094,8 @@ export class World {
       if (!u.alive || u.team === e.team) continue;
       if (!isUnit(u.kind)) continue;
       if (dist2(u.x, u.z, mx, mz) < r2) {
-        link.severedUntil = this.tick + 300;
+        const fx = pathEffects(this.teams[e.team].techPath);
+        link.severedUntil = this.tick + Math.round(LINK_SEVER_TICKS * fx.linkSeverScale);
         return false;
       }
     }
@@ -1085,7 +1136,8 @@ export class World {
         e.vx = e.vz = 0;
         if (b.rigTeam < 0) b.rigTeam = e.team;
         b.rigProgress = Math.min(1, b.rigProgress + DT * 0.1);
-        b.rigHp = 700 * b.rigProgress;
+        const fx = pathEffects(this.teams[e.team].techPath);
+        b.rigHp = 700 * b.rigProgress * fx.rigHpMul;
         if (b.rigProgress >= 1) e.order = Ord.Gather;
       } else this.steer(e, b.x, b.z, st.spd);
       return;
@@ -1106,9 +1158,10 @@ export class World {
       if (n.rigTeam < 0 || n.rigProgress < 1) continue;
       if (n.cargoType !== Tile.Ore && n.cargoType !== Tile.Gas) continue;
       const eco = this.teams[n.rigTeam];
+      const iv = pathEffects(eco.techPath).rigExtractSec;
       n.rigAccum += DT;
-      while (n.rigAccum >= 1 && n.hp > 0) {
-        n.rigAccum -= 1;
+      while (n.rigAccum >= iv && n.hp > 0) {
+        n.rigAccum -= iv;
         n.hp = Math.max(0, n.hp - 0.5);
         if (n.cargoType === Tile.Ore) eco.ore += 1;
         else eco.gas += 1;
@@ -1128,11 +1181,13 @@ export class World {
         this.boosts[t] = 0;
         continue;
       }
-      eco.energy = Math.max(0, eco.energy - DRAIN[kind] * DT);
+      const fx = pathEffects(eco.techPath);
+      eco.energy = Math.max(0, eco.energy - DRAIN[kind] * DT * fx.boostDrainMul);
       if (eco.energy < 4) this.boosts[t] = 0;
     }
   }
 
+  /** M4 — resolves the commit channel: applies the pending path once, irreversibly. */
   private stepAge(): void {
     for (let t = 0; t < 2; t++) {
       const eco = this.teams[t];
@@ -1140,7 +1195,15 @@ export class World {
       eco.ageT -= DT;
       if (eco.ageT <= 0) {
         eco.ageT = 0;
-        if (eco.epoch === 0) eco.epoch = 1;
+        const pending = this.pendingPath[t];
+        this.pendingPath[t] = null;
+        if (pending !== null && eco.techPath === null) {
+          // Decision 5 — epoch=1 written once for legacy readers, then never again.
+          eco.techPath = pending;
+          eco.epoch = 1;
+        } else if (eco.epoch === 0) {
+          eco.epoch = 1;
+        }
       }
     }
   }
@@ -1629,7 +1692,11 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team > 1) continue;
-      const los = STATS[e.kind].los + (e.civ === 'voidmarked' ? 1 : 0) + (this.boosts[e.team] === 2 ? 2.5 : 0);
+      const los =
+        STATS[e.kind].los +
+        (e.civ === 'voidmarked' ? 1 : 0) +
+        (this.boosts[e.team] === 2 ? 2.5 : 0) +
+        (e.kind === Kind.Scout ? pathEffects(this.teams[e.team].techPath).scoutLosBonus : 0);
       const r = Math.ceil(los);
       const vis = this.visible[e.team];
       const exp = this.explored[e.team];
@@ -1723,7 +1790,7 @@ export class World {
     if (!this.marshalPeelQ.includes(e.id)) this.marshalPeelQ.push(e.id);
   }
 
-  /** Tick 240: off-screen Dominion for the enemy marshal; ore/gas/charge for mixed-arms Yard queue. */
+  /** Tick 240: off-screen doctrine commit for the enemy marshal; ore/gas/charge for mixed-arms Yard queue. */
   private stepEnemyMarshal(): void {
     if (this.tick < 240) return;
     const eco = this.teams[1];
@@ -1731,7 +1798,9 @@ export class World {
     eco.gas = Math.max(eco.gas, 40);
     eco.energy = Math.max(eco.energy, 40);
     if (this.tick === 240) {
-      eco.epoch = 2;
+      // M4 decision 6 — instant doctrine commit replaces the old epoch jump.
+      eco.techPath = this.civ[1] === 'vespari' ? 'sky-dominion' : 'iron-colossus';
+      this.pendingPath[1] = null;
       eco.ageT = 0;
       eco.ore = Math.max(eco.ore, 500);
       eco.gas = Math.max(eco.gas, 120);
@@ -1766,7 +1835,7 @@ export class World {
 
   private pumpMarshalTraining(): void {
     const eco = this.teams[1];
-    if (eco.epoch < minTrainEpoch(Kind.Fighter)) return;
+    if (!gateOpen(eco, Kind.Fighter)) return;
     let hall: Ent | null = null;
     let barracks: Ent | null = null;
     let workers = 0;
@@ -1785,7 +1854,7 @@ export class World {
     const stS = STATS[Kind.Siege];
     if (
       barracks.trainT <= 0 &&
-      eco.epoch >= minTrainEpoch(Kind.Siege) &&
+      gateOpen(eco, Kind.Siege) &&
       sieges < 1 &&
       eco.pop + stS.pop <= eco.cap &&
       eco.ore >= stS.ore &&
@@ -1868,7 +1937,7 @@ export class World {
       const k = fighters > 6 && eco.gas >= 45 ? uniqueUnit(this.civ[1]) : Kind.Fighter;
       if (
         this.tick < 240 &&
-        eco.epoch >= minTrainEpoch(k) &&
+        gateOpen(eco, k) &&
         eco.ore >= STATS[k].ore &&
         eco.gas >= STATS[k].gas &&
         eco.energy >= STATS[k].energy
