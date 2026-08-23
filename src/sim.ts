@@ -228,6 +228,10 @@ export class World {
     e.radius = st.radius;
     e.vis = true;
     e.seenBy = 0;
+    e.rigTeam = -1;
+    e.rigProgress = 0;
+    e.rigHp = 0;
+    e.rigAccum = 0;
     e.path = null;
     e.pathI = 0;
     e.hitFlash = 0;
@@ -432,6 +436,7 @@ export class World {
     }
     this.thinkUnits();
     this.thinkBuildings();
+    this.stepRigs();
     this.stepAge();
     this.stepCorpses();
     this.moveSeparate();
@@ -1061,12 +1066,54 @@ export class World {
       e.order = Ord.Idle;
       return;
     }
+    // M3-B — Gravemark workers raise extraction rigs on ore/gas nodes.
+    if (b.kind === Kind.Resource) {
+      if (e.civ !== 'aurion') {
+        e.order = Ord.Idle;
+        return;
+      }
+      if (b.cargoType !== Tile.Ore && b.cargoType !== Tile.Gas) {
+        e.order = Ord.Idle;
+        return;
+      }
+      if (b.rigTeam >= 0 && b.rigTeam !== e.team) {
+        e.order = Ord.Idle;
+        return;
+      }
+      if (dist2(e.x, e.z, b.x, b.z) < (b.radius + 0.5) ** 2) {
+        e.vx = e.vz = 0;
+        if (b.rigTeam < 0) b.rigTeam = e.team;
+        b.rigProgress = Math.min(1, b.rigProgress + DT * 0.1);
+        b.rigHp = 700 * b.rigProgress;
+        if (b.rigProgress >= 1) e.order = Ord.Gather;
+      } else this.steer(e, b.x, b.z, st.spd);
+      return;
+    }
     if (dist2(e.x, e.z, b.x, b.z) < (b.radius + 0.5) ** 2) {
       e.vx = e.vz = 0;
       b.progress = Math.min(1, b.progress + DT * 0.12);
       b.hp = Math.min(b.maxHp, b.maxHp * b.progress);
       if (b.progress >= 1) e.order = Ord.Idle;
     } else this.steer(e, b.x, b.z, st.spd);
+  }
+
+  /** M3-B B3 — finished rigs auto-extract 1 unit per 1.0 s for 0.5 node hp. */
+  private stepRigs(): void {
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const n = this.ents[i];
+      if (!n.alive || n.kind !== Kind.Resource) continue;
+      if (n.rigTeam < 0 || n.rigProgress < 1) continue;
+      if (n.cargoType !== Tile.Ore && n.cargoType !== Tile.Gas) continue;
+      const eco = this.teams[n.rigTeam];
+      n.rigAccum += DT;
+      while (n.rigAccum >= 1 && n.hp > 0) {
+        n.rigAccum -= 1;
+        n.hp = Math.max(0, n.hp - 0.5);
+        if (n.cargoType === Tile.Ore) eco.ore += 1;
+        else eco.gas += 1;
+      }
+      if (n.hp <= 0) this.kill(n);
+    }
   }
 
   private stepAge(): void {
@@ -1133,6 +1180,22 @@ export class World {
     }
   }
 
+  /** M3-B B4 — a finished rig absorbs damage before the base node does. */
+  private damageRigAware(t: Ent, dmg: number): void {
+    if (t.kind === Kind.Resource && t.rigTeam >= 0 && t.rigProgress >= 1) {
+      t.rigHp -= dmg;
+      if (t.rigHp <= 0) {
+        t.rigHp = 0;
+        t.rigTeam = -1;
+        t.rigProgress = 0;
+        t.rigAccum = 0;
+        this.spawnSpark(t.x, t.z, 1, 'aurion');
+      }
+      return;
+    }
+    t.hp -= dmg;
+  }
+
   private tryStrike(e: Ent, t: Ent, st: typeof STATS[number]): void {
     if (e.cooldown > 0) return;
     if (this.tick < 240 && t.kind === Kind.Worker) return;
@@ -1144,7 +1207,7 @@ export class World {
       (e.civ === 'aurion' ? 0.92 : 1) *
       this.openingDmgMul(e, t);
     if (st.melee) {
-      t.hp -= applied * bonus;
+      this.damageRigAware(t, applied * bonus);
       if (t.team === 1 && this.tick < 240) t.hitFlash = 0.45;
       this.spawnSpark(t.x, t.z, 1, e.civ);
       this.onHit?.();
@@ -1232,11 +1295,12 @@ export class World {
       for (const id of this.q) {
         const e = this.ents[id];
         if (!e.alive || e.hp <= 0 || e.team === b.team) continue;
-        if (e.kind === Kind.Resource) continue;
+        // M3-B — bolts may strike rigged resource nodes; plain nodes stay immune.
+        if (e.kind === Kind.Resource && e.rigTeam < 0) continue;
         if (e.kind === Kind.Worker) continue;
         if (e.kind === Kind.Shade && e.stealth > 0.6) continue;
         if (dist2(b.x, b.z, e.x, e.z) < (e.radius + 0.25) ** 2) {
-          e.hp -= b.dmg;
+          this.damageRigAware(e, b.dmg);
           if (e.team === 1 && this.tick < 240) e.hitFlash = 0.45;
           this.markCombat(e);
           this.spawnSpark(b.x, b.z, 1, b.civ);
@@ -1815,6 +1879,67 @@ export class World {
     // M2-D R3/R4 — deterministic scouting and sight-based target invalidation.
     this.stepAiScout();
     this.stepAiTargetInvalidation();
+    // M3-B B5 — Gravemark AI assigns idle workers to raise rigs on discovered nodes.
+    this.stepAiRigs();
+  }
+
+  /** M3-B B5 — aurion AI: one idle worker per discovered unrigged ore/gas node, capped. */
+  private stepAiRigs(): void {
+    if (this.civ[1] !== 'aurion') return;
+    let builders = 0;
+    const claimed = new Set<number>();
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1 || e.kind !== Kind.Worker) continue;
+      if (e.order === Ord.Build && e.tid >= 0) {
+        const t = this.ents[e.tid];
+        if (t?.alive && t.kind === Kind.Resource) {
+          builders++;
+          claimed.add(e.tid);
+        }
+      }
+    }
+    if (builders >= 2) return;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1 || e.kind !== Kind.Worker) continue;
+      // The census above turns idle workers into Gather; rigs recruit unloaded
+      // gatherers (not hauling cargo) and never touch the opening tableau.
+      const eligible =
+        e.order === Ord.Gather && e.cargo === 0 && !this.openingTableauWorker(e);
+      if (!eligible) continue;
+      if (builders >= 2) return;
+      const node = this.nearestUnriggedNode(e.x, e.z, claimed);
+      if (!node) return;
+      claimed.add(node.id);
+      e.order = Ord.Build;
+      e.tid = node.id;
+      e.tx = node.x;
+      e.tz = node.z;
+      e.path = null;
+      e.pathI = 0;
+      builders++;
+    }
+  }
+
+  /** Nearest discovered ore/gas node without a friendly rig and not already claimed. */
+  private nearestUnriggedNode(x: number, z: number, claimed: Set<number>): Ent | null {
+    let best: Ent | null = null;
+    let bestD = 1e9;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.kind !== Kind.Resource) continue;
+      if (e.cargoType !== Tile.Ore && e.cargoType !== Tile.Gas) continue;
+      if ((e.seenBy & SEEN_RIVAL) === 0) continue;
+      if (e.rigTeam >= 0) continue;
+      if (claimed.has(e.id)) continue;
+      const d = dist2(x, z, e.x, e.z);
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    return best;
   }
 
   /** M2-D R3 — send an idle rival Scout to the nearest explored-but-not-visible tile. */

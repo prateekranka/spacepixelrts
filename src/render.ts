@@ -2058,6 +2058,34 @@ export class GameRenderer {
       ctx.globalAlpha = 1;
     }
 
+    // M3-B — Gravemark rig brackets on rigged resource nodes the player has seen.
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const n = world.ents[i];
+      if (!n.alive || n.kind !== Kind.Resource || n.rigTeam < 0 || !n.vis) continue;
+      const p = this.project(n.x, this.groundY(n.x, n.z) + 0.12, n.z, this.projectPointScratch);
+      const half = 10 + n.rigProgress * 8;
+      const done = n.rigProgress >= 1;
+      ctx.globalAlpha = done ? 0.85 : 0.35 + n.rigProgress * 0.4;
+      ctx.strokeStyle = done ? P.ice : P.sky;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      // Four corner brackets.
+      ctx.moveTo(p.x - half, p.y - half + 5);
+      ctx.lineTo(p.x - half, p.y - half);
+      ctx.lineTo(p.x - half + 5, p.y - half);
+      ctx.moveTo(p.x + half - 5, p.y - half);
+      ctx.lineTo(p.x + half, p.y - half);
+      ctx.lineTo(p.x + half, p.y - half + 5);
+      ctx.moveTo(p.x + half, p.y + half - 5);
+      ctx.lineTo(p.x + half, p.y + half);
+      ctx.lineTo(p.x + half - 5, p.y + half);
+      ctx.moveTo(p.x - half + 5, p.y + half);
+      ctx.lineTo(p.x - half, p.y + half);
+      ctx.lineTo(p.x - half, p.y + half - 5);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
     const opening = world.tick < 240;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = world.ents[i];

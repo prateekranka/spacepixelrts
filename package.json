@@ -20,7 +20,7 @@
     "qa:m2-ai": "node scripts/qa-m2-ai.mjs",
     "test:m2-ai": "tsx tests/m2-ai-knowledge.test.ts",
     "qa:m3-economies": "node scripts/qa-m3-economies.mjs",
-    "test:m3": "tsx tests/m3-economies.test.ts"
+    "test:m3": "tsx tests/m3-economies.test.ts && tsx tests/m3-rigs.test.ts"
   },
   "dependencies": {
     "three": "^0.180.0"

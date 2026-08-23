@@ -85,6 +85,11 @@ export interface Ent {
   vis: boolean;
   /** Discovery latch bits — bit 1 is player team 0, bit 2 is AI team 1 (M2-B). */
   seenBy: number;
+  /** M3-B — Gravemark extraction rig on this resource node (docs/M3_ECONOMIES.md). */
+  rigTeam: number;
+  rigProgress: number;
+  rigHp: number;
+  rigAccum: number;
   path: number[] | null;
   pathI: number;
   hitFlash: number;
@@ -169,6 +174,10 @@ export function makeEnt(): Ent {
     radius: 0.3,
     vis: true,
     seenBy: 0,
+    rigTeam: -1,
+    rigProgress: 0,
+    rigHp: 0,
+    rigAccum: 0,
     path: null,
     pathI: 0,
     hitFlash: 0,
