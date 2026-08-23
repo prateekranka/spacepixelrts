@@ -2036,6 +2036,28 @@ export class GameRenderer {
       ctx.globalAlpha = 1;
     }
 
+    // M3-A — Sunweaver Solar collection tethers (only for nodes the player has seen).
+    for (const link of world.links) {
+      const node = world.ents[link.nodeId];
+      const hall = world.ents[link.hallId];
+      if (!node?.alive || !hall?.alive || !node.vis) continue;
+      const severed = link.severedUntil > world.tick;
+      const pa = this.project(node.x, this.groundY(node.x, node.z) + 0.18, node.z, this.projectPointScratch);
+      const ax = pa.x;
+      const ay = pa.y;
+      const pb = this.project(hall.x, this.groundY(hall.x, hall.z) + 0.18, hall.z, this.projectPointScratch);
+      ctx.globalAlpha = severed ? 0.2 : 0.55;
+      ctx.strokeStyle = link.team === 0 ? P.amber : P.ice;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([7, 6]);
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(pb.x, pb.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
     const opening = world.tick < 240;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = world.ents[i];

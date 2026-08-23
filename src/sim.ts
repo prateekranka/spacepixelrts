@@ -47,6 +47,15 @@ import {
 import { SEEN_PLAYER, SEEN_RIVAL, makeHeliosLandmarks } from './discovery';
 import type { DiscoveryEvent, EntityDiscoveryEvent, Landmark } from './discovery';
 
+/** M3-A — Sunweaver Solar collection link record (docs/M3_ECONOMIES.md). */
+export interface Link {
+  nodeId: number;
+  hallId: number;
+  team: number;
+  /** Tick until which the link is severed; -1 = live. */
+  severedUntil: number;
+}
+
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
 const DC = [1, 1, 1, 1, 1.4142, 1.4142, 1.4142, 1.4142];
@@ -77,6 +86,10 @@ export class World {
   fogOfWarEnabled = true;
   /** M2-D — legacy scripted marshal cheats are off by default (docs/M2_D_AI_KNOWLEDGE.md). */
   scriptedMarshalEnabled = false;
+  /** M3-A — Sunweaver Solar collection links (docs/M3_ECONOMIES.md). */
+  readonly links: Link[] = [];
+  /** M3-C — per-team active boost: 0 off · 1 production · 2 vision · 3 shields. */
+  readonly boosts: number[] = [0, 0];
   readonly bolts: Bolt[] = [];
   readonly sparks: Spark[] = [];
   readonly flags: { x: number; z: number; t: number }[] = [];
@@ -172,6 +185,9 @@ export class World {
     this.aiT = 0;
     this.discoveryLog.length = 0;
     this.landmarks = makeHeliosLandmarks();
+    this.links.length = 0;
+    this.boosts[0] = 0;
+    this.boosts[1] = 0;
     this.genMap();
     this.spawnScenario();
     this.recountPop();
@@ -987,6 +1003,8 @@ export class World {
       e.vx = e.vz = 0;
       e.path = null;
       if (e.cooldown <= 0) {
+        // M3-A — Sunweaver workers pulse energy over a Solar link instead of hauling.
+        if (this.trySolarLinkPulse(e, node)) return;
         e.cargo += 1;
         e.cargoType = node.cargoType;
         node.hp -= 1;
@@ -998,6 +1016,42 @@ export class World {
       e.vx = e.vz = 0;
       e.path = null;
     }
+  }
+
+  /** M3-A — try a linked Solar energy pulse for a Sunweaver worker (docs/M3_ECONOMIES.md A1–A3). */
+  private trySolarLinkPulse(e: Ent, node: Ent): boolean {
+    if (e.civ !== 'vespari' || node.cargoType !== Tile.Solar) return false;
+    const hall = this.nearestHall(e.team, node.x, node.z);
+    if (!hall) return false;
+    let link = this.links.find((l) => l.nodeId === node.id && l.team === e.team);
+    if (!link) {
+      link = { nodeId: node.id, hallId: hall.id, team: e.team, severedUntil: -1 };
+      this.links.push(link);
+    }
+    if (link.severedUntil > this.tick) return false;
+    // A3 — an enemy unit near the tether midpoint severs the link for 10 s.
+    const mx = (node.x + hall.x) * 0.5;
+    const mz = (node.z + hall.z) * 0.5;
+    const r2 = 1.8 * 1.8;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const u = this.ents[i];
+      if (!u.alive || u.team === e.team) continue;
+      if (!isUnit(u.kind)) continue;
+      if (dist2(u.x, u.z, mx, mz) < r2) {
+        link.severedUntil = this.tick + 300;
+        return false;
+      }
+    }
+    const eco = this.teams[e.team];
+    eco.energy += 1;
+    node.hp -= 1;
+    e.cooldown = 0.4;
+    if (node.hp <= 0) {
+      this.kill(node);
+      const idx = this.links.indexOf(link);
+      if (idx >= 0) this.links.splice(idx, 1);
+    }
+    return true;
   }
 
   private thinkBuild(e: Ent): void {
