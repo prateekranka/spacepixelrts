@@ -1,12 +1,11 @@
 // M3-A — Sunweaver Solar collection links (docs/M3_ECONOMIES.md A1–A3).
 
 import assert from 'node:assert/strict';
-import { Kind, Ord, Tile } from '../src/engine';
+import { DT, Kind, Ord, Tile } from '../src/engine';
 import { CIV_PROFILE } from '../src/content';
 import { World } from '../src/sim';
 
 const SEED = 0x5eed;
-const DT = 1 / 30;
 
 function solarNode(world: World) {
   // The Solar node nearest the player Hall — the base node, not a mid-map patch.
@@ -128,10 +127,10 @@ function placeWorkerAtNode(world: World, team: number, nodeId: number) {
   for (let i = 0; i < 15; i++) w.step();
   assert.ok(link.severedUntil > w.tick, 'severed now');
   const severTick = link.severedUntil;
-  // Remove the enemy, then step past the 10 s window.
+  // Remove the enemy, then step past the 10 s window (sever cooldown is in ticks).
   enemy.alive = false;
   const energy0 = w.teams[0].energy;
-  const stepsPast = Math.ceil((severTick - w.tick) / DT) + 5;
+  const stepsPast = severTick - w.tick + 5;
   for (let i = 0; i < stepsPast; i++) w.step();
   const energyAfter = w.teams[0].energy;
   assert.ok(energyAfter > energy0, 'link relinked after cooldown and streams again');
