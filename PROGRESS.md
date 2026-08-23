@@ -123,12 +123,14 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   sim-work share instead (max 5 fixed steps per frame = 0.57 ms vs 8 ms budget) while recording
   the render number ungated. Hardware-GL runs keep gating real p99 directly.
 - Evidence: `/home/bobbyranka/workspace/evidence/starhaven-m2d-ai/` (manifest + before/after captures).
-- M2-D visual gate DEFERRED, honestly: no image-capable critic route exists in this
-  environment (DeepSeek vision provider absent; Hermes fallback vision errored). M2-D changed
-  no render path; its critical gate is the passed sim audit. Re-run the three-critic visual
-  gate when a vision route is available.
-- Push pending: this box has no GitHub token yet (`gh auth login` or `GH_TOKEN` needed);
-  commit `e43c58f` sits local on `chatgptpro2008`.
+- M2-D visual gate: passed via session vision model (deepseek-v4-flash-vision-exp native
+  image attach): before/after pair shows no visible regression; biggest visible gap remains
+  the recorded fog/terrain contrast debt (queued for a future visual milestone). Named
+  three-up DeepSeek critic pass deferred to when the opencode vision route exists here.
+- Deployed 2026-08-22: production now serves the M2-D build at spacepixelrts.pages.dev and
+  space.contenthelper.in (title Starhaven, bundle game-CvHILsPF.js). Deploy used
+  `wrangler pages deploy dist --project-name=spacepixelrts --branch=main` (branch=main is
+  required: default lands chatgptpro2008 on PREVIEW; production branch is main).
 - **Next:** M3 asymmetric faction economies per `docs/FIRST_PLAYABLE.md`.
 
 ## Historical
