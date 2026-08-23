@@ -280,15 +280,17 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   Max-fast blind gate: **PASS**. Named gap: final four combat silhouettes, already locked as VS-4.
   Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs2a-r2-lead/` and
   `/home/bobbyranka/workspace/evidence/starhaven-vs2a-observer/`.
-- **VS-2B Central Lumen ownership FROZEN / ACTIVE** (`docs/VS2B_LUMEN_FIELD.md`): combat
-  units capture the discovered center in 5s; owner earns +1 Charge/s and a 4s global vision pulse
-  each 30s; contested/empty states preserve owner but reset capture; no alternate victory. Compact
-  status/bar lives under matchup tiles and minimap marker tints by owner. Strict TDD + eight-state
-  1366×1024 browser proof; no AI doctrine, combat assets, stats, input, or app-flow work.
-  R1 implementation (`0acf224`, local/unpushed) passed sim/HUD/QA regressions but fresh Sol
-  FAILed one spatial-readability gap: panel states were clear, yet no clear world/minimap marker
-  connected them to the conflict. R2 adds one projected ring/beacon environment asset and a larger
-  minimap marker; objective mechanics stay frozen.
+- **VS-2B Central Lumen ownership COMPLETE** (`0acf224` + marker repair `0813d75`): exact
+  combat roster captures the discovered 4.5-radius field in 5s; contested/empty reset progress;
+  owner receives +1 Charge/s and a 4s global vision pulse every 30 owned seconds; no winner change.
+  Compact panel and 6px bar live under matchup tiles; minimap marker tints by owner. R1 sim/HUD/QA
+  passed but fresh Sol FAILed the missing spatial link. R2 browser RED proved 0/32 overlay perimeter
+  samples in all seven states and absent +/-10 minimap ring colors; GREEN adds a projected 32-point
+  world ring, LUMEN beacon/plate, partial capture arc, contested/owner colors, pulse ring, and larger
+  minimap marker with zero WebGL calls. Lead replay: 32/32 all states, player/rival exact +10 Charge,
+  pulse 30s/4s, sim share <0.8ms, winner -1, console 0, all VS2/M0–M5/build gates PASS. Fresh Sol
+  R2 blind gate: **PASS**. Named non-blocking debt: thin capture progress. Evidence:
+  `/home/bobbyranka/workspace/evidence/starhaven-vs2b-r2-lead/`. Next: VS-3 terminal/results.
 - **Production live at VS-2A** (`5833429`, `assets/main-LvBGVAyw.js`): deployed to the
   existing `spacepixelrts` Pages project on production branch `main`. Live production QA readback
   at tick 9650 confirms Standard AI, scripted marshal false, one Yard, one Habitat, Iron Colossus,
