@@ -1,0 +1,54 @@
+# M6-B Builder Brief — progression handoff + honest costs (strict TDD)
+
+Read first:
+1. docs/M6_B_PROGRESSION_HANDOFF.md (frozen contract)
+2. src/input.ts focusScout pattern
+3. src/hud.ts handle/renderCmds path + train/build branches
+4. scripts/qa-touch-contract.mjs and scripts/qa-m4.mjs
+
+Scope only:
+- src/input.ts
+- src/hud.ts
+- scripts/qa-progression-handoff.mjs (new)
+- package.json (`qa:progression-handoff`)
+- tasks/M6B-red.log (force-saved RED transcript)
+No sim/content/render changes; no dependency.
+
+Strict order:
+A. Write QA + package script first. Run on unchanged source. It must fail because no tech-focus exists and cost labels hide Charge. Save full output to tasks/M6B-red.log. Do not touch src before this RED.
+B. Implement minimum input/HUD change to satisfy the frozen contract. Do not weaken QA.
+C. Run all gates.
+
+Implementation exactness:
+- `Input.focusHall(): boolean` selects/centers alive completed player Hall, clears commandMode/place, plays select, returns true; returns false with no state mutation if no Hall.
+- `Hud.handle('tech-focus')`: call focusHall; hint `Choose one permanent path` on success, `Build a Nexus first` on failure.
+- Uncommitted/no-selection deck: TECHNOLOGY PATH / Open Nexus research.
+- Uncommitted/Yard deck: CHOOSE PATH / Open Nexus research BEFORE combat-unit tiles.
+- Locked train subs: `Choose path first`.
+- After commit: no tech-focus; train gates normal.
+- One local `costLabel` helper (do not edit content): nonzero costs fixed order and exact spelling `Ore · Volatiles · Charge`.
+- Use costLabel for every build/train sub; preserve locked/pop-cap overrides.
+- Path tile cost spelling becomes `400 Ore · 80 Charge`; channel/locked text unchanged.
+- No topbar additions.
+
+Browser QA at 1024×768 must use real button/touch actions and assert:
+1. RED current tree: no tech-focus + Yard `150 ore` hidden 20 Charge + locked `needs path`.
+2. GREEN no-selection tech-focus selects Hall and two path tiles appear.
+3. Yard tech-focus same and hint correct.
+4. Exact labels: Yard `150 Ore · 20 Charge`; Solar Strider `90 Ore · 35 Volatiles · 20 Charge`.
+5. With staged 500 Ore/120 Charge, touch Solar Ascendancy; assert 400/80 deduction, channel, step to locked.
+6. Select Yard: Lumen Guard + Solar Strider enabled; tech-focus absent.
+7. Screenshots, manifest, zero console errors.
+
+Verify:
+npm run qa:progression-handoff
+npm run qa:touch-contract
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+
+Leave tree dirty. Report RED failure lines, files, gate tails, deviations.

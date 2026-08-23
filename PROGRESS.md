@@ -12,8 +12,8 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
 | Role | Who |
 | --- | --- |
 | Orchestrator — directs / reviews / scope-controls | Bottymcbotface (lead) |
-| Blind visual critic — image-only, 3 critiques at gates, categories only | `gpt-5.6-sol` effort max via `tasks/codex-linux-run.sh sol <brief> <log> -i <shot>` (ChatGPT sub) |
-| Repository implementer — one bounded task at a time | `gpt-5.6-luna` effort max fast via `tasks/codex-linux-run.sh luna <brief> <log>` (ChatGPT sub); opencode free tier as fallback |
+| Blind gate / pixel forensics / design synthesis | `gpt-5.6-sol` effort max fast via `tasks/codex-linux-run.sh sol <brief> <log> [-i <shot>]` (ChatGPT sub) |
+| Implementer + bounded specific tasks + focused 5–10 min playtests | `gpt-5.6-luna` effort max fast via `tasks/codex-linux-run.sh luna <brief> <log>` (ChatGPT sub); opencode fallback |
 
 ## Now
 
@@ -226,8 +226,12 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
      deselects, resources become Attacking/no income, pause off-screen, technology dead-end;
   2. first-time 1366×1024: 52:25, FAIL — same economy→army break; no Harvest feedback,
      Yard/tech unreachable, combat/AI unreadable; zero console errors;
-  3. expert RTS systems run still finishing its report.
-  Evidence/reports: `/home/bobbyranka/workspace/evidence/starhaven-blind-{gameplay,touch,systems}-sol/`.
+  3. expert RTS systems: 93:39 across Standard+Cadet, FAIL — same zero-income→unaffordable
+     path→disabled army lock; also found hidden Yard Charge cost, silent objective placement,
+     detached structure hit regions, onboarding ambush, and unreadable combat.
+  All three independently named the missing closed economy→technology→army loop as the
+  single biggest gameplay gap. Evidence/reports:
+  `/home/bobbyranka/workspace/evidence/starhaven-blind-{gameplay,touch,systems}-sol/`.
 - **M6-A touch order truth + first income COMPLETE** (`docs/M6_A_TOUCH_ORDER_TRUTH.md`):
   strict TDD RED saved in `tasks/M6A-red.log` (MOVE button left mode null), then GREEN
   in input.ts/hud.ts only; sim.ts untouched. Context resolver excludes Resources from enemy
@@ -237,7 +241,12 @@ destroy the enemy Core or lose -> results. Contract: `docs/FIRST_PLAYABLE.md`.
   Fresh blind touch-only re-gate PASS: MOVE armed→tap→Moving, GATHER armed→resource→Gathering,
   Volatiles visibly rose 40→48 in honest real time. Evidence/report:
   `/home/bobbyranka/workspace/evidence/starhaven-m6a-blind-touch/`.
-  Remaining named gap: FIND IDLE WORKER is clipped at 1024×768 (next responsive-HUD piece).
+  Remaining named gap: FIND IDLE WORKER is clipped at 1024×768 (responsive-HUD debt).
+- **M6-B progression handoff + honest costs FROZEN**
+  (`docs/M6_B_PROGRESSION_HANDOFF.md`): actionable `TECHNOLOGY PATH` / `CHOOSE PATH`
+  entry from no-selection and Yard decks selects/centers Nexus; all build/train labels show
+  every real Ore/Volatiles/Charge deduction; locked units say `Choose path first`.
+  Strict browser RED→GREEN required; sim/content/render stay untouched.
 - **Production matches working tree** (`game-C12P1XJ5.js`): force-deployed twice — first the
   M5-A/M4-B state bobby was viewing, then this build. `desktop.html` route deployed too:
   strips the portrait rotate-gate so non-iPad browsers render full landscape UI
