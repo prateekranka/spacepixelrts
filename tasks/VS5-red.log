@@ -1,0 +1,44 @@
+VS5 reserve RED — before any production edit
+
+$ npx tsx tests/vs5-pacing.test.ts
+exit_code=1
+/home/bobbyranka/workspace/spacepixelrts/tests/vs5-pacing.test.ts:4
+import { World, OPENING_ORE_RESERVE } from '../src/sim';
+                ^
+SyntaxError: The requested module '../src/sim' does not provide an export named 'OPENING_ORE_RESERVE'
+
+Node.js v26.7.0
+
+VS5 Scout replacement RED — after reserve/guidance GREEN, before AI production edit
+
+$ npx tsx tests/vs5-pacing.test.ts
+exit_code=1
+Error: VS5 Scout replacement RED: no successful normal Hall→Scout replacement; observed winner=1, discoveryTick=7114, attackTick=9604, winnerTick=16285
+
+Node.js v26.7.0
+
+VS5 guidance RED — pure evaluator state table before evaluator/HUD production edit
+
+$ npx tsx tests/vs5-pacing.test.ts
+exit_code=1
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'select-scout'
+- 'build-yard'
+
+at <anonymous> (/home/bobbyranka/workspace/spacepixelrts/tests/vs5-pacing.test.ts:94:10)
+
+Node.js v26.7.0
+
+VS5 browser QA RED — QA harness countdown assertion, before QA-only step-count edit
+
+$ node scripts/qa-vs5-pacing.mjs --out /home/bobbyranka/workspace/evidence/starhaven-vs5-pacing
+exit_code=1
+Error: 04 countdown did not update: "Technology locks in 40s" -> "Technology locks in 40s"
+
+VS5 browser QA RED — QA harness resource-wait assertion, before QA-only wait edit
+
+$ node scripts/qa-vs5-pacing.mjs --out /home/bobbyranka/workspace/evidence/starhaven-vs5-pacing
+exit_code=1
+Error: normal player unique tryTrain failed

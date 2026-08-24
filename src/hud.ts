@@ -375,11 +375,13 @@ export class Hud {
   private drawGuidance(world: World, input: Input): void {
     const g = evaluateOpeningGuidance(world.ents, world.landmarks, input.selected, {
       ore: world.teams[0].ore,
+      energy: world.teams[0].energy,
       techPath: world.techPathOf(0),
       channelT: world.pathChannelT(0),
     });
-    if (g.id !== this.guidanceSig) {
-      this.guidanceSig = g.id;
+    const guidanceSig = `${g.id}|${g.primary}|${g.secondary ?? ''}`;
+    if (guidanceSig !== this.guidanceSig) {
+      this.guidanceSig = guidanceSig;
       const strong = this.guidanceEl.querySelector<HTMLElement>('strong')!;
       const span = this.guidanceEl.querySelector<HTMLElement>('span')!;
       strong.textContent = g.primary;
@@ -388,11 +390,47 @@ export class Hud {
     }
 
     let target: { x: number; y: number; z: number; label: string } | null = null;
-    if (g.id === 'select-scout') {
+    const playerAnchor = world.ents.find(
+      (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === Kind.Hall,
+    ) ?? world.ents.find(
+      (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind < Kind.Hall,
+    );
+    const playerCiv = playerAnchor?.civ ?? world.civ[0];
+    if (g.id === 'build-yard') {
+      const worker = world.ents.find(
+        (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === Kind.Worker && entity.order === Ord.Idle,
+      );
+      if (worker) target = { x: worker.x, y: 0.8, z: worker.z, label: 'WORKER' };
+    } else if (g.id === 'complete-yard' || g.id === 'train-army') {
+      const yard = world.ents.find(
+        (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === Kind.Barracks,
+      );
+      if (yard) target = { x: yard.x, y: 0.8, z: yard.z, label: 'YARD' };
+    } else if (g.id === 'fund-path') {
+      const hall = world.ents.find(
+        (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === Kind.Hall,
+      );
+      const ore = world.ents
+        .filter(
+          (entity) => entity.alive && entity.kind === Kind.Resource && entity.cargoType === Tile.Ore
+            && ((entity.seenBy & SEEN_PLAYER) !== 0 || entity.vis),
+        )
+        .sort((a, b) => {
+          const ad = hall ? (a.x - hall.x) ** 2 + (a.z - hall.z) ** 2 : a.x ** 2 + a.z ** 2;
+          const bd = hall ? (b.x - hall.x) ** 2 + (b.z - hall.z) ** 2 : b.x ** 2 + b.z ** 2;
+          return ad - bd;
+        })[0];
+      if (ore) target = { x: ore.x, y: 0.6, z: ore.z, label: 'ORE' };
+    } else if (g.id === 'choose-path' || g.id === 'path-channel') {
+      const nexus = world.ents.find(
+        (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === Kind.Hall,
+      );
+      if (nexus) target = { x: nexus.x, y: 1, z: nexus.z, label: 'NEXUS' };
+    } else if (g.id === 'select-scout') {
       const scout = world.ents.find(
         (entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Scout,
       );
-      if (scout) target = { x: scout.x, y: 0.8, z: scout.z, label: labelOf(Kind.Scout, world.civ[0]).toUpperCase() };
+      if (scout) target = { x: scout.x, y: 0.8, z: scout.z, label: labelOf(Kind.Scout, playerCiv).toUpperCase() };
     } else if (g.id === 'explore-signal') {
       const signal = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
       if (signal) target = { x: signal.x, y: 0.6, z: signal.z, label: 'SIGNAL' };

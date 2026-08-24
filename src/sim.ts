@@ -93,6 +93,7 @@ const MARSHAL_FORWARD_Z = MAP - 16;
 const PATH_COMMIT_ORE = 400;
 const PATH_COMMIT_CHARGE = 80;
 const PATH_COMMIT_CHANNEL = 40;
+export const OPENING_ORE_RESERVE = 700;
 /** VS-2B — central objective contract. */
 const LUMEN_CAPTURE_RADIUS = 4.5;
 const LUMEN_CAPTURE_SECONDS = 5;
@@ -912,7 +913,7 @@ export class World {
     const node = this.spawn(Kind.Resource, 'vespari', 3, x, z);
     if (node) {
       node.cargoType = kind;
-      node.hp = kind === Tile.Ore ? 280 : kind === Tile.Gas ? 200 : 160;
+      node.hp = kind === Tile.Ore ? OPENING_ORE_RESERVE : kind === Tile.Gas ? 200 : 160;
       node.maxHp = node.hp;
       node.radius = 0.55;
     }
@@ -2159,6 +2160,31 @@ export class World {
       !this.ents.some((e) => e.alive && e.team === 1 && e.kind === Kind.House)
     ) {
       this.tryAiPlaceHouse(hall);
+    }
+
+    // VS5 — replace a lost rival Scout through the ordinary Hall training seam until Core discovery.
+    const playerHall = this.ents.find(
+      (e) => e.alive && e.hp > 0 && e.team === 0 && e.kind === Kind.Hall && e.progress >= 1,
+    );
+    const rivalScoutAlive = this.ents.some(
+      (e) => e.alive && e.hp > 0 && e.team === 1 && e.kind === Kind.Scout,
+    );
+    const scoutStats = STATS[Kind.Scout];
+    if (
+      hall &&
+      playerHall &&
+      (playerHall.seenBy & SEEN_RIVAL) === 0 &&
+      !rivalScoutAlive &&
+      hall.progress >= 1 &&
+      hall.hp > 0 &&
+      hall.trainT <= 0 &&
+      eco.ageT <= 0 &&
+      eco.pop + scoutStats.pop <= eco.cap &&
+      eco.ore >= scoutStats.ore &&
+      eco.gas >= scoutStats.gas &&
+      eco.energy >= scoutStats.energy
+    ) {
+      this.tryTrain(hall, Kind.Scout);
     }
 
     // Keep the opening Worker count stable so the population cap can hold the compact army.

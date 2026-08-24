@@ -6,72 +6,69 @@ import { evaluateOpeningGuidance } from '../src/opening-guidance';
 
 const SEED = 0x5eed;
 
-const world = new World();
-world.reset(SEED);
+const opening = new World();
+opening.reset(SEED);
 
-function guidance(selectedIds: Iterable<number>) {
-  return evaluateOpeningGuidance(world.ents, world.landmarks, new Set(selectedIds));
+function openingGuidance(selectedIds: Iterable<number>) {
+  return evaluateOpeningGuidance(opening.ents, opening.landmarks, new Set(selectedIds));
 }
 
-// None — nothing selected asks for the scout first.
-{
-  const g = guidance([]);
-  assert.equal(g.id, 'select-scout');
-  assert.equal(g.primary, 'Select your recon unit');
-  assert.equal(g.secondary, undefined);
+// VS5 economy-first opening: no selection, Worker, Scout, and discovered objective all begin at Yard.
+assert.equal(openingGuidance([]).id, 'build-yard');
+assert.equal(openingGuidance([]).primary, 'Build a Yard');
+const worker = opening.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Worker);
+const scout = opening.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Scout);
+const central = opening.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+assert.ok(worker && scout && central);
+assert.equal(openingGuidance([worker.id]).id, 'build-yard');
+assert.equal(openingGuidance([scout.id]).id, 'build-yard');
+central.discoveredBy |= SEEN_PLAYER;
+assert.equal(openingGuidance([scout.id]).id, 'build-yard');
+
+// After the real Yard and mixed pair exist, the original Scout/objective guidance remains intact.
+const ready = new World();
+ready.reset(SEED);
+const hall = ready.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Hall);
+const builder = ready.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Worker);
+assert.ok(hall && builder);
+const spot = [
+  { x: hall.x - 3.4, z: hall.z - 3.4 },
+  { x: hall.x, z: hall.z - 4.4 },
+  { x: hall.x + 3.4, z: hall.z - 3.4 },
+].find((candidate) => ready.canPlace(candidate.x, candidate.z, 1.05));
+assert.ok(spot);
+assert.equal(ready.tryPlace(0, Kind.Barracks, spot.x, spot.z, builder.id), true);
+const yard = ready.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Barracks);
+assert.ok(yard);
+yard.progress = 1;
+yard.hp = yard.maxHp;
+assert.ok(ready.spawn(Kind.Fighter, 'vespari', 0, yard.x, yard.z));
+assert.ok(ready.spawn(Kind.Ravager, 'vespari', 0, yard.x, yard.z));
+
+function readyGuidance(selectedIds: Iterable<number>) {
+  return evaluateOpeningGuidance(ready.ents, ready.landmarks, new Set(selectedIds));
 }
 
-// Worker — selecting a worker does not advance.
-{
-  const worker = world.ents.find((e) => e.alive && e.team === 0 && e.kind === Kind.Worker);
-  assert.ok(worker);
-  const g = guidance([worker.id]);
-  assert.equal(g.id, 'select-scout');
-  assert.equal(g.primary, 'Select your recon unit');
-}
+const readyScout = ready.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Scout);
+const enemyScout = ready.ents.find((entity) => entity.alive && entity.team === 1 && entity.kind === Kind.Scout);
+const readyCentral = ready.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+assert.ok(readyScout && enemyScout && readyCentral);
+assert.equal(readyGuidance([]).id, 'select-scout');
+assert.equal(readyGuidance([readyScout.id]).id, 'explore-signal');
+assert.equal(readyGuidance([readyScout.id]).primary, 'Explore the nearby signal');
+assert.equal(readyGuidance([enemyScout.id]).id, 'select-scout');
+readyScout.alive = false;
+assert.equal(readyGuidance([readyScout.id]).id, 'select-scout');
+readyScout.alive = true;
+readyCentral.discoveredBy |= SEEN_PLAYER;
+const withScout = readyGuidance([readyScout.id]);
+assert.equal(withScout.id, 'objective-found');
+assert.equal(withScout.primary, 'A shared Lumen field has been discovered');
+assert.equal(withScout.secondary, 'The enemy may contest this location');
+assert.deepEqual(readyGuidance([]), withScout, 'objective state ignores selection');
 
-// Scout — selecting the player scout gives explore-signal.
-{
-  const scout = world.ents.find((e) => e.alive && e.team === 0 && e.kind === Kind.Scout);
-  assert.ok(scout);
-  const g = guidance([scout.id]);
-  assert.equal(g.id, 'explore-signal');
-  assert.equal(g.primary, 'Explore the nearby signal');
-  assert.equal(g.secondary, undefined);
-}
-
-// Wrong or dead scout — only an alive team-0 scout advances the prompt.
-{
-  const enemyScout = world.ents.find((e) => e.alive && e.team === 1 && e.kind === Kind.Scout);
-  const playerScout = world.ents.find((e) => e.alive && e.team === 0 && e.kind === Kind.Scout);
-  assert.ok(enemyScout && playerScout);
-  assert.equal(guidance([enemyScout.id]).id, 'select-scout');
-  playerScout.alive = false;
-  assert.equal(guidance([playerScout.id]).id, 'select-scout');
-  playerScout.alive = true;
-}
-
-// Objective bit — the Central Lumen player latch outranks any selection.
-{
-  const central = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
-  assert.ok(central);
-  const scout = world.ents.find((e) => e.alive && e.team === 0 && e.kind === Kind.Scout);
-  assert.ok(scout);
-  central.discoveredBy |= SEEN_PLAYER;
-  const withScout = guidance([scout.id]);
-  assert.equal(withScout.id, 'objective-found');
-  assert.equal(withScout.primary, 'A shared Lumen field has been discovered');
-  assert.equal(withScout.secondary, 'The enemy may contest this location');
-  assert.deepEqual(guidance([]), withScout, 'objective state ignores selection');
-}
-
-// Reset — replaying reset restores the first state.
-world.reset(SEED);
-const resetCentral = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
-assert.ok(resetCentral);
-assert.equal(resetCentral.discoveredBy & SEEN_PLAYER, 0);
-const g = guidance([]);
-assert.equal(g.id, 'select-scout');
-assert.equal(g.primary, 'Select your recon unit');
+opening.reset(SEED);
+assert.equal(openingGuidance([]).id, 'build-yard');
+assert.equal(openingGuidance([]).primary, 'Build a Yard');
 
 console.log('M2 guidance tests: PASS');

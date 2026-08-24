@@ -1,13 +1,19 @@
 /** M2-C — contextual opening guidance evaluator (docs/M2_C_GUIDANCE.md). */
 
 import { Kind } from './engine';
-import type { Ent } from './engine';
+import type { Civ, Ent } from './engine';
 import { SEEN_PLAYER } from './discovery';
 import type { Landmark } from './discovery';
+import { fighterName, labelOf, uniqueUnit } from './content';
 import type { TechPathId } from './content';
 
 export type OpeningGuidanceId =
+  | 'build-yard'
+  | 'complete-yard'
+  | 'fund-path'
   | 'choose-path'
+  | 'path-channel'
+  | 'train-army'
   | 'select-scout'
   | 'explore-signal'
   | 'objective-found';
@@ -22,10 +28,21 @@ export interface OpeningGuidance {
 /** M4-B — team economy slice needed for the technology-path nudge (docs/M4_TECH_PATHS.md). */
 export interface GuidanceEcoState {
   readonly ore: number;
+  readonly energy: number;
   readonly techPath: TechPathId | null;
   readonly channelT: number;
 }
 
+const BUILD_YARD: OpeningGuidance = {
+  id: 'build-yard',
+  primary: 'Build a Yard',
+  secondary: 'Select a Worker · 150 Ore + 20 Charge',
+};
+const COMPLETE_YARD: OpeningGuidance = {
+  id: 'complete-yard',
+  primary: 'Complete your Yard',
+  secondary: 'Keep the assigned Worker on construction',
+};
 const CHOOSE_PATH: OpeningGuidance = {
   id: 'choose-path',
   primary: 'Choose a technology path',
@@ -39,11 +56,36 @@ const OBJECTIVE_FOUND: OpeningGuidance = {
   secondary: 'The enemy may contest this location',
 };
 
+function playerCiv(ents: readonly Ent[]): Civ {
+  const hall = ents.find((ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === Kind.Hall);
+  if (hall) return hall.civ;
+  const unit = ents.find((ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind < Kind.Hall);
+  return unit?.civ ?? 'vespari';
+}
+
+function trainingGuidance(ents: readonly Ent[]): OpeningGuidance {
+  const civ = playerCiv(ents);
+  const fighterAlive = ents.some(
+    (ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === Kind.Fighter,
+  );
+  const unique = uniqueUnit(civ);
+  const uniqueAlive = ents.some(
+    (ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === unique,
+  );
+  const missing: string[] = [];
+  if (!fighterAlive) missing.push(fighterName(civ));
+  if (!uniqueAlive) missing.push(labelOf(unique, civ));
+  return {
+    id: 'train-army',
+    primary: `Train ${missing.join(' + ')}`,
+    secondary: 'Select your Yard · Habitat only if population is full',
+  };
+}
+
 /**
  * Pure evaluator over real game state: same ents/landmarks/selection always
- * return the same guidance. Discovered objective outranks selection.
- * The path nudge outranks both while the commit is affordable and unmade;
- * it is suppressed once a path is committed or the channel starts.
+ * return the same guidance. Economy/progression outranks the discovered
+ * objective and Scout selection until a mixed Fighter/unique pair is alive.
  */
 export function evaluateOpeningGuidance(
   ents: readonly Ent[],
@@ -51,7 +93,35 @@ export function evaluateOpeningGuidance(
   selected: ReadonlySet<number>,
   eco?: GuidanceEcoState,
 ): OpeningGuidance {
-  if (eco && eco.techPath === null && eco.channelT <= 0 && eco.ore >= 400) return CHOOSE_PATH;
+  const yard = ents.find(
+    (ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === Kind.Barracks,
+  );
+  if (!yard) return BUILD_YARD;
+  if (yard.progress < 1) return COMPLETE_YARD;
+
+  if (eco) {
+    if (eco.channelT > 0) {
+      return {
+        id: 'path-channel',
+        primary: `Technology locks in ${Math.ceil(eco.channelT)}s`,
+        secondary: 'Keep gathering Ore and Volatiles',
+      };
+    }
+    if (eco.techPath === null && (eco.ore < 400 || eco.energy < 80)) {
+      return {
+        id: 'fund-path',
+        primary: 'Fund technology',
+        secondary: `Ore ${Math.floor(eco.ore)}/400 · Charge ${Math.floor(eco.energy)}/80 · Keep two Workers on the nearby Ore field`,
+      };
+    }
+    if (eco.techPath === null) return CHOOSE_PATH;
+    if (
+      !ents.some((ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === Kind.Fighter) ||
+      !ents.some((ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === uniqueUnit(playerCiv(ents)))
+    ) {
+      return trainingGuidance(ents);
+    }
+  }
   const objective = landmarks.find((landmark) => landmark.id === 'central-lumen-field');
   if (objective && (objective.discoveredBy & SEEN_PLAYER) !== 0) return OBJECTIVE_FOUND;
   const scoutSelected = ents.some(
