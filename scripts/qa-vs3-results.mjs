@@ -329,8 +329,11 @@ async function main() {
       hidden: document.querySelector('#match-end')?.hasAttribute('hidden') ?? true,
       tick: globalThis.__STARHOLD_WORLD__?.tick ?? -1,
     }));
-    assertThat(defeatTerminal.title === 'DEFEAT' && defeatTerminal.sub === 'Your Nexus is ash' && !defeatTerminal.hidden, 'Defeat terminal copy/surface is wrong');
     await page.screenshot({ path: path.join(out, 'defeat-terminal.png'), fullPage: true });
+    assertThat(
+      defeatTerminal.title === 'DEFEAT' && defeatTerminal.sub === 'Your Nexus is ash' && !defeatTerminal.hidden,
+      `Defeat terminal copy/surface is wrong (${JSON.stringify(defeatTerminal)})`,
+    );
     await page.click('#match-continue');
     await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'Results');
     const defeatResults = await page.evaluate(() => {
