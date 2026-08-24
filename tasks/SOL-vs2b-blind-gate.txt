@@ -1,0 +1,23 @@
+# VS-2B Fresh Blind Objective Gate
+
+Judge only the five attached 1366×1024 composited screenshots from the actual running Starhaven build. Do not inspect source, tests, logs, filenames beyond their sequence, or prior reports.
+
+They show one objective across five states: neutral/discovered; player capture in progress; contested; rival control; player control with a vision pulse.
+
+Compare the visual communication to a reference-grade RTS objective/status treatment. This is a gameplay-readability gate, not a general art review.
+
+PASS only if a first-time player can, at a glance:
+- locate the objective status;
+- identify neutral/capture/contested/owner changes;
+- distinguish player and rival ownership;
+- see capture progress and pulse state;
+- connect the status to map/minimap conflict without major ambiguity.
+
+Output exactly:
+VERDICT: PASS or FAIL
+NEUTRAL: one sentence
+CAPTURE: one sentence
+CONTESTED: one sentence
+OWNERSHIP: one sentence
+PULSE: one sentence
+SINGLE BIGGEST GAP: one sentence

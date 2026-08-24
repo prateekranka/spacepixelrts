@@ -1,0 +1,16 @@
+
+> spacepixelrts@0.1.0 qa:touch-contract
+> node scripts/qa-touch-contract.mjs --out /tmp/starhaven-touch-contract-red
+
+[dev] 
+[dev]   VITE v7.3.6  ready in 455 ms
+[dev] 
+[dev]   ➜  Local:   http://127.0.0.1:44529/
+qa-touch-contract: dev server ready at http://127.0.0.1:44529
+--- qa-touch-contract summary ---
+ok=false
+manifest=/tmp/starhaven-touch-contract-red/manifest.json
+errors:
+  - Error: MOVE did not arm commandMode=move: {"mode":null,"place":null,"className":"verb","hint":"Landscape command deck · two-finger pan · pinch zoom · box-select to rally the swarm"}
+    at assert (file:///home/bobbyranka/workspace/spacepixelrts/scripts/qa-touch-contract.mjs:366:25)
+    at main (file:///home/bobbyranka/workspace/spacepixelrts/scripts/qa-touch-contract.mjs:443:5)

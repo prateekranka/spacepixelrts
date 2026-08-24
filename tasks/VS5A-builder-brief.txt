@@ -1,0 +1,62 @@
+# VS5A Builder — fully visible two-path Nexus deck (strict TDD)
+
+Read:
+1. docs/VS5A_TECH_CHOICE_VISIBILITY.md (frozen exact contract)
+2. current commit 5d336e4
+3. tasks/SOL-vs5-blind-gate.log final verdict
+4. src/hud.ts renderCmds + HUD_CSS
+5. scripts/qa-vs5-pacing.mjs path/channel capture flow
+
+Owned production: `src/hud.ts` only.
+Owned QA: `scripts/qa-vs5-pacing.mjs`, `tasks/VS5A-red.log` force-added.
+Do not touch sim, guidance evaluator, costs, AI, input, art/render/shader, app-flow, results, package,
+or unrelated CSS.
+
+Strict tracer TDD:
+1. Before production edits, extend browser QA at 03/04 with a helper that returns path button
+   bounding rects `{cmd,left,top,right,bottom,width,height,visible,enabled,text}`.
+2. Assert at 03:
+   - exactly two;
+   - visible/enabled;
+   - width>=44, height>=88;
+   - all edges within viewport;
+   - abs(top0-top1)<=4;
+   - exact cost text retained.
+3. Run unchanged `npm run qa:vs5 -- --out /tmp/vs5a-red`; capture expected failure showing second
+   bottom>1024 or row mismatch in `tasks/VS5A-red.log`.
+4. GREEN minimal design:
+   - when `kind===Hall && committed===null`, set `#cmds.path-focus`;
+   - this mode exposes only doctrine choice cards, not ordinary Hall train/build verbs;
+   - precommit: two equal columns, one row;
+   - channel: sole choice spans both columns;
+   - each remains >=88px and fully visible;
+   - after committed, remove path-focus and preserve old locked+ordinary controls exactly.
+   Toggle class before the render signature early-return so state cannot go stale.
+5. Assert at 04 sole card visible/disabled, inside viewport, height>=88, countdown visible, width at
+   least the combined precommit width minus4.
+6. Run GREEN QA and inspect screenshot yourself for no text collision.
+
+Likely CSS shape, subject to measured proof:
+- `#cmds.path-focus{grid-template-columns:repeat(2,minmax(0,1fr));align-content:center}`
+- `#cmds.path-focus button.choice{grid-column:auto}`
+- `#cmds.path-focus button.choice:only-child{grid-column:1/-1}`
+Do not reduce the 88px minimum or hide either doctrine precommit.
+
+Run:
+npm run qa:vs5 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs5a-choice
+npm run test:vs5
+npm run qa:progression-handoff -- --out /tmp/vs5a-progress
+npm run qa:touch-contract -- --out /tmp/vs5a-touch
+npm run test:vs4
+npm run qa:vs4 -- --out /tmp/vs5a-vs4
+npm run test:vs3
+npm run qa:vs3 -- --out /tmp/vs5a-vs3
+npm run test:vs2b
+npm run qa:vs2b -- --out /tmp/vs5a-vs2b
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs5a-vs2a
+npm run build
+git diff --check
+
+Commit prefix `VS5A:`. Do not push/deploy. Report RED geometry, GREEN geometry, evidence, all gates,
+SHA, and deviations.

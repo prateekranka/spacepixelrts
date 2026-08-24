@@ -1,0 +1,18 @@
+VS2B-R2 browser RED transcript
+Command: npm run qa:vs2b -- --out /tmp/vs2b-r2-red
+
+> spacepixelrts@0.1.0 qa:vs2b
+> node scripts/qa-vs2b-lumen.mjs --out /tmp/vs2b-r2-red
+
+qa-vs2b-lumen: dev server ready at http://127.0.0.1:42287
+--- qa-vs2b-lumen summary ---
+ok=false captures=8 errors=1
+manifest=/tmp/vs2b-r2-red/manifest.json
+errors:
+  - Error: objective overlay perimeter samples failed: [{"name":"02-neutral","samples":"0/32"},{"name":"03-sunweaver-50","samples":"0/32"},{"name":"04-sunweaver-control","samples":"0/32"},{"name":"05-contested","samples":"0/32"},{"name":"06-gravemark-control","samples":"0/32"},{"name":"07-vision-pulse","samples":"0/32"},{"name":"08-post-pulse","samples":"0/32"}]
+
+Exit status: 1
+RED evidence from /tmp/vs2b-r2-red/manifest.json:
+- projected overlay perimeter: 0/32 in every discovered screenshot state;
+- minimap +/-10 samples missed the required ring colors in every discovered screenshot state;
+- discovered captures: 02-neutral, 03-sunweaver-50, 04-sunweaver-control, 05-contested, 06-gravemark-control, 07-vision-pulse, 08-post-pulse.

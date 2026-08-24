@@ -1,0 +1,49 @@
+VS3-R2 strict RED — production unchanged
+
+Command:
+$ npm run test:vs3
+
+Output:
+
+> spacepixelrts@0.1.0 test:vs3
+> tsx tests/vs3-results.test.ts
+
+VS3 stats RED: PASS
+VS3 spawn stats: PASS
+VS3 income stats: PASS
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: ordinary melee records victim-team loss
+
+0 !== 1
+
+    at <anonymous> (/home/bobbyranka/workspace/spacepixelrts/tests/vs3-results.test.ts:131:10)
+    at ModuleJob.run (node:internal/modules/esm/module_job:569:25)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:101:5)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/esm/module_job:569:0)
+    at async node:internal/main/run_main_module:107:11 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.7.0
+
+VS3-R2 browser RED — production unchanged
+
+Command:
+$ npm run qa:vs3 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs3-r2
+
+Output:
+
+> spacepixelrts@0.1.0 qa:vs3
+> node scripts/qa-vs3-results.mjs --out /home/bobbyranka/workspace/evidence/starhaven-vs3-r2
+
+Error: Victory Results panel classes
+    at assertThat (file:///home/bobbyranka/workspace/spacepixelrts/scripts/qa-vs3-results.mjs:21:25)
+    at main (file:///home/bobbyranka/workspace/spacepixelrts/scripts/qa-vs3-results.mjs:229:5)

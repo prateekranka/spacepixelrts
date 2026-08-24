@@ -1,0 +1,63 @@
+# VS5B Builder — counted Ore-worker assignment (strict TDD)
+
+Read:
+1. docs/VS5B_ORE_WORKER_FEEDBACK.md (frozen exact contract)
+2. current commit 4ac2105 / VS5A implementation 44d33e8
+3. `/home/bobbyranka/workspace/evidence/starhaven-final-production-match-r2/report.md`
+4. `/home/bobbyranka/workspace/evidence/starhaven-final-production-match-r2/interaction-log.md`
+5. src/opening-guidance.ts + Hud.drawGuidance only
+6. tests/vs5-pacing.test.ts + scripts/qa-vs5-pacing.mjs
+
+Owned production:
+- src/opening-guidance.ts
+- src/hud.ts guidance target state/label only
+Owned tests/QA:
+- tests/vs5-pacing.test.ts
+- tests/m2-guidance.test.ts only for changed expected progression
+- scripts/qa-vs5-pacing.mjs
+- tasks/VS5B-red.log force-added
+Do not touch sim, input, content costs/stats, render/art/shaders, AI, app-flow, results, package, or CSS.
+
+Strict tracer TDD:
+1. Unit RED first on unchanged evaluator. Add pure tests for exact `assign-ore`0/2 state/copy.
+2. Add ordinary target-order fixtures:
+   - first player Worker `world.issue([id],Ord.Gather,ore.x,ore.z,ore.id)` => assign-ore1/2;
+   - second => fund-path2/2 with exact dynamic funds copy;
+   - Gas Gather does not count;
+   - Ore Return+cargoType Ore counts;
+   - dead/rival workers do not count;
+   - affordable+2 advances choose-path.
+   Save expected RED before production edit.
+3. GREEN minimal evaluator helper. Import Ord/Tile as needed. No mutation.
+4. Browser RED before HUD edit:
+   - restructure policy fixture so Yard completes before resource orders;
+   - capture no-assignment `02-assign-ore`, exact copy and `ORE · 0/2` target;
+   - issue first ordinary Gather, assert dynamic state/copy/target `1/2`;
+   - issue second Ore and one Solar ordinary Gather, capture `03-fund-path` with2/2;
+   - continue existing natural funding/path/channel/army/replacement/terminal proof;
+   - use no resources writes/spawn/winner/input automation.
+   Current HUD target lacks counted label and should RED. Save excerpt.
+5. GREEN HUD target routing for both assign-ore/fund-path. Target label derives from evaluator truth,
+   not a separate stale counter. A small pure exported helper is acceptable if needed; do not parse
+   localized copy if a typed count can be exposed cleanly.
+6. Verify screenshots: count readable, marker over orange Ore, no overlap/clipping.
+
+Run:
+npm run test:vs5
+npm run qa:vs5 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs5b-ore
+npm run qa:progression-handoff -- --out /tmp/vs5b-progress
+npm run qa:touch-contract -- --out /tmp/vs5b-touch
+npm run test:m2
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs5b-vs2a
+npm run test:vs4
+npm run qa:vs4 -- --out /tmp/vs5b-vs4
+npm run test:vs3
+npm run qa:vs3 -- --out /tmp/vs5b-vs3
+npm run test:vs2b
+npm run qa:vs2b -- --out /tmp/vs5b-vs2b
+npm run build
+git diff --check
+
+Commit prefix `VS5B:`. Do not push/deploy. Report REDs, 0→1→2 state/copy/marker, path/army/
+replacement/terminal metrics, all gates, SHA, deviations.

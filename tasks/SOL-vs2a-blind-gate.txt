@@ -1,0 +1,15 @@
+# VS-2A Fresh Blind Opponent Gate
+
+Judge only the four attached composited screenshots from the actual running Starhaven build at 1366×1024. They are explicit OBSERVER captures: production fog is unchanged, but observer visibility is enabled only so the rival's honest state can be seen. Do not inspect source/tests/logs.
+
+Sequence: rival Yard/base; mature rival economy; 2 Fighter + 2 heavy unique holding Central Lumen; the same force beginning its post-8:00 Core attack.
+
+This gate judges whether the opponent progression is visibly real and coherent: constructed rival base, faction ownership, a non-empty mixed force at center, and a readable movement from center toward conflict. Do not require final combat-asset fidelity here; the next locked VS-4 piece specifically replaces the four combat silhouettes. You may name that as debt. Fail only if the screenshots look empty, fabricated, contradictory, or cannot show base→force→attack progression.
+
+Output exactly:
+VERDICT: PASS or FAIL
+BASE: one sentence
+CENTER FORCE: one sentence
+ATTACK STATE: one sentence
+FACTION READ: one sentence
+SINGLE BIGGEST GAP: one sentence

@@ -1,0 +1,77 @@
+# M6-A Builder Brief — strict RED→GREEN touch orders + gathering
+
+Read FIRST, in order:
+1. docs/M6_A_TOUCH_ORDER_TRUTH.md (frozen contract; implement exactly)
+2. src/input.ts complete
+3. src/hud.ts handle() + renderCmds() + command CSS
+4. scripts/qa-m2-opening.mjs and scripts/qa-m4.mjs (Playwright patterns)
+5. tests/m5-army.test.ts (test style)
+
+## Scope — touch ONLY
+- src/input.ts
+- src/hud.ts
+- scripts/qa-touch-contract.mjs (new)
+- package.json (`qa:touch-contract`)
+- tasks/M6A-red.log (required RED transcript)
+No sim/content/render edits. No new dependency.
+
+## Strict TDD sequence — required, no shortcuts
+
+A. RED FIRST:
+1. Write complete `scripts/qa-touch-contract.mjs` from the locked spec.
+2. Add package script `qa:touch-contract` that requires `--out` or defaults to
+   `/tmp/starhaven-touch-contract`.
+3. Run `npm run qa:touch-contract`; it MUST fail on the current tree for the
+   expected reasons (armed MOVE tap deselect/no-move and/or resource resolves Attack/no Gather).
+4. Save the full failing output verbatim to `tasks/M6A-red.log`.
+5. Do not edit production code before steps 1–4 are complete.
+
+B. GREEN:
+6. Implement minimum production changes in input.ts/hud.ts to satisfy every locked rule.
+7. Run qa:touch-contract until PASS; do not weaken assertions.
+8. Run every existing gate below.
+
+## Implementation constraints
+
+- `commandMode` must be public/readable, typed exactly `'move'|'attack'|'gather'|null`.
+- `commandAt(move|attack|gather)` sets mode (only with valid selection); it is no longer a no-op.
+- Tap routing checks build placement, then commandMode, then normal selection.
+- Context resolver shared by long-press + right-click. Long-press no longer hard-codes Move.
+- `closestEnemyScreen` MUST `continue` for `Kind.Resource`.
+- Resource touch pick radius = 44 CSS px; keep enemy PICK_PX unchanged.
+- Gather orders filter ids to alive player Workers only; mixed combat units stay unchanged.
+- Worker command deck only: add GATHER / `Tap a resource node`.
+- MOVE/ATTACK/GATHER armed button class uses `.on` and signature includes commandMode.
+- STOP and selection change clear commandMode. Build arm clears commandMode; command arm clears place.
+- Existing right-click desktop behavior remains.
+- No sim workarounds, resource grants, or auto-income.
+
+## Browser QA required details
+
+`qa-touch-contract` at 1024×768:
+- boot `?qa=opening&qa-run=1`, bundled Chromium fallback;
+- use DOM buttons + PointerEvent/touch input on canvas for action;
+- QA handles allowed only to stage selection/locate visible entity projection/assert order/fast-step;
+- assert MOVE tap keeps one selected Scout, changes tx/tz, order=Ord.Move, clears mode;
+- select Worker, click GATHER, tap projected visible Resource within 44px, assert Gather + resource tid;
+- step until a deposit, assert the matching Ore/Gas/Charge total rises;
+- long-press + right-click Resource each Gather, never Attack;
+- mixed selection: Worker gathers, Scout never enters Gather;
+- screenshots + manifest + zero console errors.
+
+## Verify (run all; paste tails)
+
+npm run qa:touch-contract
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+
+Leave tree dirty. Report:
+- exact RED failure lines;
+- files changed;
+- GREEN/gate tails;
+- deviations (must be none unless blocked).

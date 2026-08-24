@@ -1,15 +1,56 @@
 /** P20–P23 — civilizations, stats, costs. */
 
-import { Kind, type Civ } from './engine';
+import { Kind, type Civ, type TeamEco } from './engine';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export const CIV_NAME: Record<Civ, string> = {
-  vespari: 'Helion Compact',
-  aurion: 'Kryos Conclave',
+  vespari: 'Sunweaver',
+  aurion: 'Gravemark',
   voidmarked: 'Nihiline',
 };
 
 export const ALL_CIVS: Civ[] = ['vespari', 'aurion', 'voidmarked'];
+
+export interface CivProfile {
+  subtitle: string;
+  doctrine: string;
+  edge: string;
+  plan: string;
+  startOre: number;
+  startGas: number;
+  startEnergy: number;
+}
+
+/** Opening identities are intentionally different before technology paths diverge. */
+export const CIV_PROFILE: Record<Civ, CivProfile> = {
+  vespari: {
+    subtitle: 'Sunward network',
+    doctrine: 'Solar geometry',
+    edge: 'Flexible forward control',
+    plan: 'Scout wide, then compress the frontier with energy and speed.',
+    startOre: 220,
+    startGas: 40,
+    startEnergy: 110,
+  },
+  aurion: {
+    subtitle: 'Ice cathedral',
+    doctrine: 'Cold precision',
+    edge: 'Durable positions',
+    plan: 'Freeze the approach, hold long sight lines, and punish overreach.',
+    startOre: 250,
+    startGas: 45,
+    startEnergy: 70,
+  },
+  voidmarked: {
+    subtitle: 'Void mycelium',
+    doctrine: 'Spore pressure',
+    edge: 'Stealth and disruption',
+    plan: 'Make unsafe ground, strike from concealment, and break the rhythm.',
+    startOre: 200,
+    startGas: 70,
+    startEnergy: 90,
+  },
+};
 
 /** Opponent for skirmish — always a different people. */
 export function enemyCiv(player: Civ): Civ {
@@ -60,24 +101,24 @@ export const STATS: Record<number, Stats> = {
     ore: 50, gas: 0, energy: 0, train: 7, pop: 1, melee: true, building: false,
   },
   [Kind.Scout]: {
-    hp: 32, spd: 3.15, atk: 3, range: 0.8, los: 9.5, radius: 0.26,
-    ore: 40, gas: 0, energy: 10, train: 6, pop: 1, melee: true, building: false,
+    hp: 40, spd: 3.15, atk: 5, range: 0.8, los: 9.5, radius: 0.26,
+    ore: 40, gas: 0, energy: 15, train: 6, pop: 1, melee: true, building: false,
   },
   [Kind.Fighter]: {
-    hp: 78, spd: 2.05, atk: 10, range: 3.1, los: 6, radius: 0.32,
-    ore: 60, gas: 0, energy: 20, train: 9, pop: 1, melee: false, building: false,
+    hp: 96, spd: 1.85, atk: 10, range: 3.1, los: 6, radius: 0.32,
+    ore: 70, gas: 0, energy: 20, train: 10, pop: 2, melee: false, building: false,
   },
   [Kind.Siege]: {
     hp: 55, spd: 1.15, atk: 30, range: 6.2, los: 5, radius: 0.42,
     ore: 90, gas: 40, energy: 20, train: 16, pop: 2, melee: false, building: false,
   },
   [Kind.Ravager]: {
-    hp: 96, spd: 2.35, atk: 13, range: 0.95, los: 5.5, radius: 0.36,
-    ore: 75, gas: 30, energy: 10, train: 12, pop: 2, melee: true, building: false,
+    hp: 96, spd: 2.35, atk: 15, range: 0.95, los: 5.5, radius: 0.36,
+    ore: 90, gas: 35, energy: 20, train: 16, pop: 2, melee: true, building: false,
   },
   [Kind.Prism]: {
-    hp: 150, spd: 1.15, atk: 20, range: 5.6, los: 6.5, radius: 0.4,
-    ore: 110, gas: 45, energy: 30, train: 18, pop: 2, melee: false, building: false,
+    hp: 165, spd: 0.95, atk: 24, range: 6.2, los: 7, radius: 0.48,
+    ore: 110, gas: 45, energy: 30, train: 20, pop: 3, melee: false, building: false,
   },
   [Kind.Shade]: {
     hp: 48, spd: 2.75, atk: 8, range: 3.4, los: 10.5, radius: 0.28,
@@ -133,8 +174,8 @@ export function workerName(_civ: Civ): string {
   return 'Worker';
 }
 
-export function fighterName(_civ: Civ): string {
-  return 'Fighter';
+export function fighterName(civ: Civ): string {
+  return civ === 'vespari' ? 'Lumen Guard' : 'Rift Guard';
 }
 
 export function labelOf(kind: Kind, civ: Civ): string {
@@ -144,10 +185,10 @@ export function labelOf(kind: Kind, civ: Civ): string {
   if (kind === Kind.UniqueB) return uniqueName(civ);
   if (kind === Kind.Worker) return workerName(civ);
   if (kind === Kind.Fighter) return fighterName(civ);
-  if (kind === Kind.Ravager) return 'Solar Lance';
-  if (kind === Kind.Prism) return 'Glacier Titan';
+  if (kind === Kind.Ravager) return 'Solar Strider';
+  if (kind === Kind.Prism) return 'Burden Walker';
   if (kind === Kind.Shade) return 'Spore Rider';
-  if (kind === Kind.Scout) return 'Scout';
+  if (kind === Kind.Scout) return civ === 'vespari' ? 'Wind Strider' : 'Grav-Skimmer';
   if (kind === Kind.Siege) return 'Breaker';
   return 'Unknown';
 }
@@ -165,11 +206,110 @@ export const POP_HALL = 10;
 export const GATHER_MAX = 8;
 export const BUILD_HP_START = 0.08;
 
-export const EPOCH_NAME = ['Spark', 'Orbit', 'Dominion', 'Apex'] as const;
+// ---- M4 — technology paths (docs/M4_TECH_PATHS.md) ---------------------------------
 
-/** Minimum epoch to train a unit from the Yard (DESIGN §4). */
-export function minTrainEpoch(kind: Kind): number {
-  if (kind === Kind.Fighter || kind === Kind.Shade) return 1;
-  if (kind === Kind.Siege || kind === Kind.Ravager || kind === Kind.Prism) return 2;
-  return 0;
+export type TechPathId =
+  | 'solar-ascendancy'
+  | 'sky-dominion'
+  | 'iron-colossus'
+  | 'rift-engineering';
+
+export interface TechPathInfo {
+  id: TechPathId;
+  civ: Civ;
+  name: string;
+  blurb: string;
+}
+
+/** One irreversible choice between two paths per faction (CANONICAL_VOCABULARY table). */
+export const TECH_PATHS: readonly TechPathInfo[] = [
+  {
+    id: 'solar-ascendancy',
+    civ: 'vespari',
+    name: 'Solar Ascendancy',
+    blurb: 'Tethers regrow 2x faster · Boost costs reduced 25%',
+  },
+  {
+    id: 'sky-dominion',
+    civ: 'vespari',
+    name: 'Sky Dominion',
+    blurb: 'Ships move 12% faster · Wind Striders see 2 farther',
+  },
+  {
+    id: 'iron-colossus',
+    civ: 'aurion',
+    name: 'Iron Colossus',
+    blurb: 'Rigs absorb 50% more damage · extract 33% faster',
+  },
+  {
+    id: 'rift-engineering',
+    civ: 'aurion',
+    name: 'Rift Engineering',
+    blurb: 'Ranged reach +1 · Burden Walkers train 30% faster',
+  },
+];
+
+export function pathsForCiv(civ: Civ): TechPathId[] {
+  return TECH_PATHS.filter((p) => p.civ === civ).map((p) => p.id);
+}
+
+/** M4 decision 4 — every path number lives in this one table; tests assert plumbing. */
+export interface PathEffects {
+  /** solar-ascendancy — link re-form delay scale after a sever. */
+  linkSeverScale: number;
+  /** solar-ascendancy — boost energy drain multiplier. */
+  boostDrainMul: number;
+  /** sky-dominion — non-worker unit move speed multiplier. */
+  combatSpeedMul: number;
+  /** sky-dominion — flat Scout LOS bonus. */
+  scoutLosBonus: number;
+  /** iron-colossus — finished rig HP multiplier. */
+  rigHpMul: number;
+  /** iron-colossus — rig extraction interval, seconds per unit. */
+  rigExtractSec: number;
+  /** rift-engineering — flat non-melee attack range bonus. */
+  rangedRangeBonus: number;
+  /** rift-engineering — Prism-kind train time multiplier. */
+  siegeTrainMul: number;
+}
+
+const NEUTRAL_EFFECTS: PathEffects = {
+  linkSeverScale: 1,
+  boostDrainMul: 1,
+  combatSpeedMul: 1,
+  scoutLosBonus: 0,
+  rigHpMul: 1,
+  rigExtractSec: 1,
+  rangedRangeBonus: 0,
+  siegeTrainMul: 1,
+};
+
+export const PATH_EFFECTS: Record<TechPathId, PathEffects> = {
+  'solar-ascendancy': { ...NEUTRAL_EFFECTS, linkSeverScale: 0.5, boostDrainMul: 0.75 },
+  'sky-dominion': { ...NEUTRAL_EFFECTS, combatSpeedMul: 1.12, scoutLosBonus: 2 },
+  'iron-colossus': { ...NEUTRAL_EFFECTS, rigHpMul: 1.5, rigExtractSec: 0.75 },
+  'rift-engineering': { ...NEUTRAL_EFFECTS, rangedRangeBonus: 1, siegeTrainMul: 0.7 },
+};
+
+/** An uncommitted team plays with the identity numbers. */
+export function pathEffects(path: TechPathId | null): PathEffects {
+  return path ? PATH_EFFECTS[path] : NEUTRAL_EFFECTS;
+}
+
+const GATED_KINDS: readonly Kind[] = [
+  Kind.Fighter,
+  Kind.Siege,
+  Kind.Ravager,
+  Kind.Prism,
+  Kind.Shade,
+];
+
+/** Kinds locked behind a committed technology path (M4 decision 1). */
+export function isPathGated(kind: Kind): boolean {
+  return GATED_KINDS.includes(kind);
+}
+
+/** Gate helper — gated kinds train only once the team has committed. */
+export function gateOpen(eco: Pick<TeamEco, 'techPath'>, kind: Kind): boolean {
+  return !isPathGated(kind) || eco.techPath !== null;
 }

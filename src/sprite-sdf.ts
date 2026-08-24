@@ -18,6 +18,13 @@ export const UNIT_KINDS = 7;
 export const CIVS = 3;
 export const UNIT_SLOTS = UNIT_KINDS * CIVS * UNIT_FRAMES;
 
+export const COMBAT_BRANCH_MAPPINGS = [
+  { kind: Kind.Fighter, civ: 0, row: 0 },
+  { kind: Kind.Ravager, civ: 0, row: 1 },
+  { kind: Kind.Fighter, civ: 1, row: 2 },
+  { kind: Kind.Prism, civ: 1, row: 3 },
+] as const;
+
 export function buildSprites(): SpriteAtlas {
   return buildSpriteAtlas();
 }
@@ -48,6 +55,12 @@ uniform vec2 uAtlasSize;
 uniform float uAtlasCols;
 uniform float uCell;
 uniform float uHallCell;
+uniform sampler2D uCombatAtlas;
+uniform vec2 uCombatAtlasSize;
+uniform float uCombatCell;
+uniform float uCombatCols;
+uniform float uCombatRows;
+uniform float uCombatEnabled;
 uniform sampler2D uScoutAtlas;
 uniform vec2 uScoutAtlasSize;
 uniform float uScoutCell;
@@ -82,8 +95,33 @@ void main() {
   float worker8 = 0.0;
   float worker8Action = 0.0;
   float scout = 0.0;
+  float combat = 0.0;
+  float combatRow = 0.0;
 
-  if (kind > 0.5 && kind < 1.5) {
+  // VS-4 has exactly four live mappings; corpse/dissolve frames stay legacy.
+  if (uCombatEnabled > 0.5 && frame < 4.0) {
+    if (kind > 1.5 && kind < 2.5 && civ < 0.5) {
+      combat = 1.0;
+      combatRow = 0.0;
+    } else if (kind > 3.5 && kind < 4.5 && civ < 0.5) {
+      combat = 1.0;
+      combatRow = 1.0;
+    } else if (kind > 1.5 && kind < 2.5 && civ > 0.5 && civ < 1.5) {
+      combat = 1.0;
+      combatRow = 2.0;
+    } else if (kind > 4.5 && kind < 5.5 && civ > 0.5 && civ < 1.5) {
+      combat = 1.0;
+      combatRow = 3.0;
+    }
+  }
+
+  if (combat > 0.5) {
+    col = floor(vDir + 0.5) + (frame > 0.5 ? 8.0 : 0.0);
+    row = combatRow;
+    cellSz = uCombatCell;
+    rowStride = uCombatCell;
+    pixH = uCombatCell;
+  } else if (kind > 0.5 && kind < 1.5) {
     scout = 1.0;
     col = civ * uScoutFrames + floor(frame);
     row = 0.0;
@@ -122,11 +160,14 @@ void main() {
   }
 
   float bob = 0.0;
-  if (kind < 9.5 && worker8 < 0.5 && scout < 0.5) bob = mod(floor(frame), 2.0);
+  if (kind < 9.5 && worker8 < 0.5 && scout < 0.5 && combat < 0.5) bob = mod(floor(frame), 2.0);
 
   float padX = (cellSz - spr) * 0.5;
   float rowY;
-  if (scout > 0.5) {
+  if (combat > 0.5) {
+    rowY = combatRow * uCombatCell;
+    padX = 0.0;
+  } else if (scout > 0.5) {
     rowY = 0.0;
     padX = 0.0;
   } else if (worker8 > 0.5) {
@@ -143,7 +184,9 @@ void main() {
   float spriteTop = rowY + (cellSz - pixH) - bob;
   if (worker8 > 0.5) spriteTop = rowY;
   float canvasX;
-  if (scout > 0.5) {
+  if (combat > 0.5) {
+    canvasX = col * uCombatCell + vUv.x * uCombatCell;
+  } else if (scout > 0.5) {
     canvasX = col * uScoutCell + vUv.x * uScoutCell;
   } else if (kind >= 9.5 && kind < 10.5) {
     canvasX = col * uHallCell + vUv.x * spr;
@@ -159,8 +202,16 @@ void main() {
     (canvasX + 0.5) / uScoutAtlasSize.x,
     1.0 - (canvasY + 0.5) / uScoutAtlasSize.y
   );
+  vec2 combatUV = vec2(
+    (canvasX + 0.5) / uCombatAtlasSize.x,
+    1.0 - (canvasY + 0.5) / uCombatAtlasSize.y
+  );
 
-  vec4 tex = scout > 0.5 ? texture2D(uScoutAtlas, scoutUV) : texture2D(uSpriteAtlas, atlasUV);
+  vec4 tex = combat > 0.5
+    ? texture2D(uCombatAtlas, combatUV)
+    : scout > 0.5
+      ? texture2D(uScoutAtlas, scoutUV)
+      : texture2D(uSpriteAtlas, atlasUV);
   vec3 colRgb = tex.rgb;
   if (tex.a < 0.08) discard;
 

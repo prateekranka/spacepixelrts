@@ -1,0 +1,20 @@
+# VS-5B Fresh Blind Counted-Economy Gate
+
+Judge only the six attached 1366×1024 composited screenshots from the actual running Starhaven build. They show, in order: Build Yard, assign Ore Workers 0/2, funding after Ore Workers 2/2, fully visible technology choice, train mixed army, real terminal.
+
+Do not inspect source, tests, manifests, logs, filenames beyond order, or previous verdicts.
+
+Blind questions:
+1. Does a first-time touch player know the next manual action in every frame?
+2. Is the exact Find Idle Worker → GATHER → marked Ore sequence clear?
+3. Does 0/2→2/2 give reliable assignment confirmation without implying an automatic order?
+4. Is the orange Ore target spatially distinct from blue Volatiles?
+5. Are funds, exact path costs, army requirement, and terminal action unambiguous?
+6. Does any guidance clip, overlap, contradict, or require hidden knowledge?
+
+Return exactly:
+- `VERDICT: PASS` or `VERDICT: FAIL`
+- one sentence per frame
+- `SINGLE BIGGEST GAP: ...`
+
+A PASS requires an unbroken manual economy→technology→army→terminal instruction chain. Do not give a charitable pass.

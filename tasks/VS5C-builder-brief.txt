@@ -1,0 +1,66 @@
+# VS5C Builder — post-army objective/victory guidance (strict TDD)
+
+Read:
+1. docs/VS5C_OBJECTIVE_VICTORY_GUIDANCE.md (frozen exact contract)
+2. current commit a3bcbae
+3. tasks/SOL-vs5b-full-blind-gate.log final verdict
+4. src/opening-guidance.ts + Hud.drawGuidance
+5. tests/vs5-pacing.test.ts + scripts/qa-vs5-pacing.mjs
+
+Owned production:
+- src/opening-guidance.ts
+- src/hud.ts guidance state/target only
+Owned tests/QA:
+- tests/vs5-pacing.test.ts
+- tests/m2-guidance.test.ts only if expected state changes
+- scripts/qa-vs5-pacing.mjs
+- tasks/VS5C-red.log force-add
+Do not touch sim/input/content/render/art/shaders/AI/app-flow/results/CSS/package.
+
+Strict tracer TDD:
+1. Unit RED first on unchanged evaluator:
+   - pair + undiscovered Lumen preserves select-scout/explore-signal;
+   - discovered neutral, rival owner, or contested returns exact secure-lumen copy;
+   - owner0 + hidden rival Hall returns exact push-lumen copy;
+   - owner0 + rival Hall with SEEN_PLAYER returns exact destroy-core copy;
+   - build/path/train states still outrank all objective states.
+   Save expected RED before production.
+2. GREEN minimal evaluator; optional eco fields must default safely for legacy callers/tests.
+3. Browser RED before HUD target edit:
+   - after real mixed pair, use ordinary Scout Move and real steps until landmark discovery;
+   - expect secure guidance but unchanged HUD lacks target route. Save RED.
+4. GREEN HUD passes `world.lumenState()` and routes:
+   - secure -> landmark `LUMEN`
+   - push -> landmark `PUSH`
+   - destroy -> discovered rival Hall `RIVAL NEXUS`
+   No state mutation.
+5. Continue browser proof through ordinary manual sim methods only:
+   - capture 08 secure;
+   - select pair and `world.issue(pair,Ord.AttackMove,center.x,center.z,-1)`, step to owner0;
+   - capture 09 push;
+   - move Scout/army beyond field through ordinary issue/steps until rival Hall SEEN_PLAYER naturally;
+   - capture10 destroy;
+   - issue ordinary attack if appropriate and step to real terminal; capture11.
+   Never write resources, fog, seenBy, tid/order directly, spawn, or winner. Instrument calls if useful.
+6. Check screenshots: no contradictory Build Yard, target labels align, Lumen status/ring visible, rival
+   Nexus marker appears only after discovery.
+
+Run:
+npm run test:vs5
+npm run qa:vs5 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs5c-objective
+npm run test:m2
+npm run qa:progression-handoff -- --out /tmp/vs5c-progress
+npm run qa:touch-contract -- --out /tmp/vs5c-touch
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs5c-vs2a
+npm run test:vs2b
+npm run qa:vs2b -- --out /tmp/vs5c-vs2b
+npm run test:vs4
+npm run qa:vs4 -- --out /tmp/vs5c-vs4
+npm run test:vs3
+npm run qa:vs3 -- --out /tmp/vs5c-vs3
+npm run build
+git diff --check
+
+Commit prefix `VS5C:`. Do not push/deploy. Report REDs, exact state/copy/targets, natural discovery and
+Lumen ticks, terminal, sim share, all gates, SHA, deviations.

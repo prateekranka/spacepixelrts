@@ -1,0 +1,47 @@
+# VS4A strict RED log
+# Source under test: be0488c / unchanged R3 row2 cabinet composition
+# Test-only changes were applied: 48 frozen row0/1/3 SHA-256 baselines and
+# normalized row2 anatomy assertions. src/sprites.ts was unchanged for this run.
+
+$ npm run test:vs4
+
+> spacepixelrts@0.1.0 test:vs4
+> tsx tests/vs4-combat-assets.test.ts
+
+VS4 pixel metrics: {"cells":64,"alphaPixels":{"min":1255,"max":1684},"connectedShare":{"min":1,"max":1},"directionMeanRgbaDelta":{"min":38.12603759765625,"max":48.36572265625},"poseDeltaPercent":{"min":5,"max":10.16839378238342},"magShare":{"min":0.005344418052256532,"max":0.007171314741035857},"sourceHeight":{"min":52,"max":52},"averageLuma":{"min":95.72524056603886,"max":156.65387158671587},"alphaWidth":{"min":36,"max":57},"alphaHeight":{"min":52,"max":52},"brightMaterialShare":{"min":0.6006191950464397,"max":0.7934210526315789},"rimOuterShare":{"min":1,"max":1},"rimInnerShare":{"min":1,"max":1},"guardSilhouetteIou":{"min":0.3902439024390244,"max":0.6939266386049309},"walkerSilhouetteIou":{"min":0.6560224089635854,"max":0.7117306680694372}}
+VS4 R2 readability failures: []
+VS4 R3 readability failures: []
+VS4A frozen row hash check: {"cells":48,"pass":true}
+
+VS4A row2 anatomy RED: 152 failures across 16 row2 cells after mirror dirs
+3/4/5 were normalized to authored 1/0/7.
+
+Head/hood failures:
+- authored dir 0 (and mirror dir 4), both poses: core head bbox 6x12, connected
+  core 72 (<80), visor 1px (<6).
+- authored dirs 1/7 (and mirror dirs 3/5), both poses: visor 4px (<6).
+
+Leg/gap failures:
+- authored dir 0 (and mirror dir 4): right leg was absent or only 1x2;
+  center gap contained 12–17 core pixels.
+- authored dirs 1/2/6/7 (and mirrors where applicable): center gap contained
+  14–20 core pixels.
+
+Shield/brace/head-center failures:
+- every authored facing failed the x8..26 shield bound: measured width was
+  7–8px rather than 16px (height was 31px in the measured window).
+- brace measured 2–16px over 1–8 rows rather than a 2–3px bridge.
+- head-center shield accents measured 3, 6, 9, or 15 pixels rather than zero.
+
+Polearm failures:
+- every authored facing had an empty x>=60/y<=6 tip, incomplete
+  x47..51/y22..28 and x53..57/y11..18 corridors, no connected grip-to-tip
+  path, and span 0px (distance/horizontal projection/slope all failed).
+
+AssertionError [ERR_ASSERTION]: VS4A row2 anatomy contract RED
+actual: 152
+expected: 0
+exit code: 1
+
+RED verdict: existing R3 cabinet composition fails the new anatomy contract;
+all frozen row hashes and pre-existing R1/R2/R3 pixel metrics are green.

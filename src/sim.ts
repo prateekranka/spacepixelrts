@@ -22,16 +22,20 @@ import {
   MAX_SPARKS,
 } from './engine';
 import type { Bolt, Civ, Ent, Spark, TeamEco } from './engine';
+import type { TechPathId } from './content';
+import type { Difficulty } from './match-config';
 import {
   BUILD_HP_START,
+  CIV_PROFILE,
   GATHER_MAX,
   POP_HALL,
   POP_HOUSE,
   STATS,
+  gateOpen,
   isBuilding,
   isUnit,
-  minTrainEpoch,
-  uniqueUnit,
+  pathEffects,
+  pathsForCiv,
 } from './content';
 import {
   OPENING_CENTER,
@@ -42,22 +46,93 @@ import {
   OPENING_VENTS,
   inOpeningCamp,
   inOpeningCorridor,
-  openingCampCenter,
-  openingFighterSlot,
-  openingUniqueSlot,
-  openingWorkerSlot,
 } from './opening-presentation';
+import { SEEN_PLAYER, SEEN_RIVAL, makeHeliosLandmarks } from './discovery';
+import type { DiscoveryEvent, EntityDiscoveryEvent, Landmark } from './discovery';
+
+/** M3-A — Sunweaver Solar collection link record (docs/M3_ECONOMIES.md). */
+export interface Link {
+  nodeId: number;
+  hallId: number;
+  team: number;
+  /** Tick until which the link is severed; -1 = live. */
+  severedUntil: number;
+}
+
+/** VS-2B — read-only snapshot of Central Lumen Field ownership. */
+export interface LumenState {
+  owner: -1 | 0 | 1;
+  capturing: -1 | 0 | 1;
+  progress: number;
+  contested: boolean;
+  pulseRemaining: readonly [number, number];
+}
+
+export interface MatchTeamStats {
+  resources: { ore: number; gas: number; energy: number };
+  unitsTrained: number;
+  unitsLost: number;
+  coreDamage: number;
+}
+
+export interface MatchStats {
+  tick: number;
+  teams: readonly [MatchTeamStats, MatchTeamStats];
+}
 
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
 const DZ = [0, 0, 1, -1, 1, -1, 1, -1];
 const DC = [1, 1, 1, 1, 1.4142, 1.4142, 1.4142, 1.4142];
 /** Scripted marshal wave trains faster off-screen (DESIGN §6). */
 const MARSHAL_FIGHTER_TRAIN = 1;
-const MARSHAL_SIEGE_TRAIN = 4;
 const MARSHAL_PEEL_STAGGER_TICKS = 3;
-/** Enemy forward pad — siege rally / head-start spawn (off opening crop). */
+/** Enemy forward pad — marshal rally (off opening crop). */
 const MARSHAL_FORWARD_X = MAP - 18;
 const MARSHAL_FORWARD_Z = MAP - 16;
+/** M4 decision 2 — Nexus path commit cost and channel seconds. */
+const PATH_COMMIT_ORE = 400;
+const PATH_COMMIT_CHARGE = 80;
+const PATH_COMMIT_CHANNEL = 40;
+export const OPENING_ORE_RESERVE = 700;
+/** VS-2B — central objective contract. */
+const LUMEN_CAPTURE_RADIUS = 4.5;
+const LUMEN_CAPTURE_SECONDS = 5;
+const LUMEN_PULSE_SECONDS = 4;
+const LUMEN_PULSE_INTERVAL = 30;
+/** M3-A base Solar link re-form delay after a sever, in ticks; solar-ascendancy halves it. */
+const LINK_SEVER_TICKS = 300;
+/** VS-2A — AI reaction cadence changes only with the selected difficulty. */
+const AI_CADENCE_SECONDS: Record<Difficulty, number> = {
+  cadet: 2.6,
+  standard: 1.4,
+  veteran: 0.8,
+};
+/** VS-2A-R2 — the rival may legally commit its technology path from 4:30. */
+const AI_PATH_EARLIEST_TICK = Math.round((4.5 * 60) / DT);
+/** VS-2A-R2 — the rival may target the discovered player Core from 8:00. */
+const AI_ATTACK_EARLIEST_TICK = Math.round((8 * 60) / DT);
+/** VS-2A — deterministic Yard ring, tested in array order. */
+const AI_YARD_RING_OFFSETS = [
+  { dx: -3.4, dz: -3.4 },
+  { dx: 0, dz: -4.4 },
+  { dx: 3.4, dz: -3.4 },
+  { dx: 4.4, dz: 0 },
+  { dx: 3.4, dz: 3.4 },
+  { dx: 0, dz: 4.4 },
+  { dx: -3.4, dz: 3.4 },
+  { dx: -4.4, dz: 0 },
+] as const;
+/** VS-2A — one honest housing pad for the four-unit compact force. */
+const AI_HOUSE_RING_OFFSETS = [
+  { dx: 3.4, dz: -3.4 },
+  { dx: -3.4, dz: 3.4 },
+  { dx: 0, dz: -4.4 },
+  { dx: 4.4, dz: 0 },
+  { dx: 0, dz: 4.4 },
+  { dx: -4.4, dz: 0 },
+  { dx: -3.4, dz: -3.4 },
+  { dx: 3.4, dz: 3.4 },
+] as const;
 
 export class World {
   readonly ents: Ent[] = Array.from({ length: MAX_ENTS }, makeEnt);
@@ -68,19 +143,35 @@ export class World {
   readonly explored = [new Uint8Array(MAP * MAP), new Uint8Array(MAP * MAP)];
   readonly visible = [new Uint8Array(MAP * MAP), new Uint8Array(MAP * MAP)];
   readonly teams: TeamEco[] = [
-    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 },
-    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 },
-    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0 },
-    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0 },
+    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0, techPath: null },
+    { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0, techPath: null },
+    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0, techPath: null },
+    { ore: 0, gas: 0, energy: 0, pop: 0, cap: 0, epoch: 0, ageT: 0, techPath: null },
   ];
   readonly civ: Civ[] = ['vespari', 'aurion', 'voidmarked', 'vespari'];
-  /** Clear-map review mode. Pass `?fog=1` from main to restore gameplay fog. */
-  fogOfWarEnabled = false;
+  /** Gameplay fog by default; pass `?fog=0` from main for clear-map review. */
+  fogOfWarEnabled = true;
+  /** M2-D — legacy scripted marshal cheats are off by default (docs/M2_D_AI_KNOWLEDGE.md). */
+  scriptedMarshalEnabled = false;
+  /** VS-2A — public difficulty input; it changes cadence only. */
+  aiDifficulty: Difficulty = 'standard';
+  /** M3-A — Sunweaver Solar collection links (docs/M3_ECONOMIES.md). */
+  readonly links: Link[] = [];
+  /** M3-C — per-team active boost: 0 off · 1 production · 2 vision · 3 shields. */
+  readonly boosts: number[] = [0, 0];
+  /** M4 — path chosen for the running commit channel; applied when ageT hits 0. */
+  private pendingPath: (TechPathId | null)[] = [null, null, null, null];
   readonly bolts: Bolt[] = [];
   readonly sparks: Spark[] = [];
   readonly flags: { x: number; z: number; t: number }[] = [];
   readonly hash = new Spatial();
   readonly q: number[] = [];
+  /** M2-B — Helios Rift landmarks; fresh records with cleared latches on every reset. */
+  landmarks: Landmark[] = makeHeliosLandmarks();
+  /** M2-B — chronological discovery events (entities, resources, structures). */
+  readonly discoveryLog: DiscoveryEvent[] = [];
+  /** Wired from main; fires on first sight of an entity or landmark per team. */
+  onDiscover?: (event: DiscoveryEvent) => void;
   tick = 0;
   seed = 0x5eed;
   /** -1 in play · 0 player win · 1 enemy win */
@@ -99,8 +190,19 @@ export class World {
   private marshalPeelBuilt = false;
   private marshalPeelQ: number[] = [];
   private marshalPeelI = 0;
-  private marshalSiegeSpawned = false;
   private sparkHead = 0;
+  private lumenOwner: -1 | 0 | 1 = -1;
+  private lumenCapturing: -1 | 0 | 1 = -1;
+  private lumenProgress = 0;
+  private lumenContested = false;
+  private lumenPulseRemaining: [number, number] = [0, 0];
+  private lumenChargeAccum: [number, number] = [0, 0];
+  private lumenOwnedAccum: [number, number] = [0, 0];
+  private matchStatsData: [MatchTeamStats, MatchTeamStats] = [
+    this.makeMatchTeamStats(),
+    this.makeMatchTeamStats(),
+  ];
+  private matchStatsTracking = false;
 
   constructor() {
     for (let i = 0; i < MAX_ENTS; i++) {
@@ -120,10 +222,32 @@ export class World {
     }
   }
 
+  private makeMatchTeamStats(): MatchTeamStats {
+    return {
+      resources: { ore: 0, gas: 0, energy: 0 },
+      unitsTrained: 0,
+      unitsLost: 0,
+      coreDamage: 0,
+    };
+  }
+
+  private resetMatchStats(): void {
+    this.matchStatsData[0] = this.makeMatchTeamStats();
+    this.matchStatsData[1] = this.makeMatchTeamStats();
+  }
+
+  private recordGathered(team: number, resource: 'ore' | 'gas' | 'energy', amount: number): void {
+    if (!this.matchStatsTracking || (team !== 0 && team !== 1) || amount <= 0) return;
+    this.matchStatsData[team].resources[resource] += amount;
+  }
+
   reset(seed = 0x5eed): void {
+    this.matchStatsTracking = false;
+    this.resetMatchStats();
     this.seed = seed;
     this.tick = 0;
     this.winner = -1;
+    this.resetLumen();
     this.bolts.length = 0;
     for (let i = 0; i < MAX_SPARKS; i++) this.sparks[i].active = false;
     this.sparkHead = 0;
@@ -134,8 +258,28 @@ export class World {
       this.ents[i].id = i;
       this.free.push(i);
     }
-    this.teams[0] = { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 };
-    this.teams[1] = { ore: 220, gas: 40, energy: 90, pop: 0, cap: 0, epoch: 0, ageT: 0 };
+    const playerStart = CIV_PROFILE[this.civ[0]];
+    const enemyStart = CIV_PROFILE[this.civ[1]];
+    this.teams[0] = {
+      ore: playerStart.startOre,
+      gas: playerStart.startGas,
+      energy: playerStart.startEnergy,
+      pop: 0,
+      cap: 0,
+      epoch: 0,
+      ageT: 0,
+      techPath: null,
+    };
+    this.teams[1] = {
+      ore: enemyStart.startOre,
+      gas: enemyStart.startGas,
+      energy: enemyStart.startEnergy,
+      pop: 0,
+      cap: 0,
+      epoch: 0,
+      ageT: 0,
+      techPath: null,
+    };
     this.explored[0].fill(0);
     this.explored[1].fill(0);
     this.visible[0].fill(0);
@@ -143,27 +287,38 @@ export class World {
     this.marshalPeelBuilt = false;
     this.marshalPeelQ = [];
     this.marshalPeelI = 0;
-    this.marshalSiegeSpawned = false;
     this.aiT = 0;
+    this.discoveryLog.length = 0;
+    this.landmarks = makeHeliosLandmarks();
+    this.links.length = 0;
+    this.boosts[0] = 0;
+    this.boosts[1] = 0;
+    this.pendingPath = [null, null, null, null];
     this.genMap();
     this.spawnScenario();
+    this.matchStatsTracking = true;
     this.recountPop();
     this.updateFog();
-    this.revealOpeningVision(MAP * 0.5, MAP * 0.52);
-    this.refreshVis();
   }
 
-  private refreshVis(): void {
-    for (let i = 0; i < MAX_ENTS; i++) {
-      const e = this.ents[i];
-      if (!e.alive) continue;
-      if (e.team === 0) {
-        e.vis = true;
-        continue;
-      }
-      const idx = tileAt(e.x, e.z);
-      e.vis = this.visible[0][idx] === 1 && !(e.kind === Kind.Shade && e.stealth > 0.55);
-    }
+  matchStats(): MatchStats {
+    return {
+      tick: this.tick,
+      teams: [
+        {
+          resources: { ...this.matchStatsData[0].resources },
+          unitsTrained: this.matchStatsData[0].unitsTrained,
+          unitsLost: this.matchStatsData[0].unitsLost,
+          coreDamage: this.matchStatsData[0].coreDamage,
+        },
+        {
+          resources: { ...this.matchStatsData[1].resources },
+          unitsTrained: this.matchStatsData[1].unitsTrained,
+          unitsLost: this.matchStatsData[1].unitsLost,
+          coreDamage: this.matchStatsData[1].coreDamage,
+        },
+      ],
+    };
   }
 
   spawn(kind: Kind, civ: Civ, team: number, x: number, z: number): Ent | null {
@@ -199,6 +354,11 @@ export class World {
     e.rallyZ = z;
     e.radius = st.radius;
     e.vis = true;
+    e.seenBy = 0;
+    e.rigTeam = -1;
+    e.rigProgress = 0;
+    e.rigHp = 0;
+    e.rigAccum = 0;
     e.path = null;
     e.pathI = 0;
     e.hitFlash = 0;
@@ -206,6 +366,9 @@ export class World {
     e.dissolveT = 0;
     e.corpseT = 0;
     if (kind === Kind.Hall) e.hp = st.hp;
+    if (this.matchStatsTracking && (team === 0 || team === 1) && isUnit(kind)) {
+      this.matchStatsData[team].unitsTrained++;
+    }
     return e;
   }
 
@@ -218,6 +381,7 @@ export class World {
   kill(e: Ent): void {
     if (!e.alive) return;
     if (isUnit(e.kind)) {
+      const firstDeath = e.corpseT <= 0 && e.dissolveT <= 0;
       e.hp = 0;
       e.dissolveT = DISSOLVE_DUR;
       e.corpseT = STAIN_DUR;
@@ -225,6 +389,9 @@ export class World {
       e.path = null;
       e.tid = -1;
       e.order = Ord.Idle;
+      if (firstDeath && this.matchStatsTracking && (e.team === 0 || e.team === 1)) {
+        this.matchStatsData[e.team].unitsLost++;
+      }
       this.recountPop();
       return;
     }
@@ -317,35 +484,70 @@ export class World {
     }
   }
 
-  tryAgeUp(team: number): boolean {
+  /** M4 decision 2/3 — begin the irreversible Nexus path commit; rejects leave no trace. */
+  tryCommitPath(team: number, path: TechPathId): boolean {
+    if (team < 0 || team >= this.teams.length) return false;
+    if (!pathsForCiv(this.civ[team]).includes(path)) return false;
     const eco = this.teams[team];
-    if (eco.epoch !== 0 || eco.ageT > 0) return false;
-    if (eco.ore < 400 || eco.energy < 80) return false;
+    if (eco.epoch !== 0 || eco.ageT > 0 || eco.techPath !== null) return false;
+    let hallReady = false;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team !== team || e.kind !== Kind.Hall) continue;
       if (e.trainT > 0) return false;
+      if (e.hp > 0 && e.progress >= 1) hallReady = true;
     }
-    eco.ore -= 400;
-    eco.energy -= 80;
-    eco.ageT = 40;
+    if (!hallReady) return false;
+    if (eco.ore < PATH_COMMIT_ORE || eco.energy < PATH_COMMIT_CHARGE) return false;
+    eco.ore -= PATH_COMMIT_ORE;
+    eco.energy -= PATH_COMMIT_CHARGE;
+    eco.ageT = PATH_COMMIT_CHANNEL;
+    this.pendingPath[team] = path;
     return true;
   }
 
+  /** M4 — committed path of a team (null before the commit channel completes). */
+  techPathOf(team: number): TechPathId | null {
+    return this.teams[team]?.techPath ?? null;
+  }
+
+  /** M4 — path currently being committed by a team, before it locks in. */
+  pendingPathOf(team: number): TechPathId | null {
+    return this.pendingPath[team] ?? null;
+  }
+
+  /** M4 — seconds remaining on the active commit channel (0 when idle or done). */
+  pathChannelT(team: number): number {
+    return this.teams[team]?.ageT ?? 0;
+  }
+
+  /** VS-2B — return a defensive, read-only-through-method Lumen snapshot. */
+  lumenState(): LumenState {
+    return {
+      owner: this.lumenOwner,
+      capturing: this.lumenCapturing,
+      progress: this.lumenProgress,
+      contested: this.lumenContested,
+      pulseRemaining: [this.lumenPulseRemaining[0], this.lumenPulseRemaining[1]],
+    };
+  }
+
   tryTrain(building: Ent, kind: Kind): boolean {
+    if (kind === Kind.Siege || kind === Kind.Shade) return false;
     if (!building.alive || !isBuilding(building.kind)) return false;
     if (building.trainT > 0) return false;
     const st = STATS[kind];
     const eco = this.teams[building.team];
     if (building.kind === Kind.Hall && eco.ageT > 0) return false;
-    if (building.kind === Kind.Barracks && eco.epoch < minTrainEpoch(kind)) return false;
+    if (building.kind === Kind.Barracks && !gateOpen(eco, kind)) return false;
     if (eco.ore < st.ore || eco.gas < st.gas || eco.energy < st.energy) return false;
     if (eco.pop + st.pop > eco.cap) return false;
     eco.ore -= st.ore;
     eco.gas -= st.gas;
     eco.energy -= st.energy;
     building.trainKind = kind;
-    building.trainT = st.train;
+    const trainMul = kind === Kind.Prism ? pathEffects(eco.techPath).siegeTrainMul : 1;
+    building.trainT = st.train * trainMul;
     return true;
   }
 
@@ -361,6 +563,10 @@ export class World {
     eco.energy -= st.energy;
     const built = this.spawn(kind, this.civ[team], team, x, z);
     if (!built) return false;
+    if (team === 1 && kind === Kind.Barracks) {
+      built.rallyX = OPENING_CENTER.x;
+      built.rallyZ = OPENING_CENTER.z;
+    }
     built.progress = BUILD_HP_START;
     built.hp = Math.max(1, st.hp * BUILD_HP_START);
     b.order = Ord.Build;
@@ -392,6 +598,7 @@ export class World {
   }
 
   step(): void {
+    if (this.winner !== -1) return;
     this.tick++;
     this.hash.clear();
     for (let i = 0; i < MAX_ENTS; i++) {
@@ -403,15 +610,20 @@ export class World {
     }
     this.thinkUnits();
     this.thinkBuildings();
+    this.stepRigs();
+    this.stepBoosts();
     this.stepAge();
     this.stepCorpses();
     this.moveSeparate();
     this.stepBolts();
     this.stepSparks();
+    this.stepLumen();
     this.updateFog();
     this.stepFlags();
-    this.stepEnemyMarshal();
-    this.stepMarshalPeel();
+    if (this.scriptedMarshalEnabled) {
+      this.stepEnemyMarshal();
+      this.stepMarshalPeel();
+    }
     this.stepAi();
     if ((this.tick & 7) === 0) this.recountPop();
     this.checkWinner();
@@ -701,7 +913,7 @@ export class World {
     const node = this.spawn(Kind.Resource, 'vespari', 3, x, z);
     if (node) {
       node.cargoType = kind;
-      node.hp = kind === Tile.Ore ? 280 : kind === Tile.Gas ? 200 : 160;
+      node.hp = kind === Tile.Ore ? OPENING_ORE_RESERVE : kind === Tile.Gas ? 200 : 160;
       node.maxHp = node.hp;
       node.radius = 0.55;
     }
@@ -766,6 +978,7 @@ export class World {
 
   private strikeRange(e: Ent, st: (typeof STATS)[number], t: Ent): number {
     let r = st.range + t.radius;
+    if (!st.melee) r += pathEffects(this.teams[e.team].techPath).rangedRangeBonus;
     if (this.tick < 240 && this.openingClashEnt(e) && !st.melee) r += 0.95;
     return r;
   }
@@ -778,20 +991,6 @@ export class World {
     }
     if (target.team === 0) return 0.35;
     return 1;
-  }
-
-  private revealOpeningVision(cx: number, cz: number): void {
-    const icx = cx | 0;
-    const icz = cz | 0;
-    for (let z = icz - 10; z <= icz + 10; z++) {
-      if (z < 0 || z >= MAP) continue;
-      for (let x = icx - 14; x <= icx + 14; x++) {
-        if (x < 0 || x >= MAP) continue;
-        const idx = x + z * MAP;
-        this.visible[0][idx] = 1;
-        this.explored[0][idx] = 1;
-      }
-    }
   }
 
   private stampPatch(kind: Tile, count: number, rng: () => number): void {
@@ -820,122 +1019,30 @@ export class World {
   }
 
   private spawnScenario(): void {
-    const a = this.civ[0];
-    const b = this.civ[1];
-    this.spawn(Kind.Hall, a, 0, 10.5, 10.5);
-    this.spawn(Kind.House, a, 0, 13.5, 8.5);
-    this.spawn(Kind.House, a, 0, 12.0, 12.0);
-    this.spawn(Kind.House, a, 0, 8.8, 9.0);
-    this.spawn(Kind.Barracks, a, 0, 8.2, 13.6);
-    this.spawn(Kind.Hall, b, 1, MAP - 10.5, MAP - 10.5);
-    this.spawn(Kind.House, b, 1, MAP - 13.2, MAP - 8.4);
-    this.spawn(Kind.House, b, 1, MAP - 12.0, MAP - 12.0);
-    this.spawn(Kind.House, b, 1, MAP - 8.8, MAP - 9.0);
-    this.spawn(Kind.Barracks, b, 1, MAP - 8.1, MAP - 13.5);
-
-    for (let i = 0; i < 5; i++) {
-      const w0 = this.spawn(Kind.Worker, a, 0, 12.2 + i * 0.55, 12.4);
-      if (w0) {
-        w0.order = Ord.Gather;
-        w0.tx = 18;
-        w0.tz = 16;
-      }
-      const w1 = this.spawn(Kind.Worker, b, 1, MAP - 12.2 - i * 0.55, MAP - 12.4);
-      if (w1) {
-        w1.order = Ord.Gather;
-        w1.tx = MAP - 18;
-        w1.tz = MAP - 16;
-      }
-    }
-    this.spawn(Kind.Scout, a, 0, 16, 14);
-    this.spawn(Kind.Scout, b, 1, MAP - 16, MAP - 14);
-
-    // Opening clash — camera-aligned 2x4 ranks with enough presentation
-    // footprint to keep opposing silhouettes countable.
-    const cx = OPENING_CENTER.x;
-    const cz = OPENING_CENTER.z;
-    for (let i = 0; i < 8; i++) {
-      const col = i % 4;
-      const row = (i / 4) | 0;
-      const f0Slot = openingFighterSlot(0, row, col);
-      const f1Slot = openingFighterSlot(1, row, col);
-      const f0 = this.spawn(Kind.Fighter, a, 0, f0Slot.x, f0Slot.z);
-      if (f0) {
-        f0.order = Ord.Attack;
-        f0.tx = f1Slot.x;
-        f0.tz = f1Slot.z;
-        f0.facing = dir8(f0.tx - f0.x, f0.tz - f0.z);
-        f0.cooldown = -0.08 * (i % 5);
-      }
-      const kryosLiving = (row === 0 && col >= 1 && col <= 2) || (row === 1 && col <= 2);
-      const f1 = this.spawn(Kind.Fighter, b, 1, f1Slot.x, f1Slot.z);
-      if (f1) {
-        if (kryosLiving) {
-          f1.order = Ord.Attack;
-          f1.tx = f0Slot.x;
-          f1.tz = f0Slot.z;
-          f1.facing = dir8(f1.tx - f1.x, f1.tz - f1.z);
-          f1.cooldown = -0.08 * ((i + 2) % 5);
-        } else {
-          f1.hp = 0;
-          f1.corpseT = 4;
-          f1.vx = f1.vz = 0;
-          f1.path = null;
-          f1.tid = -1;
-          f1.order = Ord.Idle;
-        }
-      }
-    }
-    const uniqueSlot = openingUniqueSlot(0);
-    const rv = this.spawn(uniqueUnit(a), a, 0, uniqueSlot.x, uniqueSlot.z);
-    if (rv) {
-      rv.order = Ord.Attack;
-      rv.tx = OPENING_CENTER.x + 2.2;
-      rv.tz = OPENING_CENTER.z + 2.2;
-      rv.facing = dir8(rv.tx - rv.x, rv.tz - rv.z);
-      rv.cooldown = -0.15;
-    }
-
-    // Forward camps — workers + gem parked beyond Helion wing with visible Z gap.
-    const camp0 = openingCampCenter(0);
-    const camp1 = openingCampCenter(1);
-    const oreX = cx - 0.25;
-    const oreZ = camp0.z - 0.1;
-    const gasX = cx + 1.1;
-    const gasZ = camp1.z - 0.1;
-    this.spawn(Kind.House, a, 0, camp0.x, camp0.z);
-    this.spawn(Kind.House, b, 1, camp1.x, camp1.z);
-    for (let i = 0; i < 3; i++) {
-      const slot = openingWorkerSlot(0, i);
-      const w = this.spawn(Kind.Worker, a, 0, slot.x, slot.z);
-      if (w) {
-        w.order = Ord.Gather;
-        w.tx = oreX;
-        w.tz = oreZ;
-      }
-    }
-    for (let i = 0; i < 3; i++) {
-      const slot = openingWorkerSlot(1, i);
-      const wk = this.spawn(Kind.Worker, b, 1, slot.x, slot.z);
-      if (wk) {
-        wk.order = Ord.Gather;
-        wk.tx = gasX;
-        wk.tz = gasZ;
-      }
-    }
-
-    // Contested mid gem — Helion workers gather between the firing wings.
-    const midSpawns: [number, number][] = [
-      [cx - 0.85, cz - 0.7],
-      [cx + 0.85, cz - 0.7],
-      [cx, cz + 0.85],
+    // M2-A opening — six entities per side, mirrored through the map center.
+    const workerOffsets: readonly (readonly [number, number])[] = [
+      [-2.6, -2.2],
+      [2.6, -2.2],
+      [-2.6, 2.6],
+      [2.6, 2.6],
     ];
-    for (const [wx, wz] of midSpawns) {
-      const w = this.spawn(Kind.Worker, a, 0, wx, wz);
-      if (w) {
-        w.order = Ord.Gather;
-        w.tx = cx;
-        w.tz = cz;
+    const nodeOffsets: readonly (readonly [Tile, number, number])[] = [
+      [Tile.Ore, 5.5, -1.5],
+      [Tile.Gas, -1.5, 5.5],
+      [Tile.Solar, 5.5, 4.5],
+    ];
+    for (let t = 0; t < 2; t++) {
+      const sgn = t === 0 ? 1 : -1;
+      const bx = t === 0 ? 10.5 : MAP - 10.5;
+      const bz = t === 0 ? 10.5 : MAP - 10.5;
+      this.spawn(Kind.Hall, this.civ[t], t, bx, bz);
+      for (const [dx, dz] of workerOffsets) {
+        this.spawn(Kind.Worker, this.civ[t], t, bx + dx * sgn, bz + dz * sgn);
+      }
+      this.spawn(Kind.Scout, this.civ[t], t, bx + 4.2 * sgn, bz - 4.2 * sgn);
+      // Safe mirrored gems — one of each type within reach of every Core.
+      for (const [kind, dx, dz] of nodeOffsets) {
+        this.placeOpeningNodeAt(kind, bx + dx * sgn, bz + dz * sgn);
       }
     }
   }
@@ -982,7 +1089,7 @@ export class World {
             if (holdFire || !marchThrough) {
               e.vx = e.vz = 0;
               e.path = null;
-              if (holdFire) e.facing = target.x >= e.x ? 1 : -1;
+              if (holdFire) e.facing = dir8(target.x - e.x, target.z - e.z);
               continue;
             }
           }
@@ -1012,7 +1119,10 @@ export class World {
           !crossedCenter;
         const gx = target && e.order !== Ord.Move && !openingMarch ? target.x : e.tx;
         const gz = target && e.order !== Ord.Move && !openingMarch ? target.z : e.tz;
-        this.steer(e, gx, gz, st.spd * (1 + e.frenzy * 0.08));
+        // M4 decision 4 — sky-dominion quickens non-worker combat movement.
+        const spdMul =
+          e.kind === Kind.Worker ? 1 : pathEffects(this.teams[e.team].techPath).combatSpeedMul;
+        this.steer(e, gx, gz, st.spd * spdMul * (1 + e.frenzy * 0.08));
         const pathDone = !e.path || e.pathI >= (e.path.length >> 1);
         const reachedGoalTile = pathDone && tileAt(e.x, e.z) === tileAt(e.tx, e.tz);
         if (e.order === Ord.Move && (dist2(e.x, e.z, e.tx, e.tz) < 0.16 || reachedGoalTile)) {
@@ -1050,16 +1160,27 @@ export class World {
       e.order = Ord.Return;
       if (dist2(e.x, e.z, hall.x, hall.z) < (hall.radius + 0.55) ** 2) {
         const eco = this.teams[e.team];
-        if (e.cargoType === Tile.Ore) eco.ore += e.cargo;
-        else if (e.cargoType === Tile.Gas) eco.gas += e.cargo;
-        else eco.energy += e.cargo;
+        if (e.cargoType === Tile.Ore) {
+          eco.ore += e.cargo;
+          this.recordGathered(e.team, 'ore', e.cargo);
+        } else if (e.cargoType === Tile.Gas) {
+          eco.gas += e.cargo;
+          this.recordGathered(e.team, 'gas', e.cargo);
+        } else {
+          eco.energy += e.cargo;
+          this.recordGathered(e.team, 'energy', e.cargo);
+        }
         e.cargo = 0;
         e.order = Ord.Gather;
       } else this.steer(e, hall.x, hall.z, st.spd);
       return;
     }
     let node = e.tid >= 0 ? this.ents[e.tid] : null;
-    if (!node?.alive || node.kind !== Kind.Resource) node = this.nearestResource(e.x, e.z);
+    // M2-D R2 — team 1 gathers only from nodes it has discovered.
+    if (!node?.alive || node.kind !== Kind.Resource || (e.team === 1 && (node.seenBy & SEEN_RIVAL) === 0)) {
+      node =
+        e.team === 1 ? this.nearestResourceForTeam(1, e.x, e.z) : this.nearestResource(e.x, e.z);
+    }
     if (!node) {
       e.order = Ord.Idle;
       return;
@@ -1074,6 +1195,8 @@ export class World {
       e.vx = e.vz = 0;
       e.path = null;
       if (e.cooldown <= 0) {
+        // M3-A — Sunweaver workers pulse energy over a Solar link instead of hauling.
+        if (this.trySolarLinkPulse(e, node)) return;
         e.cargo += 1;
         e.cargoType = node.cargoType;
         node.hp -= 1;
@@ -1087,11 +1210,73 @@ export class World {
     }
   }
 
+  /** M3-A — try a linked Solar energy pulse for a Sunweaver worker (docs/M3_ECONOMIES.md A1–A3). */
+  private trySolarLinkPulse(e: Ent, node: Ent): boolean {
+    if (e.civ !== 'vespari' || node.cargoType !== Tile.Solar) return false;
+    const hall = this.nearestHall(e.team, node.x, node.z);
+    if (!hall) return false;
+    let link = this.links.find((l) => l.nodeId === node.id && l.team === e.team);
+    if (!link) {
+      link = { nodeId: node.id, hallId: hall.id, team: e.team, severedUntil: -1 };
+      this.links.push(link);
+    }
+    if (link.severedUntil > this.tick) return false;
+    // A3 — an enemy unit near the tether midpoint severs the link for 10 s.
+    const mx = (node.x + hall.x) * 0.5;
+    const mz = (node.z + hall.z) * 0.5;
+    const r2 = 1.8 * 1.8;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const u = this.ents[i];
+      if (!u.alive || u.team === e.team) continue;
+      if (!isUnit(u.kind)) continue;
+      if (dist2(u.x, u.z, mx, mz) < r2) {
+        const fx = pathEffects(this.teams[e.team].techPath);
+        link.severedUntil = this.tick + Math.round(LINK_SEVER_TICKS * fx.linkSeverScale);
+        return false;
+      }
+    }
+    const eco = this.teams[e.team];
+    eco.energy += 1;
+    this.recordGathered(e.team, 'energy', 1);
+    node.hp -= 1;
+    e.cooldown = 0.4;
+    if (node.hp <= 0) {
+      this.kill(node);
+      const idx = this.links.indexOf(link);
+      if (idx >= 0) this.links.splice(idx, 1);
+    }
+    return true;
+  }
+
   private thinkBuild(e: Ent): void {
     const st = STATS[e.kind];
     const b = e.tid >= 0 ? this.ents[e.tid] : null;
     if (!b?.alive) {
       e.order = Ord.Idle;
+      return;
+    }
+    // M3-B — Gravemark workers raise extraction rigs on ore/gas nodes.
+    if (b.kind === Kind.Resource) {
+      if (e.civ !== 'aurion') {
+        e.order = Ord.Idle;
+        return;
+      }
+      if (b.cargoType !== Tile.Ore && b.cargoType !== Tile.Gas) {
+        e.order = Ord.Idle;
+        return;
+      }
+      if (b.rigTeam >= 0 && b.rigTeam !== e.team) {
+        e.order = Ord.Idle;
+        return;
+      }
+      if (dist2(e.x, e.z, b.x, b.z) < (b.radius + 0.5) ** 2) {
+        e.vx = e.vz = 0;
+        if (b.rigTeam < 0) b.rigTeam = e.team;
+        b.rigProgress = Math.min(1, b.rigProgress + DT * 0.1);
+        const fx = pathEffects(this.teams[e.team].techPath);
+        b.rigHp = 700 * b.rigProgress * fx.rigHpMul;
+        if (b.rigProgress >= 1) e.order = Ord.Gather;
+      } else this.steer(e, b.x, b.z, st.spd);
       return;
     }
     if (dist2(e.x, e.z, b.x, b.z) < (b.radius + 0.5) ** 2) {
@@ -1102,6 +1287,49 @@ export class World {
     } else this.steer(e, b.x, b.z, st.spd);
   }
 
+  /** M3-B B3 — finished rigs auto-extract 1 unit per 1.0 s for 0.5 node hp. */
+  private stepRigs(): void {
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const n = this.ents[i];
+      if (!n.alive || n.kind !== Kind.Resource) continue;
+      if (n.rigTeam < 0 || n.rigProgress < 1) continue;
+      if (n.cargoType !== Tile.Ore && n.cargoType !== Tile.Gas) continue;
+      const eco = this.teams[n.rigTeam];
+      const iv = pathEffects(eco.techPath).rigExtractSec;
+      n.rigAccum += DT;
+      while (n.rigAccum >= iv && n.hp > 0) {
+        n.rigAccum -= iv;
+        n.hp = Math.max(0, n.hp - 0.5);
+        if (n.cargoType === Tile.Ore) {
+          eco.ore += 1;
+          this.recordGathered(n.rigTeam, 'ore', 1);
+        } else {
+          eco.gas += 1;
+          this.recordGathered(n.rigTeam, 'gas', 1);
+        }
+      }
+      if (n.hp <= 0) this.kill(n);
+    }
+  }
+
+  /** M3-C C2/C3 — drains active boosts and auto-disables them below 4 energy. */
+  private stepBoosts(): void {
+    const DRAIN = [0, 8, 5, 6];
+    for (let t = 0; t < 2; t++) {
+      const kind = this.boosts[t];
+      if (kind === 0) continue;
+      const eco = this.teams[t];
+      if (eco.energy <= 4) {
+        this.boosts[t] = 0;
+        continue;
+      }
+      const fx = pathEffects(eco.techPath);
+      eco.energy = Math.max(0, eco.energy - DRAIN[kind] * DT * fx.boostDrainMul);
+      if (eco.energy < 4) this.boosts[t] = 0;
+    }
+  }
+
+  /** M4 — resolves the commit channel: applies the pending path once, irreversibly. */
   private stepAge(): void {
     for (let t = 0; t < 2; t++) {
       const eco = this.teams[t];
@@ -1109,7 +1337,15 @@ export class World {
       eco.ageT -= DT;
       if (eco.ageT <= 0) {
         eco.ageT = 0;
-        if (eco.epoch === 0) eco.epoch = 1;
+        const pending = this.pendingPath[t];
+        this.pendingPath[t] = null;
+        if (pending !== null && eco.techPath === null) {
+          // Decision 5 — epoch=1 written once for legacy readers, then never again.
+          eco.techPath = pending;
+          eco.epoch = 1;
+        } else if (eco.epoch === 0) {
+          eco.epoch = 1;
+        }
       }
     }
   }
@@ -1122,6 +1358,10 @@ export class World {
       if (e.kind === Kind.Hall && e.civ === 'vespari') {
         // Slow self-repair.
         e.hp = Math.min(e.maxHp, e.hp + DT * 2);
+      }
+      // M3-C — Shields boost regen for this team's finished buildings.
+      if (this.boosts[e.team] === 3) {
+        e.hp = Math.min(e.maxHp, e.hp + DT * 6);
       }
       if (e.kind === Kind.UniqueB && e.civ === 'vespari') {
         this.sporeT[e.team] += DT;
@@ -1145,15 +1385,23 @@ export class World {
       } else e.cooldown = Math.max(0, e.cooldown - DT);
 
       if (e.trainT > 0) {
-        const spd = e.civ === 'vespari' ? 1.2 : 1;
+        const spd = (e.civ === 'vespari' ? 1.2 : 1) * (this.boosts[e.team] === 1 ? 1.8 : 1);
         e.trainT -= DT * spd;
         if (e.trainT <= 0) {
           e.trainT = 0;
           const u = this.spawn(e.trainKind, e.civ, e.team, e.rallyX, e.rallyZ);
           if (u) {
-            if (e.team === 1 && this.tick >= 240 && isUnit(u.kind) && u.kind !== Kind.Worker) {
+            if (
+              this.scriptedMarshalEnabled &&
+              e.team === 1 &&
+              this.tick >= 240 &&
+              isUnit(u.kind) &&
+              u.kind !== Kind.Worker
+            ) {
               u.order = Ord.Idle;
               this.queueMarshalPeel(u);
+            } else if (e.team === 1 && this.tick < AI_ATTACK_EARLIEST_TICK) {
+              this.orderAiAttackMoveCenter(u);
             } else {
               u.order = Ord.AttackMove;
               u.tx = e.rallyX + (e.team === 0 ? 1 : -1);
@@ -1166,6 +1414,33 @@ export class World {
     }
   }
 
+  /** M3-B B4 — a finished rig absorbs damage before the base node does. */
+  private damageRigAware(t: Ent, dmg: number, attackerTeam = -1): void {
+    const hpBefore = t.hp;
+    if (t.kind === Kind.Resource && t.rigTeam >= 0 && t.rigProgress >= 1) {
+      t.rigHp -= dmg;
+      if (t.rigHp <= 0) {
+        t.rigHp = 0;
+        t.rigTeam = -1;
+        t.rigProgress = 0;
+        t.rigAccum = 0;
+        this.spawnSpark(t.x, t.z, 1, 'aurion');
+      }
+      return;
+    }
+    t.hp -= dmg;
+    if (
+      t.kind === Kind.Hall &&
+      this.matchStatsTracking &&
+      (attackerTeam === 0 || attackerTeam === 1) &&
+      (t.team === 0 || t.team === 1) &&
+      t.team !== attackerTeam
+    ) {
+      const removed = Math.max(0, Math.min(Math.max(0, hpBefore), hpBefore - t.hp));
+      this.matchStatsData[attackerTeam].coreDamage += removed;
+    }
+  }
+
   private tryStrike(e: Ent, t: Ent, st: typeof STATS[number]): void {
     if (e.cooldown > 0) return;
     if (this.tick < 240 && t.kind === Kind.Worker) return;
@@ -1173,11 +1448,11 @@ export class World {
     const bonus = t.civ === 'aurion' ? 0.85 : 1; // compact armor
     const applied =
       dmg *
-      (isBuilding(t.kind) && e.kind === Kind.Siege ? 1.8 : 1) *
+      (isBuilding(t.kind) && e.kind === Kind.Prism ? 1.8 : 1) *
       (e.civ === 'aurion' ? 0.92 : 1) *
       this.openingDmgMul(e, t);
     if (st.melee) {
-      t.hp -= applied * bonus;
+      this.damageRigAware(t, applied * bonus, e.team);
       if (t.team === 1 && this.tick < 240) t.hitFlash = 0.45;
       this.spawnSpark(t.x, t.z, 1, e.civ);
       this.onHit?.();
@@ -1265,11 +1540,12 @@ export class World {
       for (const id of this.q) {
         const e = this.ents[id];
         if (!e.alive || e.hp <= 0 || e.team === b.team) continue;
-        if (e.kind === Kind.Resource) continue;
+        // M3-B — bolts may strike rigged resource nodes; plain nodes stay immune.
+        if (e.kind === Kind.Resource && e.rigTeam < 0) continue;
         if (e.kind === Kind.Worker) continue;
         if (e.kind === Kind.Shade && e.stealth > 0.6) continue;
         if (dist2(b.x, b.z, e.x, e.z) < (e.radius + 0.25) ** 2) {
-          e.hp -= b.dmg;
+          this.damageRigAware(e, b.dmg, b.team);
           if (e.team === 1 && this.tick < 240) e.hitFlash = 0.45;
           this.markCombat(e);
           this.spawnSpark(b.x, b.z, 1, b.civ);
@@ -1321,8 +1597,8 @@ export class World {
     e.z = clamp(e.z, 0.6, MAP - 0.6);
     if (e.kind === Kind.Worker) {
       if (Math.abs(e.vx) + Math.abs(e.vz) > 0.05) e.facing = dir8(e.vx, e.vz);
-    } else if (Math.abs(e.vx) > 0.05) {
-      e.facing = e.vx >= 0 ? 1 : -1;
+    } else if (Math.abs(e.vx) + Math.abs(e.vz) > 0.05) {
+      e.facing = dir8(e.vx, e.vz);
     }
   }
 
@@ -1361,6 +1637,7 @@ export class World {
       const o = this.ents[id];
       if (!o.alive || o.hp <= 0 || o.team === e.team) continue;
       if (o.kind === Kind.Resource) continue;
+      if (e.team === 1 && o.team === 0 && o.kind === Kind.Hall && (o.seenBy & SEEN_RIVAL) === 0) continue;
       if (o.kind === Kind.Shade && o.stealth > 0.55) continue;
       const d = dist2(e.x, e.z, o.x, o.z);
       if (d < bestD) {
@@ -1381,6 +1658,25 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team !== team || e.kind !== Kind.Hall || e.progress < 1) continue;
+      const d = dist2(x, z, e.x, e.z);
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  /** M2-D — AI-visible resource search: only nodes this team has discovered (R2). */
+  nearestResourceForTeam(team: number, x: number, z: number): Ent | null {
+    const bit = team === 0 ? SEEN_PLAYER : SEEN_RIVAL;
+    let best: Ent | null = null;
+    let bestD = 1e9;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.kind !== Kind.Resource) continue;
+      if (e.cargoType !== Tile.Ore && e.cargoType !== Tile.Gas && e.cargoType !== Tile.Solar) continue;
+      if ((e.seenBy & bit) === 0) continue;
       const d = dist2(x, z, e.x, e.z);
       if (d < bestD) {
         bestD = d;
@@ -1464,12 +1760,172 @@ export class World {
     return !!this.block[tileAt(x, z)];
   }
 
+  private discoveryBit(team: number): number {
+    return team === 0 ? SEEN_PLAYER : SEEN_RIVAL;
+  }
+
+  private entityDiscoveryMeta(e: Ent): Pick<EntityDiscoveryEvent, 'kind' | 'label'> {
+    if (e.kind === Kind.Resource) {
+      const label =
+        e.cargoType === Tile.Ore
+          ? 'Ore Field'
+          : e.cargoType === Tile.Gas
+            ? 'Volatile Field'
+            : e.cargoType === Tile.Solar
+              ? 'Lumen Field'
+              : e.cargoType === Tile.PropWreck
+                ? 'Neutral Tech Relic'
+                : 'Rift Vent';
+      return { kind: 'resource', label };
+    }
+    if (isBuilding(e.kind)) {
+      return { kind: 'enemy-structure', label: e.kind === Kind.Hall ? 'Enemy Core' : 'Enemy Structure' };
+    }
+    return { kind: 'entity', label: 'Enemy Unit' };
+  }
+
+  private markEntityDiscovered(team: number, e: Ent): void {
+    const bit = this.discoveryBit(team);
+    if ((e.seenBy & bit) !== 0) return;
+    e.seenBy |= bit;
+    if (e.team === team) return;
+    const meta = this.entityDiscoveryMeta(e);
+    const event: EntityDiscoveryEvent = {
+      team,
+      tick: this.tick,
+      id: e.id,
+      kind: meta.kind,
+      label: meta.label,
+      x: e.x,
+      z: e.z,
+    };
+    this.discoveryLog.push(event);
+    this.onDiscover?.(event);
+  }
+
+  private markLandmarksDiscovered(team: number): void {
+    const bit = this.discoveryBit(team);
+    const visible = this.visible[team];
+    for (const landmark of this.landmarks) {
+      if ((landmark.discoveredBy & bit) !== 0) continue;
+      if (!visible[tileAt(landmark.x, landmark.z)]) continue;
+      landmark.discoveredBy |= bit;
+      const event: DiscoveryEvent = {
+        team,
+        tick: this.tick,
+        id: landmark.id,
+        kind: landmark.kind,
+        label: landmark.label,
+        x: landmark.x,
+        z: landmark.z,
+      };
+      this.discoveryLog.push(event);
+      this.onDiscover?.(event);
+    }
+  }
+
+  private markVisibleEntitiesDiscovered(team: number): void {
+    const visible = this.visible[team];
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive) continue;
+      if (e.team !== team && e.kind === Kind.Shade && e.stealth > 0.55) continue;
+      if (e.team === team || visible[tileAt(e.x, e.z)]) this.markEntityDiscovered(team, e);
+    }
+  }
+
+  private resetLumen(): void {
+    this.lumenOwner = -1;
+    this.lumenCapturing = -1;
+    this.lumenProgress = 0;
+    this.lumenContested = false;
+    this.lumenPulseRemaining[0] = 0;
+    this.lumenPulseRemaining[1] = 0;
+    this.lumenChargeAccum[0] = 0;
+    this.lumenChargeAccum[1] = 0;
+    this.lumenOwnedAccum[0] = 0;
+    this.lumenOwnedAccum[1] = 0;
+  }
+
+  /** VS-2B — deterministic Central Lumen capture, income, and pulse accounting. */
+  private stepLumen(): void {
+    for (let team = 0; team < 2; team++) {
+      this.lumenPulseRemaining[team] = Math.max(0, this.lumenPulseRemaining[team] - DT);
+    }
+
+    let playerPresent = false;
+    let rivalPresent = false;
+    const radius2 = LUMEN_CAPTURE_RADIUS * LUMEN_CAPTURE_RADIUS;
+    const landmark = this.landmarks.find((entry) => entry.id === 'central-lumen-field');
+    if (landmark) {
+      for (let i = 0; i < MAX_ENTS; i++) {
+        const e = this.ents[i];
+        if (
+          !e.alive ||
+          e.hp <= 0 ||
+          (e.kind !== Kind.Fighter && e.kind !== Kind.Ravager && e.kind !== Kind.Prism)
+        ) continue;
+        if (dist2(e.x, e.z, landmark.x, landmark.z) > radius2) continue;
+        if (e.team === 0) playerPresent = true;
+        else if (e.team === 1) rivalPresent = true;
+      }
+    }
+
+    const bothPresent = playerPresent && rivalPresent;
+    this.lumenContested = bothPresent;
+    if (!playerPresent && !rivalPresent) {
+      this.lumenCapturing = -1;
+      this.lumenProgress = 0;
+    } else if (bothPresent) {
+      this.lumenCapturing = -1;
+      this.lumenProgress = 0;
+    } else {
+      const team: 0 | 1 = playerPresent ? 0 : 1;
+      if (this.lumenOwner === team) {
+        this.lumenCapturing = -1;
+        this.lumenProgress = 0;
+      } else {
+        if (this.lumenCapturing !== team) {
+          this.lumenCapturing = team;
+          this.lumenProgress = 0;
+        }
+        this.lumenProgress = Math.min(LUMEN_CAPTURE_SECONDS, this.lumenProgress + DT);
+        if (this.lumenProgress + 1e-9 >= LUMEN_CAPTURE_SECONDS) {
+          this.lumenOwner = team;
+          this.lumenCapturing = -1;
+          this.lumenProgress = 0;
+          this.lumenChargeAccum[team] = 0;
+          this.lumenOwnedAccum[team] = 0;
+        }
+      }
+    }
+
+    if (this.lumenOwner !== 0 && this.lumenOwner !== 1) return;
+    const owner: 0 | 1 = this.lumenOwner;
+    const eco = this.teams[owner];
+    this.lumenChargeAccum[owner] += DT;
+    while (this.lumenChargeAccum[owner] + 1e-9 >= 1) {
+      this.lumenChargeAccum[owner] -= 1;
+      eco.energy += 1;
+      this.recordGathered(owner, 'energy', 1);
+    }
+    this.lumenOwnedAccum[owner] += DT;
+    while (this.lumenOwnedAccum[owner] + 1e-9 >= LUMEN_PULSE_INTERVAL) {
+      this.lumenOwnedAccum[owner] -= LUMEN_PULSE_INTERVAL;
+      this.lumenPulseRemaining[owner] = LUMEN_PULSE_SECONDS;
+    }
+  }
+
   private updateFog(): void {
     if (!this.fogOfWarEnabled) {
       this.visible[0].fill(1);
       this.visible[1].fill(1);
       this.explored[0].fill(1);
       this.explored[1].fill(1);
+      for (let team = 0; team < 2; team++) {
+        this.markVisibleEntitiesDiscovered(team);
+        this.markLandmarksDiscovered(team);
+      }
       for (let i = 0; i < MAX_ENTS; i++) {
         if (this.ents[i].alive) this.ents[i].vis = true;
       }
@@ -1480,7 +1936,11 @@ export class World {
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team > 1) continue;
-      const los = STATS[e.kind].los + (e.civ === 'voidmarked' ? 1 : 0);
+      const los =
+        STATS[e.kind].los +
+        (e.civ === 'voidmarked' ? 1 : 0) +
+        (this.boosts[e.team] === 2 ? 2.5 : 0) +
+        (e.kind === Kind.Scout ? pathEffects(this.teams[e.team].techPath).scoutLosBonus : 0);
       const r = Math.ceil(los);
       const vis = this.visible[e.team];
       const exp = this.explored[e.team];
@@ -1501,18 +1961,14 @@ export class World {
         }
       }
     }
-    if (this.tick < 200) {
-      const ocx = (MAP * 0.5) | 0;
-      const ocz = (MAP * 0.52) | 0;
-      for (let z = ocz - 10; z <= ocz + 10; z++) {
-        if (z < 0 || z >= MAP) continue;
-        for (let x = ocx - 14; x <= ocx + 14; x++) {
-          if (x < 0 || x >= MAP) continue;
-          const idx = x + z * MAP;
-          this.visible[0][idx] = 1;
-          this.explored[0][idx] = 1;
-        }
-      }
+    for (let team = 0; team < 2; team++) {
+      if (this.lumenPulseRemaining[team] <= 0) continue;
+      this.visible[team].fill(1);
+      this.explored[team].fill(1);
+    }
+    for (let team = 0; team < 2; team++) {
+      this.markVisibleEntitiesDiscovered(team);
+      this.markLandmarksDiscovered(team);
     }
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
@@ -1521,16 +1977,12 @@ export class World {
         e.vis = true;
         continue;
       }
+      if (e.kind === Kind.Resource) {
+        e.vis = (e.seenBy & SEEN_PLAYER) !== 0;
+        continue;
+      }
       const idx = tileAt(e.x, e.z);
       e.vis = this.visible[0][idx] === 1 && !(e.kind === Kind.Shade && e.stealth > 0.55);
-    }
-    if (this.tick < 240) {
-      for (let i = 0; i < MAX_ENTS; i++) {
-        const e = this.ents[i];
-        if (!e.alive) continue;
-        if (this.openingClashEnt(e)) e.vis = true;
-        if (this.openingFlankCampEnt(e) || this.openingMidGemWorkerEnt(e)) e.vis = true;
-      }
     }
   }
 
@@ -1558,6 +2010,7 @@ export class World {
 
   private shouldMarshalPeel(e: Ent): boolean {
     if (!e.alive || e.team !== 1 || !isUnit(e.kind) || e.kind === Kind.Worker) return false;
+    if (e.kind === Kind.Siege || e.kind === Kind.Shade) return false;
     if (this.isRaidingPlayerHall(e)) return false;
     if (this.openingClashEnt(e)) return true;
     if (e.order === Ord.Idle) return true;
@@ -1587,7 +2040,7 @@ export class World {
     if (!this.marshalPeelQ.includes(e.id)) this.marshalPeelQ.push(e.id);
   }
 
-  /** Tick 240: off-screen Dominion for the enemy marshal; ore/gas/charge for mixed-arms Yard queue. */
+  /** Tick 240: off-screen doctrine commit for the enemy marshal; ore/gas/charge for mixed-arms Yard queue. */
   private stepEnemyMarshal(): void {
     if (this.tick < 240) return;
     const eco = this.teams[1];
@@ -1595,7 +2048,9 @@ export class World {
     eco.gas = Math.max(eco.gas, 40);
     eco.energy = Math.max(eco.energy, 40);
     if (this.tick === 240) {
-      eco.epoch = 2;
+      // M4 decision 6 — instant doctrine commit replaces the old epoch jump.
+      eco.techPath = this.civ[1] === 'vespari' ? 'sky-dominion' : 'iron-colossus';
+      this.pendingPath[1] = null;
       eco.ageT = 0;
       eco.ore = Math.max(eco.ore, 500);
       eco.gas = Math.max(eco.gas, 120);
@@ -1617,25 +2072,16 @@ export class World {
         }
       }
     }
-    if (this.tick === 250 && !this.marshalSiegeSpawned) {
-      this.marshalSiegeSpawned = true;
-      const s = this.spawn(Kind.Siege, this.civ[1], 1, MARSHAL_FORWARD_X, MARSHAL_FORWARD_Z);
-      if (s) {
-        s.order = Ord.Idle;
-        this.queueMarshalPeel(s);
-      }
-    }
     this.pumpMarshalTraining();
   }
 
   private pumpMarshalTraining(): void {
     const eco = this.teams[1];
-    if (eco.epoch < minTrainEpoch(Kind.Fighter)) return;
+    if (!gateOpen(eco, Kind.Fighter)) return;
     let hall: Ent | null = null;
     let barracks: Ent | null = null;
     let workers = 0;
     let fighters = 0;
-    let sieges = 0;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team !== 1) continue;
@@ -1643,22 +2089,8 @@ export class World {
       if (e.kind === Kind.Barracks) barracks = e;
       if (e.kind === Kind.Worker) workers++;
       if (e.kind === Kind.Fighter && e.hp > 0) fighters++;
-      if (e.kind === Kind.Siege && e.hp > 0) sieges++;
     }
     if (!barracks) return;
-    const stS = STATS[Kind.Siege];
-    if (
-      barracks.trainT <= 0 &&
-      eco.epoch >= minTrainEpoch(Kind.Siege) &&
-      sieges < 1 &&
-      eco.pop + stS.pop <= eco.cap &&
-      eco.ore >= stS.ore &&
-      eco.gas >= stS.gas &&
-      eco.energy >= stS.energy
-    ) {
-      this.tryMarshalTrain(barracks, Kind.Siege);
-      return;
-    }
     const stF = STATS[Kind.Fighter];
     const room = eco.pop + stF.pop <= eco.cap;
     const pay = eco.ore >= stF.ore && eco.energy >= stF.energy;
@@ -1674,8 +2106,6 @@ export class World {
     if (building.team === 1 && this.tick >= 240) {
       if (kind === Kind.Fighter) {
         building.trainT = Math.min(building.trainT, MARSHAL_FIGHTER_TRAIN);
-      } else if (kind === Kind.Siege) {
-        building.trainT = Math.min(building.trainT, MARSHAL_SIEGE_TRAIN);
       }
     }
     return true;
@@ -1703,63 +2133,373 @@ export class World {
 
   private stepAi(): void {
     this.aiT += DT;
-    if (this.aiT < 1.4) return;
+    if (this.aiT + 1e-9 < AI_CADENCE_SECONDS[this.aiDifficulty]) return;
     this.aiT = 0;
     const eco = this.teams[1];
     let hall: Ent | null = null;
-    let barracks: Ent | null = null;
-    let fighters = 0;
+    let yard: Ent | null = null;
     let workers = 0;
-    let military = 0;
     for (let i = 0; i < MAX_ENTS; i++) {
       const e = this.ents[i];
       if (!e.alive || e.team !== 1) continue;
       if (e.kind === Kind.Hall) hall = e;
-      if (e.kind === Kind.Barracks) barracks = e;
-      if (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism) fighters++;
-      if (isUnit(e.kind) && e.kind !== Kind.Worker) military++;
-      if (e.kind === Kind.Worker) {
-        workers++;
-        if (e.order === Ord.Idle) {
-          e.order = Ord.Gather;
+      if (e.kind === Kind.Barracks) yard = e;
+      if (e.kind === Kind.Worker) workers++;
+    }
+
+    // VS-2A — the only way the rival creates its Yard is the public placement seam.
+    if (!yard && hall && hall.progress >= 1 && hall.hp > 0) {
+      this.tryAiPlaceYard(hall);
+      yard = this.ents.find((e) => e.alive && e.team === 1 && e.kind === Kind.Barracks) ?? null;
+    }
+
+    // The opening four Workers plus one Scout need one honest House for a 2+2 force.
+    if (
+      hall &&
+      yard &&
+      !this.ents.some((e) => e.alive && e.team === 1 && e.kind === Kind.House)
+    ) {
+      this.tryAiPlaceHouse(hall);
+    }
+
+    // VS5 — replace a lost rival Scout through the ordinary Hall training seam until Core discovery.
+    const playerHall = this.ents.find(
+      (e) => e.alive && e.hp > 0 && e.team === 0 && e.kind === Kind.Hall && e.progress >= 1,
+    );
+    const rivalScoutAlive = this.ents.some(
+      (e) => e.alive && e.hp > 0 && e.team === 1 && e.kind === Kind.Scout,
+    );
+    const scoutStats = STATS[Kind.Scout];
+    if (
+      hall &&
+      playerHall &&
+      (playerHall.seenBy & SEEN_RIVAL) === 0 &&
+      !rivalScoutAlive &&
+      hall.progress >= 1 &&
+      hall.hp > 0 &&
+      hall.trainT <= 0 &&
+      eco.ageT <= 0 &&
+      eco.pop + scoutStats.pop <= eco.cap &&
+      eco.ore >= scoutStats.ore &&
+      eco.gas >= scoutStats.gas &&
+      eco.energy >= scoutStats.energy
+    ) {
+      this.tryTrain(hall, Kind.Scout);
+    }
+
+    // Keep the opening Worker count stable so the population cap can hold the compact army.
+    if (hall && hall.trainT <= 0 && workers < 4 && eco.ore >= STATS[Kind.Worker].ore && eco.pop < eco.cap) {
+      this.tryTrain(hall, Kind.Worker);
+    }
+
+    if (yard && yard.progress >= 1) {
+      this.tryAiCommitPath(hall, yard);
+      this.tryAiTrainMix(yard);
+    }
+
+    // Idle Workers return to the normal gather loop after construction decisions.
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (e.alive && e.team === 1 && e.kind === Kind.Worker && e.order === Ord.Idle) e.order = Ord.Gather;
+    }
+
+    // M2-D R3/R4 — deterministic scouting and sight-based target invalidation.
+    this.stepAiScout();
+    this.stepAiTargetInvalidation();
+    // M3-B B5 — Gravemark AI assigns idle workers to raise rigs on discovered nodes.
+    this.stepAiRigs();
+    this.stepAiFieldOrders();
+    // M3-C C3 — Sunweaver AI boost policy: production while training, vision while scouting.
+    if (this.civ[1] === 'vespari') {
+      const trainingMilitary =
+        (yard !== null && yard.trainT > 0) || (hall !== null && hall.trainT > 0);
+      if (trainingMilitary && eco.energy > 80) this.boosts[1] = 1;
+      else if (this.tick < 1800 && eco.energy > 30) this.boosts[1] = 2;
+      else this.boosts[1] = 0;
+    }
+  }
+
+  /** VS-2A — choose an unloaded Worker, preferring Idle then Gather, without interrupting Build. */
+  private aiBuilderWorker(): Ent | null {
+    let idle: Ent | null = null;
+    let gatherer: Ent | null = null;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1 || e.kind !== Kind.Worker || e.cargo !== 0 || e.order === Ord.Build) continue;
+      if (e.order === Ord.Idle) {
+        idle ??= e;
+        if (!this.aiNearestResourceIsSolar(e)) return e;
+      }
+      if (e.order === Ord.Gather && gatherer === null) gatherer = e;
+    }
+    return idle ?? gatherer;
+  }
+
+  private aiNearestResourceIsSolar(e: Ent): boolean {
+    const target = e.tid >= 0 ? this.ents[e.tid] : null;
+    const node = target?.alive && target.kind === Kind.Resource
+      ? target
+      : this.nearestResourceForTeam(1, e.x, e.z);
+    return node?.cargoType === Tile.Solar;
+  }
+
+  /** VS-2A — one legal placement from a frozen ring; tryPlace is called only after canPlace. */
+  private tryAiPlaceFromRing(
+    kind: Kind,
+    center: { x: number; z: number },
+    offsets: readonly { dx: number; dz: number }[],
+  ): boolean {
+    const st = STATS[kind];
+    const eco = this.teams[1];
+    if (eco.ore < st.ore || eco.gas < st.gas || eco.energy < st.energy) return false;
+    const builder = this.aiBuilderWorker();
+    if (!builder) return false;
+    for (const offset of offsets) {
+      const x = center.x + offset.dx;
+      const z = center.z + offset.dz;
+      if (!this.canPlace(x, z, st.radius)) continue;
+      return this.tryPlace(1, kind, x, z, builder.id);
+    }
+    return false;
+  }
+
+  /** VS-2A — one Yard maximum, built by a real Worker near the completed Core. */
+  private tryAiPlaceYard(hall: Ent): boolean {
+    if (this.ents.some((e) => e.alive && e.team === 1 && e.kind === Kind.Barracks)) return false;
+    return this.tryAiPlaceFromRing(Kind.Barracks, hall, AI_YARD_RING_OFFSETS);
+  }
+
+  /** VS-2A — the existing cap needs one normal House for the compact 2+2 force. */
+  private tryAiPlaceHouse(hall: Ent): boolean {
+    const unique = this.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism;
+    const desiredArmyPop = STATS[Kind.Fighter].pop * 2 + STATS[unique].pop * 2;
+    if (this.teams[1].pop + desiredArmyPop <= this.teams[1].cap) return false;
+    if (this.ents.some((e) => e.alive && e.team === 1 && e.kind === Kind.House)) return false;
+    return this.tryAiPlaceFromRing(Kind.House, hall, AI_HOUSE_RING_OFFSETS);
+  }
+
+  /** VS-2A — legal path entry; the normal 40-second channel owns the eventual write. */
+  private tryAiCommitPath(hall: Ent | null, yard: Ent): boolean {
+    const eco = this.teams[1];
+    if (
+      this.tick < AI_PATH_EARLIEST_TICK ||
+      !hall ||
+      hall.progress < 1 ||
+      hall.hp <= 0 ||
+      hall.trainT > 0 ||
+      yard.progress < 1 ||
+      eco.ageT > 0 ||
+      eco.techPath !== null ||
+      eco.epoch !== 0 ||
+      eco.ore < PATH_COMMIT_ORE ||
+      eco.energy < PATH_COMMIT_CHARGE
+    ) {
+      return false;
+    }
+    const path: TechPathId = this.civ[1] === 'vespari' ? 'sky-dominion' : 'iron-colossus';
+    return this.tryCommitPath(1, path);
+  }
+
+  private aiCountKindAndQueued(kind: Kind): number {
+    let count = 0;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1) continue;
+      if (e.kind === kind && e.hp > 0) count++;
+      if (e.trainT > 0 && e.trainKind === kind) count++;
+    }
+    return count;
+  }
+
+  private aiCanTrain(yard: Ent, kind: Kind): boolean {
+    const st = STATS[kind];
+    const eco = this.teams[1];
+    return yard.alive && yard.progress >= 1 && yard.trainT <= 0 && gateOpen(eco, kind)
+      && eco.ore >= st.ore && eco.gas >= st.gas && eco.energy >= st.energy
+      && eco.pop + st.pop <= eco.cap;
+  }
+
+  /** VS-2A — lower living+queued side first, with a legal affordability fallback. */
+  private tryAiTrainMix(yard: Ent): boolean {
+    if (this.teams[1].ageT > 0) return false;
+    const unique = this.civ[1] === 'vespari' ? Kind.Ravager : Kind.Prism;
+    const fighters = this.aiCountKindAndQueued(Kind.Fighter);
+    const uniques = this.aiCountKindAndQueued(unique);
+    const preferred = fighters <= uniques ? Kind.Fighter : unique;
+    const fallback = preferred === Kind.Fighter ? unique : Kind.Fighter;
+    if (this.aiCanTrain(yard, preferred)) return this.tryTrain(yard, preferred);
+    if (this.aiCanTrain(yard, fallback)) return this.tryTrain(yard, fallback);
+    return false;
+  }
+
+  /** VS-2A-R2 — keep a combat-ready field force on the shared center before the attack floor. */
+  private orderAiAttackMoveCenter(e: Ent): void {
+    e.order = Ord.AttackMove;
+    e.tx = OPENING_CENTER.x;
+    e.tz = OPENING_CENTER.z;
+    e.tid = -1;
+    e.path = this.pathfind(e.x, e.z, OPENING_CENTER.x, OPENING_CENTER.z);
+    e.pathI = 0;
+  }
+
+  /** VS-2A — rally the field at center until a discovered Core and four-unit force exist. */
+  private stepAiFieldOrders(): void {
+    const hall = this.ents.find((e) => e.alive && e.team === 0 && e.kind === Kind.Hall && e.hp > 0);
+    const field = this.ents.filter(
+      (e) => e.alive && e.hp > 0 && e.team === 1
+        && (e.kind === Kind.Fighter || e.kind === Kind.Ravager || e.kind === Kind.Prism),
+    );
+    const coreDiscovered = hall !== undefined && (hall.seenBy & SEEN_RIVAL) !== 0;
+    if (hall && coreDiscovered && field.length >= 4 && this.tick >= AI_ATTACK_EARLIEST_TICK) {
+      for (const unit of field) {
+        if (unit.order !== Ord.AttackMove || unit.tid !== hall.id) this.orderAttackMoveHall(unit, hall);
+      }
+      return;
+    }
+    for (const unit of field) {
+      if (dist2(unit.x, unit.z, OPENING_CENTER.x, OPENING_CENTER.z) < 0.28 * 0.28) {
+        this.orderAiAttackMoveCenter(unit);
+      } else if (
+        unit.order !== Ord.AttackMove ||
+        unit.tid !== -1 ||
+        Math.abs(unit.tx - OPENING_CENTER.x) > 0.01 ||
+        Math.abs(unit.tz - OPENING_CENTER.z) > 0.01
+      ) {
+        this.orderAiAttackMoveCenter(unit);
+      }
+    }
+  }
+
+  /** M3-B B5 — aurion AI: one idle worker per discovered unrigged ore/gas node, capped. */
+  private stepAiRigs(): void {
+    if (this.civ[1] !== 'aurion') return;
+    let builders = 0;
+    const claimed = new Set<number>();
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1 || e.kind !== Kind.Worker) continue;
+      if (e.order === Ord.Build && e.tid >= 0) {
+        const t = this.ents[e.tid];
+        if (t?.alive && t.kind === Kind.Resource) {
+          builders++;
+          claimed.add(e.tid);
         }
       }
     }
-    if (hall && hall.trainT <= 0 && workers < 8 && eco.ore >= 50 && eco.pop < eco.cap) {
-      this.tryTrain(hall, Kind.Worker);
+    if (builders >= 2) return;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1 || e.kind !== Kind.Worker) continue;
+      // The census above turns idle workers into Gather; rigs recruit unloaded
+      // gatherers (not hauling cargo) and never touch the opening tableau.
+      const eligible =
+        e.order === Ord.Gather && e.cargo === 0 && !this.openingTableauWorker(e);
+      if (!eligible) continue;
+      // Keep one ordinary discovered-resource gatherer on Solar so Charge for
+      // the legal path and normal Yard training is earned, never granted.
+      if (this.aiNearestResourceIsSolar(e)) continue;
+      if (builders >= 2) return;
+      const node = this.nearestUnriggedNode(e.x, e.z, claimed);
+      if (!node) return;
+      claimed.add(node.id);
+      e.order = Ord.Build;
+      e.tid = node.id;
+      e.tx = node.x;
+      e.tz = node.z;
+      e.path = null;
+      e.pathI = 0;
+      builders++;
     }
-    if (barracks && barracks.trainT <= 0 && eco.pop < eco.cap) {
-      const k = fighters > 6 && eco.gas >= 45 ? uniqueUnit(this.civ[1]) : Kind.Fighter;
-      if (
-        this.tick < 240 &&
-        eco.epoch >= minTrainEpoch(k) &&
-        eco.ore >= STATS[k].ore &&
-        eco.gas >= STATS[k].gas &&
-        eco.energy >= STATS[k].energy
-      ) {
-        this.tryTrain(barracks, k);
-      } else if (
-        this.tick < 240 &&
-        this.tick >= 28 &&
-        military < 5 &&
-        eco.ore >= STATS[Kind.Scout].ore &&
-        eco.energy >= STATS[Kind.Scout].energy
-      ) {
-        this.tryTrain(barracks, Kind.Scout);
+  }
+
+  /** Nearest discovered ore/gas node without a friendly rig and not already claimed. */
+  private nearestUnriggedNode(x: number, z: number, claimed: Set<number>): Ent | null {
+    let best: Ent | null = null;
+    let bestD = 1e9;
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.kind !== Kind.Resource) continue;
+      if (e.cargoType !== Tile.Ore && e.cargoType !== Tile.Gas) continue;
+      if ((e.seenBy & SEEN_RIVAL) === 0) continue;
+      if (e.rigTeam >= 0) continue;
+      if (claimed.has(e.id)) continue;
+      const d = dist2(x, z, e.x, e.z);
+      if (d < bestD) {
+        bestD = d;
+        best = e;
       }
     }
-    if (
-      hall &&
-      hall.trainT <= 0 &&
-      workers >= 8 &&
-      this.tick < 240 &&
-      this.tick >= 28 &&
-      military < 5 &&
-      eco.pop + STATS[Kind.Scout].pop <= eco.cap &&
-      eco.ore >= STATS[Kind.Scout].ore &&
-      eco.energy >= STATS[Kind.Scout].energy
-    ) {
-      this.tryTrain(hall, Kind.Scout);
+    return best;
+  }
+
+  /** VS-2A — send an idle rival Scout to the nearest deterministic unexplored frontier tile. */
+  private stepAiScout(): void {
+    const scout = this.ents.find(
+      (e) => e.alive && e.team === 1 && e.kind === Kind.Scout && e.order === Ord.Idle,
+    );
+    if (!scout) return;
+    const exp = this.explored[1];
+    let bestX = -1;
+    let bestZ = -1;
+    let bestTravel = Infinity;
+    let bestProgress = Infinity;
+    let bestIndex = Infinity;
+    for (let z = 0; z < MAP; z++) {
+      for (let x = 0; x < MAP; x++) {
+        const idx = x + z * MAP;
+        if (exp[idx] !== 0 || this.block[idx] !== 0) continue;
+        let frontier = false;
+        for (let dz = -1; dz <= 1 && !frontier; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dz === 0) continue;
+            const xx = x + dx;
+            const zz = z + dz;
+            if (xx < 0 || zz < 0 || xx >= MAP || zz >= MAP) continue;
+            if (exp[xx + zz * MAP] !== 0) {
+              frontier = true;
+              break;
+            }
+          }
+        }
+        if (!frontier) continue;
+        const travel = dist2(scout.x, scout.z, x + 0.5, z + 0.5);
+        const progress = dist2(x + 0.5, z + 0.5, 10.5, 10.5);
+        if (
+          travel < bestTravel ||
+          (travel === bestTravel && (progress < bestProgress || (progress === bestProgress && idx < bestIndex)))
+        ) {
+          bestTravel = travel;
+          bestProgress = progress;
+          bestIndex = idx;
+          bestX = x;
+          bestZ = z;
+        }
+      }
+    }
+    if (bestX < 0) return;
+    scout.order = Ord.Move;
+    scout.tx = bestX + 0.5;
+    scout.tz = bestZ + 0.5;
+    scout.tid = -1;
+    scout.path = null;
+    scout.pathI = 0;
+  }
+
+  /** M2-D R4 — attackers drop targets their team can no longer see. */
+  private stepAiTargetInvalidation(): void {
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const e = this.ents[i];
+      if (!e.alive || e.team !== 1 || e.order !== Ord.Attack || e.tid < 0) continue;
+      const t = this.ents[e.tid];
+      if (!t.alive || t.hp <= 0) continue;
+      if (t.team === 1) continue;
+      if (this.visible[1][tileAt(t.x, t.z)] !== 0) continue;
+      e.order = Ord.Idle;
+      e.tid = -1;
+      e.vx = 0;
+      e.vz = 0;
+      e.path = null;
+      e.pathI = 0;
     }
   }
 

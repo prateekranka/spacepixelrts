@@ -1,0 +1,31 @@
+/** Starhold palette: original tokens for deep space, oxidized metal, and warm signal light. */
+export const STARHOLD_PALETTE = Object.freeze({
+  ink: '#0B0A12',
+  night: '#171326',
+  deep: '#2A203B',
+  shadow: '#3A2030',
+  fog: '#29323D',
+  slate: '#46505B',
+  steel: '#637381',
+  sky: '#7FA7B8',
+  ice: '#B7D1D0',
+  moss: '#294A3A',
+  leaf: '#4E8A5A',
+  lime: '#9CCB6E',
+  rust: '#5C2E28',
+  sienna: '#8D4A34',
+  copper: '#B66B3F',
+  ochre: '#D09A4E',
+  sand: '#D6B98A',
+  cream: '#F0E7D2',
+  plum: '#5A315D',
+  berry: '#9A4A7A',
+  rose: '#C36A91',
+  coral: '#D78A9A',
+  amber: '#F0C15A',
+  red: '#B84B45',
+  muted: '#9CA6A5',
+  pale: '#D4D8D0',
+});
+
+export type StarholdColor = keyof typeof STARHOLD_PALETTE;

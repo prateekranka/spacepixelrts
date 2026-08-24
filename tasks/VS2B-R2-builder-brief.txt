@@ -1,0 +1,64 @@
+# VS2B-R2 Builder — spatial objective marker (browser TDD)
+
+Read:
+1. docs/VS2B_LUMEN_FIELD.md amended R2 section
+2. tasks/SOL-vs2b-blind-gate.txt and tail of tasks/SOL-vs2b-blind-gate.log
+3. current commit 0acf224
+4. src/render.ts drawOverlay/project/groundY
+5. src/hud.ts drawLandmarkMarker
+6. scripts/qa-vs2b-lumen.mjs
+
+Root cause is frozen: R1 panel states are clear, but the world has no persistent marker and the
+minimap mark is too small to connect the panel to conflict. Fix only that gap.
+
+Owned:
+- src/render.ts
+- src/hud.ts only minimap objective marker sizing if required
+- scripts/qa-vs2b-lumen.mjs
+- tasks/VS2B-R2-red.log (force-add)
+- existing tests only if needed to run; no sim/HUD panel mechanic change
+No sim/main/input/content/stats/combat-sprite/AI/app-flow/package/dependency changes.
+
+Strict browser RED first:
+1. Extend qa:vs2b before production edits.
+2. For each discovered screenshot state, compute 32 projected perimeter points at radius 4.5 via
+   __STARHOLD_VIEW__.project + groundY and sample #overlay alpha. Require >=20/32 non-transparent
+   points. Current R1 must FAIL.
+3. Require minimap objective ring color at +/-10 internal-canvas pixels from projected center.
+   Current R1 must FAIL.
+4. Save full failing output to tasks/VS2B-R2-red.log.
+5. Only then edit render/hud.
+
+World-space overlay asset after landmark SEEN_PLAYER:
+- complete 4.5-unit ring from >=32 projected world points;
+- 5px P.ink under-stroke then >=2.5px state stroke;
+- neutral P.amber/P.cream; Sunweaver P.lime/P.amber; Gravemark P.ice/P.sky;
+  contested P.coral;
+- center diamond beacon plus compact `LUMEN` plate anchored above projected center;
+- capturing overlays a brighter partial ring proportional to progress/5;
+- active player pulse adds one restrained outer pulse ring;
+- tracks pan/zoom; hidden before discovery; reset canvas state; no per-frame arrays or DOM;
+- no WebGL draw calls and no sim mutation.
+
+Minimap:
+- enlarge central objective outer/inner radii so owner colors survive CSS scaling and +/-10 samples;
+- retain discovery gating and current ownership colors.
+
+Verification:
+npm run qa:vs2b -- --out /home/bobbyranka/workspace/evidence/starhaven-vs2b-r2
+npm run test:vs2b
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs2b-r2-ai
+npm run qa:progression-handoff -- --out /tmp/vs2b-r2-progression
+npm run qa:touch-contract -- --out /tmp/vs2b-r2-touch
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit prefix `VS2B-R2:`. Do not push/deploy. Report RED sample counts, final counts, screenshots,
+perf, regressions, SHA, deviations.

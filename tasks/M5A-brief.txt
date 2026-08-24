@@ -1,0 +1,52 @@
+# M5-A Builder Brief — roster freeze + labels (sim + presentation)
+
+You are implementing M5-A of spacepixelrts. The contract is docs/M5_ARMY.md —
+implement it exactly. Read FIRST:
+1. docs/M5_ARMY.md (frozen mapping, stat deltas, presentation changes)
+2. src/content.ts (STATS, labelOf, fighterName, workerName, TECH_PATHS blurbs)
+3. src/sim.ts (tryTrain, gateOpen usage, AI training choices, marshal logic)
+4. tests/m4-tech-paths.test.ts (style reference)
+
+## Scope — touch ONLY
+- src/content.ts   (stats table, labels, tech copy)
+- src/hud.ts       (remove Breaker button; Scout labels via labelOf)
+- src/opening-guidance.ts / src/start-screen.ts  (no bare "Scout" copy)
+- src/sim.ts       (roster enforcement in tryTrain + AI; siegeTrainMul scope)
+- tests/m5-army.test.ts (new)
+- package.json     ("test:m5": "tsx tests/m5-army.test.ts")
+
+Do NOT touch render/art/terrain. Keep m0/m2/m3/m4 suites green.
+
+## Exact changes
+
+1. STATS deltas per docs/M5_ARMY.md §Stat freeze (Scout, Fighter, Ravager,
+   Prism). Worker unchanged.
+2. Move the ×1.8 building-damage modifier from Kind.Siege to Kind.Prism at its
+   combat-resolution site in sim.ts. Siege keeps no special modifier.
+3. Labels: fighterName(civ) → 'Lumen Guard' | 'Rift Guard'; labelOf(Scout)
+   faction-aware → 'Wind Strider' | 'Grav-Skimmer'; labelOf(Ravager) →
+   'Solar Strider'; labelOf(Prism) → 'Burden Walker'. uniqueName unchanged.
+4. Tech copy in TECH_PATHS blurbs: sky-dominion blurb uses 'Wind Striders';
+   rift-engineering blurb uses 'Burden Walkers'.
+5. hud.ts Hall/Yard panels: remove the Breaker train button; Scout button
+   label comes from labelOf(Kind.Scout, civ).
+6. sim.ts tryTrain: reject Kind.Siege and Kind.Shade outright (return false) —
+   they are out of the M5 roster. AI training/marshal paths must never pick
+   them (check every gateOpen/minTrain-era call site and the marshal spawn).
+7. Scope the rift-engineering siegeTrainMul effect to Prism only (it currently
+   applies to any train call; multiply only when kind === Kind.Prism).
+8. opening-guidance.ts + start-screen.ts: replace player-facing bare "Scout"
+   with faction-aware label or 'recon unit' — keep tone, keep banned-word rule
+   (no epoch/age words).
+9. tests/m5-army.test.ts: assert stat values above; assert Siege/Shade refuse
+   to train; assert Prism gets ×1.8 vs buildings and Siege does not;
+   assert rift-engineering speeds Prism training but not Fighter training;
+   assert labels for both factions.
+
+## Verify (run all, paste tails)
+npm run test:m5 && npm run test:m4 && npm run test:m0 && npm run test:m2 &&
+npm run test:m2-ai && npm run test:m3 && npm run build
+
+If an existing suite asserts old stats/breaker behavior, update THAT TEST to
+the frozen contract and note it in your summary. Leave tree dirty.
+Report: files changed, tails, deviations.

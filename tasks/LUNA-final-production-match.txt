@@ -1,0 +1,69 @@
+# FINAL VS Production Whole-Match Integrator — Luna Max fast
+
+You are a competent first-time RTS player. Play exactly ONE production match at:
+`https://spacepixelrts.pages.dev/desktop.html`
+
+This is the only match-length test. Do not inspect source, bundles, tests, repo docs, QA routes,
+`__STARHOLD*` globals, DevTools, or network internals. Do not edit the repository. Use only visible
+production UI and actual pointer/touch clicks. You may use Playwright screenshots/DOM text as eyes,
+but no state injection, resource grants, direct methods, hidden selectors that bypass visible controls,
+or canvas coordinate inference from app globals.
+
+SETUP
+- viewport 1366×1024;
+- NEW SKIRMISH;
+- Sunweaver player vs Gravemark rival;
+- STANDARD;
+- FOG ON;
+- fixed seed if a visible field exists; otherwise leave setup default;
+- start ONE match.
+
+HARD TIME RULE
+- Record wall clock immediately after entering Playing.
+- Stop all gameplay at 18:00 elapsed, even if unfinished.
+- No restart, second match, reload, or second browser after the match begins.
+- You may pause through the visible HUD, but pause time counts toward 18:00.
+
+REQUIRED NORMAL-UI JOURNEY
+1. Find idle Workers and issue real Gather orders to visible resource nodes.
+2. Prove one resource count rises from actual return/deposit.
+3. Build and complete one Yard.
+4. Reach the Nexus technology choice through the visible handoff; verify both exact 400 Ore + 80
+   Charge costs; commit one path and wait for the real 40s lock.
+5. Train at least one Lumen Guard and one Solar Strider. Build a Habitat if population requires it.
+6. Move an army to the Central Lumen Field; observe neutral/capturing/controlled or contested state.
+7. Fight a real rival unit or attack the rival Core. Observe at least one readable combat/death event.
+8. Reach a real Victory or Defeat terminal, click CONTINUE, and inspect Results.
+9. Verify Results shows nonzero duration and truthful visible stats; test either PLAY AGAIN to setup or
+   MAIN MENU, but do not start a second match.
+
+CAPTURE EVIDENCE outside repo in:
+`/home/bobbyranka/workspace/evidence/starhaven-final-production-match/`
+- `01-opening.png`
+- `02-income.png`
+- `03-yard.png`
+- `04-path.png`
+- `05-army.png`
+- `06-lumen.png`
+- `07-battle.png`
+- `08-terminal.png`
+- `09-results.png`
+- `interaction-log.md` with wall-clock elapsed times and visible action/result only
+- `report.md`
+
+REPORT EXACTLY
+- Verdict: PASS or FAIL
+- Match elapsed time and terminal outcome, or exact state at 18:00
+- Seam table: income, Yard, path entry, path lock, mixed army, Lumen, battle, terminal, Results
+  each PASS/FAIL + elapsed time + screenshot
+- First-income before→after resources
+- Exact path/cost/lock observed
+- Units trained and whether new four-unit art stayed legible during movement/combat
+- Lumen states observed
+- Results values seen
+- Console/page errors (visible browser errors only; do not open DevTools)
+- Single biggest blocker if FAIL; single biggest residual gap if PASS
+- Explicit confirmation: one match, no restart, no QA/state injection, stopped by 18:00
+
+Do not soften failures. A terminal caused before technology/army is a FAIL even if Results works. A
+path/army reached but no terminal by 18:00 is a pacing FAIL. Do not commit or deploy.

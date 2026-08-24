@@ -15,11 +15,17 @@ export interface Box {
 
 /** Screen-space pick radius (CSS px) — matches ARCHITECTURE.md hit test. */
 const PICK_PX = 28;
+/** Touch target radius for a visible resource node. */
+const RESOURCE_PICK_PX = 44;
+
+/** M2-A: stationary single-pointer hold that must elapse before a Move is issued. */
+const LONG_PRESS_MS = 450;
 
 export class Input {
   selected = new Set<number>();
   groups: number[][] = [[], [], [], []];
   place: Kind | null = null;
+  commandMode: 'move' | 'attack' | 'gather' | null = null;
   box: Box | null = null;
   halfH = 14;
   readonly pan = { x: 18, z: 22 };
@@ -32,6 +38,10 @@ export class Input {
   private moved = false;
   private downX = 0;
   private downY = 0;
+  private pressTimer: number | null = null;
+  private pressFired = false;
+  private multiPointerGesture = false;
+  private interactive = true;
 
   constructor(
     readonly host: HTMLElement,
@@ -44,7 +54,7 @@ export class Input {
     host.addEventListener('pointerdown', (e) => this.onDown(e));
     host.addEventListener('pointermove', (e) => this.onMove(e));
     host.addEventListener('pointerup', (e) => this.onUp(e));
-    host.addEventListener('pointercancel', (e) => this.onUp(e));
+    host.addEventListener('pointercancel', (e) => this.onUp(e, true));
     host.addEventListener(
       'wheel',
       (e) => {
@@ -55,6 +65,39 @@ export class Input {
     );
     window.addEventListener('keydown', (e) => this.onKey(e));
     host.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  setInteractive(enabled: boolean): void {
+    this.interactive = enabled;
+    if (enabled) return;
+    this.cancelLongPress();
+    this.pointers.clear();
+    this.dragging = false;
+    this.panning = false;
+    this.box = null;
+    this.pressFired = false;
+    this.multiPointerGesture = false;
+  }
+
+  resetForMatch(): void {
+    this.selected.clear();
+    this.groups = [[], [], [], []];
+    this.place = null;
+    this.commandMode = null;
+    this.box = null;
+    this.dragging = false;
+    this.panning = false;
+    this.pointers.clear();
+    this.cancelLongPress();
+    this.lastTap = 0;
+    this.lastTapId = -1;
+    this.pinch0 = 0;
+    this.moved = false;
+    this.downX = 0;
+    this.downY = 0;
+    this.pressFired = false;
+    this.multiPointerGesture = false;
+    Input.keys.clear();
   }
 
   tick(dt: number): void {
@@ -72,6 +115,7 @@ export class Input {
   }
 
   commandAt(kind: 'move' | 'stop' | 'attack' | 'gather' | 'idleworker'): void {
+    if (!this.interactive) return;
     if (kind === 'stop') {
       for (const id of this.selected) {
         const e = this.world.ents[id];
@@ -80,9 +124,17 @@ export class Input {
           e.path = null;
         }
       }
+      this.commandMode = null;
+      return;
+    }
+    if (kind === 'move' || kind === 'attack' || kind === 'gather') {
+      if (!this.hasValidSelection()) return;
+      this.place = null;
+      this.commandMode = kind;
       return;
     }
     if (kind === 'idleworker') {
+      this.commandMode = null;
       this.selected.clear();
       for (const e of this.world.ents) {
         if (e.alive && e.team === 0 && e.kind === Kind.Worker && e.order === Ord.Idle) {
@@ -98,28 +150,64 @@ export class Input {
 
   /** Focus and select the player scout so it is controllable from the opening view. */
   focusScout(): void {
+    if (!this.interactive) return;
     const scout = this.world.ents.find(
       (e) => e.alive && e.team === 0 && e.kind === Kind.Scout && e.hp > 0 && e.vis,
     );
     if (!scout) return;
     this.selected.clear();
     this.selected.add(scout.id);
+    this.commandMode = null;
     this.pan.x = scout.x;
     this.pan.z = scout.z;
     this.halfH = Math.min(this.halfH, 6.2);
     this.sfx.select();
   }
 
+  /** Focus the player's completed Nexus so research is reachable without a building pick. */
+  focusHall(): boolean {
+    if (!this.interactive) return false;
+    const hall = this.world.ents.find(
+      (e) => e.alive && e.team === 0 && e.kind === Kind.Hall && e.hp > 0 && e.progress >= 1,
+    );
+    if (!hall) return false;
+    this.selected.clear();
+    this.selected.add(hall.id);
+    this.commandMode = null;
+    this.place = null;
+    this.pan.x = hall.x;
+    this.pan.z = hall.z;
+    this.halfH = Math.min(this.halfH, 6.2);
+    this.sfx.select();
+    return true;
+  }
+
   private onDown(e: PointerEvent): void {
+    if (!this.interactive) return;
     const el = e.target as HTMLElement;
+    if (el.closest('#start-screen')) return;
     if (el.closest('#topbar, #bottom, #civpick')) return;
     this.sfx.resume();
-    this.host.setPointerCapture(e.pointerId);
+    // Synthetic pointer events (QA drivers, some browsers) throw NotFoundError here
+    // because their pointerId is not active. Capture is an optimization; never fatal.
+    try {
+      this.host.setPointerCapture(e.pointerId);
+    } catch {
+      /* pointer not active — proceed without capture */
+    }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.moved = false;
     this.downX = e.clientX;
     this.downY = e.clientY;
+    // A second button or finger during a hold (right click mid-press, two-finger
+    // gesture) cancels the pending long press before it can fire.
+    this.cancelLongPress();
+    if (this.pointers.size === 1) {
+      this.pressFired = false;
+      this.multiPointerGesture = false;
+    }
     if (this.pointers.size === 2) {
+      this.multiPointerGesture = true;
       const pts = [...this.pointers.values()];
       this.pinch0 = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       this.panning = true;
@@ -136,6 +224,16 @@ export class Input {
     }
     this.dragging = true;
     this.box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
+    // M2-A: arm the stationary long-press context order for a lone left pointer.
+    if (
+      e.button === 0 &&
+      e.isPrimary &&
+      this.place === null &&
+      this.commandMode === null &&
+      this.selected.size > 0
+    ) {
+      this.pressTimer = window.setTimeout(() => this.fireLongPress(), LONG_PRESS_MS);
+    }
   }
 
   private onMove(e: PointerEvent): void {
@@ -144,7 +242,10 @@ export class Input {
     const dx = e.clientX - prev.x;
     const dy = e.clientY - prev.y;
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (Math.abs(e.clientX - this.downX) + Math.abs(e.clientY - this.downY) > 8) this.moved = true;
+    if (Math.abs(e.clientX - this.downX) + Math.abs(e.clientY - this.downY) > 8) {
+      this.moved = true;
+      this.cancelLongPress();
+    }
 
     if (this.pointers.size === 2 && this.panning) {
       const pts = [...this.pointers.values()];
@@ -158,33 +259,77 @@ export class Input {
       this.panByScreenDelta(dx, dy);
       return;
     }
-    if (this.dragging && this.box) {
+    if (this.dragging && this.box && !this.pressFired) {
       this.box.x1 = e.clientX;
       this.box.y1 = e.clientY;
     }
   }
 
-  private onUp(e: PointerEvent): void {
+  private onUp(e: PointerEvent, cancelled = false): void {
     this.pointers.delete(e.pointerId);
+    this.cancelLongPress();
     if (this.pointers.size < 2) this.panning = false;
+    if (cancelled) {
+      // Pointercancel ends the gesture outright: never a tap, box, or press fire.
+      this.dragging = false;
+      this.box = null;
+      this.pressFired = false;
+      this.multiPointerGesture = false;
+      return;
+    }
+    if (this.multiPointerGesture) {
+      this.dragging = false;
+      this.box = null;
+      this.pressFired = false;
+      if (this.pointers.size === 0) this.multiPointerGesture = false;
+      return;
+    }
     if (e.button === 2) {
       this.dragging = false;
       this.box = null;
       return;
     }
-    if (this.dragging && this.box && this.moved) {
+    if (this.pressFired) {
+      // The long-press Move consumed this gesture; release is not a tap or box.
+    } else if (this.dragging && this.box && this.moved) {
       this.selectBox(this.box);
       this.sfx.select();
     } else if (this.dragging && !this.moved) {
       if (this.place !== null) this.tryPlace(e.clientX, e.clientY);
+      else if (this.commandMode !== null) this.commandTap(e.clientX, e.clientY);
       else this.selectTap(e.clientX, e.clientY);
     }
     this.dragging = false;
     this.box = null;
+    this.pressFired = false;
     if (this.pointers.size === 0) this.panning = false;
   }
 
+  /** M2-A/M6-A: a held stationary single pointer uses the shared context resolver. */
+  private fireLongPress(): void {
+    this.pressTimer = null;
+    if (
+      this.place !== null ||
+      this.moved ||
+      this.pressFired ||
+      this.pointers.size !== 1 ||
+      this.selected.size === 0
+    ) {
+      return;
+    }
+    this.contextOrderAt(this.downX, this.downY, false);
+    this.pressFired = true;
+  }
+
+  private cancelLongPress(): void {
+    if (this.pressTimer !== null) {
+      clearTimeout(this.pressTimer);
+      this.pressTimer = null;
+    }
+  }
+
   private selectTap(cx: number, cy: number): void {
+    this.commandMode = null;
     const w = this.pickWorld(cx, cy);
     const now = performance.now();
     const hit = this.closest(w.x, w.z, 1.35, 0);
@@ -207,6 +352,7 @@ export class Input {
   }
 
   private selectBox(box: Box): void {
+    this.commandMode = null;
     this.selected.clear();
     const x0 = Math.min(box.x0, box.x1);
     const y0 = Math.min(box.y0, box.y1);
@@ -221,21 +367,74 @@ export class Input {
   }
 
   private orderAt(cx: number, cy: number, attackMove: boolean): void {
-    if (this.selected.size === 0) return;
+    this.contextOrderAt(cx, cy, attackMove);
+  }
+
+  private commandTap(cx: number, cy: number): void {
+    const mode = this.commandMode;
+    if (mode === null || !this.hasValidSelection()) return;
     const w = this.pickWorld(cx, cy);
-    const enemy = this.closestEnemyScreen(cx, cy);
-    const node = enemy ? null : this.closestResource(cx, cy, w.x, w.z);
-    const ids = [...this.selected];
-    if (enemy) {
-      this.world.issue(ids, Ord.Attack, enemy.x, enemy.z, enemy.id);
-      this.sfx.attack();
-    } else if (node && node.kind === Kind.Resource) {
+    if (mode === 'gather') {
+      const node = this.closestResource(cx, cy);
+      const ids = this.selectedWorkers();
+      if (!node || ids.length === 0) return;
       this.world.issue(ids, Ord.Gather, node.x, node.z, node.id);
+      this.commandMode = null;
       this.sfx.move();
+      return;
+    }
+    if (mode === 'attack') {
+      const enemy = this.closestEnemyScreen(cx, cy);
+      if (enemy) {
+        this.world.issue([...this.selected], Ord.Attack, enemy.x, enemy.z, enemy.id);
+        this.sfx.attack();
+      } else {
+        this.world.issue([...this.selected], Ord.AttackMove, w.x, w.z, -1);
+        this.sfx.move();
+      }
     } else {
-      this.world.issue(ids, attackMove ? Ord.AttackMove : Ord.Move, w.x, w.z, -1);
+      this.world.issue([...this.selected], Ord.Move, w.x, w.z, -1);
       this.sfx.move();
     }
+    this.commandMode = null;
+  }
+
+  private contextOrderAt(cx: number, cy: number, attackMove: boolean): void {
+    if (!this.hasValidSelection()) return;
+    const w = this.pickWorld(cx, cy);
+    const enemy = this.closestEnemyScreen(cx, cy);
+    if (enemy) {
+      this.world.issue([...this.selected], Ord.Attack, enemy.x, enemy.z, enemy.id);
+      this.commandMode = null;
+      this.sfx.attack();
+      return;
+    }
+    const node = this.closestResource(cx, cy);
+    if (node) {
+      const ids = this.selectedWorkers();
+      if (ids.length === 0) return;
+      this.world.issue(ids, Ord.Gather, node.x, node.z, node.id);
+      this.commandMode = null;
+      this.sfx.move();
+      return;
+    }
+    this.world.issue([...this.selected], attackMove ? Ord.AttackMove : Ord.Move, w.x, w.z, -1);
+    this.commandMode = null;
+    this.sfx.move();
+  }
+
+  private hasValidSelection(): boolean {
+    return [...this.selected].some((id) => {
+      const e = this.world.ents[id];
+      return e.alive && e.team === 0 && isUnit(e.kind);
+    });
+  }
+
+  private selectedWorkers(): number[] {
+    return [...this.selected].filter((id) => {
+      const e = this.world.ents[id];
+      return e.alive && e.team === 0 && e.kind === Kind.Worker;
+    });
   }
 
   private tryPlace(cx: number, cy: number): void {
@@ -272,7 +471,7 @@ export class Input {
     let best = null as (typeof this.world.ents)[0] | null;
     let bestD = PICK_PX * PICK_PX;
     for (const e of this.world.ents) {
-      if (!e.alive || !e.vis || e.team === 0) continue;
+      if (!e.alive || !e.vis || e.team === 0 || e.kind === Kind.Resource) continue;
       const footY = isBuilding(e.kind) ? 1.65 : 0.6;
       const p = this.view.project(e.x, footY, e.z);
       const dx = p.x - px;
@@ -286,18 +485,25 @@ export class Input {
     return best;
   }
 
-  /** Resource gather: modest world radius, but only when the pointer is on the node sprite. */
-  private closestResource(cx: number, cy: number, wx: number, wz: number) {
-    const node = this.closest(wx, wz, 1.5, 3);
-    if (!node || node.kind !== Kind.Resource) return null;
+  /** Resource gather: the touch target is a 44 CSS px screen-space circle. */
+  private closestResource(cx: number, cy: number) {
     const r = this.host.getBoundingClientRect();
     const px = cx - r.left;
     const py = cy - r.top;
-    const p = this.view.project(node.x, 0.05, node.z);
-    const dx = p.x - px;
-    const dy = p.y - py;
-    if (dx * dx + dy * dy > PICK_PX * PICK_PX) return null;
-    return node;
+    let best = null as (typeof this.world.ents)[0] | null;
+    let bestD = RESOURCE_PICK_PX * RESOURCE_PICK_PX;
+    for (const e of this.world.ents) {
+      if (!e.alive || !e.vis || e.kind !== Kind.Resource) continue;
+      const p = this.view.project(e.x, 0.05, e.z);
+      const dx = p.x - px;
+      const dy = p.y - py;
+      const d = dx * dx + dy * dy;
+      if (d <= bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    return best;
   }
 
   private closest(x: number, z: number, r: number, teamFilter: number) {
@@ -362,6 +568,7 @@ export class Input {
   }
 
   private onKey(e: KeyboardEvent): void {
+    if (!this.interactive) return;
     if (e.code === 'Space') {
       e.preventDefault();
       this.commandAt('stop');
@@ -371,6 +578,7 @@ export class Input {
     if (g !== undefined) {
       if (e.metaKey || e.ctrlKey) this.groups[g] = [...this.selected];
       else {
+        this.commandMode = null;
         this.selected = new Set(this.groups[g]);
         const first = this.world.ents[this.groups[g][0]];
         if (first?.alive) {

@@ -1,0 +1,71 @@
+/* Final alignment corrections for the approved painted front-end. */
+#start-screen.front-approved-art-ready .front-pixel-build{
+  right:0!important;
+  bottom:0!important;
+  width:25%!important;
+  min-width:260px!important;
+  height:9.5%!important;
+  padding:0 2.4vw 2.25vh 18px!important;
+  background:linear-gradient(90deg,transparent 0%,rgba(2,3,11,.97) 22%,#02030b 52%,#02030b 100%)!important;
+  box-shadow:-24px 0 28px rgba(2,3,11,.52)!important;
+}
+
+/* The approved source is deliberately given tiny overscan for stepped camera drift. */
+.front-approved-art-ready .front-approved-art{
+  min-width:100%!important;
+  min-height:100%!important;
+}
+
+/*
+ * The painting contains representative loading UI. A real octagonal command deck covers that
+ * sample and contains the live status, progress and tip. This preserves the colony and ships above
+ * while making the lower interface feel like part of the same pixel-art composition.
+ */
+.front-loading-screen.front-approved-art-ready>.front-approved-tint{
+  inset:62.2% 16.5% 3.7% 16.5%!important;
+  width:auto!important;
+  height:auto!important;
+  box-sizing:border-box!important;
+  opacity:1!important;
+  border:2px solid rgba(var(--front-accent-rgb),.48)!important;
+  background:
+    linear-gradient(180deg,rgba(7,14,34,.975) 0%,rgba(3,7,20,.992) 58%,rgba(1,3,12,.998) 100%)!important;
+  box-shadow:
+    0 0 0 4px rgba(0,0,0,.72),
+    0 0 30px rgba(var(--front-accent-rgb),.2),
+    inset 0 0 0 1px rgba(255,255,255,.05),
+    inset 0 14px 28px rgba(var(--front-accent-rgb),.035)!important;
+  clip-path:polygon(
+    18px 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% calc(100% - 18px),
+    calc(100% - 18px) 100%,
+    18px 100%,
+    0 calc(100% - 18px),
+    0 18px
+  )!important;
+  mix-blend-mode:normal!important;
+  animation:approved-command-deck-pulse 3.6s steps(8,end) infinite!important;
+}
+
+@keyframes approved-command-deck-pulse{
+  0%,100%{
+    border-color:rgba(var(--front-accent-rgb),.4);
+    box-shadow:0 0 0 4px rgba(0,0,0,.72),0 0 22px rgba(var(--front-accent-rgb),.13),inset 0 0 0 1px rgba(255,255,255,.05),inset 0 14px 28px rgba(var(--front-accent-rgb),.03);
+  }
+  50%{
+    border-color:rgba(var(--front-accent-rgb),.62);
+    box-shadow:0 0 0 4px rgba(0,0,0,.72),0 0 34px rgba(var(--front-accent-rgb),.24),inset 0 0 0 1px rgba(255,255,255,.07),inset 0 14px 28px rgba(var(--front-accent-rgb),.055);
+  }
+}
+
+@media(max-aspect-ratio:3/2){
+  .front-loading-screen.front-approved-art-ready>.front-approved-tint{
+    inset:61.5% 10% 2.8% 10%!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .front-loading-screen.front-approved-art-ready>.front-approved-tint{animation:none!important}
+}

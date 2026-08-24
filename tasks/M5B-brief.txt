@@ -1,0 +1,40 @@
+# M5-B Builder Brief — HUD copy + hierarchy polish after critic FAIL
+
+Critic verdict on the M5 opening: FAIL. Named gaps, all in the HUD layer:
+1. Placeholder-sounding copy on command tiles: "tap field", "hold field",
+   "halt order".
+2. Cryptic abbreviations in the resource bar and boosts: "CHG", "VOL",
+   "Prod" — plus group buttons "II group" reading as noise.
+3. Secondary text too small / low contrast across deck and resource bar.
+
+Read FIRST: src/hud.ts (command tile construction ~line 338-460, topbar markup
+~line 60-100, resource/boost CSS ~line 610-700), scripts/qa-m2-opening.mjs
+(button-name assertions), tests/m2-*.test.ts if they assert copy.
+
+Scope: ONLY src/hud.ts (+ qa script/test updates where they assert old strings).
+
+Exact changes:
+
+1. COMMAND TILE SUB-LINES (Hall panel and unit panels):
+   - 'tap field' -> 'then tap ground'
+   - 'hold field' -> 'hold, then tap target'
+   - 'halt order' -> 'stop'
+   Keep every cmd id unchanged.
+2. RESOURCE BAR LABELS: change small caption under each number:
+   ore stays 'Ore'; gas 'VOL' -> 'Volatiles' (keep data-k=gas);
+   nrg 'CHG' -> 'Charge' (data-k=nrg); pop stays. If width is tight,
+   font-size 10px letter-spacing .08em uppercase is acceptable.
+3. BOOST BUTTONS: title attributes already explain; make visible labels
+   'Prod +' / 'Vision +' / 'Shield +' so they read as toggles, keep
+   data-boost attributes and ids.
+4. GROUP BUTTONS: sub 'group' -> 'army 1'/'army 2'/'army 3' for I/II/III.
+   Keep cmd ids group-0/1/2.
+5. SECONDARY TEXT LEGIBILITY: `#cmds small` opacity .55 -> .8, size 10px ->
+   11px; `#res small` same bump; `.countdown` unchanged.
+6. qa-m2-opening.mjs: update the button-name lookup if it referenced exact
+   strings changed above; add no new assertions.
+
+Verify (paste tails): npm run build && npm run test:m0 && npm run test:m2 &&
+npm run test:m5 && node scripts/qa-m2-opening.mjs --out /tmp/m5b-qa
+
+Leave tree dirty. Report files changed, tails, deviations.

@@ -8,8 +8,9 @@ import type { World } from './sim';
 import { VfxRenderer } from './vfx';
 import { buildTerrainMesh, buildFogMesh, buildHeightTexture } from './terrain';
 import { sampleHeightBilinear } from './height';
-import { SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
+import { COMBAT_BRANCH_MAPPINGS, SDF_FRAG, SDF_VERT, civIndex, spriteSize, buildSprites } from './sprite-sdf';
 import { STARHOLD_PALETTE as P } from './palette';
+import { SEEN_PLAYER } from './discovery';
 import {
   WORKER_ACTION_ATTACK,
   WORKER_ACTION_BUILD,
@@ -21,6 +22,10 @@ import {
 export const ISO_YAW = Math.PI / 4;
 export const ISO_PITCH = Math.atan(0.5);
 export const ISO_DIST = 40;
+
+const LUMEN_RING_POINTS = 32;
+const LUMEN_RING_RADIUS = 4.5;
+const LUMEN_PULSE_RADIUS = 5.35;
 
 const VERT = /* glsl */ `
 attribute vec4 iUv;
@@ -1339,12 +1344,29 @@ function updateProceduralWorkerMesh(root: THREE.Group, e: Ent, dt: number): void
   }
 }
 
+function isCombatLiveEnt(e: Ent): boolean {
+  if (e.hp <= 0 || e.corpseT > 0) return false;
+  return (
+    (e.civ === 'vespari' && (e.kind === Kind.Fighter || e.kind === Kind.Ravager)) ||
+    (e.civ === 'aurion' && (e.kind === Kind.Fighter || e.kind === Kind.Prism))
+  );
+}
+
+function combatWorldScale(e: Ent): readonly [number, number] {
+  if (e.kind === Kind.Fighter && e.civ === 'vespari') return [1.59, 1.89];
+  if (e.kind === Kind.Ravager && e.civ === 'vespari') return [2.05, 1.54];
+  if (e.kind === Kind.Fighter && e.civ === 'aurion') return [1.67, 1.92];
+  if (e.kind === Kind.Prism && e.civ === 'aurion') return [2.05, 1.81];
+  return [1, 1];
+}
+
 export class GameRenderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera: THREE.OrthographicCamera;
   readonly overlay: HTMLCanvasElement;
   readonly octx: CanvasRenderingContext2D;
+  readonly combatBranchMappings = COMBAT_BRANCH_MAPPINGS;
   atlas!: Atlas;
   spriteAtlas!: SpriteAtlas;
   private sdfMesh!: THREE.InstancedMesh;
@@ -1363,10 +1385,10 @@ export class GameRenderer {
   private fogTex!: THREE.DataTexture;
   private fogData = new Uint8Array(MAP * MAP * 4);
   private fogMesh!: THREE.Mesh;
-  /** Fog remains available for inspection, but art review starts with a clear map. */
-  readonly fogOfWarEnabled = new URLSearchParams(window.location.search).get('fog') === '1';
   /** Procedural mesh experiment; append ?mesh=0 to compare the sprite path. */
   readonly proceduralScoutEnabled = new URLSearchParams(window.location.search).get('mesh') !== '0';
+  /** VS-4 forensic switch; combat=0 keeps the legacy atlas branch on the same mesh. */
+  readonly combatEnabled = new URLSearchParams(window.location.search).get('combat') !== '0';
   private heightData!: Uint8Array;
   private mapMesh!: THREE.Mesh;
   private lastCamQ = new THREE.Quaternion();
@@ -1452,6 +1474,13 @@ export class GameRenderer {
     spriteTex.colorSpace = THREE.SRGBColorSpace;
     spriteTex.flipY = true;
     spriteTex.needsUpdate = true;
+    const combatTex = new THREE.CanvasTexture(spriteAtlas.combatCanvas);
+    combatTex.magFilter = THREE.NearestFilter;
+    combatTex.minFilter = THREE.NearestFilter;
+    combatTex.generateMipmaps = false;
+    combatTex.colorSpace = THREE.SRGBColorSpace;
+    combatTex.flipY = true;
+    combatTex.needsUpdate = true;
     const scoutTex = new THREE.CanvasTexture(spriteAtlas.scoutCanvas);
     scoutTex.magFilter = THREE.NearestFilter;
     scoutTex.minFilter = THREE.NearestFilter;
@@ -1471,6 +1500,14 @@ export class GameRenderer {
         uAtlasCols: { value: spriteAtlas.cols },
         uCell: { value: spriteAtlas.cell },
         uHallCell: { value: spriteAtlas.hallCell },
+        uCombatAtlas: { value: combatTex },
+        uCombatAtlasSize: {
+          value: new THREE.Vector2(spriteAtlas.combatWidth, spriteAtlas.combatHeight),
+        },
+        uCombatCell: { value: spriteAtlas.combatCell },
+        uCombatCols: { value: spriteAtlas.combatCols },
+        uCombatRows: { value: spriteAtlas.combatRows },
+        uCombatEnabled: { value: this.combatEnabled ? 1 : 0 },
         uScoutAtlas: { value: scoutTex },
         uScoutAtlasSize: {
           value: new THREE.Vector2(spriteAtlas.scoutWidth, spriteAtlas.scoutHeight),
@@ -1499,10 +1536,13 @@ export class GameRenderer {
 
     // Lighting is scoped to the procedural experiment. Existing terrain and
     // sprite shaders do not consume scene lights, so this does not alter them.
-    this.scene.add(new THREE.HemisphereLight(P.ice, P.night, 1.45));
-    const scoutKey = new THREE.DirectionalLight(P.amber, 2.5);
+    this.scene.add(new THREE.HemisphereLight(P.ice, P.night, 2.1));
+    const scoutKey = new THREE.DirectionalLight(P.amber, 3.2);
     scoutKey.position.set(5, 9, 4);
     this.scene.add(scoutKey);
+    const fieldFill = new THREE.PointLight(P.amber, 0.5);
+    fieldFill.position.set(MAP * 0.5, 8, MAP * 0.52);
+    this.scene.add(fieldFill);
     this.proceduralScout = buildProceduralScoutMesh();
     this.proceduralScout.visible = false;
     this.scene.add(this.proceduralScout);
@@ -1548,15 +1588,53 @@ export class GameRenderer {
     this.buildStars();
     this.buildNebula();
     this.fogTex = new THREE.DataTexture(this.fogData, MAP, MAP, THREE.RGBAFormat);
-    this.fogTex.magFilter = THREE.NearestFilter;
-    this.fogTex.minFilter = THREE.NearestFilter;
+    // Smooth texel blending keeps the explored/unexplored boundary a soft ramp
+    // instead of a bright pixelated stair-step at far zoom.
+    this.fogTex.magFilter = THREE.LinearFilter;
+    this.fogTex.minFilter = THREE.LinearFilter;
+    this.fogTex.generateMipmaps = false;
     this.fogTex.wrapS = this.fogTex.wrapT = THREE.ClampToEdgeWrapping;
     this.fogTex.needsUpdate = true;
     this.fogMesh = buildFogMesh(buildHeightTexture(world));
     const fogMat = this.fogMesh.material as THREE.ShaderMaterial;
     fogMat.uniforms.uFog.value = this.fogTex;
-    this.fogMesh.visible = this.fogOfWarEnabled;
+    this.fogMesh.visible = world.fogOfWarEnabled;
     this.scene.add(this.fogMesh);
+  }
+
+  resetWorld(world: World): void {
+    this.disposeTerrain();
+    this.disposeFog();
+    this.buildMap(world);
+
+    const fogHeight = buildHeightTexture(world);
+    this.fogMesh = buildFogMesh(fogHeight);
+    const fogMat = this.fogMesh.material as THREE.ShaderMaterial;
+    fogMat.uniforms.uFog.value = this.fogTex;
+    this.fogMesh.visible = world.fogOfWarEnabled;
+    this.scene.add(this.fogMesh);
+
+    this.fogData.fill(0);
+    this.fogTex.needsUpdate = true;
+    this.proceduralScout.visible = false;
+    for (const worker of this.proceduralWorkers.values()) {
+      this.scene.remove(worker);
+      worker.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry.dispose();
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const material of materials) material.dispose();
+      });
+    }
+    this.proceduralWorkers.clear();
+    this.drawnEntIds.clear();
+    this.proceduralScoutDrawn = 0;
+    this.proceduralWorkerDrawn = 0;
+    this.lastDrawn = 0;
+    this.lastVfx = 0;
+    this.lastDrawnMs = 0;
+    this.octx.clearRect(0, 0, this.overlay.width, this.overlay.height);
   }
 
   resize(w: number, h: number): void {
@@ -1716,6 +1794,7 @@ export class GameRenderer {
         propDrawn++;
       } else {
         const spr = spriteSize(e.kind);
+        const combatLive = this.combatEnabled && isCombatLiveEnt(e);
         const cellsW = e.kind === Kind.Hall ? 2 : 1;
         const cellsH = e.kind === Kind.Hall ? 2 : 1;
         let scaleX: number;
@@ -1725,13 +1804,15 @@ export class GameRenderer {
           const mul = targetH / cellsH;
           scaleX = cellsW * mul * e.facing;
           scaleY = cellsH * mul;
+        } else if (combatLive) {
+          [scaleX, scaleY] = combatWorldScale(e);
         } else if (e.kind === Kind.Worker && e.hp > 0) {
           scaleX = cellsW * 1.55;
           scaleY = cellsH * 2.32;
         } else {
           const corpse = e.hp <= 0 || e.corpseT > 0;
           const unitMul = e.kind === Kind.Worker ? 1.55 : corpse ? 0.82 : 0.96;
-          const facingSign = e.facing >= 4 ? -1 : 1;
+          const facingSign = combatLive ? 1 : e.facing >= 4 ? -1 : 1;
           scaleX = cellsW * unitMul * (e.kind === Kind.Worker ? 1 : facingSign);
           scaleY = cellsH * (e.kind === Kind.Worker ? 1.55 : corpse ? 0.88 : 1.12);
         }
@@ -1741,8 +1822,10 @@ export class GameRenderer {
           ? 1.15
           : e.hp <= 0 || e.corpseT > 0
             ? 0.55
-            : e.kind === Kind.Worker
+          : e.kind === Kind.Worker
               ? 0.9
+              : combatLive
+                ? scaleY * 0.5 + 0.03
               : 0.58;
         this.dummy.position.set(x, groundY + lift, z);
         this.dummy.quaternion.copy(this.lastCamQ);
@@ -1898,6 +1981,32 @@ export class GameRenderer {
     this.scene.add(this.mapMesh);
   }
 
+  private disposeTerrain(): void {
+    if (!this.mapMesh) return;
+    this.scene.remove(this.mapMesh);
+    const material = this.mapMesh.material as THREE.ShaderMaterial;
+    const disposed = new Set<THREE.Texture>();
+    for (const uniform of Object.values(material.uniforms)) {
+      const texture = uniform.value as THREE.Texture;
+      if (texture?.isTexture && !disposed.has(texture)) {
+        disposed.add(texture);
+        texture.dispose();
+      }
+    }
+    this.mapMesh.geometry.dispose();
+    material.dispose();
+  }
+
+  private disposeFog(): void {
+    if (!this.fogMesh) return;
+    this.scene.remove(this.fogMesh);
+    const material = this.fogMesh.material as THREE.ShaderMaterial;
+    const heightTexture = material.uniforms.uHeight?.value as THREE.Texture;
+    if (heightTexture?.isTexture) heightTexture.dispose();
+    this.fogMesh.geometry.dispose();
+    material.dispose();
+  }
+
   private buildStars(): void {
     const cx = MAP * 0.5;
     const cz = MAP * 0.52;
@@ -1950,7 +2059,8 @@ export class GameRenderer {
   }
 
   private updateFog(world: World): void {
-    if (!this.fogOfWarEnabled) return;
+    this.fogMesh.visible = world.fogOfWarEnabled;
+    if (!world.fogOfWarEnabled) return;
     const vis = world.visible[0];
     const exp = world.explored[0];
     const d = this.fogData;
@@ -1965,12 +2075,12 @@ export class GameRenderer {
         d[o] = 14;
         d[o + 1] = 12;
         d[o + 2] = 28;
-        d[o + 3] = 58;
+        d[o + 3] = 56;
       } else {
-        d[o] = 8;
-        d[o + 1] = 6;
-        d[o + 2] = 18;
-        d[o + 3] = 175;
+        d[o] = 20;
+        d[o + 1] = 16;
+        d[o + 2] = 34;
+        d[o + 3] = 32;
       }
     }
     this.fogTex.needsUpdate = true;
@@ -1986,6 +2096,8 @@ export class GameRenderer {
     const w = this.overlay.width;
     const h = this.overlay.height;
     ctx.clearRect(0, 0, w, h);
+
+    this.drawLumenMarker(world);
 
     if (box) {
       const x = Math.min(box.x0, box.x1);
@@ -2030,6 +2142,56 @@ export class GameRenderer {
       ctx.lineTo(p.x + 9, p.y);
       ctx.moveTo(p.x, p.y - 9);
       ctx.lineTo(p.x, p.y + 9);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // M3-A — Sunweaver Solar collection tethers (only for nodes the player has seen).
+    for (const link of world.links) {
+      const node = world.ents[link.nodeId];
+      const hall = world.ents[link.hallId];
+      if (!node?.alive || !hall?.alive || !node.vis) continue;
+      const severed = link.severedUntil > world.tick;
+      const pa = this.project(node.x, this.groundY(node.x, node.z) + 0.18, node.z, this.projectPointScratch);
+      const ax = pa.x;
+      const ay = pa.y;
+      const pb = this.project(hall.x, this.groundY(hall.x, hall.z) + 0.18, hall.z, this.projectPointScratch);
+      ctx.globalAlpha = severed ? 0.2 : 0.55;
+      ctx.strokeStyle = link.team === 0 ? P.amber : P.ice;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([7, 6]);
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(pb.x, pb.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    // M3-B — Gravemark rig brackets on rigged resource nodes the player has seen.
+    for (let i = 0; i < MAX_ENTS; i++) {
+      const n = world.ents[i];
+      if (!n.alive || n.kind !== Kind.Resource || n.rigTeam < 0 || !n.vis) continue;
+      const p = this.project(n.x, this.groundY(n.x, n.z) + 0.12, n.z, this.projectPointScratch);
+      const half = 10 + n.rigProgress * 8;
+      const done = n.rigProgress >= 1;
+      ctx.globalAlpha = done ? 0.85 : 0.35 + n.rigProgress * 0.4;
+      ctx.strokeStyle = done ? P.ice : P.sky;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      // Four corner brackets.
+      ctx.moveTo(p.x - half, p.y - half + 5);
+      ctx.lineTo(p.x - half, p.y - half);
+      ctx.lineTo(p.x - half + 5, p.y - half);
+      ctx.moveTo(p.x + half - 5, p.y - half);
+      ctx.lineTo(p.x + half, p.y - half);
+      ctx.lineTo(p.x + half, p.y - half + 5);
+      ctx.moveTo(p.x + half, p.y + half - 5);
+      ctx.lineTo(p.x + half, p.y + half);
+      ctx.lineTo(p.x + half - 5, p.y + half);
+      ctx.moveTo(p.x - half + 5, p.y + half);
+      ctx.lineTo(p.x - half, p.y + half);
+      ctx.lineTo(p.x - half, p.y + half - 5);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
@@ -2079,5 +2241,142 @@ export class GameRenderer {
       ctx.lineWidth = 1;
       ctx.strokeRect(head.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
     }
+  }
+
+  private drawLumenMarker(world: World): void {
+    const landmark = world.landmarks.find((entry) => entry.id === 'central-lumen-field');
+    if (!landmark || (landmark.discoveredBy & SEEN_PLAYER) === 0) return;
+
+    const state = world.lumenState();
+    const team = state.contested ? -1 : state.capturing >= 0 ? state.capturing : state.owner;
+    let ring: string = P.amber;
+    let accent: string = P.cream;
+    if (state.contested) {
+      ring = P.coral;
+      accent = P.coral;
+    } else if (team === 0) {
+      ring = P.lime;
+      accent = P.amber;
+    } else if (team === 1) {
+      ring = P.ice;
+      accent = P.sky;
+    }
+
+    const centerPoint = this.project(
+      landmark.x,
+      this.groundY(landmark.x, landmark.z) + 0.05,
+      landmark.z,
+      this.projectPointScratch,
+    );
+    const centerX = centerPoint.x;
+    const centerY = centerPoint.y;
+    const ctx = this.octx;
+    ctx.save();
+    // The overlay is shared by several effects; make this asset self-contained
+    // and leave no state behind for the entity annotations below it.
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.setLineDash([]);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowBlur = 0;
+
+    this.drawProjectedLumenRing(ctx, landmark.x, landmark.z, LUMEN_RING_RADIUS, 5, P.ink);
+    this.drawProjectedLumenRing(ctx, landmark.x, landmark.z, LUMEN_RING_RADIUS, 2.75, ring);
+
+    if (state.capturing >= 0 && !state.contested && state.progress > 0) {
+      const progress = Math.max(0, Math.min(1, state.progress / 5));
+      this.drawProjectedLumenRing(
+        ctx,
+        landmark.x,
+        landmark.z,
+        LUMEN_RING_RADIUS,
+        3.5,
+        accent,
+        progress,
+      );
+    }
+
+    if (state.pulseRemaining[0] > 0) {
+      ctx.globalAlpha = 0.62;
+      this.drawProjectedLumenRing(ctx, landmark.x, landmark.z, LUMEN_PULSE_RADIUS, 2, P.lime);
+      ctx.globalAlpha = 1;
+    }
+
+    const beaconX = Math.round(centerX);
+    const beaconY = Math.round(centerY);
+    const beaconSize = 7;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(beaconX, beaconY - beaconSize - 3);
+    ctx.lineTo(beaconX, beaconY - 32);
+    ctx.stroke();
+
+    ctx.fillStyle = accent;
+    ctx.strokeStyle = P.ink;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(beaconX, beaconY - beaconSize);
+    ctx.lineTo(beaconX + beaconSize, beaconY);
+    ctx.lineTo(beaconX, beaconY + beaconSize);
+    ctx.lineTo(beaconX - beaconSize, beaconY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const label = 'LUMEN';
+    ctx.font = '700 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const plateW = Math.ceil(ctx.measureText(label).width) + 12;
+    const plateH = 16;
+    const plateX = Math.round(centerX - plateW / 2);
+    const plateY = Math.round(centerY - 40);
+    ctx.fillStyle = `${P.ink}e8`;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(plateX, plateY, plateW, plateH);
+    ctx.strokeRect(plateX + 0.5, plateY + 0.5, plateW - 1, plateH - 1);
+    ctx.fillStyle = P.cream;
+    ctx.fillText(label, Math.round(centerX), plateY + plateH / 2 + 0.5);
+    ctx.restore();
+  }
+
+  private drawProjectedLumenRing(
+    ctx: CanvasRenderingContext2D,
+    centerX: number,
+    centerZ: number,
+    radius: number,
+    lineWidth: number,
+    color: string,
+    fraction = 1,
+  ): void {
+    const clamped = Math.max(0, Math.min(1, fraction));
+    if (clamped <= 0) return;
+    const complete = clamped >= 1;
+    const segmentCount = complete ? LUMEN_RING_POINTS : Math.floor(clamped * LUMEN_RING_POINTS);
+    const remainder = clamped * LUMEN_RING_POINTS - segmentCount;
+    ctx.beginPath();
+    for (let index = 0; index <= segmentCount; index++) {
+      const turn = complete ? index / LUMEN_RING_POINTS : Math.min(clamped, index / LUMEN_RING_POINTS);
+      const angle = turn * Math.PI * 2;
+      const x = centerX + Math.cos(angle) * radius;
+      const z = centerZ + Math.sin(angle) * radius;
+      const point = this.project(x, this.groundY(x, z) + 0.05, z, this.projectPointScratch);
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    }
+    if (!complete && remainder > 1e-6) {
+      const angle = clamped * Math.PI * 2;
+      const x = centerX + Math.cos(angle) * radius;
+      const z = centerZ + Math.sin(angle) * radius;
+      const point = this.project(x, this.groundY(x, z) + 0.05, z, this.projectPointScratch);
+      ctx.lineTo(point.x, point.y);
+    }
+    if (complete) ctx.closePath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
   }
 }

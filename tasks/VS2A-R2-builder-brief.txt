@@ -1,0 +1,59 @@
+# VS2A-R2 Builder — repair opponent pacing and center hold
+
+Read:
+1. docs/VS2A_HONEST_AI.md (amended timing contract)
+2. docs/FIRST_PLAYABLE.md phase windows
+3. current VS2A implementation/tests/QA at HEAD 125744c
+
+R1 objective facts:
+- path channel starts tick 2876 = 1:35.9;
+- path locks tick 3686 = 2:02.9;
+- 2+2 force targets player Core tick 4966 = 2:45.5;
+- product contract requires path by ~8 min and first conflict in minutes 8–17.
+R1 therefore FAILS despite green old tests.
+
+Owned scope only: src/sim.ts, tests/vs2-ai-doctrine.test.ts,
+scripts/qa-vs2-ai-doctrine.mjs, tasks/VS2A-R2-red.log. No other files.
+
+Strict TDD:
+A. Add timing/center assertions FIRST and run RED on current production code. Save full expected
+failure to tasks/VS2A-R2-red.log and force-add it.
+B. Minimal GREEN production changes.
+C. Re-run every gate and amend with a new commit (do not rewrite 125744c).
+
+Locked fix:
+- `AI_PATH_EARLIEST_TICK = Math.round(4.5 * 60 / DT)`; `tryAiCommitPath` refuses earlier.
+- `AI_ATTACK_EARLIEST_TICK = Math.round(8 * 60 / DT)`; stepAiFieldOrders refuses Core targeting earlier even if Core already discovered.
+- Path first legal commit: >=4:30 and <=7:30. Normal 40s channel.
+- 2 Fighters + 2 unique exist by 8:00.
+- Before attack floor, field force has AttackMove orders toward Central Lumen Field, tid=-1. It must
+  be combat-ready, not plain Move; add/rename helper accordingly.
+- At/after 8:00, discovered Core + >=4 force gets existing Core AttackMove. First Core attack <=12:00.
+- one honest House remains accepted/documented; no other R1 behavior changes.
+- no grants, direct spawns/writes, hidden target, stat/cost/cadence changes.
+
+Update tests:
+- capture successful commit call tick and assert floor/window;
+- capture first tick with >=2+2 and assert <=8:00;
+- record a pre-8:00 >=4 force snapshot: all units AttackMove to center, tid=-1;
+- assert hidden/before-floor Core target count 0;
+- assert first Core target tick [8:00,12:00]; deterministic repeat.
+
+Update browser QA:
+- maxTicks at least 21600 (12 min at 30Hz);
+- separate `mixed-center-force` capture BEFORE 8:00 with center AttackMove/no Core tid;
+- separate `discovered-core-attack` capture AT/AFTER 8:00;
+- manifest records path start, lock, force-ready, attack ticks and minute values;
+- existing no-grant/perf/console gates stay.
+
+Run:
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /home/bobbyranka/workspace/evidence/starhaven-vs2a-r2
+npm run test:m2-ai
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit prefix exactly `VS2A-R2:`. Do not push/deploy. Report RED lines, final ticks/minutes, gates,
+commit SHA, deviations.

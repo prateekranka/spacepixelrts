@@ -1,0 +1,104 @@
+name: First Playable Gate
+
+on:
+  push:
+    branches: [chatgptpro2008]
+  pull_request:
+    branches: [main, chatgptpro2008]
+  workflow_dispatch:
+
+concurrency:
+  group: first-playable-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-slice:
+    name: Deterministic slice and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run application-flow and opening gates
+        run: |
+          npm run test:m0
+          npm run test:m2
+          npm run test:m2-ai
+
+      - name: Run economy, technology, and army gates
+        run: |
+          npm run test:m3
+          npm run test:m4
+          npm run test:m5
+
+      - name: Run vertical-slice gates
+        run: |
+          npm run test:vs2-ai
+          npm run test:vs2b
+          npm run test:vs3
+          npm run test:vs4
+          npm run test:vs5
+
+      - name: Build deployable desktop route
+        run: npm run build
+
+  browser-slice:
+    name: Browser progression, results, and front-end themes
+    needs: deterministic-slice
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install browser runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser slice gates
+        run: |
+          set +e
+          npm run qa:progression-handoff -- --out=/tmp/starhaven-progression
+          progression_status=$?
+          npm run qa:vs3 -- --out=/tmp/starhaven-results
+          results_status=$?
+          npm run qa:front-end-themes -- --out=/tmp/starhaven-front-end
+          front_end_status=$?
+          if [ "$progression_status" -ne 0 ] || [ "$results_status" -ne 0 ] || [ "$front_end_status" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: first-playable-browser-evidence
+          path: |
+            /tmp/starhaven-progression
+            /tmp/starhaven-results
+            /tmp/starhaven-front-end
+          if-no-files-found: warn
+          retention-days: 14

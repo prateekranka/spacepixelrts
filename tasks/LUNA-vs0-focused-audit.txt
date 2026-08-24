@@ -1,0 +1,29 @@
+# VS0 Focused Playability Audit — Luna Max fast
+
+You are a first-time RTS player. Test the CLEAN local build at `http://127.0.0.1:5173/desktop.html` only.
+
+Hard cap: 8 REAL PLAY MINUTES after entering the match. Stop immediately at 8:00. Do not inspect source, docs, bundles, QA URLs, hidden globals/state, storage, or network. Use fresh Playwright Chromium at 1366×1024. Normal visible UI input only. You may read visible DOM text to locate controls. Do not edit repository files.
+
+Evidence root: `/home/bobbyranka/workspace/evidence/starhaven-vs0-audit/` (outside repo). Save opening, first-income, tech-block/handoff, first-unit-or-blocker, terminal/results-or-blocker screenshots plus `report.md`.
+
+Test exactly:
+1. Main menu → New Skirmish → default Standard match.
+2. Use visible controls to make one Worker gather. Confirm one visible resource rises.
+3. Build/select the Yard. Try to discover and commit a technology path without clicking random building art for more than 30 seconds.
+4. Try to train one combat unit.
+5. If a combat unit trains, issue it toward the enemy/Core and observe combat until the 8-minute cap.
+6. If Victory/Defeat appears, try to continue to Results and return to setup/menu.
+7. Record console errors and visible blockers.
+
+Report exactly:
+# VS0 Focused Playability Audit
+## Session facts
+## Furthest honest state reached
+## Economy
+## Technology handoff
+## Army/combat
+## Terminal/results
+## Single biggest vertical-slice blocker
+## Verdict
+
+Verdict PASS only if within 8 minutes you can earn income, commit a path, train a combat unit, and see a usable route toward match completion. Results need not occur in 8 minutes, but terminal flow must be visibly actionable if reached. Otherwise FAIL. Name one biggest blocker. Return concise facts only.

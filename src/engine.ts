@@ -1,5 +1,7 @@
 /** P10 — deterministic tick, types, spatial hash. */
 
+import type { TechPathId } from './content';
+
 export const TICK_HZ = 20;
 export const DT = 1 / TICK_HZ;
 /** Two sim ticks of dissolve before corpse stain (DESIGN §5.4 #6). */
@@ -83,6 +85,13 @@ export interface Ent {
   rallyZ: number;
   radius: number;
   vis: boolean;
+  /** Discovery latch bits — bit 1 is player team 0, bit 2 is AI team 1 (M2-B). */
+  seenBy: number;
+  /** M3-B — Gravemark extraction rig on this resource node (docs/M3_ECONOMIES.md). */
+  rigTeam: number;
+  rigProgress: number;
+  rigHp: number;
+  rigAccum: number;
   path: number[] | null;
   pathI: number;
   hitFlash: number;
@@ -99,10 +108,12 @@ export interface TeamEco {
   energy: number;
   pop: number;
   cap: number;
-  /** 0 Spark · 1 Orbit · 2 Dominion · 3 Apex */
+  /** Legacy progression int; M4 writes it to 1 once on path commit for old readers. */
   epoch: number;
-  /** seconds remaining on current age-up research */
+  /** Seconds remaining on the age-up / path-commit channel. */
   ageT: number;
+  /** M4 — committed technology path; null until the commit channel completes. */
+  techPath: TechPathId | null;
 }
 
 export interface Bolt {
@@ -166,6 +177,11 @@ export function makeEnt(): Ent {
     rallyZ: 0,
     radius: 0.3,
     vis: true,
+    seenBy: 0,
+    rigTeam: -1,
+    rigProgress: 0,
+    rigHp: 0,
+    rigAccum: 0,
     path: null,
     pathI: 0,
     hitFlash: 0,

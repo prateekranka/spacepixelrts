@@ -1,0 +1,28 @@
+# FRESH BLIND M6-A TOUCH RE-GATE
+
+Test the live current build at `http://127.0.0.1:5199/desktop.html` as a first-time touch player. This is a focused re-gate of two production failures. Do not inspect source, docs, tests, bundles, QA URLs, hidden globals/state, network, console internals, or storage.
+
+Browser: fresh Playwright context, 1024×768, hasTouch true, isMobile true. Touch input only. Visible-control DOM reads may locate labels; all gameplay assertions must come from visible UI/screenshots.
+
+Evidence root: `/home/bobbyranka/workspace/evidence/starhaven-m6a-blind-touch/`.
+Save `01-opening.png`, `02-move-armed.png`, `03-moving.png`, `04-gather-armed.png`, `05-gathering.png`, `06-income.png`, `interaction-log.md`, `report.md`.
+
+Required real play:
+1. Start through Main menu → New Skirmish → Start Match. No QA route.
+2. Use visible FIND WIND STRIDER. Touch MOVE. Confirm MOVE visibly arms. Tap clear ground once. Confirm the Wind Strider remains selected and visible ORDER becomes Moving; capture.
+3. Use visible FIND IDLE WORKER. Locate a visible resource node through normal camera/minimap controls. Touch GATHER. Confirm GATHER visibly arms. Tap the node. Confirm Worker remains selected and visible ORDER becomes Gathering (not Attacking); capture.
+4. Wait honestly up to 3 real minutes. Record visible ORE/VOLATILES/CHARGE before and after. PASS only if at least the correct visible resource increases.
+5. Long-press that resource with a Worker selected. It must stay/return Gathering, never Attacking.
+6. Check whether armed-state hints clear after a successful order.
+
+Final report exactly:
+# M6-A Blind Touch Re-gate
+## Session facts
+## MOVE verdict
+## GATHER verdict
+## Visible income evidence
+## Remaining bugs
+## Final verdict
+PASS only if armed MOVE tap works, selected unit stays selected, Gather reads Gathering, and visible income rises. Otherwise FAIL. State the single biggest remaining gap.
+
+Save and return report. Be strict.
