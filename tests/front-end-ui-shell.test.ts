@@ -164,7 +164,7 @@ assert.match(mainMenuMarkup, /data-start-action="new-skirmish"/);
 assert.doesNotMatch(mainMenuMarkup, /data-start-action="start-match"/);
 
 const mainMenuCssStart = shellCss.indexOf('/* FPE-2 MAIN MENU PIXEL SHELL');
-const mainMenuCssEnd = shellCss.indexOf('/* FPE-3 LEGACY SETUP AND PANELS');
+const mainMenuCssEnd = shellCss.indexOf('/* FPE-3 MATCH SETUP AND PANELS PIXEL SHELL');
 assert.ok(mainMenuCssStart >= 0 && mainMenuCssEnd > mainMenuCssStart, 'Main Menu CSS section is explicitly bounded');
 const mainMenuCss = shellCss.slice(mainMenuCssStart, mainMenuCssEnd);
 assert.match(mainMenuCss, /\.start-heading h1[\s\S]*font-family:\s*var\(--font-display\)/);
@@ -197,6 +197,48 @@ assert.doesNotMatch(mainMenuCss, /\bborder-radius\s*:\s*(?:[3-9]|[1-9]\d|\d+\.\d
 assert.doesNotMatch(mainMenuCss, /\btranslate(?:X|Y)?\([^)]*\.\d/);
 assert.doesNotMatch(mainMenuCss, /\b(?:ease|ease-in|ease-out)\b/i);
 
+const setupPanelCssStart = mainMenuCssEnd;
+const setupPanelCssEnd = shellCss.indexOf('/* FPE-4 LEGACY LOADING RULES');
+assert.ok(setupPanelCssStart >= 0 && setupPanelCssEnd > setupPanelCssStart, 'setup/panel CSS section is explicitly bounded');
+const setupPanelCss = shellCss.slice(setupPanelCssStart, setupPanelCssEnd);
+assert.doesNotMatch(shellCss, /FPE-3 LEGACY SETUP AND PANELS/i, 'FPE-3 legacy marker is removed');
+assert.doesNotMatch(setupPanelCss, /backdrop-filter|blur|(?:linear|radial|conic)-gradient|cubic-bezier/i, 'setup/panel CSS has no glass, blur, or gradient treatment');
+assert.doesNotMatch(setupPanelCss, /\b(?:ease|ease-in|ease-out)\b/i, 'setup/panel CSS has no smooth easing');
+assert.doesNotMatch(setupPanelCss, /\bbox-shadow\s*:[^;]*(?:blur|\d+px\s+\d+px\s+\d+px)/i, 'setup/panel shadows stay hard');
+assert.doesNotMatch(setupPanelCss, /\bborder-radius\s*:\s*(?:[3-9]|[1-9]\d|\d+\.\d+)px/i, 'setup/panel geometry has no rounded corners');
+assert.doesNotMatch(setupPanelCss, /\btranslate(?:X|Y)?\([^)]*\.\d/i, 'setup/panel transforms use integer pixels');
+assert.doesNotMatch(setupPanelCss, /background(?:-color)?\s*:\s*transparent/i, 'setup/panel has no transparent invisible hotspot surface');
+assert.match(setupPanelCss, /border:\s*2px\s+solid/);
+assert.match(setupPanelCss, /border:\s*1px\s+solid/);
+assert.match(setupPanelCss, /box-shadow:\s*6px\s+6px\s+0\s+var\(--px-border-dark\)/);
+assert.match(setupPanelCss, /clip-path:\s*polygon\(8px\s+0/);
+assert.match(setupPanelCss, /\.setup-heading h2[\s\S]*font-family:\s*var\(--font-display\)/);
+assert.match(setupPanelCss, /\.setup-field legend[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(setupPanelCss, /\.setup-status[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(setupPanelCss, /\.seed-row input[\s\S]*font-family:\s*var\(--font-body\)/);
+assert.match(setupPanelCss, /\.panel-card h2[\s\S]*font-family:\s*var\(--font-display\)/);
+assert.match(setupPanelCss, /\.panel-content[\s\S]*font-family:\s*var\(--font-body\)/);
+assert.match(setupPanelCss, /animation:\s*panel-reveal\s+140ms\s+steps\(4, end\)/);
+assert.match(setupPanelCss, /@keyframes panel-reveal[\s\S]*clip-path:/);
+assert.match(setupPanelCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.panel-card[\s\S]*animation:\s*none !important/);
+assert.match(setupPanelCss, /\.setup-card::-webkit-scrollbar[\s\S]*width:\s*12px/);
+assert.match(setupPanelCss, /\.setup-card::-webkit-scrollbar-thumb[\s\S]*background-color:\s*var\(--civ-primary\)/);
+assert.match(setupPanelCss, /\.panel-card[\s\S]*scrollbar-color:\s*var\(--civ-primary\)\s+var\(--px-ink\)/);
+assert.match(setupPanelCss, /\.panel-close-icon::before[\s\S]*transform:\s*rotate\(45deg\)/);
+assert.match(setupPanelCss, /\.panel-close-icon::after[\s\S]*transform:\s*rotate\(-45deg\)/);
+
+assert.doesNotMatch(startScreen, /<button[^>]*class="panel-close"[^>]*>[^<]*×/u, 'panel close has no Unicode icon text');
+assert.match(startScreen, /class="panel-close"[^>]*aria-label="Close"[^>]*><span class="panel-close-icon"/);
+for (const action of ['tutorial', 'factions', 'settings', 'records', 'history', 'codex', 'dispatches']) {
+  assert.match(startScreen, new RegExp(`['"]${action}['"]`), `${action} panel action remains present`);
+}
+
+const fpe4Marker = '/* FPE-4 LEGACY LOADING RULES';
+assert.equal((shellCss.match(/FPE-\d+ LEGACY/g) ?? []).length, 1, 'loading is the only explicitly scoped legacy surface');
+assert.equal((shellCss.match(new RegExp(fpe4Marker.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&'), 'g')) ?? []).length, 1);
+assert.doesNotMatch(shellCss.slice(0, setupPanelCssEnd), /\bLEGACY\b/i, 'pre-loading production sections have no legacy marker');
+assert.match(shellCss.slice(setupPanelCssEnd), /\.front-loading-screen/);
+
 const baselineCommit = '645b0ec';
 execFileSync('git', ['cat-file', '-e', `${baselineCommit}^{commit}`], { cwd: repoRoot });
 const protectedFiles = [
@@ -216,4 +258,4 @@ for (const relativePath of protectedFiles) {
   assert.deepEqual(current, baseline, `${relativePath} is unchanged from ${baselineCommit}`);
 }
 
-console.log('FPE-2 pixel front-end shell tests: PASS');
+console.log('FPE-3 pixel front-end shell tests: PASS');

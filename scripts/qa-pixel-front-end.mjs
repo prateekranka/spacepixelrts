@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Browser proof for the FPE-2 Main Menu pixel shell.
+ * Browser proof for the FPE-2 Main Menu and FPE-3 setup/panel pixel shell.
  *
  * Usage:
  *   npm run qa:pixel-front-end -- --out /absolute/evidence/folder
@@ -28,6 +28,7 @@ const SCENES = {
   sunweaver: 'sunweaver-capital',
   gravemark: 'gravemark-quarry',
 };
+const PANEL_ACTIONS = ['tutorial', 'factions', 'settings', 'records', 'history', 'codex', 'dispatches'];
 const TIMEOUT_MS = 30000;
 
 function parseArgs(argv) {
@@ -360,17 +361,402 @@ async function exerciseTooltipAndFocus(page, output, faction, dimension, manifes
   manifest.captures.push(path.basename(file));
 }
 
-async function openAndClosePanel(page, selector, label) {
+async function surfaceContract(page, selector) {
+  return page.evaluate((surfaceSelector) => {
+    const surface = document.querySelector(surfaceSelector);
+    const visible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && Number(style.opacity) !== 0
+        && box.width > 0
+        && box.height > 0;
+    };
+    const box = (element) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height };
+    };
+    if (!(surface instanceof HTMLElement)) return null;
+    const controls = [...surface.querySelectorAll('button, input')].filter(visible).map((element) => ({
+      tagName: element.tagName,
+      className: element.className,
+      rect: box(element),
+    }));
+    const clipped = controls.filter(({ rect }) => rect.x < 0 || rect.y < 0 || rect.right > window.innerWidth || rect.bottom > window.innerHeight);
+    const surfaceRect = box(surface);
+    return {
+      surfaceRect,
+      controls,
+      clipped,
+      overflow: {
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        documentWidth: document.documentElement.scrollWidth,
+        documentHeight: document.documentElement.scrollHeight,
+      },
+    };
+  }, selector);
+}
+
+function assertSurfaceContract(details, label, { minimumInset = 0 } = {}) {
+  assertThat(details, `${label}: surface is missing`);
+  assertThat(details.clipped.length === 0, `${label}: visible control is clipped (${JSON.stringify(details.clipped)})`);
+  assertThat(details.controls.every(({ rect }) => rect.width >= 44 && rect.height >= 44), `${label}: a visible control is below 44x44 CSS pixels`);
+  assertThat(details.overflow.documentWidth <= details.overflow.viewportWidth, `${label}: horizontal document overflow`);
+  assertThat(details.overflow.documentHeight <= details.overflow.viewportHeight, `${label}: vertical document overflow`);
+  if (minimumInset > 0) {
+    const { surfaceRect } = details;
+    assertThat(surfaceRect.x >= minimumInset && surfaceRect.y >= minimumInset, `${label}: surface starts inside the ${minimumInset}px safe inset`);
+    assertThat(surfaceRect.right <= details.overflow.viewportWidth - minimumInset && surfaceRect.bottom <= details.overflow.viewportHeight - minimumInset, `${label}: surface exceeds the ${minimumInset}px safe inset`);
+  }
+}
+
+async function openAndClosePanel(page, selector, label, { capturePath = null } = {}) {
   const opener = page.locator(selector);
+  const openerHandle = await opener.elementHandle();
   await opener.click();
   const panel = page.locator('.start-panel');
   await panel.waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+  await page.waitForTimeout(160);
   const close = panel.locator('.panel-close');
   await close.waitFor({ state: 'visible', timeout: TIMEOUT_MS });
-  await close.click();
+  assertThat(await close.getAttribute('aria-label') === 'Close', `${label}: Close button has no exact aria-label`);
+  const details = await surfaceContract(page, '.panel-card');
+  assertSurfaceContract(details, label, { minimumInset: 24 });
+  if (capturePath) await page.screenshot({ path: capturePath, type: 'png' });
+
+  const focusables = panel.locator('.panel-card button:not(:disabled), .panel-card input:not(:disabled), .panel-card select:not(:disabled), .panel-card textarea:not(:disabled), .panel-card [href], .panel-card [tabindex]:not([tabindex="-1"])');
+  const focusableCount = await focusables.count();
+  assertThat(focusableCount > 0, `${label}: no focusable control exists inside panel`);
+  await page.evaluate(() => document.querySelector('.panel-close')?.focus());
+  await page.keyboard.press('Tab');
+  assertThat(await page.evaluate(() => document.querySelector('.panel-card')?.contains(document.activeElement)), `${label}: Tab escaped the panel`);
+  await page.evaluate(() => {
+    const elements = [...document.querySelectorAll('.panel-card button:not(:disabled), .panel-card input:not(:disabled), .panel-card select:not(:disabled), .panel-card textarea:not(:disabled), .panel-card [href], .panel-card [tabindex]:not([tabindex="-1"])')];
+    elements.at(-1)?.focus();
+  });
+  await page.keyboard.press('Tab');
+  const forwardWrapped = await page.evaluate(() => document.activeElement === document.querySelector('.panel-card button:not(:disabled), .panel-card input:not(:disabled), .panel-card select:not(:disabled), .panel-card textarea:not(:disabled), .panel-card [href], .panel-card [tabindex]:not([tabindex="-1"])'));
+  assertThat(forwardWrapped, `${label}: Tab did not wrap from the last panel control`);
+  await page.keyboard.press('Shift+Tab');
+  const backwardWrapped = await page.evaluate(() => {
+    const elements = [...document.querySelectorAll('.panel-card button:not(:disabled), .panel-card input:not(:disabled), .panel-card select:not(:disabled), .panel-card textarea:not(:disabled), .panel-card [href], .panel-card [tabindex]:not([tabindex="-1"])')];
+    return document.activeElement === elements.at(-1);
+  });
+  assertThat(backwardWrapped, `${label}: Shift+Tab did not wrap from the first panel control`);
+  await page.keyboard.press('Escape');
   await panel.waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
-  const restored = await page.evaluate((element) => document.activeElement === element, await opener.elementHandle());
-  assertThat(restored, `${label}: closing the panel did not restore focus`);
+  const restored = await page.evaluate((element) => document.activeElement === element, openerHandle);
+  assertThat(restored, `${label}: Escape did not restore focus to the exact opener`);
+  await openerHandle?.dispose();
+}
+
+async function readSetupContract(page) {
+  await page.evaluate(async () => {
+    await Promise.all([
+      document.fonts.load('700 32px "Pixelify Sans"'),
+      document.fonts.load('700 14px "Silkscreen"'),
+      document.fonts.load('400 14px "Kode Mono"'),
+    ]);
+  });
+  return page.evaluate(() => {
+    const visible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && Number(style.opacity) !== 0
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const rect = (element) => {
+      const box = element.getBoundingClientRect();
+      return { x: box.x, y: box.y, right: box.right, bottom: box.bottom, width: box.width, height: box.height };
+    };
+    const setup = document.querySelector('.setup-view');
+    const heading = document.querySelector('.setup-heading');
+    const cards = [...document.querySelectorAll('.setup-card')].filter(visible);
+    const selected = {};
+    for (const button of document.querySelectorAll('[data-config-field].selected')) {
+      const field = button.getAttribute('data-config-field');
+      if (field) selected[field] = button.getAttribute('data-config-value') || '';
+    }
+    const controls = [...(setup?.querySelectorAll('button, input') || [])].filter(visible);
+    const controlRects = controls.map((element) => ({
+      tagName: element.tagName,
+      className: element.className,
+      rect: rect(element),
+    }));
+    const clipped = controlRects.filter(({ rect: box }) => box.x < 0 || box.y < 0 || box.right > window.innerWidth || box.bottom > window.innerHeight);
+    const seedRow = document.querySelector('[data-seed-row]');
+    const seedInput = document.querySelector('[data-seed-input]');
+    const start = document.querySelector('[data-start-action="start-match"]');
+    const back = document.querySelector('[data-start-action="back"]');
+    const headingTitle = document.querySelector('.setup-heading h2');
+    const label = document.querySelector('.setup-field legend');
+    const status = document.querySelector('.setup-status');
+    const explanation = document.querySelector('.faction-summary p');
+    return {
+      setupVisible: visible(setup),
+      setupRect: setup ? rect(setup) : null,
+      headingRect: heading ? rect(heading) : null,
+      cards: cards.map(rect),
+      selected,
+      controls: controlRects,
+      clipped,
+      seedVisible: visible(seedRow),
+      seedValue: seedInput?.value || '',
+      seedInvalid: seedInput?.getAttribute('aria-invalid') || '',
+      startDisabled: start instanceof HTMLButtonElement ? start.disabled : true,
+      startRect: start ? rect(start) : null,
+      backRect: back ? rect(back) : null,
+      fonts: {
+        displayLoaded: document.fonts.check('700 32px "Pixelify Sans"'),
+        interfaceLoaded: document.fonts.check('700 14px "Silkscreen"'),
+        bodyLoaded: document.fonts.check('400 14px "Kode Mono"'),
+        displayUsed: headingTitle ? getComputedStyle(headingTitle).fontFamily : '',
+        interfaceUsed: label ? getComputedStyle(label).fontFamily : '',
+        statusUsed: status ? getComputedStyle(status).fontFamily : '',
+        bodyUsed: explanation ? getComputedStyle(explanation).fontFamily : '',
+        inputUsed: seedInput ? getComputedStyle(seedInput).fontFamily : '',
+      },
+      config: globalThis.__STARHAVEN_QA__?.config || null,
+      overflow: {
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        documentWidth: document.documentElement.scrollWidth,
+        documentHeight: document.documentElement.scrollHeight,
+      },
+    };
+  });
+}
+
+function assertSetupContract(details, faction, dimension) {
+  const rival = faction === 'sunweaver' ? 'gravemark' : 'sunweaver';
+  assertThat(details.setupVisible, `${faction} ${dimension.width}x${dimension.height}: setup view is not visible`);
+  assertThat(details.cards.length === 2, `${faction} ${dimension.width}x${dimension.height}: expected two framed setup sections`);
+  assertThat(details.selected.playerFaction === faction, `${faction}: player faction selection is ${details.selected.playerFaction}`);
+  assertThat(details.selected.aiFaction === rival, `${faction}: AI faction selection is ${details.selected.aiFaction}`);
+  assertThat(details.selected.difficulty === 'standard', `${faction}: default difficulty selection is ${details.selected.difficulty}`);
+  assertThat(details.selected.fogOfWar === 'true', `${faction}: default fog selection is ${details.selected.fogOfWar}`);
+  assertThat(details.selected.speed === '1', `${faction}: default speed selection is ${details.selected.speed}`);
+  assertThat(details.selected.tacticalPause === 'enabled', `${faction}: default tactical pause selection is ${details.selected.tacticalPause}`);
+  assertThat(details.selected.seedMode === 'random', `${faction}: default seed mode selection is ${details.selected.seedMode}`);
+  assertThat(!details.seedVisible && !details.startDisabled, `${faction}: random-seed setup does not start in a valid state`);
+  assertThat(details.clipped.length === 0, `${faction} ${dimension.width}x${dimension.height}: setup control is clipped (${JSON.stringify(details.clipped)})`);
+  assertThat(details.controls.every(({ rect }) => rect.width >= 44 && rect.height >= 44), `${faction}: setup control is below 44x44 CSS pixels`);
+  assertThat(details.overflow.documentWidth <= details.overflow.viewportWidth, `${faction} ${dimension.width}x${dimension.height}: setup horizontal overflow`);
+  assertThat(details.overflow.documentHeight <= details.overflow.viewportHeight, `${faction} ${dimension.width}x${dimension.height}: setup vertical overflow`);
+  assertThat(details.headingRect.x >= 32 && details.headingRect.right <= dimension.width - 32, `${faction}: setup header misses the 32px horizontal safe area`);
+  assertThat(details.fonts.displayLoaded && details.fonts.interfaceLoaded && details.fonts.bodyLoaded, `${faction}: setup local fonts did not load`);
+  assertThat(/Pixelify Sans/i.test(details.fonts.displayUsed), `${faction}: setup heading is not Pixelify Sans`);
+  assertThat(/Silkscreen/i.test(details.fonts.interfaceUsed) && /Silkscreen/i.test(details.fonts.statusUsed), `${faction}: setup labels/status are not Silkscreen`);
+  assertThat(/Kode Mono/i.test(details.fonts.bodyUsed) && /Kode Mono/i.test(details.fonts.inputUsed), `${faction}: setup explanations/input are not Kode Mono`);
+}
+
+async function exerciseSetupInteractions(page, faction) {
+  const rival = faction === 'sunweaver' ? 'gravemark' : 'sunweaver';
+  const clickSegment = async (field, value) => {
+    await page.locator(`[data-config-field="${field}"][data-config-value="${value}"]`).click();
+    await page.waitForFunction(({ expectedField, expectedValue }) => {
+      const selected = document.querySelector(`[data-config-field="${expectedField}"][data-config-value="${expectedValue}"].selected`);
+      return Boolean(selected);
+    }, { expectedField: field, expectedValue: value }, { timeout: TIMEOUT_MS });
+  };
+
+  await clickSegment('difficulty', 'veteran');
+  await clickSegment('fogOfWar', 'false');
+  await clickSegment('speed', '1.25');
+  await clickSegment('tacticalPause', 'on-demand');
+
+  await page.locator(`[data-config-field="aiFaction"][data-config-value="${faction}"]`).click();
+  await page.waitForFunction(({ expectedPlayer, expectedAi }) => {
+    const config = globalThis.__STARHAVEN_QA__?.config;
+    return config?.playerFaction === expectedPlayer && config?.aiFaction === expectedAi;
+  }, { expectedPlayer: rival, expectedAi: faction }, { timeout: TIMEOUT_MS });
+  const mirrorAnnouncement = await page.locator('.setup-live').textContent();
+  assertThat(/Player civilization changed to/i.test(mirrorAnnouncement || ''), 'mirror-swap announcement is missing');
+
+  await clickSegment('seedMode', 'deterministic');
+  const seedRow = page.locator('[data-seed-row]');
+  await seedRow.waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+  const seedInput = page.locator('[data-seed-input]');
+  await seedInput.fill('-1');
+  await page.waitForFunction(() => {
+    const input = document.querySelector('[data-seed-input]');
+    const start = document.querySelector('[data-start-action="start-match"]');
+    return input?.getAttribute('aria-invalid') === 'true'
+      && start instanceof HTMLButtonElement
+      && start.disabled;
+  }, undefined, { timeout: TIMEOUT_MS });
+  assertThat(/unsigned 32-bit|cannot be negative|cannot exceed/i.test((await page.locator('.setup-status').textContent()) || ''), 'invalid seed copy is missing');
+
+  await seedInput.fill('424242');
+  await page.waitForFunction(() => {
+    const input = document.querySelector('[data-seed-input]');
+    const start = document.querySelector('[data-start-action="start-match"]');
+    return input?.getAttribute('aria-invalid') === 'false'
+      && input?.getAttribute('value') === null
+      && (input instanceof HTMLInputElement && input.value === '424242')
+      && start instanceof HTMLButtonElement
+      && !start.disabled
+      && globalThis.__STARHAVEN_QA__?.config?.seed === 424242;
+  }, undefined, { timeout: TIMEOUT_MS });
+  assertThat(await seedInput.inputValue() === '424242', 'valid deterministic seed was not retained');
+  assertThat(await page.locator('[data-config-field="seedMode"][data-config-value="deterministic"]').getAttribute('aria-pressed') === 'true', 'deterministic seed mode is not selected');
+}
+
+async function runSetupCase(browser, baseUrl, output, faction, dimension, manifest) {
+  const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1 });
+  await context.addInitScript(({ key, value }) => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, { key: DEFAULT_PROFILE_KEY, value: profileValue(faction) });
+  const page = await context.newPage();
+  page.setDefaultTimeout(TIMEOUT_MS);
+  const errors = attachErrorCapture(page);
+  try {
+    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, faction);
+    await page.locator('.menu-item[data-start-action="new-skirmish"]').click();
+    await page.locator('.setup-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    const details = await readSetupContract(page);
+    assertSetupContract(details, faction, dimension);
+    const file = path.join(output, `setup-${faction}-${dimension.width}x${dimension.height}.png`);
+    await page.screenshot({ path: file, type: 'png' });
+    manifest.captures.push(path.basename(file));
+    await exerciseSetupInteractions(page, faction);
+    const interacted = await readSetupContract(page);
+    assertThat(interacted.seedVisible && interacted.seedValue === '424242' && !interacted.startDisabled, `${faction}: deterministic seed interaction did not finish valid`);
+    await page.locator('.secondary-action[data-start-action="back"]').click();
+    await page.locator('.menu-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    assertThat(errors.length === 0, `${faction} ${dimension.width}x${dimension.height}: setup browser errors\n${errors.join('\n')}`);
+    manifest.assertions.push({ name: `match setup ${faction} ${dimension.width}x${dimension.height}`, status: 'PASS', details: { initial: details, interacted } });
+  } catch (error) {
+    manifest.assertions.push({ name: `match setup ${faction} ${dimension.width}x${dimension.height}`, status: 'FAIL', error: error?.message || String(error) });
+    manifest.errors.push(error?.stack || error?.message || String(error));
+  } finally {
+    if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
+    await context.close();
+  }
+}
+
+async function runPanelEvidence(browser, baseUrl, output, manifest) {
+  const dimension = { width: 1366, height: 1024 };
+  const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1 });
+  await context.addInitScript(({ key, value }) => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, { key: DEFAULT_PROFILE_KEY, value: profileValue('sunweaver') });
+  const page = await context.newPage();
+  page.setDefaultTimeout(TIMEOUT_MS);
+  const errors = attachErrorCapture(page);
+  try {
+    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, 'sunweaver');
+    for (const action of PANEL_ACTIONS) {
+      const selector = action === 'tutorial' || action === 'factions' || action === 'settings'
+        ? `.menu-item[data-start-action="${action}"]`
+        : `.utility-button[data-start-action="${action}"]`;
+      const file = path.join(output, `panel-${action}-1366x1024.png`);
+      await openAndClosePanel(page, selector, `${action} evidence`, { capturePath: file });
+      manifest.captures.push(path.basename(file));
+    }
+    await page.setViewportSize({ width: 1180, height: 820 });
+    await waitForMenu(page, 'sunweaver');
+    const smallFile = path.join(output, 'panel-records-1180x820.png');
+    await openAndClosePanel(page, '.utility-button[data-start-action="records"]', 'records 1180x820 evidence', { capturePath: smallFile });
+    manifest.captures.push(path.basename(smallFile));
+    assertThat(errors.length === 0, `panel evidence browser errors\n${errors.join('\n')}`);
+    manifest.assertions.push({ name: 'all seven panels have evidence, focus containment, Escape close, and no clipping', status: 'PASS', details: { panels: PANEL_ACTIONS, smallViewport: 'records' } });
+  } catch (error) {
+    manifest.assertions.push({ name: 'all seven panels have evidence, focus containment, Escape close, and no clipping', status: 'FAIL', error: error?.message || String(error) });
+    manifest.errors.push(error?.stack || error?.message || String(error));
+  } finally {
+    if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
+    await context.close();
+  }
+}
+
+async function runTouchContract(browser, baseUrl, manifest) {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 1024 }, deviceScaleFactor: 1, hasTouch: true });
+  await context.addInitScript(({ key, value }) => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, { key: DEFAULT_PROFILE_KEY, value: profileValue('sunweaver') });
+  const page = await context.newPage();
+  page.setDefaultTimeout(TIMEOUT_MS);
+  const errors = attachErrorCapture(page);
+  try {
+    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, 'sunweaver');
+    await page.tap('.menu-item[data-start-action="tutorial"]');
+    await page.locator('.start-panel').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    await page.tap('.panel-close');
+    await page.locator('.start-panel').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
+    await page.tap('.menu-item[data-start-action="new-skirmish"]');
+    await page.locator('.setup-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    await page.tap('[data-config-field="difficulty"][data-config-value="cadet"]');
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-config-field="difficulty"][data-config-value="cadet"].selected')), undefined, { timeout: TIMEOUT_MS });
+    await page.tap('.secondary-action[data-start-action="back"]');
+    await page.locator('.menu-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    assertThat(errors.length === 0, `touch contract browser errors\n${errors.join('\n')}`);
+    manifest.assertions.push({ name: 'touch context taps panel opener, setup segment, and close control', status: 'PASS' });
+  } catch (error) {
+    manifest.assertions.push({ name: 'touch context taps panel opener, setup segment, and close control', status: 'FAIL', error: error?.message || String(error) });
+    manifest.errors.push(error?.stack || error?.message || String(error));
+  } finally {
+    if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
+    await context.close();
+  }
+}
+
+async function runReducedMotionContract(browser, baseUrl, output, manifest) {
+  const dimension = { width: 1366, height: 1024 };
+  const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1, reducedMotion: 'reduce' });
+  await context.addInitScript(({ key, value }) => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, { key: DEFAULT_PROFILE_KEY, value: profileValue('sunweaver') });
+  const page = await context.newPage();
+  page.setDefaultTimeout(TIMEOUT_MS);
+  const errors = attachErrorCapture(page);
+  try {
+    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, 'sunweaver');
+    await page.locator('.utility-button[data-start-action="records"]').click();
+    await page.locator('.start-panel').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    const motion = await page.evaluate(() => {
+      const panel = document.querySelector('.panel-card');
+      const style = panel ? getComputedStyle(panel) : null;
+      return {
+        mediaMatches: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        animationName: style?.animationName || '',
+        animationDuration: style?.animationDuration || '',
+        transitionDuration: style?.transitionDuration || '',
+      };
+    });
+    assertThat(motion.mediaMatches, 'Reduced Motion media query was not active');
+    assertThat(motion.animationName === 'none' && motion.animationDuration === '0s', `decorative panel animation remains under Reduced Motion (${JSON.stringify(motion)})`);
+    const file = path.join(output, 'panel-reduced-motion-1366x1024.png');
+    await page.screenshot({ path: file, type: 'png' });
+    manifest.captures.push(path.basename(file));
+    await page.keyboard.press('Escape');
+    await page.locator('.start-panel').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
+    await page.locator('.menu-item[data-start-action="factions"]').click();
+    await page.locator('.faction-choice[data-faction-choice="gravemark"]').click();
+    await page.waitForFunction(() => document.querySelector('#start-screen')?.dataset.civ === 'gravemark'
+      && document.querySelector('.front-end-scene')?.getAttribute('data-faction') === 'gravemark', undefined, { timeout: TIMEOUT_MS });
+    await page.keyboard.press('Escape');
+    await page.locator('.start-panel').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
+    assertThat(errors.length === 0, `Reduced Motion browser errors\n${errors.join('\n')}`);
+    manifest.assertions.push({ name: 'Reduced Motion removes panel animation while preserving faction state changes', status: 'PASS', details: motion });
+  } catch (error) {
+    manifest.assertions.push({ name: 'Reduced Motion removes panel animation while preserving faction state changes', status: 'FAIL', error: error?.message || String(error) });
+    manifest.errors.push(error?.stack || error?.message || String(error));
+  } finally {
+    if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
+    await context.close();
+  }
 }
 
 async function exerciseControls(page) {
@@ -395,6 +781,8 @@ async function exerciseFactionChoice(page, faction) {
   await page.locator('.panel-close').click();
   await page.locator('.start-panel').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
   await page.waitForFunction((expected) => document.querySelector('.front-end-scene')?.getAttribute('data-faction') === expected, rival, { timeout: TIMEOUT_MS });
+  const stored = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) || '{}'), DEFAULT_PROFILE_KEY);
+  assertThat(stored.preferredFaction === rival, `Factions: preferred faction ${rival} did not persist after close`);
 }
 
 async function runMenuCase(browser, baseUrl, output, faction, dimension, manifest) {
@@ -510,6 +898,14 @@ async function main() {
         await runMenuCase(browser, baseUrl, output, faction, dimension, manifest);
       }
     }
+    for (const faction of FACTIONS) {
+      for (const dimension of DIMENSIONS) {
+        await runSetupCase(browser, baseUrl, output, faction, dimension, manifest);
+      }
+    }
+    await runPanelEvidence(browser, baseUrl, output, manifest);
+    await runTouchContract(browser, baseUrl, manifest);
+    await runReducedMotionContract(browser, baseUrl, output, manifest);
     await runDispatchPersistence(browser, baseUrl, output, manifest);
   } catch (error) {
     manifest.errors.push(error?.stack || error?.message || String(error));

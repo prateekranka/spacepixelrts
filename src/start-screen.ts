@@ -239,7 +239,7 @@ export class StartScreen {
         <div class="start-panel" hidden>
           <div class="panel-scrim" data-start-action="close-panel"></div>
           <section class="panel-card" role="dialog" aria-modal="true" aria-labelledby="panel-title">
-            <button type="button" class="panel-close" data-start-action="close-panel" aria-label="Close">×</button>
+            <button type="button" class="panel-close" data-start-action="close-panel" aria-label="Close"><span class="panel-close-icon" aria-hidden="true"></span></button>
             <p class="start-kicker">STARHAVEN FIELD NOTES</p>
             <h2 id="panel-title"></h2>
             <div class="panel-content"></div>
@@ -422,11 +422,16 @@ export class StartScreen {
       return;
     }
     this.seedEntryError = null;
+    input.classList.remove('invalid');
+    input.setAttribute('aria-invalid', 'false');
     this.commitConfig({ ...this.config, seed: Number(input.value) });
   }
 
   private markSeedEntryInvalid(message: string): void {
     this.seedEntryError = message;
+    const input = this.root.querySelector<HTMLInputElement>('[data-seed-input]');
+    input?.classList.add('invalid');
+    input?.setAttribute('aria-invalid', 'true');
     this.renderValidation([message]);
     this.root.querySelector<HTMLButtonElement>('[data-start-action="start-match"]')!.disabled = true;
   }
@@ -497,6 +502,8 @@ export class StartScreen {
     seedRow.hidden = this.config.seedMode !== 'deterministic';
     const seedInput = this.root.querySelector<HTMLInputElement>('[data-seed-input]')!;
     seedInput.value = String(this.config.seed >>> 0);
+    seedInput.classList.toggle('invalid', this.seedEntryError !== null);
+    seedInput.setAttribute('aria-invalid', String(this.seedEntryError !== null));
 
     const validation = validateMatchConfig(this.config);
     this.renderValidation(this.seedEntryError !== null ? [this.seedEntryError] : validation.errors);
