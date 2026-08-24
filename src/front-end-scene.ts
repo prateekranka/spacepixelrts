@@ -29,7 +29,7 @@ export interface FrontEndSceneRenderer {
 /** Controller name used by the menu and loading containers. */
 export interface FrontEndSceneController extends FrontEndSceneRenderer {}
 
-/** Map the two canonical factions to their distinct procedural scene packs. */
+/** Map the two canonical factions to their distinct authored scene packs. */
 export function sceneForFaction(faction: FactionId): SceneId {
   return faction === 'sunweaver' ? 'sunweaver-capital' : 'gravemark-quarry';
 }
@@ -58,405 +58,535 @@ export function sceneMotionOffset(
   return Math.round(Math.sin(safeFrame * 0.17 + phase) * amplitude);
 }
 
-interface ScenePalette {
-  readonly skyTop: string;
-  readonly skyHorizon: string;
-  readonly skyGlow: string;
-  readonly star: string;
-  readonly body: string;
-  readonly bodyBright: string;
-  readonly far: string;
-  readonly mid: string;
-  readonly ground: string;
-  readonly foreground: string;
-  readonly accent: string;
-  readonly accentSoft: string;
-  readonly light: string;
+/** Return a looping source frame for a sprite sheet or animation strip. */
+export function sceneStripFrame(
+  visualFrame: number,
+  frameRate: number,
+  framesCount: number,
+  reducedMotion = false,
+): number {
+  if (reducedMotion || !Number.isFinite(visualFrame) || !Number.isFinite(frameRate)) return 0;
+  if (!Number.isFinite(framesCount) || framesCount <= 0 || frameRate <= 0) return 0;
+  const count = Math.floor(framesCount);
+  if (count <= 0) return 0;
+  const frame = Math.max(0, Math.floor(visualFrame));
+  return Math.floor((frame * frameRate) / SCENE_FPS) % count;
 }
 
-const SUNWEAVER: ScenePalette = {
-  skyTop: '#26151e',
-  skyHorizon: '#e1834e',
-  skyGlow: '#ffd49b',
-  star: '#fff4d4',
-  body: '#db632c',
-  bodyBright: '#fff1ad',
-  far: '#7d3f39',
-  mid: '#4b2a32',
-  ground: '#261922',
-  foreground: '#120f17',
-  accent: '#f6c95f',
-  accentSoft: '#d9f1dc',
-  light: '#fff9d5',
-};
+type BlendMode = 'source-over' | 'screen';
+type AssetKind = 'cover' | 'rect';
+type SceneRect = readonly [number, number, number, number];
 
-const GRAVEMARK: ScenePalette = {
-  skyTop: '#0a111b',
-  skyHorizon: '#203548',
-  skyGlow: '#91c9dc',
-  star: '#d2e6ee',
-  body: '#526578',
-  bodyBright: '#d0edf4',
-  far: '#263844',
-  mid: '#17252f',
-  ground: '#101921',
-  foreground: '#080e14',
-  accent: '#81c8bb',
-  accentSoft: '#9ecfe7',
-  light: '#c8f1e7',
-};
+export interface SceneAssetManifest {
+  readonly file: string;
+  readonly kind: AssetKind;
+  readonly blend: BlendMode;
+  readonly rect?: SceneRect;
+}
 
-interface DrawContext {
-  readonly ctx: CanvasRenderingContext2D;
-  readonly palette: ScenePalette;
+export interface SceneSpritePlaceManifest {
   readonly frame: number;
+  readonly box: SceneRect;
+  readonly anchor?: SceneRect;
+}
+
+export interface SceneSpriteManifest {
+  readonly file: string;
+  readonly frames: readonly SceneRect[];
+  readonly frameRate: number;
+  readonly blend: BlendMode;
+  readonly drift?: {
+    readonly amplitude: number;
+    readonly phase: number;
+  };
+  readonly places: readonly SceneSpritePlaceManifest[];
+}
+
+export interface SceneTwinklesManifest {
+  readonly mask: string;
+  readonly fps: number;
+}
+
+export interface ScenePackManifest {
+  readonly scene: SceneId;
   readonly mode: SceneMode;
-  readonly reducedMotion: boolean;
+  readonly canvas: {
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly assets: readonly SceneAssetManifest[];
+  readonly sprites: readonly SceneSpriteManifest[];
+  readonly twinkles?: SceneTwinklesManifest;
+  readonly fallbackPalette?: readonly string[];
 }
 
-function hash(index: number, salt: number): number {
-  let value = Math.imul(index + 1, 0x45d9f3b) ^ Math.imul(salt + 17, 0x27d4eb2d);
-  value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
-  value ^= value >>> 13;
-  return (value >>> 0) / 0x100000000;
+const VALID_BLEND_MODES: readonly BlendMode[] = ['source-over', 'screen'];
+const VALID_ASSET_KINDS: readonly AssetKind[] = ['cover', 'rect'];
+const PACK_ROOT = 'front-end/civilizations';
+
+const DEFAULT_FALLBACK_PALETTES: Readonly<Record<FactionId, readonly string[]>> = {
+  sunweaver: ['#26151e', '#e1834e', '#f6c95f', '#0d1424', '#120f17'],
+  gravemark: ['#0a111b', '#203548', '#81c8bb', '#0c141c', '#080e14'],
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function rgba(hex: string, alpha: number): string {
-  const raw = hex.replace('#', '');
-  const expanded = raw.length === 3 ? raw.split('').map((part) => part + part).join('') : raw;
-  const red = Number.parseInt(expanded.slice(0, 2), 16);
-  const green = Number.parseInt(expanded.slice(2, 4), 16);
-  const blue = Number.parseInt(expanded.slice(4, 6), 16);
-  return `rgba(${red},${green},${blue},${alpha})`;
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
-function polygon(ctx: CanvasRenderingContext2D, points: readonly number[], fill: string): void {
-  if (points.length < 6) return;
-  ctx.fillStyle = fill;
-  ctx.beginPath();
-  ctx.moveTo(points[0], points[1]);
-  for (let index = 2; index < points.length; index += 2) ctx.lineTo(points[index], points[index + 1]);
-  ctx.closePath();
-  ctx.fill();
+function isRect(value: unknown): value is SceneRect {
+  return Array.isArray(value)
+    && value.length === 4
+    && value.every((part) => isFiniteNumber(part));
 }
 
-function line(ctx: CanvasRenderingContext2D, points: readonly number[], stroke: string, width = 1): void {
-  if (points.length < 4) return;
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = width;
-  ctx.beginPath();
-  ctx.moveTo(points[0], points[1]);
-  for (let index = 2; index < points.length; index += 2) ctx.lineTo(points[index], points[index + 1]);
-  ctx.stroke();
+function rectWithin(value: SceneRect, width: number, height: number): boolean {
+  const [x, y, rectWidth, rectHeight] = value;
+  return rectWidth > 0
+    && rectHeight > 0
+    && x >= 0
+    && y >= 0
+    && x + rectWidth <= width
+    && y + rectHeight <= height;
 }
 
-function drawSkyAndStars({ ctx, palette, frame, reducedMotion }: DrawContext): void {
-  const gradient = ctx.createLinearGradient(0, 0, 0, SCENE_HEIGHT);
-  gradient.addColorStop(0, palette.skyTop);
-  gradient.addColorStop(0.58, palette.skyHorizon);
-  gradient.addColorStop(1, palette.skyGlow);
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, SCENE_WIDTH, SCENE_HEIGHT);
+function isBlendMode(value: unknown): value is BlendMode {
+  return VALID_BLEND_MODES.includes(value as BlendMode);
+}
 
-  // Stars stay in the upper field so the menu's right-side copy remains readable.
-  for (let index = 0; index < 92; index += 1) {
-    const x = Math.floor(hash(index, 11) * 660 + 16);
-    const y = Math.floor(hash(index, 23) * 205 + 14);
-    const size = hash(index, 31) > 0.88 ? 2 : 1;
-    const twinkle = reducedMotion ? 0.72 : 0.46 + (Math.sin(frame * 0.19 + index * 1.7) + 1) * 0.18;
-    ctx.globalAlpha = twinkle;
-    ctx.fillStyle = palette.star;
-    ctx.fillRect(x, y, size, size);
+function isAssetKind(value: unknown): value is AssetKind {
+  return VALID_ASSET_KINDS.includes(value as AssetKind);
+}
+
+function isRelativeAssetFile(value: unknown): value is string {
+  return typeof value === 'string'
+    && value.length > 0
+    && !value.startsWith('/')
+    && !value.split('/').includes('..');
+}
+
+function pushRectError(errors: string[], label: string, value: unknown, width: number, height: number): void {
+  if (!isRect(value)) {
+    errors.push(`${label} must be [x,y,w,h]`);
+    return;
   }
-  ctx.globalAlpha = 1;
-}
-
-function drawSunweaverBody({ ctx, palette, frame, reducedMotion }: DrawContext): void {
-  const x = 171;
-  const y = 204;
-  const radius = 122;
-  const halo = ctx.createRadialGradient(x, y, radius * 0.4, x, y, radius * 1.42);
-  halo.addColorStop(0, rgba(palette.bodyBright, 0.72));
-  halo.addColorStop(0.52, rgba(palette.body, 0.3));
-  halo.addColorStop(1, rgba(palette.body, 0));
-  ctx.fillStyle = halo;
-  ctx.fillRect(x - 185, y - 185, 370, 370);
-  ctx.fillStyle = palette.bodyBright;
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, radius - 1, 0, Math.PI * 2);
-  ctx.clip();
-  for (let band = 0; band < 19; band += 1) {
-    const bandY = y - radius + Math.floor(hash(band, 41) * radius * 2);
-    const bandHeight = 2 + Math.floor(hash(band, 43) * 8);
-    ctx.globalAlpha = 0.1 + hash(band, 47) * 0.17;
-    ctx.fillStyle = band % 2 === 0 ? palette.body : '#fff8c7';
-    ctx.fillRect(x - radius, bandY, radius * 2, bandHeight);
-  }
-  ctx.globalAlpha = 1;
-  ctx.restore();
-  const pulse = reducedMotion ? 0 : sceneMotionOffset(frame, 2, 1.2) ;
-  ctx.strokeStyle = rgba(palette.light, 0.55);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(x, y, radius + 3 + pulse, Math.PI * 1.02, Math.PI * 1.98);
-  ctx.stroke();
-}
-
-function drawGravemarkBody({ ctx, palette, frame, reducedMotion }: DrawContext): void {
-  const x = 170;
-  const y = 142;
-  const radius = 103;
-  const halo = ctx.createRadialGradient(x, y, radius * 0.7, x, y, radius * 1.55);
-  halo.addColorStop(0, rgba(palette.bodyBright, 0.24));
-  halo.addColorStop(1, rgba(palette.body, 0));
-  ctx.fillStyle = halo;
-  ctx.fillRect(x - 165, y - 165, 330, 330);
-  ctx.fillStyle = palette.body;
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, radius - 1, 0, Math.PI * 2);
-  ctx.clip();
-  for (let shard = 0; shard < 22; shard += 1) {
-    const sx = x - radius + Math.floor(hash(shard, 59) * radius * 1.8);
-    const sy = y - radius + Math.floor(hash(shard, 61) * radius * 1.7);
-    const width = 8 + Math.floor(hash(shard, 67) * 35);
-    line(ctx, [sx, sy, sx + width, sy + 2 + Math.floor(hash(shard, 71) * 9)], rgba(palette.bodyBright, 0.16), 2);
-  }
-  ctx.restore();
-  ctx.strokeStyle = rgba(palette.bodyBright, 0.6);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(x, y, radius + 2, Math.PI * 0.17, Math.PI * 1.34);
-  ctx.stroke();
-  const drift = reducedMotion ? 0 : sceneMotionOffset(frame, 5, 0.6);
-  for (let asteroid = 0; asteroid < 7; asteroid += 1) {
-    const ax = Math.round(315 + asteroid * 47 + drift * (asteroid % 2 === 0 ? 1 : -1));
-    const ay = Math.round(71 + (asteroid % 3) * 42 + hash(asteroid, 79) * 24);
-    polygon(ctx, [ax, ay, ax + 7, ay - 4, ax + 14, ay + 2, ax + 8, ay + 10, ax - 2, ay + 7], palette.bodyBright);
+  if (!rectWithin(value, width, height)) {
+    errors.push(`${label} ${JSON.stringify(value)} is outside ${width}x${height}`);
   }
 }
 
-function drawSunweaverFarTerrain({ ctx, palette }: DrawContext): void {
-  polygon(ctx, [0, 332, 88, 305, 156, 319, 224, 290, 302, 320, 380, 287, 452, 317, 522, 300, 602, 326, 700, 290, 780, 316, 860, 298, 960, 322, 960, 540, 0, 540], palette.far);
-  polygon(ctx, [0, 364, 96, 342, 191, 349, 260, 331, 347, 354, 428, 323, 522, 352, 622, 333, 708, 356, 803, 326, 960, 350, 960, 540, 0, 540], palette.mid);
-  for (let index = 0; index < 12; index += 1) {
-    const x = 34 + index * 71;
-    const y = 331 + Math.floor(hash(index, 91) * 32);
-    line(ctx, [x, y, x + 26, y - 14, x + 47, y], rgba(palette.skyGlow, 0.18), 1);
-  }
-}
+/**
+ * Validate the declarative portion of one scene pack.
+ *
+ * File existence is intentionally checked by the node-only asset test because
+ * the browser loader receives a URL, not a filesystem path. The returned list
+ * keeps every problem so callers can report a complete pack failure at once.
+ */
+export function validatePack(manifest: unknown): string[] {
+  const errors: string[] = [];
+  if (!isRecord(manifest)) return ['manifest must be an object'];
 
-function drawGravemarkFarTerrain({ ctx, palette }: DrawContext): void {
-  polygon(ctx, [0, 310, 80, 274, 162, 302, 246, 251, 324, 306, 405, 265, 496, 309, 588, 273, 670, 301, 764, 256, 860, 306, 960, 280, 960, 540, 0, 540], palette.far);
-  polygon(ctx, [0, 355, 94, 324, 180, 342, 263, 300, 349, 345, 430, 311, 531, 347, 631, 316, 746, 350, 837, 310, 960, 341, 960, 540, 0, 540], palette.mid);
-  for (let index = 0; index < 9; index += 1) {
-    const x = 50 + index * 99;
-    line(ctx, [x, 330, x + 25, 300 - Math.floor(hash(index, 101) * 25), x + 53, 331], rgba(palette.accentSoft, 0.16), 2);
+  if (manifest.scene !== 'sunweaver-capital' && manifest.scene !== 'gravemark-quarry') {
+    errors.push(`manifest scene ${JSON.stringify(manifest.scene)} is invalid`);
   }
-}
+  if (manifest.mode !== 'menu' && manifest.mode !== 'loading') {
+    errors.push(`manifest mode ${JSON.stringify(manifest.mode)} is invalid`);
+  }
 
-function drawSolarLattice(ctx: CanvasRenderingContext2D, palette: ScenePalette): void {
-  ctx.save();
-  ctx.translate(470, 392);
-  ctx.strokeStyle = rgba(palette.accent, 0.74);
-  ctx.lineWidth = 2;
-  for (let row = 0; row < 5; row += 1) {
-    const y = -206 + row * 37;
-    ctx.beginPath();
-    ctx.moveTo(-64 + row * 7, y);
-    ctx.lineTo(66 - row * 7, y);
-    ctx.stroke();
+  const canvas = manifest.canvas;
+  const canvasWidth = isRecord(canvas) && isFiniteNumber(canvas.width) ? canvas.width : SCENE_WIDTH;
+  const canvasHeight = isRecord(canvas) && isFiniteNumber(canvas.height) ? canvas.height : SCENE_HEIGHT;
+  if (!isRecord(canvas) || canvas.width !== SCENE_WIDTH || canvas.height !== SCENE_HEIGHT) {
+    errors.push(`manifest canvas must be ${SCENE_WIDTH}x${SCENE_HEIGHT}`);
   }
-  for (let column = -3; column <= 3; column += 1) {
-    ctx.beginPath();
-    ctx.moveTo(column * 19, -220);
-    ctx.lineTo(column * 13, 0);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
 
-function drawSunweaverSettlement({ ctx, palette, frame, reducedMotion }: DrawContext): void {
-  const base = 401;
-  // Tall tapered capital. The right side stops before the protected UI zone.
-  polygon(ctx, [408, base, 428, 184, 454, 118, 486, 103, 514, 118, 540, 184, 561, base], palette.foreground);
-  line(ctx, [454, 118, 486, 103, 514, 118], rgba(palette.light, 0.72), 2);
-  line(ctx, [428, 184, 540, 184], rgba(palette.accentSoft, 0.55), 1);
-  line(ctx, [408, base, 561, base], rgba(palette.light, 0.63), 2);
-  drawSolarLattice(ctx, palette);
-  for (let row = 0; row < 7; row += 1) {
-    const y = 213 + row * 23;
-    const width = 58 - row * 5;
-    for (let column = -2; column <= 2; column += 1) {
-      const x = Math.round(484 + column * 14 + (row % 2) * 4);
-      ctx.globalAlpha = ((row * 5 + column * 3 + Math.floor(frame / 3)) % 7) > 1 || reducedMotion ? 0.9 : 0.25;
-      ctx.fillStyle = column === 0 ? palette.light : palette.accent;
-      ctx.fillRect(x, y, Math.max(2, Math.floor(width / 14)), 5);
+  const assets = manifest.assets;
+  if (!Array.isArray(assets)) {
+    errors.push('manifest assets must be an array');
+  } else {
+    assets.forEach((asset, index) => {
+      const label = `asset[${index}]`;
+      if (!isRecord(asset)) {
+        errors.push(`${label} must be an object`);
+        return;
+      }
+      if (!isRelativeAssetFile(asset.file)) errors.push(`${label}.file is invalid`);
+      if (!isAssetKind(asset.kind)) errors.push(`${label}.kind must be cover or rect`);
+      if (!isBlendMode(asset.blend)) errors.push(`${label}.blend must be source-over or screen`);
+      if (typeof asset.file === 'string' && !asset.file.toLowerCase().endsWith('.webp')) {
+        errors.push(`${label}.file ${asset.file} must be scenic .webp`);
+      }
+      if (asset.kind === 'rect') pushRectError(errors, `${label}.rect`, asset.rect, canvasWidth, canvasHeight);
+    });
+  }
+
+  const sprites = manifest.sprites;
+  if (!Array.isArray(sprites)) {
+    errors.push('manifest sprites must be an array');
+  } else {
+    sprites.forEach((sprite, index) => {
+      const label = `sprite[${index}]`;
+      if (!isRecord(sprite)) {
+        errors.push(`${label} must be an object`);
+        return;
+      }
+      if (!isRelativeAssetFile(sprite.file)) errors.push(`${label}.file is invalid`);
+      if (typeof sprite.file === 'string' && !sprite.file.toLowerCase().endsWith('.png')) {
+        errors.push(`${label}.file ${sprite.file} must be a sprite .png`);
+      }
+      if (!isBlendMode(sprite.blend)) errors.push(`${label}.blend must be source-over or screen`);
+      if (!isFiniteNumber(sprite.frameRate) || sprite.frameRate <= 0) {
+        errors.push(`${label}.frameRate must be positive`);
+      }
+
+      const frames = sprite.frames;
+      if (!Array.isArray(frames) || frames.length === 0) {
+        errors.push(`${label}.frames must be non-empty`);
+      } else {
+        frames.forEach((frame, frameIndex) => {
+          if (!isRect(frame) || frame[2] <= 0 || frame[3] <= 0) {
+            errors.push(`${label}.frames[${frameIndex}] must be [x,y,w,h] with positive size`);
+          }
+        });
+      }
+
+      const places = sprite.places;
+      if (!Array.isArray(places) || places.length === 0) {
+        errors.push(`${label}.places must be non-empty`);
+      } else {
+        places.forEach((place, placeIndex) => {
+          const placeLabel = `${label}.places[${placeIndex}]`;
+          if (!isRecord(place)) {
+            errors.push(`${placeLabel} must be an object`);
+            return;
+          }
+          const framesCount = Array.isArray(frames) ? frames.length : 0;
+          const placeFrame = place.frame;
+          if (!Number.isInteger(placeFrame) || (placeFrame as number) < -1 || (placeFrame as number) >= framesCount) {
+            errors.push(`${placeLabel}.frame must be -1 or a frame index`);
+          }
+          if (!isRect(place.box) || place.box[2] <= 0 || place.box[3] <= 0) {
+            errors.push(`${placeLabel}.box must be [x,y,w,h] with positive size`);
+          }
+          if (place.anchor !== undefined && (!isRect(place.anchor) || place.anchor[2] <= 0 || place.anchor[3] <= 0)) {
+            errors.push(`${placeLabel}.anchor must be [x,y,w,h] with positive size`);
+          }
+        });
+      }
+
+      if (sprite.drift !== undefined) {
+        if (!isRecord(sprite.drift) || !isFiniteNumber(sprite.drift.amplitude) || !isFiniteNumber(sprite.drift.phase)) {
+          errors.push(`${label}.drift must contain finite amplitude and phase`);
+        }
+      }
+    });
+  }
+
+  if (manifest.twinkles !== undefined) {
+    if (!isRecord(manifest.twinkles)) {
+      errors.push('twinkles must be an object');
+    } else {
+      if (!isRelativeAssetFile(manifest.twinkles.mask) || !manifest.twinkles.mask.toLowerCase().endsWith('.png')) {
+        errors.push(`twinkles.mask ${String(manifest.twinkles.mask)} must be a .png file`);
+      }
+      if (!isFiniteNumber(manifest.twinkles.fps) || manifest.twinkles.fps <= 0) {
+        errors.push('twinkles.fps must be positive');
+      }
     }
   }
+
+  if (manifest.fallbackPalette !== undefined) {
+    if (!Array.isArray(manifest.fallbackPalette) || manifest.fallbackPalette.length < 5) {
+      errors.push('fallbackPalette must contain at least five colors');
+    } else if (manifest.fallbackPalette.some((color) => typeof color !== 'string' || color.length === 0)) {
+      errors.push('fallbackPalette colors must be non-empty strings');
+    }
+  }
+
+  return errors;
+}
+
+type DecodedImage = ImageBitmap | HTMLImageElement;
+
+interface LoadedScenePack {
+  readonly manifest: ScenePackManifest;
+  readonly images: ReadonlyMap<string, DecodedImage>;
+}
+
+class ScenePackLoadError extends Error {
+  readonly manifest: ScenePackManifest | null;
+
+  constructor(message: string, manifest: ScenePackManifest | null = null) {
+    super(message);
+    this.name = 'ScenePackLoadError';
+    this.manifest = manifest;
+  }
+}
+
+const packCache = new Map<string, Promise<LoadedScenePack>>();
+
+function packKey(faction: FactionId, mode: SceneMode): string {
+  return `${faction}/${mode}`;
+}
+
+function packAssetPath(faction: FactionId, mode: SceneMode, file: string): string {
+  return `${PACK_ROOT}/${faction}/${mode}/${file}`;
+}
+
+function manifestPath(faction: FactionId, mode: SceneMode): string {
+  return `${PACK_ROOT}/${faction}/${mode}/manifest.json`;
+}
+
+function rootManifestPath(faction: FactionId): string {
+  return `${PACK_ROOT}/${faction}/manifest.json`;
+}
+
+function manifestForMode(value: unknown, mode: SceneMode): unknown {
+  if (isRecord(value) && isRecord(value[mode])) return value[mode];
+  return value;
+}
+
+async function fetchManifest(faction: FactionId, mode: SceneMode): Promise<ScenePackManifest> {
+  const candidates = [manifestPath(faction, mode), rootManifestPath(faction)];
+  let lastError: unknown = new Error('manifest request failed');
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate);
+      if (!response.ok) {
+        lastError = new Error(`${candidate} returned HTTP ${response.status}`);
+        continue;
+      }
+      const manifest = manifestForMode(await response.json(), mode);
+      const errors = validatePack(manifest);
+      if (errors.length > 0) throw new ScenePackLoadError(`Invalid ${faction}/${mode} pack: ${errors.join('; ')}`);
+      return manifest as ScenePackManifest;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (lastError instanceof ScenePackLoadError) throw lastError;
+  throw new ScenePackLoadError(`Could not load ${faction}/${mode} manifest: ${String(lastError)}`);
+}
+
+async function decodeHtmlImage(url: string): Promise<HTMLImageElement> {
+  if (typeof Image === 'undefined') throw new Error(`Image decoding is unavailable for ${url}`);
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    let settled = false;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      resolve(image);
+    };
+    image.onload = () => {
+      if (typeof image.decode !== 'function') {
+        finish();
+        return;
+      }
+      void image.decode().then(finish, finish);
+    };
+    image.onerror = () => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`Could not decode image ${url}`));
+    };
+    image.decoding = 'async';
+    image.src = url;
+  });
+}
+
+async function decodeImage(url: string): Promise<DecodedImage> {
+  if (typeof globalThis.createImageBitmap === 'function') {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
+    return globalThis.createImageBitmap(await response.blob());
+  }
+  return decodeHtmlImage(url);
+}
+
+async function loadScenePack(faction: FactionId, mode: SceneMode): Promise<LoadedScenePack> {
+  let manifest: ScenePackManifest | null = null;
+  try {
+    manifest = await fetchManifest(faction, mode);
+    const files = new Set<string>();
+    for (const asset of manifest.assets) files.add(asset.file);
+    for (const sprite of manifest.sprites) files.add(sprite.file);
+    if (manifest.twinkles) files.add(manifest.twinkles.mask);
+    const decoded = await Promise.all(
+      [...files].map(async (file): Promise<readonly [string, DecodedImage]> => {
+        const image = await decodeImage(packAssetPath(faction, mode, file));
+        return [file, image];
+      }),
+    );
+    return { manifest, images: new Map(decoded) };
+  } catch (error) {
+    if (error instanceof ScenePackLoadError) {
+      if (error.manifest === null && manifest !== null) {
+        throw new ScenePackLoadError(error.message, manifest);
+      }
+      throw error;
+    }
+    throw new ScenePackLoadError(`Could not load ${faction}/${mode} art: ${String(error)}`, manifest);
+  }
+}
+
+function getCachedPack(faction: FactionId, mode: SceneMode): Promise<LoadedScenePack> {
+  const key = packKey(faction, mode);
+  const cached = packCache.get(key);
+  if (cached) return cached;
+  const request = loadScenePack(faction, mode);
+  packCache.set(key, request);
+  return request;
+}
+
+function imageWidth(image: DecodedImage): number {
+  const htmlImage = image as HTMLImageElement;
+  return htmlImage.naturalWidth || image.width;
+}
+
+function imageHeight(image: DecodedImage): number {
+  const htmlImage = image as HTMLImageElement;
+  return htmlImage.naturalHeight || image.height;
+}
+
+function drawCover(ctx: CanvasRenderingContext2D, image: DecodedImage): void {
+  const width = imageWidth(image);
+  const height = imageHeight(image);
+  if (width <= 0 || height <= 0) return;
+  const scale = Math.max(SCENE_WIDTH / width, SCENE_HEIGHT / height);
+  const drawWidth = width * scale;
+  const drawHeight = height * scale;
+  ctx.drawImage(image, (SCENE_WIDTH - drawWidth) / 2, (SCENE_HEIGHT - drawHeight) / 2, drawWidth, drawHeight);
+}
+
+function drawFitContain(
+  ctx: CanvasRenderingContext2D,
+  image: DecodedImage,
+  source: SceneRect,
+  box: SceneRect,
+): void {
+  const [sourceX, sourceY, sourceWidth, sourceHeight] = source;
+  const [boxX, boxY, boxWidth, boxHeight] = box;
+  if (sourceWidth <= 0 || sourceHeight <= 0 || boxWidth <= 0 || boxHeight <= 0) return;
+  const scale = Math.min(boxWidth / sourceWidth, boxHeight / sourceHeight);
+  const drawWidth = sourceWidth * scale;
+  const drawHeight = sourceHeight * scale;
+  const drawX = boxX + (boxWidth - drawWidth) / 2;
+  const drawY = boxY + (boxHeight - drawHeight) / 2;
+  ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, drawX, drawY, drawWidth, drawHeight);
+}
+
+function sourceFrameRect(
+  frame: SceneRect,
+  frames: readonly SceneRect[],
+  image: DecodedImage,
+): SceneRect {
+  const width = imageWidth(image);
+  const height = imageHeight(image);
+  const usesEndpoints = frames.some(([x, y, frameWidth, frameHeight]) => (
+    x + frameWidth > width || y + frameHeight > height
+  ));
+  if (!usesEndpoints) return frame;
+  const [x, y, right, bottom] = frame;
+  return [x, y, Math.max(1, right - x), Math.max(1, bottom - y)];
+}
+
+function drawImageWithBlend(
+  ctx: CanvasRenderingContext2D,
+  blend: BlendMode,
+  draw: () => void,
+): void {
+  ctx.globalCompositeOperation = blend;
+  draw();
   ctx.globalAlpha = 1;
-  for (let wing = 0; wing < 3; wing += 1) {
-    const x = 336 + wing * 112;
-    const height = 44 + wing * 13;
-    polygon(ctx, [x, base, x + 14, base - height, x + 43, base - height + 12, x + 54, base], palette.foreground);
-    line(ctx, [x + 14, base - height, x + 43, base - height + 12], rgba(palette.accentSoft, 0.42), 1);
-  }
+  ctx.globalCompositeOperation = 'source-over';
 }
 
-function drawGravemarkSettlement({ ctx, palette, frame, reducedMotion }: DrawContext): void {
-  const base = 411;
-  // Low, wide fortress with three readable quarry tiers.
-  polygon(ctx, [208, base, 214, 367, 263, 350, 302, 323, 351, 342, 403, 305, 467, 333, 528, 313, 596, 346, 646, 335, 682, 370, 694, base], palette.foreground);
-  polygon(ctx, [245, 369, 311, 337, 382, 354, 432, 321, 497, 347, 556, 326, 624, 361, 614, base, 242, base], palette.ground);
-  line(ctx, [214, 367, 263, 350, 302, 323, 351, 342, 403, 305, 467, 333, 528, 313, 596, 346, 646, 335, 682, 370], rgba(palette.accentSoft, 0.58), 2);
-  for (let shaft = 0; shaft < 4; shaft += 1) {
-    const x = 282 + shaft * 92;
-    ctx.fillStyle = palette.mid;
-    ctx.fillRect(x, 366 - (shaft % 2) * 7, 26, 45);
-    ctx.strokeStyle = rgba(palette.accent, 0.5);
-    ctx.strokeRect(x + 0.5, 366.5 - (shaft % 2) * 7, 25, 44);
-    line(ctx, [x + 4, 369 - (shaft % 2) * 7, x + 21, 404], rgba(palette.accentSoft, 0.32), 1);
-  }
-  // Crane arms and conveyors create an industrial silhouette.
-  for (let crane = 0; crane < 3; crane += 1) {
-    const x = 326 + crane * 119;
-    const lift = reducedMotion ? 0 : sceneMotionOffset(frame, 3, crane * 0.8);
-    line(ctx, [x, 355, x, 269, x + 58, 269], rgba(palette.accentSoft, 0.67), 3);
-    line(ctx, [x + 51, 269, x + 51, 308 + lift], rgba(palette.accent, 0.55), 1);
-    ctx.fillStyle = palette.accent;
-    ctx.fillRect(x + 46, Math.round(305 + lift), 11, 8);
-  }
-  line(ctx, [251, 393, 651, 393], rgba(palette.accent, 0.66), 4);
-  for (let roller = 0; roller < 14; roller += 1) {
-    const x = 258 + roller * 29;
-    ctx.fillStyle = palette.accentSoft;
-    ctx.fillRect(x, 390, 11, 3);
-  }
+function paletteFor(faction: FactionId, manifest: ScenePackManifest | null): readonly string[] {
+  const palette = manifest?.fallbackPalette;
+  return palette && palette.length >= 5 ? palette : DEFAULT_FALLBACK_PALETTES[faction];
 }
 
-function drawSunweaverGround({ ctx, palette, frame, reducedMotion }: DrawContext): void {
-  ctx.fillStyle = palette.ground;
-  ctx.fillRect(0, 402, SCENE_WIDTH, 138);
-  for (let row = 0; row < 9; row += 1) {
-    const y = 419 + row * 13;
-    line(ctx, [0, y, 705, y + (reducedMotion ? 0 : sceneMotionOffset(frame, 1, row))], rgba(palette.accentSoft, 0.12), 1);
-  }
-  // Quiet landing strip keeps the lower-center loading status readable.
-  ctx.fillStyle = rgba(palette.foreground, 0.68);
-  ctx.fillRect(257, 465, 432, 75);
-}
-
-function drawGravemarkGround({ ctx, palette }: DrawContext): void {
-  ctx.fillStyle = palette.ground;
-  ctx.fillRect(0, 407, SCENE_WIDTH, 133);
-  for (let row = 0; row < 7; row += 1) {
-    const y = 421 + row * 15;
-    line(ctx, [0, y, 226, y - 4, 252, y, 688, y, 712, y - 4, 960, y], rgba(palette.accentSoft, 0.13), 1);
-  }
-  ctx.fillStyle = rgba(palette.foreground, 0.82);
-  ctx.fillRect(255, 466, 450, 74);
-}
-
-function drawForeground({ ctx, palette }: DrawContext): void {
-  polygon(ctx, [0, 468, 132, 447, 222, 470, 266, 540, 0, 540], palette.foreground);
-  polygon(ctx, [960, 447, 846, 462, 741, 446, 700, 540, 960, 540], palette.foreground);
-  line(ctx, [0, 468, 132, 447, 222, 470], rgba(palette.accent, 0.36), 2);
-  line(ctx, [960, 447, 846, 462, 741, 446], rgba(palette.accent, 0.36), 2);
-}
-
-function drawLightsAndEffects({ ctx, palette, frame, reducedMotion }: DrawContext): void {
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (let index = 0; index < 14; index += 1) {
-    const x = 278 + index * 27;
-    const baseY = 423 + (index % 3) * 5;
-    const glow = reducedMotion ? 0.22 : 0.14 + (Math.sin(frame * 0.21 + index) + 1) * 0.09;
-    ctx.globalAlpha = glow;
-    ctx.fillStyle = index % 4 === 0 ? palette.accentSoft : palette.accent;
-    ctx.fillRect(x, baseY, 3, 2);
-  }
-  ctx.restore();
-  ctx.globalAlpha = 1;
-}
-
-function drawWindStrider(ctx: CanvasRenderingContext2D, x: number, y: number, palette: ScenePalette): void {
-  ctx.save();
-  ctx.translate(Math.round(x), Math.round(y));
-  polygon(ctx, [0, 0, 18, -4, 29, 0, 18, 4], palette.light);
-  line(ctx, [7, 0, 12, -14, 17, 0], palette.accentSoft, 1);
-  line(ctx, [12, -7, 23, -13], palette.accent, 1);
-  ctx.fillStyle = palette.accent;
-  ctx.fillRect(5, -1, 4, 2);
-  ctx.restore();
-}
-
-function drawGravSkimmer(ctx: CanvasRenderingContext2D, x: number, y: number, palette: ScenePalette): void {
-  ctx.save();
-  ctx.translate(Math.round(x), Math.round(y));
-  polygon(ctx, [0, 4, 11, -4, 34, -4, 45, 4, 31, 9, 11, 9], palette.foreground);
-  line(ctx, [6, 5, 39, 5], palette.accentSoft, 2);
-  ctx.fillStyle = palette.accent;
-  ctx.fillRect(15, 8, 5, 2);
-  ctx.fillRect(30, 8, 5, 2);
-  ctx.restore();
-}
-
-function drawBurdenWalker(ctx: CanvasRenderingContext2D, x: number, y: number, palette: ScenePalette): void {
-  ctx.save();
-  ctx.translate(Math.round(x), Math.round(y));
-  polygon(ctx, [0, -17, 25, -22, 44, -13, 40, 3, 11, 4], palette.foreground);
-  line(ctx, [8, 3, 4, 17, 12, 17, 17, 4, 31, 4, 35, 17, 43, 17, 37, 1], palette.accentSoft, 3);
-  ctx.fillStyle = palette.accent;
-  ctx.fillRect(17, -14, 9, 4);
-  ctx.restore();
-}
-
-function drawMovingUnits({ ctx, palette, frame, mode, reducedMotion }: DrawContext, scene: SceneId): void {
-  const motionFrame = sceneMotionFrame(frame, reducedMotion);
-  if (scene === 'sunweaver-capital') {
-    const offset = (motionFrame * 4) % 410;
-    drawWindStrider(ctx, 250 + offset, 356, palette);
-    drawWindStrider(ctx, 470 + ((offset + 180) % 410), 369, palette);
-    if (mode === 'loading') drawWindStrider(ctx, 350 + ((offset + 90) % 280), 332, palette);
-  } else {
-    const offset = (motionFrame * 3) % 340;
-    drawGravSkimmer(ctx, 260 + offset, 354, palette);
-    drawGravSkimmer(ctx, 430 + ((offset + 160) % 340), 378, palette);
-    drawBurdenWalker(ctx, 548 + sceneMotionOffset(motionFrame, 8, 1.1, reducedMotion), 389, palette);
-  }
-}
-
-function drawScene(canvas: HTMLCanvasElement, scene: SceneId, mode: SceneMode, frame: number, reducedMotion: boolean): void {
+function drawFallback(
+  canvas: HTMLCanvasElement,
+  faction: FactionId,
+  manifest: ScenePackManifest | null,
+): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  ctx.save();
   ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
   ctx.clearRect(0, 0, SCENE_WIDTH, SCENE_HEIGHT);
-  const palette = scene === 'sunweaver-capital' ? SUNWEAVER : GRAVEMARK;
-  const draw: DrawContext = { ctx, palette, frame, mode, reducedMotion };
-  drawSkyAndStars(draw);
-  if (scene === 'sunweaver-capital') {
-    drawSunweaverBody(draw);
-    drawSunweaverFarTerrain(draw);
-    drawSunweaverSettlement(draw);
-    drawSunweaverGround(draw);
-  } else {
-    drawGravemarkBody(draw);
-    drawGravemarkFarTerrain(draw);
-    drawGravemarkSettlement(draw);
-    drawGravemarkGround(draw);
+  const palette = paletteFor(faction, manifest);
+  const gradient = ctx.createLinearGradient(0, 0, 0, SCENE_HEIGHT);
+  gradient.addColorStop(0, palette[0]);
+  gradient.addColorStop(0.56, palette[1]);
+  gradient.addColorStop(1, palette[4]);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, SCENE_WIDTH, SCENE_HEIGHT);
+}
+
+function drawPack(
+  canvas: HTMLCanvasElement,
+  pack: LoadedScenePack,
+  visualFrame: number,
+  reducedMotion: boolean,
+): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.clearRect(0, 0, SCENE_WIDTH, SCENE_HEIGHT);
+
+  for (const asset of pack.manifest.assets) {
+    const image = pack.images.get(asset.file);
+    if (!image) throw new Error(`Missing decoded asset ${asset.file}`);
+    drawImageWithBlend(ctx, asset.blend, () => {
+      if (asset.kind === 'cover') drawCover(ctx, image);
+      else if (asset.rect) drawFitContain(ctx, image, [0, 0, imageWidth(image), imageHeight(image)], asset.rect);
+    });
   }
-  drawForeground(draw);
-  drawLightsAndEffects(draw);
-  drawMovingUnits(draw, scene);
-  ctx.restore();
+
+  for (const sprite of pack.manifest.sprites) {
+    const image = pack.images.get(sprite.file);
+    if (!image) throw new Error(`Missing decoded sprite ${sprite.file}`);
+    for (const place of sprite.places) {
+      const frameIndex = place.frame >= 0
+        ? Math.min(place.frame, sprite.frames.length - 1)
+        : sceneStripFrame(visualFrame, sprite.frameRate, sprite.frames.length, reducedMotion);
+      const source = sourceFrameRect(
+        sprite.frames[frameIndex] ?? sprite.frames[0],
+        sprite.frames,
+        image,
+      );
+      const [x, y, width, height] = place.box;
+      const drift = sprite.drift
+        ? sceneMotionOffset(visualFrame, sprite.drift.amplitude, sprite.drift.phase, reducedMotion)
+        : 0;
+      drawImageWithBlend(ctx, sprite.blend, () => {
+        drawFitContain(ctx, image, source, [x, y + drift, width, height]);
+      });
+    }
+  }
+
+  const twinkles = pack.manifest.twinkles;
+  if (twinkles) {
+    const image = pack.images.get(twinkles.mask);
+    if (!image) throw new Error(`Missing decoded twinkle mask ${twinkles.mask}`);
+    const pulseFrame = quantizeSceneTime(visualFrame * SCENE_STEP_MS, twinkles.fps);
+    const pulse = reducedMotion ? 0.9 : 0.35 + ((Math.sin(pulseFrame * 0.8) + 1) / 2) * 0.55;
+    ctx.globalAlpha = pulse;
+    drawImageWithBlend(ctx, 'screen', () => drawCover(ctx, image));
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.imageSmoothingEnabled = false;
 }
 
 function requestFrame(callback: FrameRequestCallback): number {
@@ -485,12 +615,17 @@ class SceneRenderer implements FrontEndSceneRenderer {
   private paintedFrame = -1;
   private rafId: number | null = null;
   private destroyed = false;
+  private activePackKey: string;
+  private activePack: LoadedScenePack | null = null;
+  private fallbackManifest: ScenePackManifest | null = null;
+  private loadGeneration = 0;
 
   constructor(container: HTMLElement, options: FrontEndSceneOptions) {
     this.container = container;
     this.faction = options.faction ?? 'sunweaver';
     this.mode = options.mode ?? 'menu';
     this.reducedMotion = options.reducedMotion ?? false;
+    this.activePackKey = packKey(this.faction, this.mode);
     this.root = document.createElement('div');
     this.root.className = 'front-end-scene';
     this.root.dataset.scene = sceneForFaction(this.faction);
@@ -503,9 +638,13 @@ class SceneRenderer implements FrontEndSceneRenderer {
     this.canvas.width = SCENE_WIDTH;
     this.canvas.height = SCENE_HEIGHT;
     this.canvas.setAttribute('aria-hidden', 'true');
+    const ctx = this.canvas.getContext('2d');
+    if (ctx) ctx.imageSmoothingEnabled = false;
     this.root.append(this.canvas);
     container.append(this.root);
+    this.markFallback('loading');
     this.paint(0);
+    this.loadActivePack();
     this.schedule();
   }
 
@@ -519,14 +658,14 @@ class SceneRenderer implements FrontEndSceneRenderer {
     this.root.dataset.scene = sceneForFaction(faction);
     this.root.dataset.faction = faction;
     this.syncContainerDataset();
-    this.paint(this.reducedMotion ? 0 : this.frame);
+    this.selectPack();
   }
 
   setMode(mode: SceneMode): void {
     if (this.destroyed || mode === this.mode) return;
     this.mode = mode;
     this.root.dataset.mode = mode;
-    this.paint(this.reducedMotion ? 0 : this.frame);
+    this.selectPack();
   }
 
   setReducedMotion(reduced: boolean): void {
@@ -540,16 +679,67 @@ class SceneRenderer implements FrontEndSceneRenderer {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.loadGeneration += 1;
     if (this.rafId !== null) cancelFrame(this.rafId);
     this.rafId = null;
     this.root.remove();
+  }
+
+  private selectPack(): void {
+    this.activePackKey = packKey(this.faction, this.mode);
+    this.activePack = null;
+    this.fallbackManifest = null;
+    this.markFallback('loading');
+    this.paint(this.reducedMotion ? 0 : this.frame);
+    this.loadActivePack();
+  }
+
+  private loadActivePack(): void {
+    const key = this.activePackKey;
+    const generation = ++this.loadGeneration;
+    void getCachedPack(this.faction, this.mode).then(
+      (pack) => {
+        if (this.destroyed || generation !== this.loadGeneration || key !== this.activePackKey) return;
+        this.activePack = pack;
+        this.fallbackManifest = null;
+        this.paint(this.reducedMotion ? 0 : this.frame);
+      },
+      (error: unknown) => {
+        if (this.destroyed || generation !== this.loadGeneration || key !== this.activePackKey) return;
+        this.activePack = null;
+        this.fallbackManifest = error instanceof ScenePackLoadError ? error.manifest : null;
+        const message = error instanceof Error ? error.message : String(error);
+        this.markFallback(message);
+        this.paint(this.reducedMotion ? 0 : this.frame);
+      },
+    );
   }
 
   private paint(frame: number): void {
     const visualFrame = sceneMotionFrame(frame, this.reducedMotion);
     this.frame = Math.max(0, Math.floor(frame));
     this.paintedFrame = visualFrame;
-    drawScene(this.canvas, this.sceneId, this.mode, visualFrame, this.reducedMotion);
+    if (this.activePack === null) {
+      drawFallback(this.canvas, this.faction, this.fallbackManifest);
+      return;
+    }
+    try {
+      drawPack(this.canvas, this.activePack, visualFrame, this.reducedMotion);
+      this.root.dataset.artReady = 'true';
+      delete this.root.dataset.artError;
+    } catch (error) {
+      const failedPack = this.activePack;
+      this.activePack = null;
+      this.fallbackManifest = failedPack.manifest;
+      const message = error instanceof Error ? error.message : String(error);
+      this.markFallback(message);
+      drawFallback(this.canvas, this.faction, this.fallbackManifest);
+    }
+  }
+
+  private markFallback(error: string): void {
+    this.root.dataset.artReady = 'false';
+    this.root.dataset.artError = error;
   }
 
   private syncContainerDataset(): void {
@@ -568,7 +758,7 @@ class SceneRenderer implements FrontEndSceneRenderer {
   }
 }
 
-/** Mount a procedural civilization scene into a menu or loading container. */
+/** Mount an authored civilization scene into a menu or loading container. */
 export function mountFrontEndScene(
   container: HTMLElement,
   options: FrontEndSceneOptions = {},
