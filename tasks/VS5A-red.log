@@ -1,0 +1,10 @@
+VS5A browser QA RED — geometry tracer before HUD path-focus production edit
+
+$ npm run qa:vs5 -- --out /tmp/vs5a-red
+exit_code=1
+--- qa-vs5-pacing summary ---
+ok=false terminal=n/a tick=n/a simShare=n/ams errors=0
+manifest=/tmp/vs5a-red/manifest.json
+  - Error: 03 path viewport geometry [{"cmd":"path-solar-ascendancy","left":730.359375,"top":852,"right":1350,"bottom":940,"width":619.640625,"height":88,"visible":true,"enabled":true,"text":"Solar AscendancyTethers regrow 2x faster · Boost costs reduced 25%400 Ore · 80 Charge"},{"cmd":"path-sky-dominion","left":730.359375,"top":946,"right":1350,"bottom":1034,"width":619.640625,"height":88,"visible":true,"enabled":true,"text":"Sky DominionShips move 12% faster · Wind Striders see 2 farther400 Ore · 80 Charge"}]
+
+RED geometry: Sky Dominion bottom=1034 > viewport height 1024; top-edge difference=94px, so the two 88px cards are stacked instead of sharing one row.

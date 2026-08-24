@@ -625,6 +625,9 @@ export class Hud {
     const eco = world.teams[0];
     const channel = world.pathChannelT(0);
     const channeling = channel > 0;
+    const committed = world.techPathOf(0);
+    const pathFocus = kind === Kind.Hall && committed === null;
+    this.cmdsEl.classList.toggle('path-focus', pathFocus);
     const costLabel = (cost: Pick<(typeof STATS)[number], 'ore' | 'gas' | 'energy'>): string => {
       const parts: string[] = [];
       if (cost.ore > 0) parts.push(`${cost.ore} Ore`);
@@ -665,7 +668,6 @@ export class Hud {
       btns.push({ cmd: 'stop', label: 'STOP', sub: 'Cancel orders', disabled: true });
     } else if (kind === Kind.Hall) {
       // M4-B — the one irreversible technology-path choice lives on the Nexus deck.
-      const committed = world.techPathOf(0);
       if (committed) {
         const info = TECH_PATHS.find((p) => p.id === committed)!;
         btns.push({
@@ -699,11 +701,13 @@ export class Hud {
           });
         }
       }
-      btns.push(trainBtn(Kind.Worker, workerName(civ), undefined, channeling));
-      btns.push(trainBtn(Kind.Scout, labelOf(Kind.Scout, civ), undefined, channeling));
-      btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: costLabel(STATS[Kind.House]) });
-      btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: costLabel(STATS[Kind.Barracks]) });
-      btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: costLabel(STATS[Kind.UniqueB]) });
+      if (!pathFocus) {
+        btns.push(trainBtn(Kind.Worker, workerName(civ), undefined, channeling));
+        btns.push(trainBtn(Kind.Scout, labelOf(Kind.Scout, civ), undefined, channeling));
+        btns.push({ cmd: `build-${Kind.House}`, label: houseName(civ), sub: costLabel(STATS[Kind.House]) });
+        btns.push({ cmd: `build-${Kind.Barracks}`, label: barracksName(civ), sub: costLabel(STATS[Kind.Barracks]) });
+        btns.push({ cmd: `build-${Kind.UniqueB}`, label: uniqueName(civ), sub: costLabel(STATS[Kind.UniqueB]) });
+      }
     } else if (kind === Kind.Barracks) {
       if (world.techPathOf(0) === null) {
         btns.push({ cmd: 'tech-focus', label: 'CHOOSE PATH', sub: 'Open Nexus research' });
@@ -1022,6 +1026,9 @@ const HUD_CSS = `
 #cmds button.choice.unaffordable{opacity:.68;filter:saturate(.55)}
 #cmds button.choice.unaffordable .cost{color:${P.coral}}
 #cmds button.choice.channel{border-color:${P.amber}}
+#cmds.path-focus{grid-template-columns:repeat(2,minmax(0,1fr));align-content:center}
+#cmds.path-focus button.choice{grid-column:auto}
+#cmds.path-focus button.choice:only-child{grid-column:1 / -1}
 .countdown{margin:0;color:${P.amber};font-size:12px;font-weight:500;line-height:14px;opacity:.85;text-transform:uppercase}
 #cmds button.choice.locked{background:${P.amber};border:1px solid ${P.amber};color:#171326}
 #cmds button.choice.locked strong{color:#171326}

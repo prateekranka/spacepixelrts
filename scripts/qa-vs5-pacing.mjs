@@ -172,6 +172,25 @@ async function guidance(page) {
   });
 }
 
+async function pathButtonRects(page) {
+  return page.evaluate(() => [...document.querySelectorAll('#cmds button.choice[data-cmd^="path-"]')].map((button) => {
+    const rect = button.getBoundingClientRect();
+    const style = getComputedStyle(button);
+    return {
+      cmd: button.dataset.cmd ?? '',
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+      visible: style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0,
+      enabled: !button.disabled,
+      text: button.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    };
+  }));
+}
+
 async function capture(page, out, manifest, name, check) {
   await settle(page);
   const filename = `${name}.png`;
@@ -416,11 +435,18 @@ async function main() {
     await settle(page);
     current = await guidance(page);
     const pathButtons = current.deck.filter((button) => button.cmd === 'path-solar-ascendancy' || button.cmd === 'path-sky-dominion');
+    const pathRects = await pathButtonRects(page);
     requireThat(current.state === 'choose-path', `03 state ${current.state}`);
     requireThat(current.primary === 'Choose a technology path' && current.secondary === 'Select your Nexus and commit one of two doctrines', `03 copy ${JSON.stringify(current)}`);
     requireThat(!current.targetHidden && current.target === 'NEXUS', `03 target ${JSON.stringify(current)}`);
     requireThat(pathButtons.length === 2 && pathButtons.every((button) => button.text.includes('400 Ore · 80 Charge')), `03 path costs ${JSON.stringify(pathButtons)}`);
-    await capture(page, out, manifest, '03-choose-path', { ...current, pathButtons });
+    requireThat(pathRects.length === 2, `03 path rect count ${JSON.stringify(pathRects)}`);
+    requireThat(pathRects.every((button) => button.visible && button.enabled), `03 path visibility/enabled ${JSON.stringify(pathRects)}`);
+    requireThat(pathRects.every((button) => button.width >= 44 && button.height >= 88), `03 path minimum geometry ${JSON.stringify(pathRects)}`);
+    requireThat(pathRects.every((button) => button.left >= 0 && button.top >= 0 && button.right <= VIEWPORT.width && button.bottom <= VIEWPORT.height), `03 path viewport geometry ${JSON.stringify(pathRects)}`);
+    requireThat(Math.abs(pathRects[0].top - pathRects[1].top) <= 4, `03 path row geometry ${JSON.stringify(pathRects)}`);
+    requireThat(pathRects.every((button) => button.text.includes('400 Ore · 80 Charge')), `03 path rect costs ${JSON.stringify(pathRects)}`);
+    await capture(page, out, manifest, '03-choose-path', { ...current, pathButtons, pathRects });
 
     const committed = await page.evaluate(() => {
       const world = globalThis.__STARHOLD_WORLD__;
@@ -432,12 +458,27 @@ async function main() {
     const channelBefore = await guidance(page);
     requireThat(channelBefore.state === 'path-channel' && channelBefore.primary === `Technology locks in ${Math.ceil(channelBefore.channelT)}s`, `04 initial channel ${JSON.stringify(channelBefore)}`);
     requireThat(!channelBefore.targetHidden && channelBefore.target === 'NEXUS', `04 target ${JSON.stringify(channelBefore)}`);
+    const channelBeforeRects = await pathButtonRects(page);
+    const combinedPrecommitWidth = pathRects[0].width + pathRects[1].width;
+    requireThat(channelBeforeRects.length === 1, `04 path rect count ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects[0].visible && !channelBeforeRects[0].enabled, `04 path visibility/enabled ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects[0].left >= 0 && channelBeforeRects[0].top >= 0 && channelBeforeRects[0].right <= VIEWPORT.width && channelBeforeRects[0].bottom <= VIEWPORT.height, `04 path viewport geometry ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects[0].height >= 88, `04 path height ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects[0].width >= combinedPrecommitWidth - 4, `04 path combined width ${JSON.stringify({ combinedPrecommitWidth, channelBeforeRects })}`);
+    requireThat(channelBeforeRects[0].text.includes('Committing') && /\d+s/.test(channelBeforeRects[0].text), `04 path countdown ${JSON.stringify(channelBeforeRects)}`);
     await stepWorld(page, 40);
     const channelAfter = await guidance(page);
     requireThat(channelAfter.state === 'path-channel', `04 channel state changed ${JSON.stringify(channelAfter)}`);
     requireThat(channelAfter.primary !== channelBefore.primary && channelAfter.channelT < channelBefore.channelT, `04 countdown did not update ${JSON.stringify({ channelBefore, channelAfter })}`);
-    manifest.checks.channel = { before: channelBefore, after: channelAfter };
-    await capture(page, out, manifest, '04-channel', channelAfter);
+    const channelAfterRects = await pathButtonRects(page);
+    requireThat(channelAfterRects.length === 1, `04 updated path rect count ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects[0].visible && !channelAfterRects[0].enabled, `04 updated path visibility/enabled ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects[0].left >= 0 && channelAfterRects[0].top >= 0 && channelAfterRects[0].right <= VIEWPORT.width && channelAfterRects[0].bottom <= VIEWPORT.height, `04 updated path viewport geometry ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects[0].height >= 88, `04 updated path height ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects[0].width >= combinedPrecommitWidth - 4, `04 updated path combined width ${JSON.stringify({ combinedPrecommitWidth, channelAfterRects })}`);
+    requireThat(channelAfterRects[0].text.includes('Committing') && /\d+s/.test(channelAfterRects[0].text), `04 updated path countdown ${JSON.stringify(channelAfterRects)}`);
+    manifest.checks.channel = { before: channelBefore, beforeRects: channelBeforeRects, after: channelAfter, afterRects: channelAfterRects, combinedPrecommitWidth };
+    await capture(page, out, manifest, '04-channel', { ...channelAfter, pathRects: channelAfterRects });
 
     const locked = await page.evaluate(({ yardId }) => {
       const world = globalThis.__STARHOLD_WORLD__;
