@@ -146,14 +146,64 @@ assert.match(startScreen, /<button type="button" class="utility-button"/);
 assert.match(startScreen, /aria-label="\$\{label\}"/);
 assert.match(startScreen, /data-start-action="\$\{action\}"/);
 assert.match(startScreen, /--px-icon-src:url\('\$\{iconSrc\}'\)/);
+assert.match(startScreen, /aria-describedby="\$\{tooltipId\}"/);
+assert.match(startScreen, /class="utility-tooltip" id="\$\{tooltipId\}" role="tooltip"/);
 assert.match(startScreen, /sunweaver-sigil\.svg/);
 assert.match(startScreen, /gravemark-sigil\.svg/);
+
+assert.doesNotMatch(startScreen, /START_SCREEN_CSS|injectCss/, 'start-screen presentation is not injected at runtime');
+assert.match(startScreen, /this\.root\.dataset\.civ\s*=\s*this\.profile\.preferredFaction/);
+
+const menuMarkupStart = startScreen.indexOf('<section class="menu-view">');
+const setupMarkupStart = startScreen.indexOf('<section class="setup-view"');
+assert.ok(menuMarkupStart >= 0 && setupMarkupStart > menuMarkupStart, 'Main Menu markup section is present');
+const mainMenuMarkup = startScreen.slice(menuMarkupStart, setupMarkupStart);
+assert.equal((mainMenuMarkup.match(/data-primary-action="true"/g) ?? []).length, 1, 'Main Menu has one primary action marker');
+assert.equal((mainMenuMarkup.match(/class="menu-item primary"/g) ?? []).length, 1, 'Main Menu has one primary button');
+assert.match(mainMenuMarkup, /data-start-action="new-skirmish"/);
+assert.doesNotMatch(mainMenuMarkup, /data-start-action="start-match"/);
+
+const mainMenuCssStart = shellCss.indexOf('/* FPE-2 MAIN MENU PIXEL SHELL');
+const mainMenuCssEnd = shellCss.indexOf('/* FPE-3 LEGACY SETUP AND PANELS');
+assert.ok(mainMenuCssStart >= 0 && mainMenuCssEnd > mainMenuCssStart, 'Main Menu CSS section is explicitly bounded');
+const mainMenuCss = shellCss.slice(mainMenuCssStart, mainMenuCssEnd);
+assert.match(mainMenuCss, /\.start-heading h1[\s\S]*font-family:\s*var\(--font-display\)/);
+assert.match(mainMenuCss, /\.start-kicker[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(mainMenuCss, /\.menu-item strong[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(mainMenuCss, /\.menu-item small[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(mainMenuCss, /\.start-promise[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(mainMenuCss, /\.start-note[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(mainMenuCss, /\.profile-badge em[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(mainMenuCss, /\.start-promise[\s\S]*font-size:\s*16px[\s\S]*letter-spacing:\s*\.04em/);
+assert.match(mainMenuCss, /\.start-note[\s\S]*font-size:\s*13px[\s\S]*letter-spacing:\s*\.04em/);
+assert.match(mainMenuCss, /\.start-footer[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(mainMenuCss, /\.start-footer[\s\S]*text-shadow:\s*1px 1px 0 var\(--px-border-dark\)/);
+assert.match(mainMenuCss, /\.start-footer span:last-child::before[\s\S]*height:\s*12px[\s\S]*background-color:\s*var\(--civ-primary\)/);
+assert.match(mainMenuCss, /@media \(max-width:\s*1200px\)[\s\S]*padding-bottom:\s*28px/);
+assert.match(mainMenuCss, /@media \(max-height:\s*820px\) and \(min-width:\s*1201px\)[\s\S]*padding-bottom:\s*24px/);
+assert.match(mainMenuCss, /\.profile-badge[\s\S]*width:\s*448px[\s\S]*height:\s*64px[\s\S]*border:\s*2px[\s\S]*box-shadow:\s*4px 4px 0/);
+assert.match(mainMenuCss, /\.menu-item[\s\S]*height:\s*64px[\s\S]*min-height:\s*64px[\s\S]*border:\s*2px/);
+assert.match(mainMenuCss, /\.menu-list[\s\S]*gap:\s*8px[\s\S]*width:\s*448px/);
+assert.match(mainMenuCss, /\.utility-button[\s\S]*width:\s*56px[\s\S]*height:\s*56px/);
+assert.match(mainMenuCss, /\.menu-item:hover[^\{]*[\s\S]*transform:\s*translateX\(2px\)/);
+assert.match(mainMenuCss, /\.menu-item:active[^\{]*[\s\S]*transform:\s*translateY\(2px\)/);
+assert.match(mainMenuCss, /transition:\s*transform 100ms steps\(2, end\)/);
+assert.match(mainMenuCss, /mask-image:\s*var\(--px-icon-src\)/);
+assert.match(mainMenuCss, /-webkit-mask-image:\s*var\(--px-icon-src\)/);
+assert.match(mainMenuCss, /\.pixel-selection-marker/);
+assert.doesNotMatch(mainMenuCss, /backdrop-filter|filter\s*:\s*blur|(?:linear|radial)-gradient|cubic-bezier/i);
+assert.doesNotMatch(mainMenuCss, /\bbox-shadow\s*:[^;]*(?:blur|\d+px\s+\d+px\s+\d+px)/i);
+assert.doesNotMatch(mainMenuCss, /\bborder-radius\s*:\s*(?:[3-9]|[1-9]\d|\d+\.\d+)px/i);
+assert.doesNotMatch(mainMenuCss, /\btranslate(?:X|Y)?\([^)]*\.\d/);
+assert.doesNotMatch(mainMenuCss, /\b(?:ease|ease-in|ease-out)\b/i);
 
 const baselineCommit = '645b0ec';
 execFileSync('git', ['cat-file', '-e', `${baselineCommit}^{commit}`], { cwd: repoRoot });
 const protectedFiles = [
   'src/sim.ts',
   'src/engine.ts',
+  'src/render.ts',
+  'src/front-end-scene.ts',
   ...execFileSync('git', ['ls-tree', '-r', '--name-only', baselineCommit, '--', 'public/front-end/civilizations'], { cwd: repoRoot })
     .toString()
     .trim()
@@ -166,4 +216,4 @@ for (const relativePath of protectedFiles) {
   assert.deepEqual(current, baseline, `${relativePath} is unchanged from ${baselineCommit}`);
 }
 
-console.log('FPE-1 pixel front-end foundation tests: PASS');
+console.log('FPE-2 pixel front-end shell tests: PASS');

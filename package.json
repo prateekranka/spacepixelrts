@@ -22,6 +22,7 @@
     "qa:m2-ai": "node scripts/qa-m2-ai.mjs",
     "qa:front-end-themes": "node scripts/qa-front-end-rebuild.mjs",
     "qa:front-end": "node scripts/qa-front-end-rebuild.mjs",
+    "qa:pixel-front-end": "node scripts/qa-pixel-front-end.mjs",
     "qa:aaa": "node scripts/qa-aaa-front-end.mjs",
     "test:vs2b": "tsx tests/vs2b-lumen-field.test.ts",
     "test:vs3": "tsx tests/vs3-results.test.ts",
