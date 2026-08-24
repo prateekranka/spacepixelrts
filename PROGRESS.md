@@ -341,9 +341,16 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
 - **VS-5B counted Ore-worker assignment FROZEN / ACTIVE**
   (`docs/VS5B_ORE_WORKER_FEEDBACK.md`): guidance now must prove ordinary Ore assignment0/2→1/2→2/2
   before funding. Exact touch instruction names Find Idle Worker, GATHER, and marked Ore; target label
-  carries the live count. No automated order or economy tuning. Strict unit/browser RED→GREEN, fresh
-  Sol, and another no-restart production match required. R2 evidence:
-  `/home/bobbyranka/workspace/evidence/starhaven-final-production-match-r2/`.
+  carries the live count. No automated order or economy tuning. Implementation `a3bcbae`
+  independently passes unit/browser/protected gates:0/2→1/2→2/2, path funded2745, lock3546, mixed
+  pair4019, replacement Scout exact, terminal11741 (9:47), sim share1.35ms. Fresh six-frame Sol FAIL
+  was incomplete evidence; complete eight-frame re-gate then found the true remaining gap: post-army
+  guidance does not tell the player to command the army to Lumen or the rival Nexus.
+- **VS-5C post-army objective/victory guidance FROZEN / ACTIVE**
+  (`docs/VS5C_OBJECTIVE_VICTORY_GUIDANCE.md`): after mixed army, current state must direct
+  Scout→secure marked Lumen→push through lane→destroy discovered rival Nexus. Every order stays manual;
+  no mechanic/state mutation. Same progressed VS5 browser run must capture the real Lumen and Core
+  states before fresh Sol and final production match.
 - **Production live at accepted VS-4A assets but VS-5 pacing FAIL** (`1e22b5e`,
   `assets/main-CQGftbuI.js`): deployed to existing Pages `main`. Live readback confirmed combat atlas
   1024×256, four mappings, exact scales, draw calls5, runtime MAG0, console0, composited lineup at

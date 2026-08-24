@@ -1,0 +1,18 @@
+# VS-5B Fresh Blind Complete Vertical-Slice Gate
+
+Judge only the eight attached 1366×1024 composited screenshots from the current running Starhaven build. In order: Build Yard; Ore assignment0/2; funding2/2; technology choice; train mixed army; mixed army with recon handoff; Central Lumen capture; real terminal.
+
+Do not inspect source, tests, manifests, logs, filenames beyond order, or previous verdicts. Judge only the visible chain actually submitted.
+
+Questions:
+1. Is each next manual action understandable to a first-time touch player?
+2. Does the sequence visibly close economy→technology→mixed army→recon/objective→Lumen conflict→terminal?
+3. Are assignment count, targets, costs, touch controls, objective state, and terminal action unambiguous?
+4. Does anything clip, contradict, or require hidden knowledge?
+
+Return exactly:
+- `VERDICT: PASS` or `VERDICT: FAIL`
+- one sentence per frame
+- `SINGLE BIGGEST GAP: ...`
+
+Do not give a charitable pass.
