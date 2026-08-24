@@ -1,0 +1,85 @@
+.front-loading-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: end center;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: max(28px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(30px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
+  color: #f7f1df;
+  background: #080a12;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  --scene-accent: #f6c95f;
+}
+
+.front-loading-screen[data-scene-id='gravemark-quarry'] {
+  --scene-accent: #81c8bb;
+}
+
+.front-loading-card {
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  width: min(52vw, 660px);
+  min-width: min(520px, calc(100vw - 56px));
+  padding: 18px 22px 20px;
+  border: 1px solid color-mix(in srgb, var(--scene-accent, #f6c95f) 72%, transparent);
+  background: linear-gradient(145deg, rgb(8 10 18 / 88%), rgb(18 22 31 / 94%));
+  box-shadow: 0 20px 70px rgb(0 0 0 / 54%);
+  text-align: left;
+  backdrop-filter: blur(8px);
+}
+
+.front-loading-card p {
+  margin: 0;
+  color: var(--scene-accent, #f6c95f);
+  font-size: 10px;
+  letter-spacing: .22em;
+}
+
+.front-loading-card h1 {
+  margin: 7px 0 5px;
+  font-size: clamp(24px, 3vw, 38px);
+  font-weight: 600;
+  letter-spacing: .03em;
+}
+
+.front-loading-card div,
+.front-loading-card small {
+  color: #b9c4cc;
+  font-size: 12px;
+}
+
+.front-loading-track {
+  display: block;
+  height: 4px;
+  margin: 15px 0 11px;
+  overflow: hidden;
+  background: rgb(185 196 204 / 18%);
+}
+
+.front-loading-track i {
+  display: block;
+  width: 64%;
+  height: 100%;
+  background: var(--scene-accent, #f6c95f);
+  transform-origin: left center;
+  animation: front-loading-progress 1.2s steps(12, end) infinite alternate;
+}
+
+@keyframes front-loading-progress {
+  from { transform: scaleX(.58); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .front-loading-track i { animation: none; }
+}
+
+@media (max-width: 900px), (max-height: 720px) {
+  .front-loading-card {
+    width: min(70vw, 620px);
+    padding: 14px 18px 16px;
+  }
+}

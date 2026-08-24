@@ -1,0 +1,60 @@
+/* Procedural front-end scenes use one 960x540 logical buffer. */
+.front-end-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #080a12;
+  contain: layout paint;
+  --scene-safe-right: 34%;
+  --scene-safe-bottom: 15%;
+}
+
+.front-end-scene__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: center;
+  image-rendering: pixelated;
+}
+
+/* The right side is reserved for menu controls. */
+.front-end-scene[data-mode='menu'] {
+  --scene-safe-right: 36%;
+}
+
+/* The lower centre is reserved for loading status and progress. */
+.front-end-scene[data-mode='loading'] {
+  --scene-safe-bottom: 20%;
+}
+
+.front-end-scene[data-faction='sunweaver'] {
+  --scene-accent: #f6c95f;
+  --scene-accent-soft: #d9f1dc;
+}
+
+.front-end-scene[data-faction='gravemark'] {
+  --scene-accent: #81c8bb;
+  --scene-accent-soft: #9ecfe7;
+}
+
+/* This state mirrors the controller attribute and supports CSS-only callers. */
+.front-end-scene[data-reduced-motion='true'] .front-end-scene__canvas {
+  image-rendering: pixelated;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .front-end-scene {
+    --scene-safe-bottom: 22%;
+  }
+}
+
+@media (max-aspect-ratio: 4 / 3) {
+  .front-end-scene__canvas {
+    object-position: 42% center;
+  }
+}

@@ -1,6 +1,10 @@
 # M1-A — Player-facing main menu
 
-Status: **ACTIVE IMPLEMENTATION CONTRACT**
+Status: **SUPERSEDED BY THE CIVILIZATION FRONT-END REBUILD**
+
+The active contract is `docs/FRONT_END_THEMES.md`. It removes the nonfunctional Continue control,
+keeps one New Skirmish action, and adds real utility controls. The historical contract below remains
+for checkpoint history.
 
 Read first: `DIRECTIVE.md`, `docs/CANONICAL_VOCABULARY.md`, `docs/FIRST_PLAYABLE.md`,
 `docs/FIRST_PLAYABLE_GAP_ANALYSIS.md`, and `PROGRESS.md`.

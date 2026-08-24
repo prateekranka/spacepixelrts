@@ -7,6 +7,22 @@ skirmish before deep controls or general polish: menu -> scout -> gather -> choo
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
 
+## Front-end rebuild (2026-08-24)
+
+- Replaced the four filtered copies of one flattened menu painting with two faction-owned 960 × 540
+  procedural scene packs: `sunweaver-capital` and `gravemark-quarry`.
+- Rebuilt the command deck as real DOM controls over the scene canvas. The menu has one New Skirmish
+  action and real Records, Match History, Tech Codex, and Dispatches utility buttons.
+- Added a defensive local player profile. It stores the preferred faction, match totals, fastest
+  victory, up to 20 recent matches, achievement identifiers, and the last Dispatches version seen.
+- Match completion records one result after a real Victory or Defeat transition. QA routes do not
+  write player profile data.
+- Added stepped 12 fps scene motion, integer logical movement, Reduced Motion support, live faction
+  cross-selection, responsive iPad layouts, panel focus restoration, and a persistent unread badge.
+- Focused proof: `test:m0`, production build, and `qa:front-end` pass. The rendered browser gate checks
+  22 contracts across 1920 × 1080, 1366 × 768, 1366 × 1024, and 1180 × 820.
+- Evidence: `/Volumes/codex/evidence/starhaven-menu-rebuild/20260824T141252Z.IU8xBR/front-end-qa/`.
+
 ## Roles (active)
 
 | Role | Who |

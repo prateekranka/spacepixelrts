@@ -1,31 +1,44 @@
-# Random Full-HD Front-End Themes
+# Civilization front-end scenes
 
-Starhaven now selects one coherent main-menu/loading presentation per page session. The selected theme remains stable from Main Menu through Match Setup and Loading, so the transition feels intentional rather than shuffled mid-flow.
+Starhaven uses one real interface over two faction-specific scene packs. The player faction is the source of truth. A new profile starts with Sunweaver. A faction change updates the menu immediately and persists for the next visit.
 
-## Included variants
+## Scene packs
 
-| Theme ID | Direction | Accent |
+| Scene ID | Faction | Composition |
 | --- | --- | --- |
-| `violet-orbit` | P6/L6-inspired purple orbital colony | Violet |
-| `solar-foundry` | Golden sun and industrial foundry | Amber |
-| `cyan-rift` | Teal Lumen vortex and frontier city | Cyan |
-| `crimson-citadel` | Red volcanic citadel and lava lanes | Coral red |
+| `sunweaver-capital` | Sunweaver | Open solar horizon, tapered towers, light lattice structures, and Wind Striders |
+| `gravemark-quarry` | Gravemark | Fractured moon, quarry fortress, gravity cranes, heavy walkers, and mineral light |
 
-Every background is rendered as 960 × 540 pixel art and nearest-neighbour upscaled to a 1920 × 1080 image before display. The UI title is **STARHAVEN** only; `RTS` is not placed beneath the name.
+Both scenes use a 960 × 540 logical canvas. The renderer scales the canvas with `cover` rules. It updates moving scene elements at a stepped 10–12 frames per second. It draws movement on integer logical coordinates. Reduced Motion freezes nonessential movement.
 
-## Selection behavior
+The two packs use different geometry, skyline, celestial body, vehicles, ground treatment, and palette. A color filter is not a civilization scene.
 
-Normal entry selects one of the four themes with equal probability. QA routes remain deterministic on `violet-orbit` unless an explicit override is supplied.
+## Interface boundary
 
-Use these preview routes to inspect a particular variant:
+The canvas contains only the world. The DOM contains all player controls, text, badges, focus states, dialogs, and match setup fields.
 
-- `/desktop?front-theme=violet-orbit`
-- `/desktop?front-theme=solar-foundry`
-- `/desktop?front-theme=cyan-rift`
-- `/desktop?front-theme=crimson-citadel`
+The main menu has one primary action: **New Skirmish**. **Start Match** exists only inside match setup. The utility dock contains real buttons for **Records**, **Match History**, **Tech Codex**, and **Dispatches**.
+
+The local profile stores:
+
+- preferred faction;
+- match totals and fastest victory;
+- up to 20 recent match summaries;
+- unlocked achievement identifiers;
+- the last Dispatches version seen.
+
+The profile does not contain a resumable match snapshot. Therefore, the menu does not show a nonfunctional Continue control.
+
+## Asset and provenance rule
+
+The previous approved menu and loading WebP files are opaque 960 × 540 paintings. They do not have separable source layers or recorded license provenance. The new runtime does not split, color-key, filter, or load those files.
+
+The current scene packs use local procedural canvas geometry. Future raster or model layers must record their source, dimensions, alpha contract, allowed transforms, and license before runtime use.
 
 ## Validation
 
-- `npm run test:m0` checks the four IDs, random quartiles, deterministic QA fallback, explicit URL override, copy, and theme metadata.
-- `npm run qa:front-end-themes -- --out=/tmp/starhaven-front-end` launches Chromium at 1920 × 1080, captures a menu and loading screen for every variant, verifies the title/copy/progress/state, rejects console errors, and proves all eight captures are distinct.
-- The standard First Playable GitHub workflow runs both gates and uploads the screenshots and manifest with the existing browser evidence.
+- `npm run test:m0` checks app flow, profile normalization, faction mapping, scene identifiers, stepped timing, and Reduced Motion behavior.
+- `npm run qa:front-end -- --url=<served-build> --out=<durable-path>` tests real controls, panels, profile persistence, faction switching, Reduced Motion, responsive layouts, browser errors, and screenshots.
+- `npm run build` verifies the deployable desktop route.
+
+The obsolete four-theme random selector and approved-art hotspot checks are not release gates.
