@@ -15,3 +15,23 @@
   min-width:100%!important;
   min-height:100%!important;
 }
+
+/*
+ * The approved loading painting includes a representative progress strip. Cover only that
+ * lower UI band before drawing the real live progress, so text and percentages never double.
+ */
+.front-loading-screen.front-approved-art-ready>.front-approved-tint{
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+  animation:none!important;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(1,3,12,.98) 12%,
+      rgba(1,3,12,.995) 27%,
+      rgba(1,3,12,.995) 73%,
+      rgba(1,3,12,.98) 88%,
+      transparent 100%
+    ) center 84% / 78% 35% no-repeat!important;
+}
