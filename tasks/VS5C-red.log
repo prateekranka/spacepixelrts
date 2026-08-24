@@ -1,0 +1,35 @@
+VS5C unit RED — unchanged evaluator
+Command: npm run test:vs5
+Result: exit 1
+
+AssertionError [ERR_ASSERTION]: neutral discovered Lumen secures
++ actual - expected
+
+  {
++   id: 'objective-found',
++   primary: 'A shared Lumen field has been discovered',
++   secondary: 'The enemy may contest this location'
+-   id: 'secure-lumen',
+-   primary: 'Secure the Central Lumen Field',
+-   secondary: 'Select your army · ATTACK → marked Lumen'
+  }
+
+First failing assertion: tests/vs5-pacing.test.ts:251
+This RED was captured before any production evaluator or HUD change.
+
+VS5C browser RED — evaluator green, HUD target routing unchanged
+Command: npm run qa:vs5 -- --out /tmp/vs5c-browser-red
+Result: exit 1
+
+Natural discovery reached tick 4179. The browser observed:
+  state: secure-lumen
+  primary: Secure the Central Lumen Field
+  secondary: Select your army · ATTACK → marked Lumen
+  lumenPanelHidden: false
+  lumenLabel: LUMEN · NEUTRAL
+  targetHidden: true
+  target: WIND STRIDER
+
+Failure: Error: 08 target {"state":"secure-lumen","primary":"Secure the Central Lumen Field","secondary":"Select your army · ATTACK → marked Lumen","targetHidden":true,"target":"WIND STRIDER","lumenPanelHidden":false,"lumenLabel":"LUMEN · NEUTRAL","deck":[{"cmd":"train-2","text":"Lumen Guardpop cap","disabled":true},{"cmd":"train-4","text":"Solar Striderpop cap","disabled":true}],"tick":4179,"ore":86,"charge":130,"channelT":0,"selected":[339]}
+
+This RED was captured before the HUD target-route edit.

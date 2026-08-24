@@ -22,7 +22,8 @@ const NAV_TIMEOUT_MS = 30000;
 const SERVER_BOOT_TIMEOUT_MS = 120000;
 const KIND = { Worker: 0, Scout: 1, Fighter: 2, Ravager: 4, Hall: 10, Barracks: 12, Resource: 20 };
 const TILE = { Ore: 3, Solar: 5 };
-const ORD = { Gather: 3, Attack: 2, AttackMove: 6 };
+const ORD = { Move: 1, Gather: 3, Attack: 2, AttackMove: 6 };
+const SEEN_PLAYER = 1;
 const SEEN_RIVAL = 2;
 
 function parseArgs(argv) {
@@ -162,6 +163,8 @@ async function guidance(page) {
       secondary: root?.querySelector('span')?.textContent?.trim() ?? '',
       targetHidden: target?.hasAttribute('hidden') ?? true,
       target: target?.querySelector('span')?.textContent?.trim() ?? '',
+      lumenPanelHidden: document.querySelector('#lumen-objective')?.hasAttribute('hidden') ?? true,
+      lumenLabel: document.querySelector('#lumen-objective .lumen-label')?.textContent?.trim() ?? '',
       deck,
       tick: world?.tick ?? -1,
       ore: world?.teams?.[0]?.ore ?? -1,
@@ -252,6 +255,7 @@ async function main() {
       fogOfWar: true,
       frozenRaf: true,
       directWorldFastStepOnly: true,
+      objectiveControl: 'ordinary Scout Move / army AttackMove / player Attack with real World.step',
     },
     checks: {},
     captures: {},
@@ -587,31 +591,149 @@ async function main() {
     await settle(page);
     current = await guidance(page);
     requireThat(current.state === 'select-scout', `07 state ${current.state}`);
+    requireThat(current.target !== 'RIVAL NEXUS', `07 hidden rival target leaked ${JSON.stringify(current)}`);
     await capture(page, out, manifest, '07-mixed-army', { ...current, army });
 
-    const replacement = await page.evaluate(({ kinds, scoutCost, maxTicks }) => {
+    const objectiveDiscovery = await page.evaluate(({ kinds, ord, seenPlayer, maxTicks }) => {
       const world = globalThis.__STARHOLD_WORLD__;
-      const trace = globalThis.__VS5_TRACE__;
-      while (trace.replacementTrainTick < 0 && world.winner === -1 && world.tick < maxTicks) {
+      const scout = world.ents.find((entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === kinds.Scout);
+      const central = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+      if (!scout || !central) throw new Error('mixed army objective fixture missing player Scout/Central Lumen');
+      world.issue([scout.id], ord.Move, central.x, central.z, -1);
+      const issue = { tick: world.tick, scoutId: scout.id, order: scout.order, target: scout.tid, x: central.x, z: central.z };
+      while ((central.discoveredBy & seenPlayer) === 0 && world.winner === -1 && world.tick < maxTicks) {
         world.step();
         globalThis.__VS5_OBSERVE__?.();
       }
-      const calls = trace.trainCalls.filter((call) => call.ok && call.team === 1 && call.buildingKind === kinds.Hall && call.kind === kinds.Scout);
-      const call = calls[0] ?? null;
+      const fighter = world.ents.find((entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === kinds.Fighter);
+      const unique = world.ents.find((entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === kinds.Ravager);
       return {
         tick: world.tick,
-        call,
-        calls,
-        replacementScoutId: trace.replacementScoutId ?? -1,
-        coreDiscoveryTick: trace.coreDiscoveryTick,
-        attackTick: trace.attackTick,
+        discovered: (central.discoveredBy & seenPlayer) !== 0,
+        landmarkDiscoveredBy: central.discoveredBy,
+        issue,
+        lumen: world.lumenState(),
+        scoutId: scout.id,
+        fighterId: fighter?.id ?? -1,
+        uniqueId: unique?.id ?? -1,
+        pairAlive: Boolean(fighter && unique),
         winner: world.winner,
-        expectedCost: scoutCost,
       };
-    }, { kinds: { ...KIND }, scoutCost: { ore: 40, gas: 0, energy: 15, train: 6 }, maxTicks: MAX_TICKS });
-    manifest.checks.replacement = replacement;
-    requireThat(replacement.call && replacement.call.delta.ore === 40 && replacement.call.delta.gas === 0 && replacement.call.delta.energy === 15 && replacement.call.trainT === 6, `08 replacement cost/time ${JSON.stringify(replacement)}`);
-    await capture(page, out, manifest, '08-replacement-scout', replacement);
+    }, { kinds: { ...KIND }, ord: ORD, seenPlayer: SEEN_PLAYER, maxTicks: MAX_TICKS });
+    manifest.checks.objectiveDiscovery = objectiveDiscovery;
+    requireThat(objectiveDiscovery.discovered, `08 Lumen was not naturally discovered ${JSON.stringify(objectiveDiscovery)}`);
+    requireThat(objectiveDiscovery.pairAlive, `08 mixed pair did not remain alive ${JSON.stringify(objectiveDiscovery)}`);
+    await settle(page);
+    current = await guidance(page);
+    requireThat(current.state === 'secure-lumen', `08 state ${current.state}`);
+    requireThat(current.primary === 'Secure the Central Lumen Field' && current.secondary === 'Select your army · ATTACK → marked Lumen', `08 copy ${JSON.stringify(current)}`);
+    requireThat(!current.targetHidden && current.target === 'LUMEN', `08 target ${JSON.stringify(current)}`);
+    requireThat(!current.lumenPanelHidden && current.lumenLabel.startsWith('LUMEN · '), `08 Lumen panel ${JSON.stringify(current)}`);
+    await capture(page, out, manifest, '08-secure-lumen', { ...current, objectiveDiscovery });
+
+    const lumenControl = await page.evaluate(({ fighterId, uniqueId, ord, maxTicks }) => {
+      const world = globalThis.__STARHOLD_WORLD__;
+      const input = globalThis.__STARHOLD_INPUT__;
+      const central = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+      if (!central) throw new Error('Central Lumen missing for control proof');
+      const pair = [fighterId, uniqueId].filter((id) => id >= 0 && world.ents[id]?.alive && world.ents[id]?.hp > 0);
+      if (pair.length !== 2) throw new Error(`mixed pair unavailable for Lumen control: ${JSON.stringify(pair)}`);
+      input.selected = new Set(pair);
+      world.issue(pair, ord.AttackMove, central.x, central.z, -1);
+      const scout = world.ents.find((entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === 1);
+      if (scout) world.issue([scout.id], ord.Move, central.x - 8, central.z - 8, -1);
+      const issue = { tick: world.tick, ids: pair, order: world.ents[pair[0]].order, target: world.ents[pair[0]].tid, x: central.x, z: central.z };
+      const startTick = world.tick;
+      while (world.lumenState().owner !== 0 && world.winner === -1 && world.tick < maxTicks) {
+        world.step();
+        globalThis.__VS5_OBSERVE__?.();
+      }
+      const state = world.lumenState();
+      return {
+        startTick,
+        tick: world.tick,
+        issue,
+        pair,
+        scoutId: scout?.id ?? -1,
+        pairAlive: pair.every((id) => world.ents[id].alive && world.ents[id].hp > 0),
+        owner0: state.owner === 0,
+        lumen: state,
+        winner: world.winner,
+      };
+    }, { fighterId: objectiveDiscovery.fighterId, uniqueId: objectiveDiscovery.uniqueId, ord: ORD, maxTicks: MAX_TICKS });
+    manifest.checks.lumenControl = lumenControl;
+    requireThat(lumenControl.owner0, `09 player did not naturally capture Lumen ${JSON.stringify(lumenControl)}`);
+    requireThat(lumenControl.pairAlive, `09 mixed pair did not remain alive through capture ${JSON.stringify(lumenControl)}`);
+    await settle(page);
+    current = await guidance(page);
+    requireThat(current.state === 'push-lumen', `09 state ${current.state}`);
+    requireThat(current.primary === 'Push through the Lumen lane' && current.secondary === 'Select your army · ATTACK beyond the field', `09 copy ${JSON.stringify(current)}`);
+    requireThat(!current.targetHidden && current.target === 'PUSH', `09 target ${JSON.stringify(current)}`);
+    requireThat(!current.lumenPanelHidden && current.lumenLabel.startsWith('LUMEN · '), `09 Lumen panel ${JSON.stringify(current)}`);
+    await capture(page, out, manifest, '09-lumen-control', { ...current, lumenControl });
+
+    const rivalDiscovery = await page.evaluate(({ fighterId, uniqueId, scoutId, ord, seenPlayer, maxTicks }) => {
+      const world = globalThis.__STARHOLD_WORLD__;
+      const scout = scoutId >= 0 ? world.ents[scoutId] : null;
+      const rivalHall = world.ents.find((entity) => entity.alive && entity.hp > 0 && entity.team === 1 && entity.kind === 10);
+      const central = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+      if (!scout || !rivalHall || !central) throw new Error('rival discovery fixture missing Scout/Hall/Central Lumen');
+      const pair = [fighterId, uniqueId].filter((id) => id >= 0 && world.ents[id]?.alive && world.ents[id]?.hp > 0);
+      const beyond = { x: rivalHall.x, z: rivalHall.z };
+      world.issue([scout.id], ord.Move, beyond.x, beyond.z, -1);
+      if (pair.length > 0) world.issue(pair, ord.AttackMove, beyond.x, beyond.z, -1);
+      const issues = {
+        scout: { ids: [scout.id], order: scout.order, target: scout.tid, x: beyond.x, z: beyond.z },
+        army: pair.length > 0 ? { ids: pair, order: world.ents[pair[0]].order, target: world.ents[pair[0]].tid, x: beyond.x, z: beyond.z } : null,
+        field: { x: central.x, z: central.z },
+      };
+      while ((rivalHall.seenBy & seenPlayer) === 0 && world.winner === -1 && world.tick < maxTicks) {
+        world.step();
+        globalThis.__VS5_OBSERVE__?.();
+      }
+      return {
+        tick: world.tick,
+        discovered: (rivalHall.seenBy & seenPlayer) !== 0,
+        hallId: rivalHall.id,
+        hallSeenBy: rivalHall.seenBy,
+        pair,
+        pairAlive: pair.length > 0 && pair.some((id) => world.ents[id].alive && world.ents[id].hp > 0),
+        lumen: world.lumenState(),
+        issues,
+        winner: world.winner,
+      };
+    }, { fighterId: objectiveDiscovery.fighterId, uniqueId: objectiveDiscovery.uniqueId, scoutId: objectiveDiscovery.scoutId, ord: ORD, seenPlayer: SEEN_PLAYER, maxTicks: MAX_TICKS });
+    manifest.checks.rivalDiscovery = rivalDiscovery;
+    requireThat(rivalDiscovery.discovered, `10 rival Nexus was not naturally discovered ${JSON.stringify(rivalDiscovery)}`);
+    await settle(page);
+    current = await guidance(page);
+    requireThat(current.state === 'destroy-core', `10 state ${current.state}`);
+    requireThat(current.primary === 'Destroy the rival Nexus' && current.secondary === 'Select your army · ATTACK → marked Nexus', `10 copy ${JSON.stringify(current)}`);
+    requireThat(!current.targetHidden && current.target === 'RIVAL NEXUS', `10 target ${JSON.stringify(current)}`);
+    requireThat(!current.lumenPanelHidden && current.lumenLabel.startsWith('LUMEN · '), `10 Lumen panel ${JSON.stringify(current)}`);
+    await capture(page, out, manifest, '10-destroy-core', { ...current, rivalDiscovery });
+
+    const attack = await page.evaluate(({ hallId, ord }) => {
+      const world = globalThis.__STARHOLD_WORLD__;
+      const hall = world.ents[hallId];
+      const army = world.ents
+        .filter((entity) => entity.alive && entity.hp > 0 && entity.team === 0
+          && (entity.kind === 2 || entity.kind === 4 || entity.kind === 5))
+        .map((entity) => entity.id);
+      if (hall?.alive && hall.hp > 0 && army.length > 0) {
+        globalThis.__STARHOLD_INPUT__.selected = new Set(army);
+        world.issue(army, ord.Attack, hall.x, hall.z, hall.id);
+      }
+      return {
+        tick: world.tick,
+        hallId,
+        army,
+        issued: Boolean(hall?.alive && hall.hp > 0 && army.length > 0),
+        order: army[0] === undefined ? -1 : world.ents[army[0]].order,
+        target: army[0] === undefined ? -1 : world.ents[army[0]].tid,
+      };
+    }, { hallId: rivalDiscovery.hallId, ord: ORD });
+    manifest.checks.attack = attack;
 
     const terminal = await page.evaluate(({ maxTicks, kinds }) => {
       const world = globalThis.__STARHOLD_WORLD__;
@@ -646,7 +768,10 @@ async function main() {
     const event = terminal.winner === 0 ? 'MATCH_WON' : 'MATCH_LOST';
     await page.evaluate((eventName) => globalThis.__STARHAVEN_QA__?.dispatch(eventName), event);
     await page.waitForFunction((expected) => globalThis.__STARHAVEN_QA__?.state === expected, terminal.winner === 0 ? 'Victory' : 'Defeat', { timeout: PROBE_TIMEOUT_MS });
-    await capture(page, out, manifest, '09-terminal', { ...terminal, state: await page.evaluate(() => globalThis.__STARHAVEN_QA__?.state ?? '') });
+    const replacement = terminal.trace.trainCalls.filter((call) => call.ok && call.team === 1 && call.buildingKind === KIND.Hall && call.kind === KIND.Scout)[0] ?? null;
+    manifest.checks.replacement = replacement;
+    requireThat(replacement && replacement.delta.ore === 40 && replacement.delta.gas === 0 && replacement.delta.energy === 15 && replacement.trainT === 6, `replacement cost/time ${JSON.stringify(replacement)}`);
+    await capture(page, out, manifest, '11-terminal', { ...terminal, attack, replacement, state: await page.evaluate(() => globalThis.__STARHAVEN_QA__?.state ?? '') });
 
     const renderer = await rendererName(page);
     const simStepMs = await page.evaluate((seed) => {

@@ -373,11 +373,14 @@ export class Hud {
   }
 
   private drawGuidance(world: World, input: Input): void {
+    const lumen = world.lumenState();
     const g = evaluateOpeningGuidance(world.ents, world.landmarks, input.selected, {
       ore: world.teams[0].ore,
       energy: world.teams[0].energy,
       techPath: world.techPathOf(0),
       channelT: world.pathChannelT(0),
+      lumenOwner: lumen.owner,
+      lumenContested: lumen.contested,
     });
     const oreWorkers = countAssignedOreWorkers(world.ents);
     const guidanceSig = `${g.id}|${g.primary}|${g.secondary ?? ''}`;
@@ -435,6 +438,15 @@ export class Hud {
     } else if (g.id === 'explore-signal') {
       const signal = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
       if (signal) target = { x: signal.x, y: 0.6, z: signal.z, label: 'SIGNAL' };
+    } else if (g.id === 'secure-lumen' || g.id === 'push-lumen') {
+      const signal = world.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+      if (signal) target = { x: signal.x, y: 0.6, z: signal.z, label: g.id === 'secure-lumen' ? 'LUMEN' : 'PUSH' };
+    } else if (g.id === 'destroy-core') {
+      const rivalHall = world.ents.find(
+        (entity) => entity.alive && entity.hp > 0 && entity.team === 1 && entity.kind === Kind.Hall
+          && (entity.seenBy & SEEN_PLAYER) !== 0,
+      );
+      if (rivalHall) target = { x: rivalHall.x, y: 1, z: rivalHall.z, label: 'RIVAL NEXUS' };
     }
     if (!target) {
       this.guidanceTargetEl.hidden = true;

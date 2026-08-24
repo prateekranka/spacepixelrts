@@ -61,16 +61,26 @@ type GuidanceOverrides = Partial<{
   energy: number;
   techPath: TechPathId | null;
   channelT: number;
+  lumenOwner: -1 | 0 | 1;
+  lumenContested: boolean;
 }>;
 
 function guidance(world: World, overrides: GuidanceOverrides = {}, selected: Iterable<number> = []) {
   const eco = world.teams[0];
-  return evaluateOpeningGuidance(world.ents, world.landmarks, new Set(selected), {
+  const futureEco = {
     ore: overrides.ore ?? eco.ore,
     energy: overrides.energy ?? eco.energy,
     techPath: overrides.techPath === undefined ? eco.techPath : overrides.techPath,
     channelT: overrides.channelT ?? eco.ageT,
-  });
+    lumenOwner: overrides.lumenOwner,
+    lumenContested: overrides.lumenContested,
+  };
+  return evaluateOpeningGuidance(
+    world.ents,
+    world.landmarks,
+    new Set(selected),
+    futureEco as Parameters<typeof evaluateOpeningGuidance>[3],
+  );
 }
 
 function placePlayerYard(world: World): void {
@@ -204,6 +214,71 @@ function placePlayerYard(world: World): void {
   assert.equal(guidance(fixture, { techPath: 'sky-dominion' }, [scout.id]).id, 'explore-signal');
   assert.equal(guidance(fixture, { techPath: 'sky-dominion' }).id, 'select-scout');
   assert.equal(guidance(fixture, { techPath: 'sky-dominion' }, [scout.id]).primary, 'Explore the nearby signal');
+}
+
+// VS5C unit RED — post-army objective states are specified before the evaluator changes.
+{
+  const objective = new World();
+  objective.reset(SEED);
+  placePlayerYard(objective);
+  const yard = objective.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Barracks);
+  const central = objective.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+  const rivalHall = objective.ents.find((entity) => entity.alive && entity.team === 1 && entity.kind === Kind.Hall);
+  assert.ok(yard && central && rivalHall);
+  yard.progress = 1;
+  yard.hp = yard.maxHp;
+  assert.ok(objective.spawn(Kind.Fighter, 'vespari', 0, yard.x, yard.z));
+  assert.ok(objective.spawn(Kind.Ravager, 'vespari', 0, yard.x, yard.z));
+  central.discoveredBy |= SEEN_PLAYER;
+
+  const secure = {
+    id: 'secure-lumen',
+    primary: 'Secure the Central Lumen Field',
+    secondary: 'Select your army · ATTACK → marked Lumen',
+  };
+  const push = {
+    id: 'push-lumen',
+    primary: 'Push through the Lumen lane',
+    secondary: 'Select your army · ATTACK beyond the field',
+  };
+  const destroy = {
+    id: 'destroy-core',
+    primary: 'Destroy the rival Nexus',
+    secondary: 'Select your army · ATTACK → marked Nexus',
+  };
+  const readyEco = { techPath: 'sky-dominion' as const, channelT: 0 };
+
+  assert.deepEqual(guidance(objective, { ...readyEco, lumenOwner: -1, lumenContested: false }), secure, 'neutral discovered Lumen secures');
+  assert.deepEqual(guidance(objective, { ...readyEco, lumenOwner: 1, lumenContested: false }), secure, 'rival-owned discovered Lumen secures');
+  assert.deepEqual(guidance(objective, { ...readyEco, lumenOwner: 0, lumenContested: true }), secure, 'contested Lumen secures');
+  assert.deepEqual(guidance(objective, { ...readyEco, lumenOwner: 0, lumenContested: false }), push, 'player-owned hidden rival Nexus pushes');
+
+  rivalHall.seenBy |= SEEN_PLAYER;
+  assert.deepEqual(guidance(objective, { ...readyEco, lumenOwner: 0, lumenContested: false }), destroy, 'player-owned discovered rival Nexus destroys');
+
+  const buildPriority = new World();
+  buildPriority.reset(SEED);
+  const buildCentral = buildPriority.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+  assert.ok(buildCentral);
+  buildCentral.discoveredBy |= SEEN_PLAYER;
+  assert.equal(guidance(buildPriority, { ...readyEco, lumenOwner: 0, lumenContested: false }).id, 'build-yard', 'Build Yard outranks objective');
+
+  const progressionPriority = new World();
+  progressionPriority.reset(SEED);
+  placePlayerYard(progressionPriority);
+  const progressionYard = progressionPriority.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Barracks);
+  const progressionCentral = progressionPriority.landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+  assert.ok(progressionYard && progressionCentral);
+  progressionYard.progress = 1;
+  progressionYard.hp = progressionYard.maxHp;
+  progressionCentral.discoveredBy |= SEEN_PLAYER;
+  const progressionWorkers = progressionPriority.ents.filter(
+    (entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Worker,
+  );
+  const progressionOre = baseNode(progressionPriority, 0, Tile.Ore);
+  progressionPriority.issue([progressionWorkers[0].id, progressionWorkers[1].id], Ord.Gather, progressionOre.x, progressionOre.z, progressionOre.id);
+  assert.equal(guidance(progressionPriority, { ore: 400, energy: 80, techPath: null, lumenOwner: 0, lumenContested: false }).id, 'choose-path', 'path choice outranks objective');
+  assert.equal(guidance(progressionPriority, { ...readyEco, lumenOwner: 0, lumenContested: false }).id, 'train-army', 'army training outranks objective');
 }
 
 // The train copy is derived from the alive player faction, including Gravemark names.

@@ -17,7 +17,10 @@ export type OpeningGuidanceId =
   | 'train-army'
   | 'select-scout'
   | 'explore-signal'
-  | 'objective-found';
+  | 'objective-found'
+  | 'secure-lumen'
+  | 'push-lumen'
+  | 'destroy-core';
 
 export interface OpeningGuidance {
   /** Stable state id — presentation updates DOM text only when this changes. */
@@ -32,6 +35,8 @@ export interface GuidanceEcoState {
   readonly energy: number;
   readonly techPath: TechPathId | null;
   readonly channelT: number;
+  readonly lumenOwner?: -1 | 0 | 1;
+  readonly lumenContested?: boolean;
 }
 
 /** Count only live player Workers whose current order is genuinely tied to Ore. */
@@ -69,6 +74,21 @@ const OBJECTIVE_FOUND: OpeningGuidance = {
   primary: 'A shared Lumen field has been discovered',
   secondary: 'The enemy may contest this location',
 };
+const SECURE_LUMEN: OpeningGuidance = {
+  id: 'secure-lumen',
+  primary: 'Secure the Central Lumen Field',
+  secondary: 'Select your army · ATTACK → marked Lumen',
+};
+const PUSH_LUMEN: OpeningGuidance = {
+  id: 'push-lumen',
+  primary: 'Push through the Lumen lane',
+  secondary: 'Select your army · ATTACK beyond the field',
+};
+const DESTROY_CORE: OpeningGuidance = {
+  id: 'destroy-core',
+  primary: 'Destroy the rival Nexus',
+  secondary: 'Select your army · ATTACK → marked Nexus',
+};
 
 function playerCiv(ents: readonly Ent[]): Civ {
   const hall = ents.find((ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === Kind.Hall);
@@ -94,6 +114,15 @@ function trainingGuidance(ents: readonly Ent[]): OpeningGuidance {
     primary: `Train ${missing.join(' + ')}`,
     secondary: 'Select your Yard · Habitat only if population is full',
   };
+}
+
+function hasMixedArmy(ents: readonly Ent[]): boolean {
+  const civ = playerCiv(ents);
+  return ents.some(
+    (ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === Kind.Fighter,
+  ) && ents.some(
+    (ent) => ent.alive && ent.hp > 0 && ent.team === 0 && ent.kind === uniqueUnit(civ),
+  );
 }
 
 /**
@@ -145,6 +174,15 @@ export function evaluateOpeningGuidance(
     }
   }
   const objective = landmarks.find((landmark) => landmark.id === 'central-lumen-field');
+  if (eco && hasMixedArmy(ents) && objective && (objective.discoveredBy & SEEN_PLAYER) !== 0) {
+    const lumenOwner = eco.lumenOwner ?? -1;
+    if (lumenOwner !== 0 || eco.lumenContested === true) return SECURE_LUMEN;
+    const rivalHallDiscovered = ents.some(
+      (ent) => ent.alive && ent.hp > 0 && ent.team === 1 && ent.kind === Kind.Hall
+        && (ent.seenBy & SEEN_PLAYER) !== 0,
+    );
+    return rivalHallDiscovered ? DESTROY_CORE : PUSH_LUMEN;
+  }
   if (objective && (objective.discoveredBy & SEEN_PLAYER) !== 0) return OBJECTIVE_FOUND;
   const scoutSelected = ents.some(
     (ent) => ent.alive && ent.team === 0 && ent.kind === Kind.Scout && selected.has(ent.id),
