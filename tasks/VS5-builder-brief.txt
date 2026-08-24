@@ -1,0 +1,92 @@
+# VS5 Builder — first-match pacing closure (strict TDD)
+
+Read FIRST:
+1. DIRECTIVE.md
+2. docs/VERTICAL_SLICE_SPRINT.md
+3. docs/VS5_PACING_CLOSURE.md (frozen, exact)
+4. final production report + log at
+   `/home/bobbyranka/workspace/evidence/starhaven-final-production-match/`
+5. src/sim.ts spawnScenario/placeOpeningNodeAt/stepAi/thinkBuildings/tryTrain
+6. src/opening-guidance.ts, Hud.drawGuidance, tests/m2-opening/guidance/vs2-ai
+
+Owned production only:
+- src/sim.ts
+- src/opening-guidance.ts
+- src/hud.ts guidance call/signature/target routing only
+- tests/vs5-pacing.test.ts new
+- existing guidance/opening tests only if expectations must change
+- scripts/qa-vs5-pacing.mjs new
+- package.json test:vs5 + qa:vs5
+- tasks/VS5-red.log force-add
+No costs/STATS/gather cadence/cargo/speed/input/art/render/shader/terrain/app-flow/results/dependencies.
+
+Strict tracer TDD:
+1. Safe reserve RED first: test exported `OPENING_ORE_RESERVE===700`, mirrored node hp/maxHp, arithmetic.
+   Run unchanged code; save RED excerpt.
+2. GREEN only reserve constant/use; preserve other node reserves.
+3. Guidance RED on pure evaluator state-by-state, including dynamic Ore/Charge/countdown and faction
+   labels. Then GREEN evaluator/HUD signature/targets only.
+4. Scout replacement RED: kill actual rival Scout, instrument normal tryTrain calls, run real sim to18.
+   Current expected winner=-1/no Scout replacement. Then GREEN only legal Hall Scout training.
+5. Browser RED→GREEN for visible guidance targets/copy and fast-step deadlines.
+Append every expected failing command/output to tasks/VS5-red.log before each matching production edit.
+
+Reserve:
+- export stable `OPENING_ORE_RESERVE=700`;
+- opening Ore hp=maxHp700 both bases; gas200, solar160 unchanged;
+- starting resources/costs/gather unchanged.
+
+Guidance exact order/copy/targets from doc. Important:
+- add energy to GuidanceEcoState/HUD call;
+- detect Yard absent/incomplete/complete and alive fighter+unique from ents;
+- use player civ from alive team0 Hall/units; fighterName/uniqueUnit/labelOf;
+- economy/path/army states outrank objective and Scout;
+- HUD signature `${id}|${primary}|${secondary}` so 390→398 etc and countdown update;
+- guidance DOM `data-state` remains id;
+- target routing: idle Worker, Yard, nearest discovered/visible team-base Ore resource, Nexus;
+- existing Scout/Signal targets only after mixed pair.
+
+AI exact:
+- at ordinary cadence, before Worker replacement, if player Hall lacks SEEN_RIVAL and no alive team1
+  Scout, call tryTrain on ready team1 Hall for Kind.Scout under exact ordinary resource/pop/train rules;
+- no direct spawn/resources/time shortcut/hidden target;
+- once seen, do not train a replacement solely for this contract.
+
+Policy unit test:
+- no direct eco writes or spawn after reset;
+- place Yard via canPlace/tryPlace, issue ordinary Gather to safe nodes, builder returns to Ore;
+- commit via tryCommitPath exact400/80, wait normal40s, train via tryTrain;
+- path lock <=8 sim minutes, one Fighter+unique alive <=10;
+- deterministic and player civ mappings both covered where practical.
+
+Browser QA evidence outside repo default `/home/bobbyranka/workspace/evidence/starhaven-vs5-pacing/`:
+- manifest + 01-build-yard.png, 02-fund-path.png, 03-choose-path.png, 04-channel.png,
+  05-train-army.png, 06-mixed-army.png, 07-replacement-scout.png, 08-terminal.png;
+- real state, no winner write/grants; fixed seed; exact copy/target/assertions; 1366x1024;
+- sim share policy and zero errors.
+
+Run:
+npm run test:vs5
+npm run qa:vs5 -- --out /home/bobbyranka/workspace/evidence/starhaven-vs5-pacing
+npm run test:vs4
+npm run qa:vs4 -- --out /tmp/vs5-vs4
+npm run test:vs3
+npm run qa:vs3 -- --out /tmp/vs5-vs3
+npm run test:vs2b
+npm run qa:vs2b -- --out /tmp/vs5-vs2b
+npm run test:vs2-ai
+npm run qa:vs2-ai-doctrine -- --out /tmp/vs5-vs2a
+npm run qa:progression-handoff -- --out /tmp/vs5-progress
+npm run qa:touch-contract -- --out /tmp/vs5-touch
+npm run test:m0
+npm run test:m2
+npm run test:m2-ai
+npm run test:m3
+npm run test:m4
+npm run test:m5
+npm run build
+git diff --check
+
+Commit prefix `VS5:`. Do not push/deploy. Report RED per tracer, reserve arithmetic, path/army times,
+guidance sequence, replacement Scout cost/time/discovery/attack/winner, seed sample, QA paths, sim
+share, all regressions, SHA, deviations.

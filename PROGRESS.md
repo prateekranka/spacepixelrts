@@ -313,14 +313,23 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   remain byte-frozen; 16/16 row2 anatomy cells pass; all regressions/build pass. Fresh Sol identical
   unlabeled 1366×1024 gate: **PASS** — factions immediate, both guards armed, walkers distinct.
   Evidence: `/home/bobbyranka/workspace/evidence/starhaven-vs4a-lead/` and
-  `/home/bobbyranka/workspace/evidence/starhaven-vs4a-rift/`. Next: one bounded production whole-match
-  integrator because match-length pacing is the explicit test target.
-- **Production live at complete VS-3 loop** (`4ba70b6`, `assets/main-BK34aqQF.js`): deployed to
-  existing `spacepixelrts` Pages production branch `main`. Live readback used an ordinary attack to
-  set winner 0 and Core damage 2, then confirmed Victory→Continue→Results (`win`, two buttons)→Play
-  Again→second Playing. Second match has resetCount 2, winner -1, zero stats, exactly one game canvas,
-  one overlay, one HUD, and zero console errors. VS-1/2 mechanics remain in this bundle.
-  `desktop.html` is the laptop preview route.
+  `/home/bobbyranka/workspace/evidence/starhaven-vs4a-rift/`.
+- **VS-5 first-match pacing closure FROZEN / ACTIVE** (`docs/VS5_PACING_CLOSURE.md`): one
+  no-restart production match failed at18:00 with real income, completed Yard, exact path UI, but
+  390/400 Ore and no path/army/Lumen/battle/terminal. Root arithmetic: start220 - Yard150 + safe Ore
+  node280 =350, structurally 50 short; full compact spend770 needs550 gathered. Opening Ore reserve
+  becomes700, costs/gather unchanged. Guidance is reordered Build Yard→fund path with two Ore
+  Workers→choose/channel→faction-aware mixed army before Signal. Separate repro killed the only AI
+  Scout and produced no winner at18; normal 40-seed sample resolved by15:08. AI will legally retrain a
+  lost Scout at its Hall, no grant/spawn/hidden target. Strict tracer REDs, path<=8, mixed pair<=10,
+  scout-death winner<=18, visible 1366×1024 QA required. Final failed-match evidence:
+  `/home/bobbyranka/workspace/evidence/starhaven-final-production-match/`.
+- **Production live at accepted VS-4A assets but VS-5 pacing FAIL** (`1e22b5e`,
+  `assets/main-CQGftbuI.js`): deployed to existing Pages `main`. Live readback confirmed combat atlas
+  1024×256, four mappings, exact scales, draw calls5, runtime MAG0, console0, composited lineup at
+  `/home/bobbyranka/workspace/evidence/starhaven-vs4a-production/`. One subsequent normal production
+  match exposed the active VS-5 pacing blocker; production is not yet the accepted final slice.
+  `desktop.html` remains the laptop preview route.
 - GitHub push BLOCKED from this Linux box (no gh login / credential helper / SSH key here;
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
   (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
