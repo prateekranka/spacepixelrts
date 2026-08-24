@@ -11,6 +11,10 @@ import { chromium } from 'playwright';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VIEWPORT = { width: 1366, height: 1024 };
+const P99_BUDGET_MS = 8;
+const MAX_FIXED_STEPS_PER_FRAME = 5;
+const SIM_WARMUP_STEPS = 120;
+const SIM_SAMPLE_STEPS = 600;
 const EXPECTED_CONFIG = {
   playerFaction: 'gravemark',
   aiFaction: 'sunweaver',
@@ -141,6 +145,37 @@ async function probe(page) {
   });
 }
 
+async function detectWebglRenderer(page) {
+  return page.evaluate(() => {
+    try {
+      const canvas = document.querySelector('canvas#game') ?? document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      if (!gl) return { renderer: 'none', softwareGl: false };
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      const renderer = debugInfo
+        ? String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL))
+        : 'masked';
+      return {
+        renderer,
+        softwareGl: /swiftshader|llvmpipe|software/i.test(renderer),
+      };
+    } catch {
+      return { renderer: 'error', softwareGl: false };
+    }
+  });
+}
+
+async function measureSimStep(page) {
+  return page.evaluate(({ warmup, sample }) => {
+    const world = globalThis.__STARHOLD_WORLD__;
+    if (!world) throw new Error('__STARHOLD_WORLD__ missing');
+    for (let index = 0; index < warmup; index++) world.step();
+    const startedAt = performance.now();
+    for (let index = 0; index < sample; index++) world.step();
+    return Math.round(((performance.now() - startedAt) / sample) * 10000) / 10000;
+  }, { warmup: SIM_WARMUP_STEPS, sample: SIM_SAMPLE_STEPS });
+}
+
 async function capture(page, file) {
   await page.screenshot({ path: file, type: 'png' });
   return analyzePng(file);
@@ -168,7 +203,10 @@ async function main() {
       channel: 'chrome',
       headless: true,
       args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
-    });
+    }).catch(() => chromium.launch({
+      headless: true,
+      args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
+    }));
     const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
     const attachErrors = (page, label) => {
       page.on('console', (message) => {
@@ -227,7 +265,15 @@ async function main() {
     const loadReadyResult = await page.evaluate(() => globalThis.__STARHAVEN_QA__?.dispatch('LOAD_READY') ?? null);
     if (loadReadyResult?.accepted !== true) throw new Error(`Probe LOAD_READY dispatch rejected: ${JSON.stringify(loadReadyResult)}`);
     await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'Playing', null, { timeout: 30_000 });
-    await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.p99FrameMs > 0 && globalThis.__STARHAVEN_QA__?.p99FrameMs < 8, null, { timeout: 10_000 });
+    const rendererProbe = await detectWebglRenderer(page);
+    await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.p99FrameMs > 0, null, { timeout: 10_000 });
+    if (!rendererProbe.softwareGl) {
+      await page.waitForFunction(
+        (budget) => globalThis.__STARHAVEN_QA__?.p99FrameMs < budget,
+        P99_BUDGET_MS,
+        { timeout: 10_000 },
+      );
+    }
     const finalProbe = await probe(page);
     manifest.finalProbe = finalProbe;
     if (finalProbe.resetCount !== 1) throw new Error(`Playing resetCount ${finalProbe.resetCount} != 1`);
@@ -244,6 +290,26 @@ async function main() {
 
     manifest.checks.transitionHistory = finalProbe.transitionHistory;
     manifest.checks.p99FrameMs = finalProbe.p99FrameMs;
+    const performanceCheck = {
+      renderer: rendererProbe.renderer,
+      softwareGl: rendererProbe.softwareGl,
+      renderP99FrameMs: finalProbe.p99FrameMs,
+      simStepMs: null,
+      simShareMs: null,
+      gateApplied: rendererProbe.softwareGl ? 'software-sim-share-5-fixed-steps<8ms' : 'hardware-render-p99<8ms',
+    };
+    if (rendererProbe.softwareGl) {
+      performanceCheck.simStepMs = await measureSimStep(page);
+      performanceCheck.simShareMs = Math.round(
+        performanceCheck.simStepMs * MAX_FIXED_STEPS_PER_FRAME * 10000,
+      ) / 10000;
+      if (!(performanceCheck.simShareMs < P99_BUDGET_MS)) {
+        throw new Error(
+          `sim work ${performanceCheck.simShareMs.toFixed(3)}ms exceeds budget ${P99_BUDGET_MS}ms`,
+        );
+      }
+    }
+    manifest.checks.frameBudget = performanceCheck;
     manifest.ok = true;
   } catch (error) {
     manifest.errors.push(error?.stack ?? String(error));

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Browser proof for the FPE-2 Main Menu and FPE-3 setup/panel pixel shell.
+ * Browser proof for the FPE-2/FPE-3 shell and FPE-4 segmented loading command panel.
  *
  * Usage:
  *   npm run qa:pixel-front-end -- --out /absolute/evidence/folder
@@ -27,6 +27,16 @@ const FACTIONS = ['sunweaver', 'gravemark'];
 const SCENES = {
   sunweaver: 'sunweaver-capital',
   gravemark: 'gravemark-quarry',
+};
+const LOADING_SEGMENT_COUNT = 16;
+const LOADING_CONFIG = {
+  map: 'helios-rift',
+  difficulty: 'veteran',
+  fogOfWar: false,
+  speed: 1.25,
+  tacticalPause: 'on-demand',
+  seedMode: 'deterministic',
+  seed: 424242,
 };
 const PANEL_ACTIONS = ['tutorial', 'factions', 'settings', 'records', 'history', 'codex', 'dispatches'];
 const TIMEOUT_MS = 30000;
@@ -158,6 +168,14 @@ function attachErrorCapture(page) {
     if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
   });
   page.on('pageerror', (error) => errors.push(`pageerror: ${error?.message || String(error)}`));
+  page.on('requestfailed', (request) => errors.push(`requestfailed: ${request.url()} — ${request.failure()?.errorText || 'unknown'}`));
+  page.on('response', (response) => {
+    if (response.status() < 400) return;
+    const url = response.url();
+    if (/front-end-ui|front-end\/civilizations|manifest\.json|\.woff2(?:\?|$)|\.(?:svg|webp|png)(?:\?|$)/i.test(url)) {
+      errors.push(`asset response ${response.status()}: ${url}`);
+    }
+  });
   return errors;
 }
 
@@ -176,6 +194,247 @@ async function waitForMenu(page, faction) {
       && sceneContainer?.getAttribute('data-scene-id') === expectedScene
       && root?.dataset.civ === expectedFaction;
   }, { expectedFaction: faction, expectedScene: SCENES[faction] }, { timeout: TIMEOUT_MS });
+}
+
+function loadingConfig(faction) {
+  return {
+    playerFaction: faction,
+    aiFaction: faction === 'sunweaver' ? 'gravemark' : 'sunweaver',
+    ...LOADING_CONFIG,
+  };
+}
+
+async function configureLoading(page, faction) {
+  const config = loadingConfig(faction);
+  await page.locator(`[data-config-field="playerFaction"][data-config-value="${config.playerFaction}"]`).click();
+  await page.locator(`[data-config-field="aiFaction"][data-config-value="${config.aiFaction}"]`).click();
+  await page.locator(`[data-config-field="difficulty"][data-config-value="${config.difficulty}"]`).click();
+  await page.locator(`[data-config-field="fogOfWar"][data-config-value="${config.fogOfWar}"]`).click();
+  await page.locator(`[data-config-field="speed"][data-config-value="${config.speed}"]`).click();
+  await page.locator(`[data-config-field="tacticalPause"][data-config-value="${config.tacticalPause}"]`).click();
+  await page.locator('[data-config-field="seedMode"][data-config-value="deterministic"]').click();
+  await page.locator('[data-seed-input]').fill(String(config.seed));
+  await page.waitForFunction((expected) => {
+    const actual = globalThis.__STARHAVEN_QA__?.config;
+    return actual && Object.keys(expected).every((key) => actual[key] === expected[key]);
+  }, config, { timeout: TIMEOUT_MS });
+}
+
+async function readLoadingContract(page, faction, dimension) {
+  return page.evaluate(({ expectedFaction, expectedScene, target, expectedConfig, segmentCount }) => {
+    const visible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && Number(style.opacity) !== 0
+        && box.width > 0
+        && box.height > 0;
+    };
+    const rect = (element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        x: box.x,
+        y: box.y,
+        right: box.right,
+        bottom: box.bottom,
+        width: box.width,
+        height: box.height,
+      };
+    };
+    const root = document.querySelector('.front-loading-screen');
+    const card = document.querySelector('.front-loading-card');
+    const track = document.querySelector('[data-loading-segments]');
+    const scene = root?.querySelector('.front-end-scene');
+    const sceneContainer = root;
+    const segments = [...(root?.querySelectorAll('.front-loading-segment') || [])];
+    const segmentDetails = segments.map((segment) => ({
+      state: segment.getAttribute('data-state') || '',
+      visible: visible(segment),
+      rect: rect(segment),
+    }));
+    const integerRect = (box) => box && [box.x, box.y, box.right, box.bottom, box.width, box.height].every(Number.isInteger);
+    const stageHistory = (root?.getAttribute('data-loading-stage-history') || '').split(',').filter(Boolean);
+    const meta = document.querySelector('[data-loading-meta]');
+    const heading = document.querySelector('.front-loading-card h1');
+    const kicker = document.querySelector('.front-loading-kicker');
+    const tip = document.querySelector('.front-loading-tip');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const activeSegment = root?.querySelector('.front-loading-segment[data-state="active"]');
+    const activeStyle = activeSegment ? getComputedStyle(activeSegment) : null;
+    const cardRect = card ? rect(card) : null;
+    const trackRect = track ? rect(track) : null;
+    return {
+      visible: visible(root),
+      civ: root?.getAttribute('data-civ') || '',
+      scene: scene?.getAttribute('data-scene') || '',
+      faction: scene?.getAttribute('data-faction') || '',
+      mode: scene?.getAttribute('data-mode') || '',
+      artReady: scene?.getAttribute('data-art-ready') || '',
+      sceneId: sceneContainer?.getAttribute('data-scene-id') || '',
+      screenCreated: root?.getAttribute('data-loading-screen-created') || '',
+      sceneReady: root?.getAttribute('data-loading-scene-ready') || '',
+      matchReady: root?.getAttribute('data-loading-match-ready') || '',
+      stage: root?.getAttribute('data-loading-stage') || '',
+      stageHistory,
+      segmentCount: segments.length,
+      visibleSegmentCount: segmentDetails.filter((segment) => segment.visible).length,
+      states: segmentDetails.reduce((counts, segment) => {
+        counts[segment.state] = (counts[segment.state] || 0) + 1;
+        return counts;
+      }, {}),
+      segmentRects: segmentDetails.map((segment) => segment.rect),
+      segmentRectsInteger: segmentDetails.every((segment) => integerRect(segment.rect)),
+      cardRect,
+      trackRect,
+      bottomSafeGap: cardRect ? window.innerHeight - cardRect.bottom : -Infinity,
+      horizontalSafe: cardRect ? cardRect.x >= 24 && cardRect.right <= window.innerWidth - 24 : false,
+      metadata: {
+        text: meta?.textContent?.replace(/\s+/g, ' ').trim() || '',
+        civilization: document.querySelector('[data-loading-civilization]')?.textContent?.trim() || '',
+        difficulty: document.querySelector('[data-loading-difficulty]')?.textContent?.trim() || '',
+        seed: document.querySelector('[data-loading-seed]')?.textContent?.trim() || '',
+        tip: tip?.textContent?.trim() || '',
+      },
+      sigil: document.querySelector('[data-faction-sigil] img')?.getAttribute('src') || '',
+      fonts: {
+        displayUsed: heading ? getComputedStyle(heading).fontFamily : '',
+        interfaceUsed: kicker ? getComputedStyle(kicker).fontFamily : '',
+        bodyUsed: meta ? getComputedStyle(meta).fontFamily : '',
+        tipUsed: tip ? getComputedStyle(tip).fontFamily : '',
+      },
+      motion: {
+        reduced,
+        activeAnimationName: activeStyle?.animationName || 'none',
+        activeAnimationDuration: activeStyle?.animationDuration || '0s',
+      },
+      stageObservations: globalThis.__FPE4_STAGE_OBSERVATIONS__ || [],
+      config: globalThis.__STARHAVEN_QA__?.config || null,
+      expectedConfig,
+      expectedScene,
+      target,
+      segmentCountExpected: segmentCount,
+      overflow: {
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        documentWidth: document.documentElement.scrollWidth,
+        documentHeight: document.documentElement.scrollHeight,
+      },
+    };
+  }, {
+    expectedFaction: faction,
+    expectedScene: SCENES[faction],
+    target: dimension,
+    expectedConfig: loadingConfig(faction),
+    segmentCount: LOADING_SEGMENT_COUNT,
+  });
+}
+
+function assertLoadingContract(details, faction, dimension, reducedMotion = false) {
+  const expected = loadingConfig(faction);
+  assertThat(details.visible, `${faction} ${dimension.width}x${dimension.height}: loading screen is not visible`);
+  assertThat(details.civ === faction, `${faction}: loading data-civ is ${details.civ}`);
+  assertThat(details.faction === faction && details.scene === SCENES[faction] && details.mode === 'loading', `${faction}: loading scene identity is incorrect`);
+  assertThat(details.sceneId === SCENES[faction], `${faction}: loading container scene is ${details.sceneId}`);
+  assertThat(details.artReady === 'true', `${faction}: authored loading scene is not ready`);
+  assertThat(details.screenCreated === 'true' && details.sceneReady === 'true' && details.matchReady === 'true', `${faction}: loading lifecycle hooks are incomplete (${JSON.stringify(details)})`);
+  assertThat(['1', '2', '3'].every((stage) => details.stageHistory.includes(stage)), `${faction}: loading stage history is ${details.stageHistory.join(',')}`);
+  const observedStage = (stage) => details.stageObservations.find((observation) => observation.stage === stage);
+  const stageOne = observedStage('1');
+  const stageTwo = observedStage('2');
+  const stageThree = observedStage('3');
+  assertThat(stageOne?.states?.complete === 3 && stageOne?.states?.active === 1 && stageOne?.states?.future === 12, `${faction}: stage 1 segment DOM state was not observed (${JSON.stringify(details.stageObservations)})`);
+  assertThat(stageTwo?.states?.complete === 9 && stageTwo?.states?.active === 1 && stageTwo?.states?.future === 6, `${faction}: stage 2 segment DOM state was not observed (${JSON.stringify(details.stageObservations)})`);
+  assertThat(stageThree?.states?.complete === 16 && !stageThree?.states?.active && !stageThree?.states?.future, `${faction}: stage 3 segment DOM state was not observed (${JSON.stringify(details.stageObservations)})`);
+  assertThat(details.stage === '3', `${faction}: held loading did not reach truthful match-ready stage`);
+  assertThat(details.segmentCount === LOADING_SEGMENT_COUNT && details.visibleSegmentCount === LOADING_SEGMENT_COUNT, `${faction}: expected 16 visible loading segments, found ${details.segmentCount}/${details.visibleSegmentCount}`);
+  assertThat(details.states.complete === LOADING_SEGMENT_COUNT && !details.states.active && !details.states.future, `${faction}: stage 3 segment states are not fully complete (${JSON.stringify(details.states)})`);
+  assertThat(details.segmentRectsInteger, `${faction}: loading segment rectangle is fractional`);
+  assertThat(details.cardRect?.width === 704, `${faction}: loading panel width is ${details.cardRect?.width}`);
+  const expectedHeight = dimension.height <= 820 ? 144 : 152;
+  assertThat(details.cardRect?.height === expectedHeight, `${faction} ${dimension.width}x${dimension.height}: loading panel height is ${details.cardRect?.height}, expected ${expectedHeight}`);
+  assertThat(details.bottomSafeGap >= 24 && details.horizontalSafe, `${faction} ${dimension.width}x${dimension.height}: loading panel misses safe area`);
+  assertThat(details.trackRect?.width === 640 && details.trackRect?.height === 20, `${faction}: loading segment track geometry is ${JSON.stringify(details.trackRect)}`);
+  assertThat(details.metadata.civilization === (faction === 'sunweaver' ? 'Sunweaver' : 'Gravemark'), `${faction}: loading civilization metadata is ${details.metadata.civilization}`);
+  assertThat(details.metadata.difficulty === 'Veteran', `${faction}: loading difficulty metadata is ${details.metadata.difficulty}`);
+  assertThat(details.metadata.seed === 'Deterministic seed 424242', `${faction}: loading seed metadata is ${details.metadata.seed}`);
+  assertThat(details.metadata.tip === 'Survey the center before you commit your first production line.', `${faction}: loading tip changed`);
+  assertThat(details.sigil.includes(`${faction}-sigil.svg`), `${faction}: authored loading sigil is ${details.sigil}`);
+  assertThat(/Pixelify Sans/i.test(details.fonts.displayUsed), `${faction}: loading status is not Pixelify Sans`);
+  assertThat(/Silkscreen/i.test(details.fonts.interfaceUsed), `${faction}: loading kicker is not Silkscreen`);
+  assertThat(/Kode Mono/i.test(details.fonts.bodyUsed) && /Kode Mono/i.test(details.fonts.tipUsed), `${faction}: loading body metadata/tip is not Kode Mono`);
+  assertThat(Object.keys(expected).every((key) => details.config?.[key] === expected[key]), `${faction}: held loading config differs from submitted config (${JSON.stringify(details.config)})`);
+  assertThat(details.overflow.documentWidth <= details.overflow.viewportWidth && details.overflow.documentHeight <= details.overflow.viewportHeight, `${faction} ${dimension.width}x${dimension.height}: loading document overflow`);
+  assertThat(!details.motion.reduced || (details.motion.activeAnimationName === 'none' && details.motion.activeAnimationDuration === '0s'), `${faction}: Reduced Motion leaves loading activity animation active`);
+  if (reducedMotion) assertThat(details.motion.reduced, `${faction}: Reduced Motion context was not active`);
+}
+
+async function runLoadingCase(browser, baseUrl, output, faction, dimension, manifest, { reducedMotion = false } = {}) {
+  const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1, reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
+  await context.addInitScript(({ key, value }) => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, { key: DEFAULT_PROFILE_KEY, value: profileValue(faction) });
+  const page = await context.newPage();
+  page.setDefaultTimeout(TIMEOUT_MS);
+  const errors = attachErrorCapture(page);
+  try {
+    await page.goto(`${pageUrl(baseUrl)}?qa-hold-loading=1`, { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, faction);
+    await page.locator('.menu-item[data-start-action="new-skirmish"]').click();
+    await page.locator('.setup-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    await configureLoading(page, faction);
+    await page.evaluate(() => {
+      globalThis.__FPE4_STAGE_OBSERVATIONS__ = [];
+      const capture = () => {
+        const root = document.querySelector('.front-loading-screen');
+        if (!(root instanceof HTMLElement)) return;
+        const stage = root.getAttribute('data-loading-stage') || '';
+        if (!stage) return;
+        const states = [...root.querySelectorAll('.front-loading-segment')].reduce((counts, segment) => {
+          const state = segment.getAttribute('data-state') || '';
+          counts[state] = (counts[state] || 0) + 1;
+          return counts;
+        }, {});
+        const observations = globalThis.__FPE4_STAGE_OBSERVATIONS__;
+        if (observations.at(-1)?.stage !== stage) observations.push({ stage, states });
+      };
+      const observer = new MutationObserver(capture);
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['data-loading-stage', 'data-loading-stage-history', 'data-state'],
+      });
+      globalThis.__FPE4_STAGE_OBSERVER__ = observer;
+    });
+    await page.locator('.primary-action[data-start-action="start-match"]').click();
+    await page.locator('.front-loading-screen').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    await page.waitForFunction(() => document.querySelector('.front-loading-screen')?.getAttribute('data-loading-screen-created') === 'true', undefined, { timeout: TIMEOUT_MS });
+    await page.waitForFunction(() => document.querySelector('.front-loading-screen')?.getAttribute('data-loading-scene-ready') === 'true', undefined, { timeout: TIMEOUT_MS });
+    await page.waitForFunction(() => document.querySelector('.front-loading-screen')?.getAttribute('data-loading-match-ready') === 'true', undefined, { timeout: TIMEOUT_MS });
+    const details = await readLoadingContract(page, faction, dimension);
+    assertLoadingContract(details, faction, dimension, reducedMotion);
+    const suffix = reducedMotion ? '-reduced-motion' : '';
+    const file = path.join(output, `loading-${faction}-${dimension.width}x${dimension.height}${suffix}.png`);
+    await page.screenshot({ path: file, type: 'png' });
+    manifest.captures.push(path.basename(file));
+    assertThat(await page.locator('.front-loading-screen').isVisible(), `${faction}: loading hid before legal LOAD_READY`);
+    const transition = await page.evaluate(() => globalThis.__STARHAVEN_QA__?.dispatch('LOAD_READY') ?? null);
+    assertThat(transition?.accepted === true, `${faction}: legal LOAD_READY was rejected (${JSON.stringify(transition)})`);
+    await page.waitForFunction(() => globalThis.__STARHAVEN_QA__?.state === 'Playing', undefined, { timeout: TIMEOUT_MS });
+    await page.locator('.front-loading-screen').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
+    const finalProbe = await page.evaluate(() => globalThis.__STARHAVEN_QA__ ? JSON.parse(JSON.stringify(globalThis.__STARHAVEN_QA__)) : null);
+    assertThat(finalProbe?.resetCount === 1, `${faction}: legal transition changed reset count to ${finalProbe?.resetCount}`);
+    assertThat(errors.length === 0, `${faction} ${dimension.width}x${dimension.height}: loading browser/asset errors\n${errors.join('\n')}`);
+    manifest.assertions.push({ name: `segmented loading ${faction} ${dimension.width}x${dimension.height}${suffix}`, status: 'PASS', details: { loading: details, finalProbe: { state: finalProbe?.state, resetCount: finalProbe?.resetCount, transitionHistory: finalProbe?.transitionHistory } } });
+  } catch (error) {
+    manifest.assertions.push({ name: `segmented loading ${faction} ${dimension.width}x${dimension.height}${reducedMotion ? ' Reduced Motion' : ''}`, status: 'FAIL', error: error?.message || String(error) });
+    manifest.errors.push(error?.stack || error?.message || String(error));
+  } finally {
+    if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
+    await context.close();
+  }
 }
 
 async function readMenuContract(page, faction, dimension) {
@@ -902,6 +1161,14 @@ async function main() {
       for (const dimension of DIMENSIONS) {
         await runSetupCase(browser, baseUrl, output, faction, dimension, manifest);
       }
+    }
+    for (const faction of FACTIONS) {
+      for (const dimension of DIMENSIONS) {
+        await runLoadingCase(browser, baseUrl, output, faction, dimension, manifest);
+      }
+    }
+    for (const faction of FACTIONS) {
+      await runLoadingCase(browser, baseUrl, output, faction, { width: 1366, height: 1024 }, manifest, { reducedMotion: true });
     }
     await runPanelEvidence(browser, baseUrl, output, manifest);
     await runTouchContract(browser, baseUrl, manifest);

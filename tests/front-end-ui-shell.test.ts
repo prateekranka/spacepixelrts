@@ -3,6 +3,12 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  createLoadingSegmentMarkup,
+  LOADING_SEGMENT_COUNT,
+  loadingSegmentCount,
+  loadingSegmentState,
+} from '../src/loading-segments';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const uiRoot = path.join(repoRoot, 'public', 'front-end-ui');
@@ -10,8 +16,10 @@ const fontsRoot = path.join(uiRoot, 'fonts');
 const iconsRoot = path.join(uiRoot, 'icons');
 const shellCssPath = path.join(repoRoot, 'public', 'front-end-shell.css');
 const startScreenPath = path.join(repoRoot, 'src', 'start-screen.ts');
+const mainPath = path.join(repoRoot, 'src', 'main.ts');
 const shellCss = readFileSync(shellCssPath, 'utf8');
 const startScreen = readFileSync(startScreenPath, 'utf8');
+const mainSource = readFileSync(mainPath, 'utf8');
 
 const requiredFonts = [
   'PixelifySans-Bold.woff2',
@@ -198,7 +206,7 @@ assert.doesNotMatch(mainMenuCss, /\btranslate(?:X|Y)?\([^)]*\.\d/);
 assert.doesNotMatch(mainMenuCss, /\b(?:ease|ease-in|ease-out)\b/i);
 
 const setupPanelCssStart = mainMenuCssEnd;
-const setupPanelCssEnd = shellCss.indexOf('/* FPE-4 LEGACY LOADING RULES');
+const setupPanelCssEnd = shellCss.indexOf('/* FPE-4 SEGMENTED LOADING COMMAND PANEL');
 assert.ok(setupPanelCssStart >= 0 && setupPanelCssEnd > setupPanelCssStart, 'setup/panel CSS section is explicitly bounded');
 const setupPanelCss = shellCss.slice(setupPanelCssStart, setupPanelCssEnd);
 assert.doesNotMatch(shellCss, /FPE-3 LEGACY SETUP AND PANELS/i, 'FPE-3 legacy marker is removed');
@@ -233,11 +241,56 @@ for (const action of ['tutorial', 'factions', 'settings', 'records', 'history', 
   assert.match(startScreen, new RegExp(`['"]${action}['"]`), `${action} panel action remains present`);
 }
 
-const fpe4Marker = '/* FPE-4 LEGACY LOADING RULES';
-assert.equal((shellCss.match(/FPE-\d+ LEGACY/g) ?? []).length, 1, 'loading is the only explicitly scoped legacy surface');
-assert.equal((shellCss.match(new RegExp(fpe4Marker.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&'), 'g')) ?? []).length, 1);
-assert.doesNotMatch(shellCss.slice(0, setupPanelCssEnd), /\bLEGACY\b/i, 'pre-loading production sections have no legacy marker');
-assert.match(shellCss.slice(setupPanelCssEnd), /\.front-loading-screen/);
+const loadingCssStart = shellCss.indexOf('/* FPE-4 SEGMENTED LOADING COMMAND PANEL');
+assert.ok(loadingCssStart === setupPanelCssEnd, 'segmented loading CSS section is explicitly bounded');
+const loadingCss = shellCss.slice(loadingCssStart);
+assert.doesNotMatch(shellCss, /FPE-\d+ LEGACY/i, 'no FPE legacy marker remains in production CSS');
+assert.doesNotMatch(productionSource, /FPE-\d+ LEGACY/i, 'no FPE legacy marker remains in production source');
+
+const segmentMarkup = createLoadingSegmentMarkup();
+assert.equal(LOADING_SEGMENT_COUNT, 16, 'loading strip has exactly 16 segments');
+assert.equal((segmentMarkup.match(/class="front-loading-segment"/g) ?? []).length, 16, 'pure loading helper emits exactly 16 segment elements');
+assert.equal((segmentMarkup.match(/<span\b/g) ?? []).length, 16, 'loading helper emits real span elements');
+assert.equal((segmentMarkup.match(/<i\b/g) ?? []).length, 0, 'loading helper has no legacy continuous child');
+assert.deepEqual(
+  [1, 2, 3].map((stage) => loadingSegmentCount(stage as 1 | 2 | 3)),
+  [4, 10, 16],
+  'loading stages use complete segment states only',
+);
+assert.equal(loadingSegmentState(1, 3), 'active');
+assert.equal(loadingSegmentState(2, 9), 'active');
+assert.equal(loadingSegmentState(3, 15), 'complete');
+assert.equal(loadingSegmentState(3, 16), 'future');
+assert.match(mainSource, /createLoadingSegmentMarkup\(\)/);
+assert.match(mainSource, /function markLoadingScreenCreated\(\)/);
+assert.match(mainSource, /function markLoadingSceneReady\(\)/);
+assert.match(mainSource, /function markLoadingMatchReady\(\)/);
+assert.match(mainSource, /new MutationObserver\(checkReady\)/);
+assert.match(mainSource, /disconnectLoadingSceneObserver\(\)/);
+assert.match(mainSource, /loadingScreenCreated/);
+assert.match(mainSource, /loadingSceneReady/);
+assert.match(mainSource, /loadingMatchReady/);
+assert.doesNotMatch(mainSource, /aria-valuenow|role="progressbar"/i, 'loading does not claim a fake numeric progress value');
+assert.doesNotMatch(mainSource, /front-loading-track|<i\b|Math\.random|setTimeout\s*\(/, 'loading has no legacy bar, random progress, or artificial delay');
+assert.doesNotMatch(loadingCss, /front-loading-track|front-loading-progress|scaleX|(?:^|[;\s])width:\s*\d+%/i, 'loading has no continuous progress child or scale animation');
+assert.match(loadingCss, /\.front-loading-card[\s\S]*width:\s*704px[\s\S]*height:\s*152px/);
+assert.match(loadingCss, /\.front-loading-card[\s\S]*border:\s*2px\s+solid/);
+assert.match(loadingCss, /\.front-loading-card::before[\s\S]*border:\s*1px\s+solid/);
+assert.match(loadingCss, /\.front-loading-card[\s\S]*box-shadow:\s*4px\s+4px\s+0/);
+assert.match(loadingCss, /\.front-loading-card[\s\S]*clip-path:\s*polygon\(8px\s+0/);
+assert.match(loadingCss, /\.front-loading-segment-track[\s\S]*grid-template-columns:\s*repeat\(16/);
+assert.match(loadingCss, /\.front-loading-segment-track[\s\S]*gap:\s*4px/);
+assert.match(loadingCss, /\.front-loading-segment-track[\s\S]*border:\s*2px\s+solid/);
+assert.match(loadingCss, /\.front-loading-kicker[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(loadingCss, /\.front-loading-card h1[\s\S]*font-family:\s*var\(--font-display\)/);
+assert.match(loadingCss, /\.front-loading-meta[\s\S]*font-family:\s*var\(--font-body\)/);
+assert.match(loadingCss, /\.front-loading-tip[\s\S]*font-family:\s*var\(--font-body\)/);
+assert.match(loadingCss, /animation:\s*front-loading-segment-blink\s+800ms\s+steps\(2, end\)/);
+assert.match(loadingCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*front-loading-segment\[data-state="active"\][\s\S]*animation:\s*none/);
+assert.doesNotMatch(loadingCss, /backdrop-filter|filter\s*:\s*blur|(?:linear|radial|conic)-gradient|cubic-bezier|Trebuchet|Segoe|Arial|generic sans-serif/i, 'loading CSS uses the production pixel bans');
+assert.doesNotMatch(shellCss, /backdrop-filter|filter\s*:\s*blur|(?:linear|radial|conic)-gradient|cubic-bezier|Trebuchet|Segoe UI|Arial|fonts\.(?:googleapis|gstatic)\.com/i, 'full front-end shell has no banned glass, gradient, font, or CDN treatment');
+assert.doesNotMatch(shellCss, /box-shadow\s*:[^;]*(?:blur|\d+px\s+\d+px\s+\d+px)/i, 'full front-end shell uses hard shadows only');
+assert.doesNotMatch(shellCss, /front-loading-card[^}]*font-family:\s*["'](?:Trebuchet|Segoe)/i, 'old loading font is gone');
 
 const baselineCommit = '645b0ec';
 execFileSync('git', ['cat-file', '-e', `${baselineCommit}^{commit}`], { cwd: repoRoot });
@@ -258,4 +311,4 @@ for (const relativePath of protectedFiles) {
   assert.deepEqual(current, baseline, `${relativePath} is unchanged from ${baselineCommit}`);
 }
 
-console.log('FPE-3 pixel front-end shell tests: PASS');
+console.log('FPE-4 pixel front-end shell tests: PASS');

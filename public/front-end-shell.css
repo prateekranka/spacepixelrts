@@ -1818,8 +1818,8 @@ input:focus-visible {
     transition: none !important;
   }
 }
-/* FPE-4 LEGACY LOADING RULES
-   The loading lifecycle and scene compositor remain unchanged for this phase. */
+/* FPE-4 SEGMENTED LOADING COMMAND PANEL
+   Loading remains a real scene overlaid by one opaque, discrete command frame. */
 .front-loading-screen {
   position: absolute;
   inset: 0;
@@ -1828,79 +1828,207 @@ input:focus-visible {
   place-items: end center;
   box-sizing: border-box;
   overflow: hidden;
-  padding: max(28px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(30px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
-  color: #f7f1df;
-  background-color: #080a12;
-  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-  --scene-accent: #f6c95f;
-}
-
-.front-loading-screen[data-scene-id='gravemark-quarry'] {
-  --scene-accent: #81c8bb;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  color: var(--px-text);
+  background-color: var(--px-black);
+  font-family: var(--font-body);
 }
 
 .front-loading-card {
   position: relative;
   z-index: 2;
   box-sizing: border-box;
-  width: min(52vw, 660px);
-  min-width: min(520px, calc(100vw - 56px));
-  padding: 18px 22px 20px;
-  border: 1px solid var(--scene-accent, #f6c95f);
-  background-color: rgb(8 10 18 / 94%);
-  box-shadow: 6px 6px 0 #000;
+  width: 704px;
+  height: 152px;
+  max-width: calc(100vw - 48px);
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  border: 2px solid var(--px-border-mid);
+  background-color: var(--px-panel);
+  box-shadow: 4px 4px 0 var(--px-border-dark);
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
   text-align: left;
 }
 
-.front-loading-card p {
+.front-loading-card::before {
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  content: "";
+  border: 1px solid var(--px-border-mid);
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  pointer-events: none;
+}
+
+.front-loading-content {
+  position: relative;
+  z-index: 1;
+  width: 640px;
+  max-width: 100%;
+  height: 100%;
+  margin: 0 auto;
+}
+
+.front-loading-kicker {
   margin: 0;
-  color: var(--scene-accent, #f6c95f);
-  font-size: 10px;
-  letter-spacing: .22em;
+  color: var(--civ-primary);
+  font-family: var(--font-interface);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .front-loading-card h1 {
-  margin: 7px 0 5px;
-  font-size: clamp(24px, 3vw, 38px);
-  font-weight: 600;
-  letter-spacing: .03em;
+  margin: 0;
+  color: var(--px-text);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 28px;
+  letter-spacing: .04em;
+  text-shadow: 2px 2px 0 var(--px-border-dark);
 }
 
-.front-loading-card div,
-.front-loading-card small {
-  color: #b9c4cc;
-  font-size: 12px;
-}
-
-.front-loading-track {
-  display: block;
-  height: 4px;
-  margin: 15px 0 11px;
+.front-loading-meta {
+  margin: 4px 0 0;
   overflow: hidden;
-  background-color: rgb(185 196 204 / 18%);
+  color: var(--px-text-muted);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 16px;
+  letter-spacing: .02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.front-loading-track i {
+.front-loading-meta [data-loading-civilization],
+.front-loading-meta [data-loading-difficulty] {
+  color: var(--civ-bright);
+}
+
+.front-loading-segment-track {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 4px;
+  width: 640px;
+  max-width: 100%;
+  height: 20px;
+  margin: 8px 0 0;
+  box-sizing: border-box;
+  border: 2px solid var(--px-border-mid);
+  background-color: var(--px-ink);
+}
+
+.front-loading-segment {
+  position: relative;
+  align-self: center;
   display: block;
-  width: 64%;
-  height: 100%;
-  background-color: var(--scene-accent, #f6c95f);
-  transform-origin: left center;
-  animation: front-loading-progress 1.2s steps(12, end) infinite alternate;
+  min-width: 0;
+  height: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--px-border-mid);
+  background-color: #1a2635;
 }
 
-@keyframes front-loading-progress {
-  from { transform: scaleX(.58); }
-  to { transform: scaleX(1); }
+.front-loading-segment::after {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  left: 2px;
+  height: 2px;
+  content: "";
+  background-color: #2a394b;
+}
+
+.front-loading-segment[data-state="complete"],
+.front-loading-segment[data-state="active"] {
+  border-color: var(--civ-primary);
+  background-color: var(--civ-primary);
+  box-shadow: inset 0 -4px 0 var(--civ-shadow);
+}
+
+.front-loading-segment[data-state="complete"]::after,
+.front-loading-segment[data-state="active"]::after {
+  background-color: var(--civ-bright);
+}
+
+.front-loading-segment[data-state="active"] {
+  animation: front-loading-segment-blink 800ms steps(2, end) infinite;
+}
+
+@keyframes front-loading-segment-blink {
+  from { opacity: 1; }
+  to { opacity: .68; }
+}
+
+.front-loading-tip {
+  margin: 8px 0 0;
+  color: var(--px-text-muted);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.front-loading-sigil-cell {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  border: 2px solid var(--civ-primary);
+  background-color: var(--px-panel-raised);
+}
+
+.front-loading-sigil {
+  display: block;
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .front-loading-track i { animation: none; }
+  .front-loading-segment[data-state="active"] {
+    animation: none;
+  }
 }
 
-@media (max-width: 900px), (max-height: 720px) {
+@media (max-height: 820px) {
   .front-loading-card {
-    width: min(70vw, 620px);
-    padding: 14px 18px 16px;
+    height: 144px;
+    padding: 8px 16px;
+  }
+
+  .front-loading-kicker {
+    font-size: 10px;
+  }
+
+  .front-loading-card h1 {
+    font-size: 24px;
+    line-height: 24px;
+  }
+
+  .front-loading-segment-track {
+    margin-top: 4px;
+  }
+
+  .front-loading-tip {
+    margin-top: 4px;
+  }
+
+  .front-loading-sigil-cell {
+    top: 12px;
+  }
+}
+
+@media (max-width: 900px) {
+  .front-loading-card {
+    width: min(704px, calc(100vw - 48px));
   }
 }

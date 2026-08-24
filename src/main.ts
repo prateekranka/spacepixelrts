@@ -32,6 +32,11 @@ import {
   type PlayerProfile,
 } from './player-profile';
 import { mountFrontEndScene, type FrontEndSceneController } from './front-end-scene';
+import {
+  createLoadingSegmentMarkup,
+  loadingSegmentState,
+  type LoadingStage,
+} from './loading-segments';
 
 const VERSION = '0.12.0-front-end';
 const hostNode = document.getElementById('app');
@@ -59,6 +64,7 @@ let hud: Hud | null = null;
 let startScreen: StartScreen | null = null;
 let loadingScreen: HTMLDivElement | null = null;
 let loadingScene: FrontEndSceneController | null = null;
+let loadingSceneReadyObserver: MutationObserver | null = null;
 let matchResetCount = 0;
 let matchStartInFlight = false;
 let terminalStateDispatched = false;
@@ -209,11 +215,13 @@ async function startConfiguredMatch(config: MatchConfig): Promise<void> {
     await nextAnimationFrame();
     await nextAnimationFrame();
     prepareMatch(activeConfig);
+    markLoadingMatchReady();
     publish();
     await nextAnimationFrame();
     if (!qaHoldLoading) flow.dispatch('LOAD_READY');
   } catch (error) {
     console.error('Starhaven: match initialization failed', error);
+    disconnectLoadingSceneObserver();
     flow.dispatch('LOAD_FAILED');
   } finally {
     matchStartInFlight = false;
@@ -250,44 +258,126 @@ function showLoadingScreen(): void {
   const seedLabel = activeConfig.seedMode === 'deterministic'
     ? `Deterministic seed ${activeConfig.seed >>> 0}`
     : `Random seed ${activeConfig.seed >>> 0}`;
+  const sigil = activeConfig.playerFaction === 'sunweaver'
+    ? '/front-end-ui/icons/sunweaver-sigil.svg'
+    : '/front-end-ui/icons/gravemark-sigil.svg';
   const root = document.createElement('div');
   root.className = 'front-loading-screen';
+  root.dataset.civ = activeConfig.playerFaction;
+  root.dataset.loadingScreenCreated = 'false';
+  root.dataset.loadingSceneReady = 'false';
+  root.dataset.loadingMatchReady = 'false';
   root.setAttribute('role', 'status');
   root.setAttribute('aria-live', 'polite');
   root.setAttribute('aria-label', `Loading Helios Rift for ${faction}`);
   root.innerHTML = `
-    <section class="front-loading-card">
-      <p>STARHAVEN // HELIOS RIFT</p>
-      <h1>Preparing skirmish</h1>
-      <div>${faction} · ${difficulty} · ${seedLabel}</div>
-      <span class="front-loading-track" aria-hidden="true"><i></i></span>
-      <small>Survey the center before you commit your first production line.</small>
+    <section class="front-loading-card" data-civ="${activeConfig.playerFaction}" aria-labelledby="front-loading-title">
+      <div class="front-loading-content">
+        <p class="front-loading-kicker">STARHAVEN // HELIOS RIFT</p>
+        <h1 id="front-loading-title">PREPARING SKIRMISH</h1>
+        <p class="front-loading-meta" data-loading-meta>
+          <span data-loading-civilization>${faction}</span>
+          <span aria-hidden="true"> · </span>
+          <span data-loading-difficulty>${difficulty}</span>
+          <span aria-hidden="true"> · </span>
+          <span data-loading-seed>${seedLabel}</span>
+        </p>
+        <div class="front-loading-segment-track" data-loading-segments role="group" aria-label="Skirmish preparation stages">
+          ${createLoadingSegmentMarkup()}
+        </div>
+        <p class="front-loading-tip" data-loading-tip>Survey the center before you commit your first production line.</p>
+      </div>
+      <span class="front-loading-sigil-cell" data-faction-sigil>
+        <img class="front-loading-sigil px-image" src="${sigil}" alt="" aria-hidden="true" />
+      </span>
     </section>`;
   host.append(root);
   loadingScreen = root;
+  markLoadingScreenCreated();
   loadingScene = mountFrontEndScene(root, {
     faction: activeConfig.playerFaction,
     mode: 'loading',
     reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   });
+  observeLoadingSceneReady();
 }
 
 function hideLoadingScreen(): void {
+  disconnectLoadingSceneObserver();
   loadingScene?.destroy();
   loadingScene = null;
   loadingScreen?.remove();
   loadingScreen = null;
 }
 
+function disconnectLoadingSceneObserver(): void {
+  loadingSceneReadyObserver?.disconnect();
+  loadingSceneReadyObserver = null;
+}
+
+function setLoadingStage(stage: LoadingStage): void {
+  if (!loadingScreen) return;
+  const current = Number(loadingScreen.dataset.loadingStage || 0);
+  const history = loadingScreen.dataset.loadingStageHistory?.split(',').filter(Boolean) ?? [];
+  if (!history.includes(String(stage))) history.push(String(stage));
+  loadingScreen.dataset.loadingStageHistory = history.join(',');
+  if (stage < current) return;
+  loadingScreen.dataset.loadingStage = String(stage);
+  const segments = loadingScreen.querySelectorAll<HTMLElement>('.front-loading-segment');
+  segments.forEach((segment, index) => {
+    segment.dataset.state = loadingSegmentState(stage, index);
+  });
+}
+
+function markLoadingScreenCreated(): void {
+  if (!loadingScreen) return;
+  loadingScreen.dataset.loadingScreenCreated = 'true';
+  setLoadingStage(1);
+}
+
+function markLoadingSceneReady(): void {
+  if (!loadingScreen) return;
+  loadingScreen.dataset.loadingSceneReady = 'true';
+  setLoadingStage(2);
+}
+
+function markLoadingMatchReady(): void {
+  if (!loadingScreen) return;
+  loadingScreen.dataset.loadingMatchReady = 'true';
+  setLoadingStage(3);
+}
+
+function observeLoadingSceneReady(): void {
+  disconnectLoadingSceneObserver();
+  const sceneRoot = loadingScene?.root;
+  if (!sceneRoot) return;
+  const checkReady = (): void => {
+    if (sceneRoot.dataset.artError && sceneRoot.dataset.artError !== 'loading') {
+      disconnectLoadingSceneObserver();
+      return;
+    }
+    if (sceneRoot.dataset.artReady === 'true') markLoadingSceneReady();
+  };
+  checkReady();
+  loadingSceneReadyObserver = new MutationObserver(checkReady);
+  loadingSceneReadyObserver.observe(sceneRoot, {
+    attributes: true,
+    attributeFilter: ['data-art-ready', 'data-art-error'],
+  });
+}
+
 function dispatchAppEvent(event: AppEvent): TransitionResult {
   if (event === 'LOAD_READY' && !world) {
     try {
       prepareMatch(activeConfig);
+      markLoadingMatchReady();
     } catch (error) {
       console.error('Starhaven: QA match initialization failed', error);
+      disconnectLoadingSceneObserver();
       return flow.dispatch('LOAD_FAILED');
     }
   }
+  if (event === 'LOAD_READY') markLoadingMatchReady();
   return flow.dispatch(event);
 }
 
