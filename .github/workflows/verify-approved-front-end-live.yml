@@ -1,0 +1,55 @@
+name: Verify Approved Front End Live
+
+on:
+  push:
+    branches: [chatgpt/verify-approved-front-end-live]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live:
+    name: Cloudflare production approved-art matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out production-equivalent branch
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for approved-art production asset
+        run: |
+          for attempt in $(seq 1 24); do
+            if curl -fsS https://spacepixelrts.pages.dev/approved-front-art.css | grep -q 'front-approved-art-ready'; then
+              echo "Approved front end visible on attempt $attempt"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Approved art asset is not live"
+          exit 1
+
+      - name: Verify live menu and loading variants
+        run: npm run qa:front-end-themes -- --url=https://spacepixelrts.pages.dev --out=/tmp/starhaven-approved-live
+
+      - name: Upload live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starhaven-approved-front-end-live
+          path: /tmp/starhaven-approved-live
+          if-no-files-found: warn
+          retention-days: 14
