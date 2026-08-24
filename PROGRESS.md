@@ -54,6 +54,13 @@ Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`). P
 - Baseline gates pass: `test:m0`, `test:aaa`, build, and `qa:aaa`; four 1920 × 1080 captures, 0 console errors. Evidence: `/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/baseline/`.
 - Frozen DOM visual contract: `docs/PIXEL_FRONT_END_SYSTEM.md`. Single biggest gap: smooth web-dashboard UI over accepted pixel-art scenes. Implementation will replace the shell without changing gameplay or authored scene packs.
 
+### FPE-1 — local pixel UI foundation (2026-08-25) — COMPLETE
+
+- Bundled Pixelify Sans Bold, Silkscreen Regular/Bold, and Kode Mono Regular/Medium as local WOFF2 files, each under the SIL Open Font License 1.1; retained the upstream `OFL.txt` text and pinned source/hash provenance in `public/front-end-ui/PROVENANCE.md`.
+- Added six authored integer-grid SVG assets for Records, Match History, Tech Codex, Dispatches, Sunweaver, and Gravemark. Utility controls remain real labeled buttons, and existing faction/profile/panel callbacks are unchanged.
+- Verification: `npm run test:pixel-front-end`, `npm run test:m0`, `npm run test:aaa`, `npm run build`, and `git diff --check` all PASS. Protected `src/sim.ts`, `src/engine.ts`, and civilization assets remain byte-identical to `645b0ec`.
+- Limitation: the existing loading rules and injected start-screen CSS still contain the pre-FPE-1 smooth shell treatment; this phase adds the shared foundation and assets only, and does not claim the later FPE-2/FPE-4 whole-shell restyle is complete.
+
 ## Front-end rebuild (2026-08-24)
 
 - Replaced the four filtered copies of one flattened menu painting with two faction-owned 960 × 540

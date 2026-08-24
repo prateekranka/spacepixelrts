@@ -39,7 +39,7 @@ interface FactionSummary {
   id: FactionId;
   name: string;
   accent: string;
-  sigil: string;
+  sigilSrc: string;
   summary: string;
 }
 
@@ -48,14 +48,14 @@ const FACTIONS: Readonly<Record<FactionId, FactionSummary>> = {
     id: 'sunweaver',
     name: 'Sunweaver',
     accent: P.amber,
-    sigil: '✦',
+    sigilSrc: '/front-end-ui/icons/sunweaver-sigil.svg',
     summary: 'Mobility, information, energy efficiency, elite precision.',
   },
   gravemark: {
     id: 'gravemark',
     name: 'Gravemark',
     accent: P.ice,
-    sigil: '◌',
+    sigilSrc: '/front-end-ui/icons/gravemark-sigil.svg',
     summary: 'Extraction, armor, heavy production, positional control.',
   },
 };
@@ -146,10 +146,10 @@ export class StartScreen {
             </button>
           </nav>
           <nav class="utility-dock" aria-label="Starhaven utilities">
-            ${this.utilityButton('records', 'Records', '▦')}
-            ${this.utilityButton('history', 'Match History', '◷')}
-            ${this.utilityButton('codex', 'Tech Codex', '✧')}
-            ${this.utilityButton('dispatches', 'Dispatches', '✉')}
+            ${this.utilityButton('records', 'Records', '/front-end-ui/icons/records.svg')}
+            ${this.utilityButton('history', 'Match History', '/front-end-ui/icons/history.svg')}
+            ${this.utilityButton('codex', 'Tech Codex', '/front-end-ui/icons/codex.svg')}
+            ${this.utilityButton('dispatches', 'Dispatches', '/front-end-ui/icons/dispatches.svg')}
           </nav>
           <footer class="start-footer">
             <span>STARHAVEN // HELIOS RIFT</span><span>RECON · CLAIM · ADAPT</span>
@@ -332,11 +332,11 @@ export class StartScreen {
     this.renderPanelIfOpen();
   }
 
-  private utilityButton(action: PanelKind, label: string, glyph: string): string {
+  private utilityButton(action: PanelKind, label: string, iconSrc: string): string {
     const badge = action === 'dispatches'
       ? '<span class="utility-badge" data-dispatch-badge hidden aria-label="Unread dispatches">NEW</span>'
       : '';
-    return `<button type="button" class="utility-button" data-start-action="${action}" title="${label}" aria-label="${label}"><span class="utility-icon" aria-hidden="true">${glyph}</span><span class="sr-only">${label}</span>${badge}</button>`;
+    return `<button type="button" class="utility-button" data-start-action="${action}" title="${label}" aria-label="${label}"><span class="utility-icon px-image" style="--px-icon-src:url('${iconSrc}')" aria-hidden="true"></span><span class="sr-only">${label}</span>${badge}</button>`;
   }
 
   private renderProfile(): void {
@@ -344,7 +344,7 @@ export class StartScreen {
     const fastest = this.profile.fastestVictoryMs === null
       ? '—'
       : `${Math.round(this.profile.fastestVictoryMs / 1000)}s`;
-    this.profileBadge.innerHTML = `<span class="profile-sigil" style="--faction-accent:${faction.accent}" aria-hidden="true">${faction.sigil}</span><span><small>COMMANDER PROFILE</small><strong>${faction.name}</strong><em>${this.profile.wins} wins · ${this.profile.matchesPlayed} matches · best ${fastest}</em></span>`;
+    this.profileBadge.innerHTML = `<span class="profile-sigil" aria-hidden="true" style="--faction-accent:${faction.accent}"><span class="px-icon-art px-image" style="--px-icon-src:url('${faction.sigilSrc}')"></span></span><span><small>COMMANDER PROFILE</small><strong>${faction.name}</strong><em>${this.profile.wins} wins · ${this.profile.matchesPlayed} matches · best ${fastest}</em></span>`;
     const badge = this.root.querySelector<HTMLElement>('[data-dispatch-badge]');
     if (badge) badge.hidden = this.profile.lastSeenDispatchVersion >= CURRENT_DISPATCH_VERSION;
   }
@@ -504,7 +504,7 @@ export class StartScreen {
     const target = this.root.querySelector<HTMLElement>(selector)!;
     target.dataset.faction = factionId;
     target.innerHTML = `
-      <span class="faction-sigil" style="--faction-accent:${faction.accent}">${faction.sigil}</span>
+      <span class="faction-sigil" aria-hidden="true" style="--faction-accent:${faction.accent}"><span class="px-icon-art px-image" style="--px-icon-src:url('${faction.sigilSrc}')"></span></span>
       <span><small>${kicker}</small><strong>${faction.name}</strong><p>${faction.summary}</p></span>`;
   }
 
@@ -534,7 +534,7 @@ export class StartScreen {
       title.textContent = 'Two ways to take the Rift';
       content.innerHTML = `<div class="faction-list">${Object.values(FACTIONS).map((faction) => `
         <button type="button" class="faction-row faction-choice" data-faction-choice="${faction.id}" aria-pressed="${this.profile.preferredFaction === faction.id}">
-          <span class="faction-sigil" style="--faction-accent:${faction.accent}" aria-hidden="true">${faction.sigil}</span>
+          <span class="faction-sigil" aria-hidden="true" style="--faction-accent:${faction.accent}"><span class="px-icon-art px-image" style="--px-icon-src:url('${faction.sigilSrc}')"></span></span>
           <span class="faction-copy"><strong>${faction.name}</strong><p>${faction.summary}</p><small>${this.profile.preferredFaction === faction.id ? 'SELECTED FOR NEXT SKIRMISH' : 'CHOOSE AS PREFERRED FACTION'}</small></span>
         </button>`).join('')}</div><p class="panel-note">Your choice changes the front-end scene. It does not start a match.</p>`;
     } else if (kind === 'settings') {
@@ -631,8 +631,8 @@ const START_SCREEN_CSS = `
 .menu-view{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,430px);grid-template-rows:auto 1fr auto auto;gap:clamp(16px,3vh,30px) clamp(30px,6vw,96px);align-items:center;flex:1}
 .menu-view[hidden],.setup-view[hidden],.start-panel[hidden],[hidden]{display:none!important}
 .menu-scene{position:fixed;inset:0;z-index:0;overflow:hidden;background:${P.deep}}.menu-scene:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 0 42%,${P.ink}55 72%,${P.ink}ee 100%)}.menu-scene canvas{display:block;width:100%;height:100%}.menu-view>:not(.menu-scene){position:relative;z-index:1}
-.menu-copy{grid-column:2;grid-row:1}.profile-badge{display:flex;align-items:center;gap:10px;margin-top:22px;padding:9px 10px;border:1px solid ${P.muted}33;background:${P.deep}99}.profile-badge small{display:block;color:${P.muted};font-size:8px;letter-spacing:.14em}.profile-badge strong{display:block;margin-top:2px;font-size:12px}.profile-badge em{display:block;margin-top:3px;color:${P.muted};font-size:9px;font-style:normal}.profile-sigil{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--faction-accent);border-radius:50%;color:var(--faction-accent);font-size:17px}
-.utility-dock{grid-column:1;grid-row:3;justify-self:start;display:grid;grid-template-columns:repeat(4,52px);gap:8px;padding:8px;border:1px solid ${P.muted}33;background:${P.ink}b8;backdrop-filter:blur(6px)}.utility-button{position:relative;display:grid;place-items:center;min-width:52px;min-height:52px;padding:0;border:1px solid ${P.muted}55;border-radius:3px;background:${P.ink}dd;color:${P.ice};font:inherit;cursor:pointer;touch-action:manipulation;transition:border-color .16s ease,background .16s ease,transform .16s ease}.utility-button:hover{border-color:${P.amber};background:${P.plum}}.utility-button:active{transform:translateY(1px);background:${P.rust}}.utility-icon{font-size:21px;line-height:1}.utility-badge{position:absolute;top:3px;right:3px;padding:2px 4px;border-radius:2px;background:${P.coral};color:${P.ink};font-size:7px;font-weight:700;letter-spacing:.08em}
+.menu-copy{grid-column:2;grid-row:1}.profile-badge{display:flex;align-items:center;gap:10px;margin-top:22px;padding:9px 10px;border:1px solid ${P.muted}33;background:${P.deep}99}.profile-badge small{display:block;color:${P.muted};font-size:8px;letter-spacing:.14em}.profile-badge strong{display:block;margin-top:2px;font-size:12px}.profile-badge em{display:block;margin-top:3px;color:${P.muted};font-size:9px;font-style:normal}.profile-sigil{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--faction-accent);border-radius:50%;color:var(--faction-accent);font-size:17px}.profile-sigil .px-icon-art,.faction-sigil .px-icon-art{display:block;width:26px;height:26px;background:currentColor}
+.utility-dock{grid-column:1;grid-row:3;justify-self:start;display:grid;grid-template-columns:repeat(4,52px);gap:8px;padding:8px;border:1px solid ${P.muted}33;background:${P.ink}b8;backdrop-filter:blur(6px)}.utility-button{position:relative;display:grid;place-items:center;min-width:52px;min-height:52px;padding:0;border:1px solid ${P.muted}55;border-radius:3px;background:${P.ink}dd;color:${P.ice};font:inherit;cursor:pointer;touch-action:manipulation;transition:border-color .16s ease,background .16s ease,transform .16s ease}.utility-button:hover{border-color:${P.amber};background:${P.plum}}.utility-button:active{transform:translateY(1px);background:${P.rust}}.utility-icon{display:block;width:20px;height:20px;background:currentColor;mask-image:var(--px-icon-src);mask-position:center;mask-repeat:no-repeat;mask-size:contain;-webkit-mask-image:var(--px-icon-src);-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;-webkit-mask-size:contain}.utility-badge{position:absolute;top:3px;right:3px;padding:2px 4px;border-radius:2px;background:${P.coral};color:${P.ink};font-size:7px;font-weight:700;letter-spacing:.08em}
 .start-kicker{margin:0;color:${P.amber};font-size:10px;letter-spacing:.22em;text-transform:uppercase}
 .start-heading h1{margin:14px 0 12px;font-size:clamp(56px,6vw,84px);line-height:.86;letter-spacing:.03em;text-transform:uppercase;text-shadow:0 5px 0 ${P.rust}88,0 0 28px ${P.amber}22}
 .start-promise{margin:0;color:${P.ice};font-size:clamp(17px,2vw,23px)}.start-note{color:${P.muted};font-size:13px}

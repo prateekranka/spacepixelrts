@@ -1,3 +1,114 @@
+/* FPE-1 shared pixel UI foundation. The existing loading rules below remain
+   intentionally unchanged until the later shell restyle phases. */
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("/front-end-ui/fonts/PixelifySans-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Silkscreen";
+  src: url("/front-end-ui/fonts/Silkscreen-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Silkscreen";
+  src: url("/front-end-ui/fonts/Silkscreen-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kode Mono";
+  src: url("/front-end-ui/fonts/KodeMono-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kode Mono";
+  src: url("/front-end-ui/fonts/KodeMono-Medium.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+:root {
+  --px-black: #05070c;
+  --px-ink: #090d15;
+  --px-panel: #0d1420;
+  --px-panel-raised: #131b29;
+  --px-border-dark: #020408;
+  --px-border-mid: #39485c;
+  --px-text: #f1ead8;
+  --px-text-muted: #a6b0bd;
+  --px-disabled: #59616d;
+  --px-grid: 4px;
+  --px-border-1: 1px;
+  --px-border-2: 2px;
+  --px-border-4: 4px;
+  --px-control-shadow: 4px 4px 0 var(--px-border-dark);
+  --px-panel-shadow: 6px 6px 0 var(--px-border-dark);
+  --px-focus-ring: 2px solid var(--civ-bright, var(--px-text));
+  --px-focus-gap: 2px;
+  --font-display: "Pixelify Sans", monospace;
+  --font-interface: "Silkscreen", monospace;
+  --font-body: "Kode Mono", monospace;
+}
+
+[data-civ="sunweaver"],
+[data-faction="sunweaver"] {
+  --civ-primary: #f3b83f;
+  --civ-bright: #ffe8a4;
+  --civ-secondary: #75d7df;
+  --civ-warning: #e37d48;
+  --civ-shadow: #6d4315;
+}
+
+[data-civ="gravemark"],
+[data-faction="gravemark"] {
+  --civ-primary: #76d5df;
+  --civ-bright: #cafaff;
+  --civ-secondary: #6f9b82;
+  --civ-warning: #e37d48;
+  --civ-shadow: #193a43;
+}
+
+.px-border {
+  border: var(--px-border-2) solid var(--px-border-mid);
+}
+
+.px-hard-shadow-control {
+  box-shadow: var(--px-control-shadow);
+}
+
+.px-hard-shadow-panel {
+  box-shadow: var(--px-panel-shadow);
+}
+
+.px-focus:focus-visible,
+.px-focusable:focus-visible {
+  outline: var(--px-focus-ring);
+  outline-offset: var(--px-focus-gap);
+}
+
+.px-image {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.px-hidden,
+[hidden] {
+  display: none !important;
+}
+
 .front-loading-screen {
   position: absolute;
   inset: 0;
