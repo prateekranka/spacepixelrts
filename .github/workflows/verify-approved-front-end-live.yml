@@ -3,6 +3,8 @@ name: Verify Approved Front End Live
 on:
   push:
     branches: [chatgpt/verify-approved-front-end-live]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
