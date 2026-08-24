@@ -335,7 +335,15 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   unchanged. Independent VS5/progression/touch/AI/build gates pass. Fresh Sol repaired five-frame
   chain: **PASS**. Residual: Solar Strider cost wraps tightly but remains readable. Evidence:
   `/home/bobbyranka/workspace/evidence/starhaven-vs5a-lead/`. VS-5 now awaits only one no-restart
-  production whole-match gate.
+  production whole-match gate. R2 final match **FAILed**: visible income/Yard/path cards passed, but
+  only one Worker reached marked orange Ore while other income depleted blue Volatiles (`40→240`);
+  final Ore222, no path/army/terminal. Luna also exceeded hard stop; browser was killed at20:11.
+- **VS-5B counted Ore-worker assignment FROZEN / ACTIVE**
+  (`docs/VS5B_ORE_WORKER_FEEDBACK.md`): guidance now must prove ordinary Ore assignment0/2→1/2→2/2
+  before funding. Exact touch instruction names Find Idle Worker, GATHER, and marked Ore; target label
+  carries the live count. No automated order or economy tuning. Strict unit/browser RED→GREEN, fresh
+  Sol, and another no-restart production match required. R2 evidence:
+  `/home/bobbyranka/workspace/evidence/starhaven-final-production-match-r2/`.
 - **Production live at accepted VS-4A assets but VS-5 pacing FAIL** (`1e22b5e`,
   `assets/main-CQGftbuI.js`): deployed to existing Pages `main`. Live readback confirmed combat atlas
   1024×256, four mappings, exact scales, draw calls5, runtime MAG0, console0, composited lineup at

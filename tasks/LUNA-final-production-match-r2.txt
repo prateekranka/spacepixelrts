@@ -1,0 +1,75 @@
+# FINAL VS Production Whole-Match Integrator R2 — Luna Max fast
+
+You are a competent first-time RTS player. Play exactly ONE production match at:
+`https://spacepixelrts.pages.dev/desktop.html`
+
+Do not inspect source, bundles, tests, repo docs, QA routes, `__STARHOLD*` globals, DevTools, or
+network internals. Do not edit the repository. Use only visible production UI and actual trusted
+pointer/touch clicks. You may use Playwright screenshots and visible DOM text as your eyes. Do not use
+state injection, resource grants, direct game methods, hidden app globals, or clicks that bypass
+visible controls.
+
+SETUP
+- viewport 1366×1024;
+- NEW SKIRMISH;
+- Sunweaver player vs Gravemark rival;
+- STANDARD;
+- FOG ON;
+- default random seed;
+- start exactly ONE match.
+
+HARD TIME RULE
+- Record wall clock immediately after entering Playing.
+- Stop all gameplay at 18:00 elapsed, even if unfinished.
+- No restart, reload, second match, second browser, or changed seed after Playing begins.
+- Visible tactical pause is allowed, but paused time counts toward 18:00.
+
+FOLLOW VISIBLE GUIDANCE
+1. Use the first visible progression instruction. Build and complete one Yard through a Worker.
+2. Put at least two Workers on the spatially marked nearby Ore node. Keep enough Workers on Charge and
+   Volatiles for the displayed costs.
+3. Prove one real resource return with a visible before→after counter.
+4. When funded, use the visible Nexus technology handoff. Verify both exact `400 Ore · 80 Charge`
+   cards are fully visible and touchable. Commit one path and wait for the real 40-second lock.
+5. Follow the visible army instruction. Train at least one Lumen Guard and one Solar Strider. Build a
+   Habitat through a Worker only if population requires it.
+6. Move the army toward the Central Lumen Field. Observe at least one real neutral/capturing/
+   controlled/contested state.
+7. Fight a real rival unit or attack its Core. Observe at least one readable combat/death event.
+8. Reach a real Victory or Defeat terminal, press CONTINUE, and inspect Results.
+9. Verify Results shows nonzero duration and truthful visible stats. Press MAIN MENU or PLAY AGAIN to
+   reach setup, but do not start a second match.
+
+EVIDENCE DIRECTORY
+`/home/bobbyranka/workspace/evidence/starhaven-final-production-match-r2/`
+
+Required files:
+- `01-opening.png`
+- `02-income.png`
+- `03-yard.png`
+- `04-path-choice.png`
+- `05-path-locked.png`
+- `06-army.png`
+- `07-lumen.png`
+- `08-battle.png`
+- `09-terminal.png`
+- `10-results.png`
+- `interaction-log.md` with wall-clock elapsed times and visible action/result only
+- `report.md`
+
+REPORT EXACTLY
+- Verdict: PASS or FAIL
+- Match elapsed time and terminal outcome, or exact state at 18:00
+- Seam table: income, Yard, path entry, path lock, mixed army, Lumen, battle, terminal, Results — each
+  PASS/FAIL + elapsed time + screenshot
+- First-income before→after resources
+- Exact path/cost/lock observed and whether both doctrine cards were fully visible
+- Units trained and whether four-unit faction art stayed legible in motion/combat
+- Lumen states observed
+- Results values seen
+- Visible browser/page errors
+- Single biggest blocker if FAIL; single biggest residual gap if PASS
+- Explicit confirmation: one match, no restart/reload/second browser/QA/state injection, stopped by18:00
+
+Do not soften failures. A terminal before technology and mixed army is FAIL. Path/army without a
+terminal by18:00 is FAIL. Do not commit, push, or deploy.
