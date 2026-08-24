@@ -3,6 +3,8 @@ name: Deploy Approved Front End
 on:
   push:
     branches: [chatgpt/deploy-approved-front-end]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
