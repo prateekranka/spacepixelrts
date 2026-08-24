@@ -7,6 +7,36 @@ skirmish before deep controls or general polish: menu -> scout -> gather -> choo
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
 
+## AAA front-end art (2026-08-24, in progress)
+
+Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`, PR #10
+base + authored packs; PR to open when green). Contract frozen:
+`docs/AAA_FRONT_END_ART_SPEC.md` + `docs/AAA_FRONT_END_INTEGRATION_SPEC.md`.
+
+- Replaces the two procedural placeholder scene packs (flat geometry) with four
+  MASTERWORK-authored illustrated packs: sunweaver menu/loading + gravemark
+  menu/loading, each a real layered stack (sky / celestial body / far terrain /
+  settlement or quarry-city / foreground / atmosphere / lights mask / ship sheets
+  / animation strips) aligned to one 1920x1080 coordinate system (`public/
+  front-end/civilizations/<civ>/<mode>/`), manifest-driven at 960x540 logical.
+- Art pipeline (lead-owned): 2 menu key-art candidates per civilization generated,
+  blind-reviewed, refined once, loading compositions matched, then per-layer
+  generated art with shared anchor geometry, chroma/black keying, body placement
+  (sun 0.28/0.26 r=0.21H; moon 0.26/0.22 r=0.17H), 1920x1080 exact export.
+  Masters + pipeline + provenance: `assets/front-end/` (README.md); local
+  composites verified: all four packs pass composition gate.
+- Sunweaver: luminous sun capital, lattice towers, suspended bridge, plaza
+  terraces, sailcraft traffic, warm white/amber/gold/cyan/indigo, calm right side.
+- Gravemark: fractured moon + cratered asteroid ring, terraced quarry-city,
+  gravity cranes, conveyors, smelter warning lights, Grav-Skimmers, heavy
+  carrier, obsidian/steel/mineral-green/ice-blue, dense crystal foregrounds.
+- No flattened image: ships/strips/masks are separate animated assets; packs are
+  distinct compositions, no hue-rotate (test forbids it).
+- Implementation in progress: scene compositor rewrite (`src/front-end-scene.ts`)
+  reads the manifests; builder brief `tasks/AAA-builder-brief.txt` (Luna, running).
+  After implementation: blind critic gate (zen vision) on live screenshots, then
+  push + PR (#11 base `codex/starhaven-menu-rebuild`).
+
 ## Front-end rebuild (2026-08-24)
 
 - Replaced the four filtered copies of one flattened menu painting with two faction-owned 960 × 540
