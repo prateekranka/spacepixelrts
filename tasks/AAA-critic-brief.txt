@@ -1,0 +1,10 @@
+You are a blind visual critic for a shipping premium strategy-game front end. Judge ONLY the four attached screenshots (menus and match-setup/loading screens of Starhaven, pixel-art sci-fi RTS). Reference bar: previously approved Starhaven key art — richly detailed pixel-art illustration, AAA lighting and depth, deep space atmosphere, layered foreground/midground/background, readable silhouettes, no baked text.
+
+Give PASS or FAIL for each of the four images, then one overall verdict.
+
+1. sunweaver-menu: elegant solar civilization key art. Gates: (a) giant warm sun visible upper-left with glow, (b) refined vertical capital towers with lattice architecture, arch bridge, plaza terraces, (c) sailcraft traffic small and elegant, (d) warm white/amber/gold + restrained cyan + deep indigo palette, (e) right 45% calm enough for the DOM menu text/buttons, (f) no text/UI baked into the art, (g) pixel-art crispness and deep space atmosphere.
+2. gravemark-menu: industrial extraction civilization key art. Gates: (a) fractured moon or ringed anomaly upper-left, (b) quarry-city with cranes, conveyors, shafts, armored structures (NOT a recolor of the solar city), (c) skimmers/carrier silhouettes, (d) obsidian/steel/mineral-green/ice-blue + restrained warning lights, (e) right 45% calm for DOM, (f) no baked text/UI, (g) dense but controlled detail, strong foreground.
+3. sunweaver loading (match setup): same world. Gates: (a) warm sky + sun, (b) capital skyline, (c) carrier with thruster beams or dropships, (d) center band calm enough for the setup/loading UI, (e) no baked text.
+4. gravemark loading: same world. Gates: (a) dark teal sky + moon, (b) fortress/back factory skyline, (c) heavy carrier + drop pods work, (d) center calm, (e) no baked text.
+
+Then: name the single biggest remaining gap across all four, if any. Be strict: a FAIL on any gate must state the exact problem and where (which image, which region). Length: verdict table (PASS/FAIL per gate) + one paragraph.
