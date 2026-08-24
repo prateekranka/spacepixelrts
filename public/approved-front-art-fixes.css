@@ -1,0 +1,17 @@
+/* Final alignment corrections for the approved painted front-end. */
+#start-screen.front-approved-art-ready .front-pixel-build{
+  right:0!important;
+  bottom:0!important;
+  width:25%!important;
+  min-width:260px!important;
+  height:9.5%!important;
+  padding:0 2.4vw 2.25vh 18px!important;
+  background:linear-gradient(90deg,transparent 0%,rgba(2,3,11,.97) 22%,#02030b 52%,#02030b 100%)!important;
+  box-shadow:-24px 0 28px rgba(2,3,11,.52)!important;
+}
+
+/* The approved source is deliberately given tiny overscan for stepped camera drift. */
+.front-approved-art-ready .front-approved-art{
+  min-width:100%!important;
+  min-height:100%!important;
+}
