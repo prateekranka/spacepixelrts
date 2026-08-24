@@ -222,6 +222,7 @@ export class Hud {
     }
     this.root.classList.toggle('results-mode', state === 'Results');
     this.matchEndEl.hidden = !isTerminal;
+    if (isTerminal) this.drawMatchEnd();
     this.resultsEl.hidden = state !== 'Results';
     if (state === 'Results') this.renderResults();
     this.applyRootVisibility();
