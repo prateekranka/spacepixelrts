@@ -251,6 +251,12 @@ export class Hud {
 
   draw(world: World, input: Input, fps: number): void {
     if (this.appState === 'Results') return;
+    if (this.appState === 'Victory' || this.appState === 'Defeat') {
+      // Terminal overlay: freeze the guidance banner and target so stale coaching
+      // never contradicts the outcome panel.
+      this.guidanceTargetEl.hidden = true;
+      return;
+    }
     const eco = world.teams[0];
     if (input.commandMode === 'move') this.hintEl.textContent = 'MOVE ARMED · Tap ground';
     else if (input.commandMode === 'attack') this.hintEl.textContent = 'ATTACK ARMED · Tap target or ground';

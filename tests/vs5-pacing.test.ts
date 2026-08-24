@@ -122,7 +122,7 @@ function placePlayerYard(world: World): void {
   assert.deepEqual(fund, {
     id: 'assign-ore',
     primary: 'Assign 2 Workers to Ore',
-    secondary: 'Ore Workers 0/2 · Find Idle Worker → GATHER → marked Ore',
+    secondary: 'Ore Workers 0/2 · FIND IDLE WORKER → GATHER → marked Ore',
   });
 
   const workers = fixture.ents.filter(
@@ -139,13 +139,13 @@ function placePlayerYard(world: World): void {
   assert.deepEqual(guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }), {
     id: 'assign-ore',
     primary: 'Assign 2 Workers to Ore',
-    secondary: 'Ore Workers 1/2 · Find Idle Worker → GATHER → marked Ore',
+    secondary: 'Ore Workers 1/2 · FIND IDLE WORKER → GATHER → marked Ore',
   });
 
   fixture.issue([gasWorker.id], Ord.Gather, gas.x, gas.z, gas.id);
   assert.equal(
     guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }).secondary,
-    'Ore Workers 1/2 · Find Idle Worker → GATHER → marked Ore',
+    'Ore Workers 1/2 · FIND IDLE WORKER → GATHER → marked Ore',
     'Gas Gather does not count as an Ore Worker',
   );
 
@@ -153,7 +153,7 @@ function placePlayerYard(world: World): void {
   assert.deepEqual(guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }), {
     id: 'fund-path',
     primary: 'Fund technology',
-    secondary: 'Ore 398/400 · Charge 79/80 · Ore Workers 2/2',
+    secondary: 'Ore 398/400 · Charge 79/80 · Ore Workers 2/2 · Keep gathering',
   });
 
   const hall = fixture.ents.find(
@@ -169,20 +169,20 @@ function placePlayerYard(world: World): void {
   returning.cargoType = Tile.Ore;
   assert.equal(
     guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }).secondary,
-    'Ore 398/400 · Charge 79/80 · Ore Workers 3/2',
+    'Ore 398/400 · Charge 79/80 · Ore Workers 3/2 · Keep gathering',
     'returning Ore cargo counts as an Ore Worker',
   );
   returning.alive = false;
   assert.equal(
     guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }).secondary,
-    'Ore 398/400 · Charge 79/80 · Ore Workers 2/2',
+    'Ore 398/400 · Charge 79/80 · Ore Workers 2/2 · Keep gathering',
     'dead Workers do not count',
   );
   rivalWorker.order = Ord.Gather;
   rivalWorker.tid = rivalOre.id;
   assert.equal(
     guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }).secondary,
-    'Ore 398/400 · Charge 79/80 · Ore Workers 2/2',
+    'Ore 398/400 · Charge 79/80 · Ore Workers 2/2 · Keep gathering',
     'rival Workers do not count',
   );
 
@@ -202,7 +202,7 @@ function placePlayerYard(world: World): void {
   const train = guidance(fixture, { techPath: 'sky-dominion', channelT: 0 });
   assert.equal(train.id, 'train-army');
   assert.equal(train.primary, 'Train Lumen Guard + Solar Strider');
-  assert.equal(train.secondary, 'Select your Yard · Habitat only if population is full');
+  assert.equal(train.secondary, 'Select your Yard · train each unit · Habitat only if pop is full');
   const fighter = fixture.spawn(Kind.Fighter, 'vespari', 0, yard.x, yard.z);
   assert.ok(fighter);
   assert.equal(guidance(fixture, { techPath: 'sky-dominion' }).primary, 'Train Solar Strider');
@@ -234,7 +234,7 @@ function placePlayerYard(world: World): void {
   const secure = {
     id: 'secure-lumen',
     primary: 'Secure the Central Lumen Field',
-    secondary: 'Select your army · ATTACK → marked Lumen',
+    secondary: 'Select your army · ATTACK → tap the marked Lumen to capture it',
   };
   const push = {
     id: 'push-lumen',

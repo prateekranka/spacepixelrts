@@ -77,7 +77,7 @@ const OBJECTIVE_FOUND: OpeningGuidance = {
 const SECURE_LUMEN: OpeningGuidance = {
   id: 'secure-lumen',
   primary: 'Secure the Central Lumen Field',
-  secondary: 'Select your army · ATTACK → marked Lumen',
+  secondary: 'Select your army · ATTACK → tap the marked Lumen to capture it',
 };
 const PUSH_LUMEN: OpeningGuidance = {
   id: 'push-lumen',
@@ -112,7 +112,7 @@ function trainingGuidance(ents: readonly Ent[]): OpeningGuidance {
   return {
     id: 'train-army',
     primary: `Train ${missing.join(' + ')}`,
-    secondary: 'Select your Yard · Habitat only if population is full',
+    secondary: 'Select your Yard · train each unit · Habitat only if pop is full',
   };
 }
 
@@ -155,14 +155,14 @@ export function evaluateOpeningGuidance(
       return {
         id: 'assign-ore',
         primary: 'Assign 2 Workers to Ore',
-        secondary: `Ore Workers ${oreWorkers}/2 · Find Idle Worker → GATHER → marked Ore`,
+        secondary: `Ore Workers ${oreWorkers}/2 · FIND IDLE WORKER → GATHER → marked Ore`,
       };
     }
     if (eco.techPath === null && (eco.ore < 400 || eco.energy < 80)) {
       return {
         id: 'fund-path',
         primary: 'Fund technology',
-        secondary: `Ore ${Math.floor(eco.ore)}/400 · Charge ${Math.floor(eco.energy)}/80 · Ore Workers ${oreWorkers}/2`,
+        secondary: `Ore ${Math.floor(eco.ore)}/400 · Charge ${Math.floor(eco.energy)}/80 · Ore Workers ${oreWorkers}/2 · Keep gathering`,
       };
     }
     if (eco.techPath === null) return CHOOSE_PATH;

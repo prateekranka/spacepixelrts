@@ -423,7 +423,7 @@ async function main() {
     manifest.checks.yard = completed;
     current = await guidance(page);
     requireThat(current.state === 'assign-ore', `02 state ${current.state}`);
-    requireThat(current.primary === 'Assign 2 Workers to Ore' && current.secondary === 'Ore Workers 0/2 · Find Idle Worker → GATHER → marked Ore', `02 copy ${JSON.stringify(current)}`);
+    requireThat(current.primary === 'Assign 2 Workers to Ore' && current.secondary === 'Ore Workers 0/2 · FIND IDLE WORKER → GATHER → marked Ore', `02 copy ${JSON.stringify(current)}`);
     requireThat(!current.targetHidden && current.target === 'ORE · 0/2', `02 target ${JSON.stringify(current)}`);
     await capture(page, out, manifest, '02-assign-ore', current);
 
@@ -439,7 +439,7 @@ async function main() {
     await settle(page);
     current = await guidance(page);
     requireThat(current.state === 'assign-ore', `02->1 state ${current.state}`);
-    requireThat(current.primary === 'Assign 2 Workers to Ore' && current.secondary === 'Ore Workers 1/2 · Find Idle Worker → GATHER → marked Ore', `02->1 copy ${JSON.stringify(current)}`);
+    requireThat(current.primary === 'Assign 2 Workers to Ore' && current.secondary === 'Ore Workers 1/2 · FIND IDLE WORKER → GATHER → marked Ore', `02->1 copy ${JSON.stringify(current)}`);
     requireThat(!current.targetHidden && current.target === 'ORE · 1/2', `02->1 target ${JSON.stringify(current)}`);
 
     const secondAssignment = await page.evaluate(({ secondWorkerId, solarWorkerId, oreId, solarId, ord }) => {
@@ -467,7 +467,7 @@ async function main() {
     await settle(page);
     current = await guidance(page);
     requireThat(current.state === 'fund-path', `03 state ${current.state}`);
-    requireThat(current.primary === 'Fund technology' && current.secondary === `Ore ${Math.floor(current.ore)}/400 · Charge ${Math.floor(current.charge)}/80 · Ore Workers 2/2`, `03 copy ${JSON.stringify(current)}`);
+    requireThat(current.primary === 'Fund technology' && current.secondary === `Ore ${Math.floor(current.ore)}/400 · Charge ${Math.floor(current.charge)}/80 · Ore Workers 2/2 · Keep gathering`, `03 copy ${JSON.stringify(current)}`);
     requireThat(!current.targetHidden && current.target === 'ORE · 2/2', `03 target ${JSON.stringify(current)}`);
     await capture(page, out, manifest, '03-fund-path', current);
 
@@ -555,7 +555,7 @@ async function main() {
     await settle(page);
     current = await guidance(page);
     requireThat(current.state === 'train-army', `06 state ${current.state}`);
-    requireThat(current.primary === 'Train Lumen Guard + Solar Strider' && current.secondary === 'Select your Yard · Habitat only if population is full', `06 copy ${JSON.stringify(current)}`);
+    requireThat(current.primary === 'Train Lumen Guard + Solar Strider' && current.secondary === 'Select your Yard · train each unit · Habitat only if pop is full', `06 copy ${JSON.stringify(current)}`);
     requireThat(!current.targetHidden && current.target === 'YARD', `06 target ${JSON.stringify(current)}`);
     await capture(page, out, manifest, '06-train-army', current);
 
@@ -626,7 +626,7 @@ async function main() {
     await settle(page);
     current = await guidance(page);
     requireThat(current.state === 'secure-lumen', `08 state ${current.state}`);
-    requireThat(current.primary === 'Secure the Central Lumen Field' && current.secondary === 'Select your army · ATTACK → marked Lumen', `08 copy ${JSON.stringify(current)}`);
+    requireThat(current.primary === 'Secure the Central Lumen Field' && current.secondary === 'Select your army · ATTACK → tap the marked Lumen to capture it', `08 copy ${JSON.stringify(current)}`);
     requireThat(!current.targetHidden && current.target === 'LUMEN', `08 target ${JSON.stringify(current)}`);
     requireThat(!current.lumenPanelHidden && current.lumenLabel.startsWith('LUMEN · '), `08 Lumen panel ${JSON.stringify(current)}`);
     await capture(page, out, manifest, '08-secure-lumen', { ...current, objectiveDiscovery });
