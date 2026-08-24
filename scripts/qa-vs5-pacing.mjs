@@ -394,31 +394,88 @@ async function main() {
       if (!spot || !world.tryPlace(0, kinds.Barracks, spot.x, spot.z, workers[3].id)) throw new Error('legal player Yard placement failed');
       const yard = world.ents.find((entity) => entity.alive && entity.team === 0 && entity.kind === kinds.Barracks);
       if (!yard) throw new Error('player Yard missing after tryPlace');
-      world.issue([workers[0].id, workers[1].id], ord.Gather, ore.x, ore.z, ore.id);
-      world.issue([workers[2].id], ord.Gather, solar.x, solar.z, solar.id);
-      return { hallId: hall.id, yardId: yard.id, builderId: workers[3].id, oreId: ore.id, solarId: solar.id, tick: world.tick };
+      return {
+        hallId: hall.id,
+        yardId: yard.id,
+        builderId: workers[3].id,
+        workerIds: workers.map((worker) => worker.id),
+        oreId: ore.id,
+        solarId: solar.id,
+        tick: world.tick,
+      };
     }, { kinds: KIND, tile: TILE, ord: ORD });
     manifest.checks.policySetup = policy;
 
-    const completed = await page.evaluate(({ yardId, builderId, oreId }) => {
+    const completed = await page.evaluate(({ yardId }) => {
       const world = globalThis.__STARHOLD_WORLD__;
       const yard = world.ents[yardId];
-      const builder = world.ents[builderId];
-      const ore = world.ents[oreId];
       while (yard.progress < 1 && world.winner === -1 && world.tick < 10000) {
         world.step();
         globalThis.__VS5_OBSERVE__?.();
       }
       if (yard.progress < 1) throw new Error(`Yard did not complete by tick ${world.tick}`);
-      world.issue([builder.id], 3, ore.x, ore.z, ore.id);
-      return { tick: world.tick, yardProgress: yard.progress, builderOrder: builder.order, builderTarget: builder.tid, oreId: ore.id, ore: world.teams[0].ore, charge: world.teams[0].energy };
+      return { tick: world.tick, yardProgress: yard.progress, ore: world.teams[0].ore, charge: world.teams[0].energy };
     }, policy);
     manifest.checks.yard = completed;
     current = await guidance(page);
-    requireThat(current.state === 'fund-path', `02 state ${current.state}`);
-    requireThat(current.primary === 'Fund technology' && current.secondary === `Ore ${Math.floor(current.ore)}/400 · Charge ${Math.floor(current.charge)}/80 · Keep two Workers on the nearby Ore field`, `02 copy ${JSON.stringify(current)}`);
-    requireThat(!current.targetHidden && current.target === 'ORE', `02 target ${JSON.stringify(current)}`);
-    await capture(page, out, manifest, '02-fund-path', current);
+    requireThat(current.state === 'assign-ore', `02 state ${current.state}`);
+    requireThat(current.primary === 'Assign 2 Workers to Ore' && current.secondary === 'Ore Workers 0/2 · Find Idle Worker → GATHER → marked Ore', `02 copy ${JSON.stringify(current)}`);
+    requireThat(!current.targetHidden && current.target === 'ORE · 0/2', `02 target ${JSON.stringify(current)}`);
+    await capture(page, out, manifest, '02-assign-ore', current);
+
+    const firstAssignment = await page.evaluate(({ workerId, oreId, ord }) => {
+      const world = globalThis.__STARHOLD_WORLD__;
+      const worker = world.ents[workerId];
+      const ore = world.ents[oreId];
+      world.issue([worker.id], ord.Gather, ore.x, ore.z, ore.id);
+      globalThis.__VS5_OBSERVE__?.();
+      return { tick: world.tick, workerId, workerOrder: worker.order, workerTarget: worker.tid, oreId: ore.id };
+    }, { workerId: policy.workerIds[0], oreId: policy.oreId, ord: ORD });
+    manifest.checks.firstOreAssignment = firstAssignment;
+    await settle(page);
+    current = await guidance(page);
+    requireThat(current.state === 'assign-ore', `02->1 state ${current.state}`);
+    requireThat(current.primary === 'Assign 2 Workers to Ore' && current.secondary === 'Ore Workers 1/2 · Find Idle Worker → GATHER → marked Ore', `02->1 copy ${JSON.stringify(current)}`);
+    requireThat(!current.targetHidden && current.target === 'ORE · 1/2', `02->1 target ${JSON.stringify(current)}`);
+
+    const secondAssignment = await page.evaluate(({ secondWorkerId, solarWorkerId, oreId, solarId, ord }) => {
+      const world = globalThis.__STARHOLD_WORLD__;
+      const secondWorker = world.ents[secondWorkerId];
+      const solarWorker = world.ents[solarWorkerId];
+      const ore = world.ents[oreId];
+      const solar = world.ents[solarId];
+      world.issue([secondWorker.id], ord.Gather, ore.x, ore.z, ore.id);
+      world.issue([solarWorker.id], ord.Gather, solar.x, solar.z, solar.id);
+      globalThis.__VS5_OBSERVE__?.();
+      return {
+        tick: world.tick,
+        oreWorkerId: secondWorker.id,
+        oreWorkerOrder: secondWorker.order,
+        oreWorkerTarget: secondWorker.tid,
+        solarWorkerId: solarWorker.id,
+        solarWorkerOrder: solarWorker.order,
+        solarWorkerTarget: solarWorker.tid,
+        oreId: ore.id,
+        solarId: solar.id,
+      };
+    }, { secondWorkerId: policy.workerIds[1], solarWorkerId: policy.workerIds[2], oreId: policy.oreId, solarId: policy.solarId, ord: ORD });
+    manifest.checks.secondOreAndSolarAssignment = secondAssignment;
+    await settle(page);
+    current = await guidance(page);
+    requireThat(current.state === 'fund-path', `03 state ${current.state}`);
+    requireThat(current.primary === 'Fund technology' && current.secondary === `Ore ${Math.floor(current.ore)}/400 · Charge ${Math.floor(current.charge)}/80 · Ore Workers 2/2`, `03 copy ${JSON.stringify(current)}`);
+    requireThat(!current.targetHidden && current.target === 'ORE · 2/2', `03 target ${JSON.stringify(current)}`);
+    await capture(page, out, manifest, '03-fund-path', current);
+
+    const builderAssignment = await page.evaluate(({ builderId, oreId, ord }) => {
+      const world = globalThis.__STARHOLD_WORLD__;
+      const builder = world.ents[builderId];
+      const ore = world.ents[oreId];
+      world.issue([builder.id], ord.Gather, ore.x, ore.z, ore.id);
+      globalThis.__VS5_OBSERVE__?.();
+      return { tick: world.tick, workerId: builder.id, workerOrder: builder.order, workerTarget: builder.tid, oreId: ore.id };
+    }, { builderId: policy.builderId, oreId: policy.oreId, ord: ORD });
+    manifest.checks.builderFollowup = builderAssignment;
 
     const funds = await page.evaluate(({ hallId }) => {
       const world = globalThis.__STARHOLD_WORLD__;
@@ -436,17 +493,17 @@ async function main() {
     current = await guidance(page);
     const pathButtons = current.deck.filter((button) => button.cmd === 'path-solar-ascendancy' || button.cmd === 'path-sky-dominion');
     const pathRects = await pathButtonRects(page);
-    requireThat(current.state === 'choose-path', `03 state ${current.state}`);
-    requireThat(current.primary === 'Choose a technology path' && current.secondary === 'Select your Nexus and commit one of two doctrines', `03 copy ${JSON.stringify(current)}`);
-    requireThat(!current.targetHidden && current.target === 'NEXUS', `03 target ${JSON.stringify(current)}`);
-    requireThat(pathButtons.length === 2 && pathButtons.every((button) => button.text.includes('400 Ore · 80 Charge')), `03 path costs ${JSON.stringify(pathButtons)}`);
-    requireThat(pathRects.length === 2, `03 path rect count ${JSON.stringify(pathRects)}`);
-    requireThat(pathRects.every((button) => button.visible && button.enabled), `03 path visibility/enabled ${JSON.stringify(pathRects)}`);
-    requireThat(pathRects.every((button) => button.width >= 44 && button.height >= 88), `03 path minimum geometry ${JSON.stringify(pathRects)}`);
-    requireThat(pathRects.every((button) => button.left >= 0 && button.top >= 0 && button.right <= VIEWPORT.width && button.bottom <= VIEWPORT.height), `03 path viewport geometry ${JSON.stringify(pathRects)}`);
-    requireThat(Math.abs(pathRects[0].top - pathRects[1].top) <= 4, `03 path row geometry ${JSON.stringify(pathRects)}`);
-    requireThat(pathRects.every((button) => button.text.includes('400 Ore · 80 Charge')), `03 path rect costs ${JSON.stringify(pathRects)}`);
-    await capture(page, out, manifest, '03-choose-path', { ...current, pathButtons, pathRects });
+    requireThat(current.state === 'choose-path', `04 state ${current.state}`);
+    requireThat(current.primary === 'Choose a technology path' && current.secondary === 'Select your Nexus and commit one of two doctrines', `04 copy ${JSON.stringify(current)}`);
+    requireThat(!current.targetHidden && current.target === 'NEXUS', `04 target ${JSON.stringify(current)}`);
+    requireThat(pathButtons.length === 2 && pathButtons.every((button) => button.text.includes('400 Ore · 80 Charge')), `04 path costs ${JSON.stringify(pathButtons)}`);
+    requireThat(pathRects.length === 2, `04 path rect count ${JSON.stringify(pathRects)}`);
+    requireThat(pathRects.every((button) => button.visible && button.enabled), `04 path visibility/enabled ${JSON.stringify(pathRects)}`);
+    requireThat(pathRects.every((button) => button.width >= 44 && button.height >= 88), `04 path minimum geometry ${JSON.stringify(pathRects)}`);
+    requireThat(pathRects.every((button) => button.left >= 0 && button.top >= 0 && button.right <= VIEWPORT.width && button.bottom <= VIEWPORT.height), `04 path viewport geometry ${JSON.stringify(pathRects)}`);
+    requireThat(Math.abs(pathRects[0].top - pathRects[1].top) <= 4, `04 path row geometry ${JSON.stringify(pathRects)}`);
+    requireThat(pathRects.every((button) => button.text.includes('400 Ore · 80 Charge')), `04 path rect costs ${JSON.stringify(pathRects)}`);
+    await capture(page, out, manifest, '04-choose-path', { ...current, pathButtons, pathRects });
 
     const committed = await page.evaluate(() => {
       const world = globalThis.__STARHOLD_WORLD__;
@@ -456,29 +513,29 @@ async function main() {
     });
     requireThat(committed.ok && committed.pendingPath === 'sky-dominion' && committed.channelT > 0, `path commit failed ${JSON.stringify(committed)}`);
     const channelBefore = await guidance(page);
-    requireThat(channelBefore.state === 'path-channel' && channelBefore.primary === `Technology locks in ${Math.ceil(channelBefore.channelT)}s`, `04 initial channel ${JSON.stringify(channelBefore)}`);
-    requireThat(!channelBefore.targetHidden && channelBefore.target === 'NEXUS', `04 target ${JSON.stringify(channelBefore)}`);
+    requireThat(channelBefore.state === 'path-channel' && channelBefore.primary === `Technology locks in ${Math.ceil(channelBefore.channelT)}s`, `05 initial channel ${JSON.stringify(channelBefore)}`);
+    requireThat(!channelBefore.targetHidden && channelBefore.target === 'NEXUS', `05 target ${JSON.stringify(channelBefore)}`);
     const channelBeforeRects = await pathButtonRects(page);
     const combinedPrecommitWidth = pathRects[0].width + pathRects[1].width;
-    requireThat(channelBeforeRects.length === 1, `04 path rect count ${JSON.stringify(channelBeforeRects)}`);
-    requireThat(channelBeforeRects[0].visible && !channelBeforeRects[0].enabled, `04 path visibility/enabled ${JSON.stringify(channelBeforeRects)}`);
-    requireThat(channelBeforeRects[0].left >= 0 && channelBeforeRects[0].top >= 0 && channelBeforeRects[0].right <= VIEWPORT.width && channelBeforeRects[0].bottom <= VIEWPORT.height, `04 path viewport geometry ${JSON.stringify(channelBeforeRects)}`);
-    requireThat(channelBeforeRects[0].height >= 88, `04 path height ${JSON.stringify(channelBeforeRects)}`);
-    requireThat(channelBeforeRects[0].width >= combinedPrecommitWidth - 4, `04 path combined width ${JSON.stringify({ combinedPrecommitWidth, channelBeforeRects })}`);
-    requireThat(channelBeforeRects[0].text.includes('Committing') && /\d+s/.test(channelBeforeRects[0].text), `04 path countdown ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects.length === 1, `05 path rect count ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects[0].visible && !channelBeforeRects[0].enabled, `05 path visibility/enabled ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects[0].left >= 0 && channelBeforeRects[0].top >= 0 && channelBeforeRects[0].right <= VIEWPORT.width && channelBeforeRects[0].bottom <= VIEWPORT.height, `05 path viewport geometry ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects[0].height >= 88, `05 path height ${JSON.stringify(channelBeforeRects)}`);
+    requireThat(channelBeforeRects[0].width >= combinedPrecommitWidth - 4, `05 path combined width ${JSON.stringify({ combinedPrecommitWidth, channelBeforeRects })}`);
+    requireThat(channelBeforeRects[0].text.includes('Committing') && /\d+s/.test(channelBeforeRects[0].text), `05 path countdown ${JSON.stringify(channelBeforeRects)}`);
     await stepWorld(page, 40);
     const channelAfter = await guidance(page);
-    requireThat(channelAfter.state === 'path-channel', `04 channel state changed ${JSON.stringify(channelAfter)}`);
-    requireThat(channelAfter.primary !== channelBefore.primary && channelAfter.channelT < channelBefore.channelT, `04 countdown did not update ${JSON.stringify({ channelBefore, channelAfter })}`);
+    requireThat(channelAfter.state === 'path-channel', `05 channel state changed ${JSON.stringify(channelAfter)}`);
+    requireThat(channelAfter.primary !== channelBefore.primary && channelAfter.channelT < channelBefore.channelT, `05 countdown did not update ${JSON.stringify({ channelBefore, channelAfter })}`);
     const channelAfterRects = await pathButtonRects(page);
-    requireThat(channelAfterRects.length === 1, `04 updated path rect count ${JSON.stringify(channelAfterRects)}`);
-    requireThat(channelAfterRects[0].visible && !channelAfterRects[0].enabled, `04 updated path visibility/enabled ${JSON.stringify(channelAfterRects)}`);
-    requireThat(channelAfterRects[0].left >= 0 && channelAfterRects[0].top >= 0 && channelAfterRects[0].right <= VIEWPORT.width && channelAfterRects[0].bottom <= VIEWPORT.height, `04 updated path viewport geometry ${JSON.stringify(channelAfterRects)}`);
-    requireThat(channelAfterRects[0].height >= 88, `04 updated path height ${JSON.stringify(channelAfterRects)}`);
-    requireThat(channelAfterRects[0].width >= combinedPrecommitWidth - 4, `04 updated path combined width ${JSON.stringify({ combinedPrecommitWidth, channelAfterRects })}`);
-    requireThat(channelAfterRects[0].text.includes('Committing') && /\d+s/.test(channelAfterRects[0].text), `04 updated path countdown ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects.length === 1, `05 updated path rect count ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects[0].visible && !channelAfterRects[0].enabled, `05 updated path visibility/enabled ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects[0].left >= 0 && channelAfterRects[0].top >= 0 && channelAfterRects[0].right <= VIEWPORT.width && channelAfterRects[0].bottom <= VIEWPORT.height, `05 updated path viewport geometry ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects[0].height >= 88, `05 updated path height ${JSON.stringify(channelAfterRects)}`);
+    requireThat(channelAfterRects[0].width >= combinedPrecommitWidth - 4, `05 updated path combined width ${JSON.stringify({ combinedPrecommitWidth, channelAfterRects })}`);
+    requireThat(channelAfterRects[0].text.includes('Committing') && /\d+s/.test(channelAfterRects[0].text), `05 updated path countdown ${JSON.stringify(channelAfterRects)}`);
     manifest.checks.channel = { before: channelBefore, beforeRects: channelBeforeRects, after: channelAfter, afterRects: channelAfterRects, combinedPrecommitWidth };
-    await capture(page, out, manifest, '04-channel', { ...channelAfter, pathRects: channelAfterRects });
+    await capture(page, out, manifest, '05-channel', { ...channelAfter, pathRects: channelAfterRects });
 
     const locked = await page.evaluate(({ yardId }) => {
       const world = globalThis.__STARHOLD_WORLD__;
@@ -493,10 +550,10 @@ async function main() {
     manifest.checks.pathLock = locked;
     await settle(page);
     current = await guidance(page);
-    requireThat(current.state === 'train-army', `05 state ${current.state}`);
-    requireThat(current.primary === 'Train Lumen Guard + Solar Strider' && current.secondary === 'Select your Yard · Habitat only if population is full', `05 copy ${JSON.stringify(current)}`);
-    requireThat(!current.targetHidden && current.target === 'YARD', `05 target ${JSON.stringify(current)}`);
-    await capture(page, out, manifest, '05-train-army', current);
+    requireThat(current.state === 'train-army', `06 state ${current.state}`);
+    requireThat(current.primary === 'Train Lumen Guard + Solar Strider' && current.secondary === 'Select your Yard · Habitat only if population is full', `06 copy ${JSON.stringify(current)}`);
+    requireThat(!current.targetHidden && current.target === 'YARD', `06 target ${JSON.stringify(current)}`);
+    await capture(page, out, manifest, '06-train-army', current);
 
     const army = await page.evaluate(({ yardId, kinds }) => {
       const world = globalThis.__STARHOLD_WORLD__;
@@ -526,11 +583,11 @@ async function main() {
       };
     }, { yardId: policy.yardId, kinds: KIND });
     manifest.checks.army = army;
-    requireThat(army.tick <= 10 * 60 * SIM_HZ && army.fighter >= 1 && army.unique >= 1, `06 army deadline ${JSON.stringify(army)}`);
+    requireThat(army.tick <= 10 * 60 * SIM_HZ && army.fighter >= 1 && army.unique >= 1, `07 army deadline ${JSON.stringify(army)}`);
     await settle(page);
     current = await guidance(page);
-    requireThat(current.state === 'select-scout', `06 state ${current.state}`);
-    await capture(page, out, manifest, '06-mixed-army', { ...current, army });
+    requireThat(current.state === 'select-scout', `07 state ${current.state}`);
+    await capture(page, out, manifest, '07-mixed-army', { ...current, army });
 
     const replacement = await page.evaluate(({ kinds, scoutCost, maxTicks }) => {
       const world = globalThis.__STARHOLD_WORLD__;
@@ -553,8 +610,8 @@ async function main() {
       };
     }, { kinds: { ...KIND }, scoutCost: { ore: 40, gas: 0, energy: 15, train: 6 }, maxTicks: MAX_TICKS });
     manifest.checks.replacement = replacement;
-    requireThat(replacement.call && replacement.call.delta.ore === 40 && replacement.call.delta.gas === 0 && replacement.call.delta.energy === 15 && replacement.call.trainT === 6, `07 replacement cost/time ${JSON.stringify(replacement)}`);
-    await capture(page, out, manifest, '07-replacement-scout', replacement);
+    requireThat(replacement.call && replacement.call.delta.ore === 40 && replacement.call.delta.gas === 0 && replacement.call.delta.energy === 15 && replacement.call.trainT === 6, `08 replacement cost/time ${JSON.stringify(replacement)}`);
+    await capture(page, out, manifest, '08-replacement-scout', replacement);
 
     const terminal = await page.evaluate(({ maxTicks, kinds }) => {
       const world = globalThis.__STARHOLD_WORLD__;
@@ -589,7 +646,7 @@ async function main() {
     const event = terminal.winner === 0 ? 'MATCH_WON' : 'MATCH_LOST';
     await page.evaluate((eventName) => globalThis.__STARHAVEN_QA__?.dispatch(eventName), event);
     await page.waitForFunction((expected) => globalThis.__STARHAVEN_QA__?.state === expected, terminal.winner === 0 ? 'Victory' : 'Defeat', { timeout: PROBE_TIMEOUT_MS });
-    await capture(page, out, manifest, '08-terminal', { ...terminal, state: await page.evaluate(() => globalThis.__STARHAVEN_QA__?.state ?? '') });
+    await capture(page, out, manifest, '09-terminal', { ...terminal, state: await page.evaluate(() => globalThis.__STARHAVEN_QA__?.state ?? '') });
 
     const renderer = await rendererName(page);
     const simStepMs = await page.evaluate((seed) => {

@@ -1,6 +1,6 @@
 /** M2-C — contextual opening guidance evaluator (docs/M2_C_GUIDANCE.md). */
 
-import { Kind } from './engine';
+import { Kind, Ord, Tile } from './engine';
 import type { Civ, Ent } from './engine';
 import { SEEN_PLAYER } from './discovery';
 import type { Landmark } from './discovery';
@@ -10,6 +10,7 @@ import type { TechPathId } from './content';
 export type OpeningGuidanceId =
   | 'build-yard'
   | 'complete-yard'
+  | 'assign-ore'
   | 'fund-path'
   | 'choose-path'
   | 'path-channel'
@@ -31,6 +32,19 @@ export interface GuidanceEcoState {
   readonly energy: number;
   readonly techPath: TechPathId | null;
   readonly channelT: number;
+}
+
+/** Count only live player Workers whose current order is genuinely tied to Ore. */
+export function countAssignedOreWorkers(ents: readonly Ent[]): number {
+  return ents.filter((ent) => {
+    if (!ent.alive || ent.hp <= 0 || ent.team !== 0 || ent.kind !== Kind.Worker) return false;
+    if (ent.order !== Ord.Gather && ent.order !== Ord.Return) return false;
+    const target = ent.tid >= 0 ? ents[ent.tid] : undefined;
+    return (
+      (target?.alive && target.kind === Kind.Resource && target.cargoType === Tile.Ore) ||
+      (ent.order === Ord.Return && ent.cargoType === Tile.Ore)
+    );
+  }).length;
 }
 
 const BUILD_YARD: OpeningGuidance = {
@@ -100,6 +114,7 @@ export function evaluateOpeningGuidance(
   if (yard.progress < 1) return COMPLETE_YARD;
 
   if (eco) {
+    const oreWorkers = countAssignedOreWorkers(ents);
     if (eco.channelT > 0) {
       return {
         id: 'path-channel',
@@ -107,11 +122,18 @@ export function evaluateOpeningGuidance(
         secondary: 'Keep gathering Ore and Volatiles',
       };
     }
+    if (eco.techPath === null && oreWorkers < 2) {
+      return {
+        id: 'assign-ore',
+        primary: 'Assign 2 Workers to Ore',
+        secondary: `Ore Workers ${oreWorkers}/2 · Find Idle Worker → GATHER → marked Ore`,
+      };
+    }
     if (eco.techPath === null && (eco.ore < 400 || eco.energy < 80)) {
       return {
         id: 'fund-path',
         primary: 'Fund technology',
-        secondary: `Ore ${Math.floor(eco.ore)}/400 · Charge ${Math.floor(eco.energy)}/80 · Keep two Workers on the nearby Ore field`,
+        secondary: `Ore ${Math.floor(eco.ore)}/400 · Charge ${Math.floor(eco.energy)}/80 · Ore Workers ${oreWorkers}/2`,
       };
     }
     if (eco.techPath === null) return CHOOSE_PATH;

@@ -1,0 +1,31 @@
+VS5B strict TDD RED — unit evaluator before production edit
+Captured: 2026-08-24
+Command: npm run test:vs5
+Production files changed: none (src/opening-guidance.ts and src/hud.ts unchanged)
+
+Failure:
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  {
++   id: 'fund-path',
++   primary: 'Fund technology',
++   secondary: 'Ore 398/400 · Charge 79/80 · Keep two Workers on the nearby Ore field'
+--   id: 'assign-ore',
+--   primary: 'Assign 2 Workers to Ore',
+--   secondary: 'Ore Workers 0/2 · Find Idle Worker → GATHER → marked Ore'
+  }
+
+    at tests/vs5-pacing.test.ts:112:10
+
+Interpretation: the unchanged evaluator has no counted Ore-worker state/copy; RED is expected.
+
+VS5B strict TDD RED — browser target before HUD edit
+Command: npm run qa:vs5 -- --out /tmp/vs5b-browser-red-hud
+Evaluator status: GREEN; src/hud.ts guidance target routing unchanged
+
+Failure:
+Error: 02 target {"state":"assign-ore","primary":"Assign 2 Workers to Ore","secondary":"Ore Workers 0/2 · Find Idle Worker → GATHER → marked Ore","targetHidden":true,"target":"YARD",...
+
+Interpretation: the new evaluator state/copy is visible, but the unchanged HUD has no
+assign-ore target route; it leaves the target hidden/stale instead of showing ORE · 0/2.

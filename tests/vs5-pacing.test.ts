@@ -109,11 +109,71 @@ function placePlayerYard(world: World): void {
   assert.ok(central);
   central.discoveredBy |= SEEN_PLAYER;
   const fund = guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 });
-  assert.equal(fund.id, 'fund-path');
-  assert.equal(fund.primary, 'Fund technology');
+  assert.deepEqual(fund, {
+    id: 'assign-ore',
+    primary: 'Assign 2 Workers to Ore',
+    secondary: 'Ore Workers 0/2 · Find Idle Worker → GATHER → marked Ore',
+  });
+
+  const workers = fixture.ents.filter(
+    (entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Worker,
+  );
+  const ore = baseNode(fixture, 0, Tile.Ore);
+  const gas = baseNode(fixture, 0, Tile.Gas);
+  const firstOre = workers[0];
+  const gasWorker = workers[1];
+  const secondOre = workers[2];
+  assert.ok(firstOre && gasWorker && secondOre);
+
+  fixture.issue([firstOre.id], Ord.Gather, ore.x, ore.z, ore.id);
+  assert.deepEqual(guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }), {
+    id: 'assign-ore',
+    primary: 'Assign 2 Workers to Ore',
+    secondary: 'Ore Workers 1/2 · Find Idle Worker → GATHER → marked Ore',
+  });
+
+  fixture.issue([gasWorker.id], Ord.Gather, gas.x, gas.z, gas.id);
   assert.equal(
-    fund.secondary,
-    'Ore 398/400 · Charge 79/80 · Keep two Workers on the nearby Ore field',
+    guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }).secondary,
+    'Ore Workers 1/2 · Find Idle Worker → GATHER → marked Ore',
+    'Gas Gather does not count as an Ore Worker',
+  );
+
+  fixture.issue([secondOre.id], Ord.Gather, ore.x, ore.z, ore.id);
+  assert.deepEqual(guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }), {
+    id: 'fund-path',
+    primary: 'Fund technology',
+    secondary: 'Ore 398/400 · Charge 79/80 · Ore Workers 2/2',
+  });
+
+  const hall = fixture.ents.find(
+    (entity) => entity.alive && entity.team === 0 && entity.kind === Kind.Hall,
+  );
+  const returning = workers[3];
+  const rivalWorker = fixture.ents.find(
+    (entity) => entity.alive && entity.team === 1 && entity.kind === Kind.Worker,
+  );
+  const rivalOre = baseNode(fixture, 1, Tile.Ore);
+  assert.ok(hall && returning && rivalWorker);
+  fixture.issue([returning.id], Ord.Return, hall.x, hall.z, hall.id);
+  returning.cargoType = Tile.Ore;
+  assert.equal(
+    guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }).secondary,
+    'Ore 398/400 · Charge 79/80 · Ore Workers 3/2',
+    'returning Ore cargo counts as an Ore Worker',
+  );
+  returning.alive = false;
+  assert.equal(
+    guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }).secondary,
+    'Ore 398/400 · Charge 79/80 · Ore Workers 2/2',
+    'dead Workers do not count',
+  );
+  rivalWorker.order = Ord.Gather;
+  rivalWorker.tid = rivalOre.id;
+  assert.equal(
+    guidance(fixture, { ore: 398, energy: 79, techPath: null, channelT: 0 }).secondary,
+    'Ore 398/400 · Charge 79/80 · Ore Workers 2/2',
+    'rival Workers do not count',
   );
 
   const choose = guidance(fixture, { ore: 400, energy: 80, techPath: null, channelT: 0 });

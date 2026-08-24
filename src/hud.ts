@@ -27,7 +27,7 @@ import type { Input } from './input';
 import type { GameRenderer } from './render';
 import { SEEN_PLAYER } from './discovery';
 import type { LandmarkKind } from './discovery';
-import { evaluateOpeningGuidance } from './opening-guidance';
+import { countAssignedOreWorkers, evaluateOpeningGuidance } from './opening-guidance';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export class Hud {
@@ -379,6 +379,7 @@ export class Hud {
       techPath: world.techPathOf(0),
       channelT: world.pathChannelT(0),
     });
+    const oreWorkers = countAssignedOreWorkers(world.ents);
     const guidanceSig = `${g.id}|${g.primary}|${g.secondary ?? ''}`;
     if (guidanceSig !== this.guidanceSig) {
       this.guidanceSig = guidanceSig;
@@ -406,7 +407,7 @@ export class Hud {
         (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === Kind.Barracks,
       );
       if (yard) target = { x: yard.x, y: 0.8, z: yard.z, label: 'YARD' };
-    } else if (g.id === 'fund-path') {
+    } else if (g.id === 'assign-ore' || g.id === 'fund-path') {
       const hall = world.ents.find(
         (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === Kind.Hall,
       );
@@ -420,7 +421,7 @@ export class Hud {
           const bd = hall ? (b.x - hall.x) ** 2 + (b.z - hall.z) ** 2 : b.x ** 2 + b.z ** 2;
           return ad - bd;
         })[0];
-      if (ore) target = { x: ore.x, y: 0.6, z: ore.z, label: 'ORE' };
+      if (ore) target = { x: ore.x, y: 0.6, z: ore.z, label: `ORE · ${oreWorkers}/2` };
     } else if (g.id === 'choose-path' || g.id === 'path-channel') {
       const nexus = world.ents.find(
         (entity) => entity.alive && entity.hp > 0 && entity.team === 0 && entity.kind === Kind.Hall,
