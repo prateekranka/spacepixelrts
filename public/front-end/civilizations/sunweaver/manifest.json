@@ -1,0 +1,597 @@
+{
+ "menu": {
+  "scene": "sunweaver-capital",
+  "mode": "menu",
+  "canvas": {
+   "width": 960,
+   "height": 540
+  },
+  "assets": [
+   {
+    "file": "sky.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "celestial-body.webp",
+    "kind": "cover",
+    "blend": "screen"
+   },
+   {
+    "file": "far-terrain.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "settlement.webp",
+    "kind": "rect",
+    "rect": [
+     86,
+     130,
+     640,
+     360
+    ],
+    "blend": "source-over"
+   },
+   {
+    "file": "foreground.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "atmosphere.webp",
+    "kind": "cover",
+    "blend": "screen"
+   }
+  ],
+  "sprites": [
+   {
+    "file": "ships.png",
+    "frames": [
+     [
+      274,
+      44,
+      634,
+      382
+     ],
+     [
+      1182,
+      256,
+      1624,
+      320
+     ],
+     [
+      370,
+      614,
+      626,
+      932
+     ],
+     [
+      1174,
+      764,
+      1616,
+      862
+     ]
+    ],
+    "frameRate": 2,
+    "drift": {
+     "amplitude": 4,
+     "phase": 0.7
+    },
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": 0,
+      "box": [
+       196,
+       204,
+       72,
+       46
+      ]
+     },
+     {
+      "frame": 1,
+      "box": [
+       464,
+       228,
+       72,
+       40
+      ]
+     },
+     {
+      "frame": 2,
+      "box": [
+       700,
+       206,
+       72,
+       46
+      ]
+     }
+    ]
+   },
+   {
+    "file": "ship-thrusters-strip.png",
+    "frames": [
+     [
+      44,
+      486,
+      220,
+      780
+     ],
+     [
+      420,
+      310,
+      702,
+      780
+     ],
+     [
+      832,
+      310,
+      1112,
+      780
+     ],
+     [
+      1238,
+      310,
+      1516,
+      780
+     ],
+     [
+      1674,
+      452,
+      1898,
+      780
+     ]
+    ],
+    "frameRate": 12,
+    "blend": "screen",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       206,
+       214,
+       30,
+       34
+      ]
+     },
+     {
+      "frame": -1,
+      "box": [
+       474,
+       234,
+       30,
+       28
+      ]
+     }
+    ]
+   },
+   {
+    "file": "flag-strip.png",
+    "frames": [
+     [
+      0,
+      0,
+      480,
+      540
+     ],
+     [
+      480,
+      0,
+      960,
+      540
+     ],
+     [
+      960,
+      0,
+      1440,
+      540
+     ],
+     [
+      1440,
+      0,
+      1920,
+      540
+     ],
+     [
+      0,
+      540,
+      480,
+      1080
+     ],
+     [
+      480,
+      540,
+      960,
+      1080
+     ],
+     [
+      960,
+      540,
+      1440,
+      1080
+     ],
+     [
+      1440,
+      540,
+      1920,
+      1080
+     ]
+    ],
+    "frameRate": 8,
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       322,
+       86,
+       104,
+       66
+      ]
+     }
+    ]
+   },
+   {
+    "file": "beacon-strip.png",
+    "frames": [
+     [
+      0,
+      308,
+      384,
+      770
+     ],
+     [
+      384,
+      308,
+      768,
+      770
+     ],
+     [
+      768,
+      308,
+      1152,
+      770
+     ],
+     [
+      1152,
+      308,
+      1536,
+      770
+     ],
+     [
+      1536,
+      308,
+      1920,
+      770
+     ]
+    ],
+    "frameRate": 6,
+    "blend": "screen",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       238,
+       112,
+       52,
+       52
+      ]
+     },
+     {
+      "frame": -1,
+      "box": [
+       104,
+       404,
+       44,
+       44
+      ]
+     }
+    ]
+   },
+   {
+    "file": "energy-strip.png",
+    "frames": [
+     [
+      4,
+      26,
+      386,
+      488
+     ],
+     [
+      500,
+      20,
+      894,
+      494
+     ],
+     [
+      1016,
+      16,
+      1426,
+      500
+     ],
+     [
+      1526,
+      24,
+      1918,
+      492
+     ],
+     [
+      6,
+      598,
+      388,
+      1054
+     ],
+     [
+      498,
+      588,
+      896,
+      1060
+     ],
+     [
+      1018,
+      582,
+      1426,
+      1066
+     ],
+     [
+      1536,
+      602,
+      1910,
+      1050
+     ]
+    ],
+    "frameRate": 8,
+    "blend": "screen",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       216,
+       166,
+       76,
+       112
+      ]
+     }
+    ]
+   }
+  ],
+  "twinkles": {
+   "mask": "lights-mask.png",
+   "fps": 6
+  },
+  "fallbackPalette": [
+   "#26151e",
+   "#e1834e",
+   "#f6c95f",
+   "#0d1424",
+   "#120f17"
+  ]
+ },
+ "loading": {
+  "scene": "sunweaver-capital",
+  "mode": "loading",
+  "canvas": {
+   "width": 960,
+   "height": 540
+  },
+  "assets": [
+   {
+    "file": "sky.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "celestial-body.webp",
+    "kind": "cover",
+    "blend": "screen"
+   },
+   {
+    "file": "settlement.webp",
+    "kind": "rect",
+    "rect": [
+     446,
+     108,
+     500,
+     281
+    ],
+    "blend": "source-over"
+   },
+   {
+    "file": "foreground.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "atmosphere.webp",
+    "kind": "cover",
+    "blend": "screen"
+   }
+  ],
+  "sprites": [
+   {
+    "file": "carrier.png",
+    "frames": [
+     [
+      88,
+      248,
+      1906,
+      656
+     ]
+    ],
+    "frameRate": 2,
+    "drift": {
+     "amplitude": 3,
+     "phase": 2.2
+    },
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       66,
+       150,
+       300,
+       168
+      ]
+     }
+    ]
+   },
+   {
+    "file": "thrusters-strip.png",
+    "frames": [
+     [
+      44,
+      486,
+      220,
+      780
+     ],
+     [
+      420,
+      310,
+      702,
+      780
+     ],
+     [
+      832,
+      310,
+      1112,
+      780
+     ],
+     [
+      1238,
+      310,
+      1516,
+      780
+     ],
+     [
+      1674,
+      452,
+      1898,
+      780
+     ]
+    ],
+    "frameRate": 12,
+    "blend": "screen",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       88,
+       264,
+       44,
+       54
+      ]
+     },
+     {
+      "frame": -1,
+      "box": [
+       192,
+       264,
+       44,
+       54
+      ]
+     }
+    ]
+   },
+   {
+    "file": "dropships.png",
+    "frames": [
+     [
+      112,
+      356,
+      814,
+      656
+     ],
+     [
+      1076,
+      424,
+      1820,
+      636
+     ]
+    ],
+    "frameRate": 2,
+    "drift": {
+     "amplitude": 4,
+     "phase": 3.1
+    },
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": 0,
+      "box": [
+       742,
+       186,
+       130,
+       66
+      ]
+     },
+     {
+      "frame": 1,
+      "box": [
+       612,
+       122,
+       130,
+       66
+      ]
+     }
+    ]
+   },
+   {
+    "file": "beacon-strip.png",
+    "frames": [
+     [
+      0,
+      308,
+      384,
+      770
+     ],
+     [
+      384,
+      308,
+      768,
+      770
+     ],
+     [
+      768,
+      308,
+      1152,
+      770
+     ],
+     [
+      1152,
+      308,
+      1536,
+      770
+     ],
+     [
+      1536,
+      308,
+      1920,
+      770
+     ]
+    ],
+    "frameRate": 6,
+    "blend": "screen",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       470,
+       396,
+       52,
+       52
+      ]
+     }
+    ]
+   }
+  ],
+  "fallbackPalette": [
+   "#26151e",
+   "#e1834e",
+   "#f6c95f",
+   "#0d1424",
+   "#120f17"
+  ]
+ }
+}

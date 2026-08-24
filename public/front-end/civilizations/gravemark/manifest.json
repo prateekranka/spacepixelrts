@@ -1,0 +1,552 @@
+{
+ "menu": {
+  "scene": "gravemark-quarry",
+  "mode": "menu",
+  "canvas": {
+   "width": 960,
+   "height": 540
+  },
+  "assets": [
+   {
+    "file": "sky.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "celestial-body.webp",
+    "kind": "cover",
+    "blend": "screen"
+   },
+   {
+    "file": "far-terrain.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "quarry-city.webp",
+    "kind": "rect",
+    "rect": [
+     29,
+     205,
+     451,
+     254
+    ],
+    "blend": "source-over"
+   },
+   {
+    "file": "foreground.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "atmosphere.webp",
+    "kind": "cover",
+    "blend": "screen"
+   }
+  ],
+  "sprites": [
+   {
+    "file": "grav-skimmers.png",
+    "frames": [
+     [
+      202,
+      176,
+      804,
+      362
+     ],
+     [
+      1078,
+      56,
+      1730,
+      382
+     ],
+     [
+      146,
+      716,
+      804,
+      950
+     ],
+     [
+      1104,
+      706,
+      1730,
+      920
+     ]
+    ],
+    "frameRate": 2,
+    "drift": {
+     "amplitude": 4,
+     "phase": 1.1
+    },
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": 0,
+      "box": [
+       252,
+       268,
+       110,
+       58
+      ]
+     },
+     {
+      "frame": 1,
+      "box": [
+       392,
+       300,
+       110,
+       58
+      ]
+     },
+     {
+      "frame": 2,
+      "box": [
+       316,
+       236,
+       110,
+       58
+      ]
+     }
+    ]
+   },
+   {
+    "file": "crane-strip.png",
+    "frames": [
+     [
+      0,
+      0,
+      640,
+      540
+     ],
+     [
+      640,
+      42,
+      1280,
+      540
+     ],
+     [
+      1280,
+      0,
+      1920,
+      540
+     ],
+     [
+      0,
+      540,
+      640,
+      1080
+     ],
+     [
+      640,
+      540,
+      1280,
+      1078
+     ],
+     [
+      1280,
+      540,
+      1920,
+      1080
+     ]
+    ],
+    "frameRate": 6,
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       46,
+       196,
+       150,
+       168
+      ]
+     }
+    ]
+   },
+   {
+    "file": "mineral-strip.png",
+    "frames": [
+     [
+      0,
+      0,
+      640,
+      540
+     ],
+     [
+      640,
+      112,
+      1280,
+      540
+     ],
+     [
+      1280,
+      0,
+      1920,
+      540
+     ],
+     [
+      0,
+      540,
+      640,
+      1080
+     ],
+     [
+      640,
+      540,
+      1280,
+      1054
+     ],
+     [
+      1280,
+      540,
+      1920,
+      1080
+     ]
+    ],
+    "frameRate": 6,
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       84,
+       308,
+       150,
+       104
+      ]
+     }
+    ]
+   },
+   {
+    "file": "gravity-field-strip.png",
+    "frames": [
+     [
+      0,
+      0,
+      480,
+      540
+     ],
+     [
+      480,
+      0,
+      960,
+      540
+     ],
+     [
+      960,
+      0,
+      1440,
+      540
+     ],
+     [
+      1440,
+      0,
+      1920,
+      540
+     ],
+     [
+      0,
+      540,
+      480,
+      1080
+     ],
+     [
+      480,
+      540,
+      960,
+      1080
+     ],
+     [
+      960,
+      540,
+      1440,
+      1080
+     ],
+     [
+      1440,
+      540,
+      1920,
+      1080
+     ]
+    ],
+    "frameRate": 8,
+    "blend": "screen",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       516,
+       118,
+       78,
+       78
+      ]
+     }
+    ]
+   }
+  ],
+  "twinkles": {
+   "mask": "lights-mask.png",
+   "fps": 6
+  },
+  "fallbackPalette": [
+   "#0a111b",
+   "#203548",
+   "#81c8bb",
+   "#0c141c",
+   "#080e14"
+  ]
+ },
+ "loading": {
+  "scene": "gravemark-quarry",
+  "mode": "loading",
+  "canvas": {
+   "width": 960,
+   "height": 540
+  },
+  "assets": [
+   {
+    "file": "sky.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "celestial-body.webp",
+    "kind": "cover",
+    "blend": "screen"
+   },
+   {
+    "file": "fortress.webp",
+    "kind": "rect",
+    "rect": [
+     360,
+     216,
+     560,
+     315
+    ],
+    "blend": "source-over"
+   },
+   {
+    "file": "foreground.webp",
+    "kind": "cover",
+    "blend": "source-over"
+   },
+   {
+    "file": "atmosphere.webp",
+    "kind": "cover",
+    "blend": "screen"
+   }
+  ],
+  "sprites": [
+   {
+    "file": "heavy-carrier.png",
+    "frames": [
+     [
+      112,
+      192,
+      1800,
+      750
+     ]
+    ],
+    "frameRate": 2,
+    "drift": {
+     "amplitude": 2,
+     "phase": 1.7
+    },
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       30,
+       170,
+       320,
+       172
+      ]
+     }
+    ]
+   },
+   {
+    "file": "thrusters-strip.png",
+    "frames": [
+     [
+      108,
+      0,
+      352,
+      1080
+     ],
+     [
+      486,
+      0,
+      762,
+      1080
+     ],
+     [
+      876,
+      126,
+      1038,
+      846
+     ],
+     [
+      1156,
+      0,
+      1430,
+      1080
+     ],
+     [
+      1568,
+      0,
+      1804,
+      1080
+     ]
+    ],
+    "frameRate": 12,
+    "blend": "screen",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       66,
+       304,
+       40,
+       52
+      ]
+     },
+     {
+      "frame": -1,
+      "box": [
+       196,
+       304,
+       40,
+       52
+      ]
+     }
+    ]
+   },
+   {
+    "file": "drop-pods.png",
+    "frames": [
+     [
+      158,
+      338,
+      764,
+      796
+     ],
+     [
+      1292,
+      176,
+      1658,
+      1030
+     ]
+    ],
+    "frameRate": 2,
+    "drift": {
+     "amplitude": 3,
+     "phase": 4.0
+    },
+    "blend": "source-over",
+    "places": [
+     {
+      "frame": 0,
+      "box": [
+       726,
+       160,
+       110,
+       104
+      ]
+     },
+     {
+      "frame": 1,
+      "box": [
+       608,
+       258,
+       110,
+       104
+      ]
+     }
+    ]
+   },
+   {
+    "file": "gravity-beam-strip.png",
+    "frames": [
+     [
+      0,
+      0,
+      480,
+      540
+     ],
+     [
+      480,
+      0,
+      960,
+      540
+     ],
+     [
+      960,
+      0,
+      1440,
+      540
+     ],
+     [
+      1440,
+      0,
+      1920,
+      540
+     ],
+     [
+      0,
+      540,
+      480,
+      1080
+     ],
+     [
+      480,
+      540,
+      960,
+      1080
+     ],
+     [
+      960,
+      540,
+      1440,
+      1080
+     ],
+     [
+      1440,
+      540,
+      1920,
+      1080
+     ]
+    ],
+    "frameRate": 8,
+    "blend": "screen",
+    "places": [
+     {
+      "frame": -1,
+      "box": [
+       804,
+       24,
+       96,
+       400
+      ]
+     },
+     {
+      "frame": -1,
+      "box": [
+       70,
+       388,
+       80,
+       240
+      ]
+     }
+    ]
+   }
+  ],
+  "fallbackPalette": [
+   "#0a111b",
+   "#203548",
+   "#81c8bb",
+   "#0c141c",
+   "#080e14"
+  ]
+ }
+}
