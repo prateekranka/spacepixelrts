@@ -207,13 +207,12 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   (15px/32px border clearance) and correct bar paint (10px, 7% fill).
   `qa:m4` green: banned-word sweep, bar advance, double-commit rejection, locked readout.
   Evidence: `/home/bobbyranka/workspace/evidence/starhaven-m4-tech-paths/`.
-- Deploy: production deploy BLOCKED from this box — wrangler has no OAuth config here and
-  non-interactive mode needs CLOUDFLARE_API_TOKEN. Build is committed and pushed; deploy
-  needs bobby's token or a Mac-side `npm run deploy`.
-  (Update 2026-08-23: FIXED — bobby supplied a Cloudflare token; token in
-  `~/.cloudflare-token` (0600). `npx wrangler pages deploy dist --project-name=spacepixelrts
-  --branch=main` deploys to production. M4-B/M5 build live at spacepixelrts.pages.dev,
-  bundle game-CKgLgIm0.js.)
+- Deploy: production deploy is now **COMPLETE** for the approved animated pixel-art front end.
+  `npx wrangler pages deploy dist --project-name=spacepixelrts --branch=main` uploaded 15 changed
+  assets and returned deployment `e2e9a16c`. Cache-busted live readback confirms `/` and
+  `/desktop.html` return 200, both reference `assets/main-BTAMIc4r.js`, the bundle returns
+  `200 application/javascript`, and approved CSS/art files return 200. Browser smoke confirms
+  title Starhaven, two New Skirmish controls, MatchSetup entry, console/page errors 0.
 - **Sol max usage directive:** bobby directed heavy Sol use (70% weekly left before reset);
   Sol now also runs design-support memos (M5 roster mapping memo dispatched in parallel).
 - **M5-A roster freeze + labels COMPLETE** (`87844a8`, Luna builder, lead-verified):
