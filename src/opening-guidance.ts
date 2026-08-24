@@ -97,6 +97,16 @@ function playerCiv(ents: readonly Ent[]): Civ {
   return unit?.civ ?? 'vespari';
 }
 
+/** A corpse/dissolve record is the honest signal that this is recovery, not first-time training. */
+function hasRecentCombatLoss(ents: readonly Ent[], civ: Civ): boolean {
+  const unique = uniqueUnit(civ);
+  return ents.some(
+    (ent) => ent.alive && ent.team === 0 && ent.hp <= 0
+      && (ent.kind === Kind.Fighter || ent.kind === unique)
+      && (ent.dissolveT > 0 || ent.corpseT > 0),
+  );
+}
+
 function trainingGuidance(ents: readonly Ent[]): OpeningGuidance {
   const civ = playerCiv(ents);
   const fighterAlive = ents.some(
@@ -109,10 +119,15 @@ function trainingGuidance(ents: readonly Ent[]): OpeningGuidance {
   const missing: string[] = [];
   if (!fighterAlive) missing.push(fighterName(civ));
   if (!uniqueAlive) missing.push(labelOf(unique, civ));
+  const recovering = hasRecentCombatLoss(ents, civ);
   return {
     id: 'train-army',
-    primary: `Train ${missing.join(' + ')}`,
-    secondary: 'Select your Yard · train each unit · Habitat only if pop is full',
+    primary: `${recovering ? 'Rebuild' : 'Train'} ${missing.join(' + ')}`,
+    secondary: recovering
+      ? missing.length === 1
+        ? 'Combat unit lost · select your Yard and retrain the missing role'
+        : 'Strike team lost · select your Yard and retrain both roles'
+      : 'Select your Yard · train each unit · Habitat only if pop is full',
   };
 }
 
