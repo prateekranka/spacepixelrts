@@ -346,15 +346,15 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   pair4019, replacement Scout exact, terminal11741 (9:47), sim share1.35ms. Fresh six-frame Sol FAIL
   was incomplete evidence; complete eight-frame re-gate then found the true remaining gap: post-army
   guidance does not tell the player to command the army to Lumen or the rival Nexus.
-- **VS-5C post-army objective/victory guidance COMPLETE** (`b969141`): after the mixed pair,
-  guidance walks secure-lumen → push-lumen (owner0) → destroy-core (rival Nexus discovered), with
-  LUMEN/PUSH/RIVAL NEXUS world markers. Unit REDs, browser REDs, and all protected gates pass.
-  Independent QA proves natural discovery tick4179, player capture owner0 tick4578 with pair alive,
-  real terminal tick10589 (8:49), sim share1.28ms, zero errors. Production deployed
-  (`assets/main-*.js`, deployment `7a980784`) and live-verified: reserve700, pair trained, HUD states
-  render through the chain. DeepSeek blind critic (new route) FAILed the first six-frame gate on a
-  misread cost contradiction; manifest data disproves it (deck buttons enabled=false at Ore126,
-  costs70+90). Critic quirk logged; re-gate pending.
+- **VS-5C post-army objective/victory guidance COMPLETE** (`b969141`, copy sharpened
+  `67e375f`): after the mixed pair, guidance walks secure-lumen → push-lumen (owner0) →
+  destroy-core (rival Nexus discovered), with LUMEN/PUSH/RIVAL NEXUS world markers. Terminal
+  overlay now freezes the banner and target so stale coaching never contradicts the outcome.
+  Unit REDs, browser REDs, and all protected gates pass; natural discovery tick4179, player capture
+  owner0 tick4578 with pair alive, real terminal tick10589 (8:49), sim share1.26ms, zero errors.
+  Production deployed (`787bb197`) and live-verified. DeepSeek blind critic (new route) final
+  six-frame gate: **PASS** — every frame's next action judged clear; residual nit is honest retrain
+  coaching when the pair dies at Lumen (correct behavior). Evidence: `starhaven-vs5c-r3/`.
 - **Production live at accepted VS-4A assets but VS-5 pacing FAIL** (`1e22b5e`,
   `assets/main-CQGftbuI.js`): deployed to existing Pages `main`. Live readback confirmed combat atlas
   1024×256, four mappings, exact scales, draw calls5, runtime MAG0, console0, composited lineup at
