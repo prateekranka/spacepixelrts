@@ -1,0 +1,21 @@
+# VS-5 Fresh Blind First-Match Pacing Gate
+
+Judge only the five attached 1366×1024 composited screenshots from the actual running Starhaven build. They show, in order: opening guidance, funding guidance, technology choice, army-training guidance, and a real terminal reached after the rival legally retrained a lost Scout.
+
+Do not inspect source, tests, manifests, logs, filenames beyond order, or previous verdicts. Do not assume intended behavior.
+
+Blind questions:
+1. Can a first-time touch player infer the immediate economy→technology→army action in each nonterminal frame without prose outside the game?
+2. Does each frame spatially identify the required object: Worker, Ore, Nexus, Yard?
+3. Are current/required resources and exact path costs visible and unambiguous?
+4. Is the terminal outcome unmistakable and Continue usable?
+5. Does any new guidance overlap, clip, contradict the visible command deck, or demand hidden knowledge?
+
+Gate only the VS-5 progression/pacing presentation. Existing general HUD density is nonblocking unless it makes one required action unreadable.
+
+Return exactly:
+- `VERDICT: PASS` or `VERDICT: FAIL`
+- one sentence per frame
+- `SINGLE BIGGEST GAP: ...`
+
+A PASS requires an unbroken visible instruction chain from first action through army and terminal. Do not give a charitable pass.

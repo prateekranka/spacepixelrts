@@ -322,7 +322,17 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   Workers→choose/channel→faction-aware mixed army before Signal. Separate repro killed the only AI
   Scout and produced no winner at18; normal 40-seed sample resolved by15:08. AI will legally retrain a
   lost Scout at its Hall, no grant/spawn/hidden target. Strict tracer REDs, path<=8, mixed pair<=10,
-  scout-death winner<=18, visible 1366×1024 QA required. Final failed-match evidence:
+  scout-death winner<=18, visible 1366×1024 QA required. VS-5 implementation `5d336e4`
+  independently passes focused unit/browser proof, all protected regressions, and build: Yard tick154,
+  path funded2610, lock3411, mixed pair3880, replacement Scout exact 40/0/15 +6s, real terminal13413
+  (11:11), no grants/spawns/winner writes/errors, sim share1.46ms. Fresh Sol five-frame gate then
+  **FAILed one visual defect**: Sky Dominion card bottom clips because two 88px full-width choices
+  cannot fit a 112px deck.
+- **VS-5A fully visible technology choice FROZEN / ACTIVE**
+  (`docs/VS5A_TECH_CHOICE_VISIBILITY.md`): uncommitted Nexus uses a focused two-column, one-row
+  doctrine deck; both 88px cards must be fully inside 1366×1024. During channel, the sole chosen card
+  spans both columns. Normal Nexus controls return after commitment. Strict browser geometry RED→GREEN
+  plus fresh Sol re-gate required. Final failed-match evidence:
   `/home/bobbyranka/workspace/evidence/starhaven-final-production-match/`.
 - **Production live at accepted VS-4A assets but VS-5 pacing FAIL** (`1e22b5e`,
   `assets/main-CQGftbuI.js`): deployed to existing Pages `main`. Live readback confirmed combat atlas
