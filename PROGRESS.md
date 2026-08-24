@@ -328,12 +328,14 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   (11:11), no grants/spawns/winner writes/errors, sim share1.46ms. Fresh Sol five-frame gate then
   **FAILed one visual defect**: Sky Dominion card bottom clips because two 88px full-width choices
   cannot fit a 112px deck.
-- **VS-5A fully visible technology choice FROZEN / ACTIVE**
-  (`docs/VS5A_TECH_CHOICE_VISIBILITY.md`): uncommitted Nexus uses a focused two-column, one-row
-  doctrine deck; both 88px cards must be fully inside 1366×1024. During channel, the sole chosen card
-  spans both columns. Normal Nexus controls return after commitment. Strict browser geometry RED→GREEN
-  plus fresh Sol re-gate required. Final failed-match evidence:
-  `/home/bobbyranka/workspace/evidence/starhaven-final-production-match/`.
+- **VS-5A fully visible technology choice COMPLETE** (`44d33e8`): strict RED measured Solar
+  `bottom=940`, Sky `bottom=1034` against viewport1024 and 94px row offset. GREEN focuses the
+  uncommitted Nexus deck into two equal one-row cards: Solar `730–1037 × 924–1012`, Sky
+  `1043–1350 × 924–1012`; channel card `730–1350 × 924–1012`; all 88px, fully visible, exact costs
+  unchanged. Independent VS5/progression/touch/AI/build gates pass. Fresh Sol repaired five-frame
+  chain: **PASS**. Residual: Solar Strider cost wraps tightly but remains readable. Evidence:
+  `/home/bobbyranka/workspace/evidence/starhaven-vs5a-lead/`. VS-5 now awaits only one no-restart
+  production whole-match gate.
 - **Production live at accepted VS-4A assets but VS-5 pacing FAIL** (`1e22b5e`,
   `assets/main-CQGftbuI.js`): deployed to existing Pages `main`. Live readback confirmed combat atlas
   1024×256, four mappings, exact scales, draw calls5, runtime MAG0, console0, composited lineup at

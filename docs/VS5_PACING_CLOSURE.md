@@ -1,6 +1,7 @@
 # VS-5 — First-Match Pacing Closure
 
-Status: **ACTIVE / FROZEN**. Parent: `docs/VERTICAL_SLICE_SPRINT.md`.
+Status: **OBJECTIVE + VISUAL GATES COMPLETE / PRODUCTION WHOLE-MATCH PENDING**. Parent:
+`docs/VERTICAL_SLICE_SPRINT.md`.
 
 ## Evidence and root causes
 

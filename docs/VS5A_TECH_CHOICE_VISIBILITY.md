@@ -1,6 +1,7 @@
 # VS-5A — Fully Visible Technology Choice
 
-Status: **ACTIVE / FROZEN**. Parent: `docs/VS5_PACING_CLOSURE.md`.
+Status: **COMPLETE / ACCEPTED** (`44d33e8`). Parent: `docs/VS5_PACING_CLOSURE.md`.
+Fresh Sol passed the repaired five-frame progression gate.
 
 ## Loss
 
