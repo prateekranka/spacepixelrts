@@ -17,21 +17,34 @@
 }
 
 /*
- * The approved loading painting includes a representative progress strip. Cover only that
- * lower UI band before drawing the real live progress, so text and percentages never double.
+ * The approved loading painting includes representative UI. Three narrow feathered masks remove
+ * only those painted controls before the real status, progress, and tip are drawn on top; the city
+ * and landing field remain visible between and around them.
  */
 .front-loading-screen.front-approved-art-ready>.front-approved-tint{
   opacity:1!important;
   mix-blend-mode:normal!important;
   animation:none!important;
   background:
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(1,3,12,.98) 12%,
-      rgba(1,3,12,.995) 27%,
-      rgba(1,3,12,.995) 73%,
-      rgba(1,3,12,.98) 88%,
+    radial-gradient(
+      ellipse at center,
+      #01030c 0%,
+      #01030c 63%,
+      rgba(1,3,12,.98) 78%,
       transparent 100%
-    ) center 84% / 78% 35% no-repeat!important;
+    ) center 72.2% / 58% 12% no-repeat,
+    radial-gradient(
+      ellipse at center,
+      #01030c 0%,
+      #01030c 62%,
+      rgba(1,3,12,.98) 78%,
+      transparent 100%
+    ) center 79.1% / 50% 6.5% no-repeat,
+    radial-gradient(
+      ellipse at center,
+      #01030c 0%,
+      #01030c 64%,
+      rgba(1,3,12,.985) 80%,
+      transparent 100%
+    ) center 88% / 57% 15% no-repeat!important;
 }
