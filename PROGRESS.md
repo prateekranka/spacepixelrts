@@ -346,11 +346,15 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   pair4019, replacement Scout exact, terminal11741 (9:47), sim share1.35ms. Fresh six-frame Sol FAIL
   was incomplete evidence; complete eight-frame re-gate then found the true remaining gap: post-army
   guidance does not tell the player to command the army to Lumen or the rival Nexus.
-- **VS-5C post-army objective/victory guidance FROZEN / ACTIVE**
-  (`docs/VS5C_OBJECTIVE_VICTORY_GUIDANCE.md`): after mixed army, current state must direct
-  Scout→secure marked Lumen→push through lane→destroy discovered rival Nexus. Every order stays manual;
-  no mechanic/state mutation. Same progressed VS5 browser run must capture the real Lumen and Core
-  states before fresh Sol and final production match.
+- **VS-5C post-army objective/victory guidance COMPLETE** (`b969141`): after the mixed pair,
+  guidance walks secure-lumen → push-lumen (owner0) → destroy-core (rival Nexus discovered), with
+  LUMEN/PUSH/RIVAL NEXUS world markers. Unit REDs, browser REDs, and all protected gates pass.
+  Independent QA proves natural discovery tick4179, player capture owner0 tick4578 with pair alive,
+  real terminal tick10589 (8:49), sim share1.28ms, zero errors. Production deployed
+  (`assets/main-*.js`, deployment `7a980784`) and live-verified: reserve700, pair trained, HUD states
+  render through the chain. DeepSeek blind critic (new route) FAILed the first six-frame gate on a
+  misread cost contradiction; manifest data disproves it (deck buttons enabled=false at Ore126,
+  costs70+90). Critic quirk logged; re-gate pending.
 - **Production live at accepted VS-4A assets but VS-5 pacing FAIL** (`1e22b5e`,
   `assets/main-CQGftbuI.js`): deployed to existing Pages `main`. Live readback confirmed combat atlas
   1024×256, four mappings, exact scales, draw calls5, runtime MAG0, console0, composited lineup at
