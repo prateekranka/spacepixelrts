@@ -21,7 +21,7 @@
     "test:vs2b": "tsx tests/vs2b-lumen-field.test.ts",
     "test:vs3": "tsx tests/vs3-results.test.ts",
     "test:vs4": "tsx tests/vs4-combat-assets.test.ts",
-    "test:vs5": "tsx tests/vs5-pacing.test.ts",
+    "test:vs5": "tsx tests/vs5-pacing.test.ts && tsx tests/vs5-recovery-guidance.test.ts",
     "test:vs2-ai": "tsx tests/vs2-ai-doctrine.test.ts",
     "qa:vs2b": "node scripts/qa-vs2b-lumen.mjs",
     "qa:vs3": "node scripts/qa-vs3-results.mjs",
