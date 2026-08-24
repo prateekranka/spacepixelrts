@@ -1,0 +1,43 @@
+name: Live Front-End Verification
+
+on:
+  pull_request:
+    branches: [chatgptpro2008]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-front-end:
+    name: Cloudflare production theme matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify all four production themes
+        run: npm run qa:front-end-themes -- --url=https://spacepixelrts.pages.dev --out=/tmp/starhaven-live-front-end
+
+      - name: Upload live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starhaven-live-front-end
+          path: /tmp/starhaven-live-front-end
+          if-no-files-found: warn
+          retention-days: 7
