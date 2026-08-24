@@ -2,6 +2,8 @@
 
 Status: **FROZEN** (lead-owned). Branch: `hermes/starhaven-aaa-front-end`.
 Implementation target: `src/front-end-scene.ts` (PR #10 procedural painter).
+
+The authored scene contract remains unchanged. The DOM shell that overlays these packs is governed by `docs/PIXEL_FRONT_END_SYSTEM.md` on `hermes/starhaven-pixel-ui-shell`. That UI contract may change layout-safe CSS and markup hooks, but it must preserve this compositor API, the manifests, and the accepted art compositions.
 Public API of `front-end-scene.ts` MUST stay compatible:
 `mountFrontEndScene(container, {faction, mode, reducedMotion})` →
 controller with `root`, `canvas`, `sceneId`, `setFaction`, `setMode`,

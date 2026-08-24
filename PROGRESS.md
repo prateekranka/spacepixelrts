@@ -46,6 +46,14 @@ Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`). P
 - NOT DEPLOYED to Cloudflare: PR still unmerged; production keeps the previously
   approved front end (b406cb6 / e2e9a16c) until #10+#11 merge.
 
+## Pixel front-end shell (2026-08-25) — IN PROGRESS
+
+- Isolated worktree: `/home/bobbyranka/workspace/spacepixelrts-pixel-ui-shell`; branch `hermes/starhaven-pixel-ui-shell` from `origin/hermes/starhaven-aaa-front-end` at `9020475`.
+- Branch reconciliation complete: authored branch is 10 commits ahead of `origin/chatgptpro2008`; integration is 0 commits ahead. No newer gameplay or functional-menu commit needed to be merged.
+- Authored asset proof: Sunweaver 22 files and Gravemark 21 files; distinct manifest hashes and compositions; no hue-rotation substitute. Protected `src/sim.ts` and `src/engine.ts` hashes recorded.
+- Baseline gates pass: `test:m0`, `test:aaa`, build, and `qa:aaa`; four 1920 × 1080 captures, 0 console errors. Evidence: `/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/baseline/`.
+- Frozen DOM visual contract: `docs/PIXEL_FRONT_END_SYSTEM.md`. Single biggest gap: smooth web-dashboard UI over accepted pixel-art scenes. Implementation will replace the shell without changing gameplay or authored scene packs.
+
 ## Front-end rebuild (2026-08-24)
 
 - Replaced the four filtered copies of one flattened menu painting with two faction-owned 960 × 540
