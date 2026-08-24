@@ -57,10 +57,10 @@ jobs:
         run: npm run build
 
   browser-slice:
-    name: Browser progression and results
+    name: Browser progression, results, and front-end themes
     needs: deterministic-slice
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Check out branch
@@ -85,7 +85,9 @@ jobs:
           progression_status=$?
           npm run qa:vs3 -- --out=/tmp/starhaven-results
           results_status=$?
-          if [ "$progression_status" -ne 0 ] || [ "$results_status" -ne 0 ]; then
+          npm run qa:front-end-themes -- --out=/tmp/starhaven-front-end
+          front_end_status=$?
+          if [ "$progression_status" -ne 0 ] || [ "$results_status" -ne 0 ] || [ "$front_end_status" -ne 0 ]; then
             exit 1
           fi
 
@@ -97,5 +99,6 @@ jobs:
           path: |
             /tmp/starhaven-progression
             /tmp/starhaven-results
+            /tmp/starhaven-front-end
           if-no-files-found: warn
           retention-days: 14
