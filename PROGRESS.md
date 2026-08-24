@@ -7,10 +7,10 @@ skirmish before deep controls or general polish: menu -> scout -> gather -> choo
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
 
-## AAA front-end art (2026-08-24, in progress)
+## AAA front-end art (2026-08-24) — DONE
 
-Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`, PR #10
-base + authored packs; PR to open when green). Contract frozen:
+Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`). PR **#11** open
+(base `codex/starhaven-menu-rebuild`). Contract frozen:
 `docs/AAA_FRONT_END_ART_SPEC.md` + `docs/AAA_FRONT_END_INTEGRATION_SPEC.md`.
 
 - Replaces the two procedural placeholder scene packs (flat geometry) with four
@@ -21,10 +21,9 @@ base + authored packs; PR to open when green). Contract frozen:
   front-end/civilizations/<civ>/<mode>/`), manifest-driven at 960x540 logical.
 - Art pipeline (lead-owned): 2 menu key-art candidates per civilization generated,
   blind-reviewed, refined once, loading compositions matched, then per-layer
-  generated art with shared anchor geometry, chroma/black keying, body placement
-  (sun 0.28/0.26 r=0.21H; moon 0.26/0.22 r=0.17H), 1920x1080 exact export.
-  Masters + pipeline + provenance: `assets/front-end/` (README.md); local
-  composites verified: all four packs pass composition gate.
+  generated art with shared anchor geometry, chroma/black keying (luminance-aware
+  dither kill), body placement (sun 0.28/0.26 r=0.21H; moon 0.26/0.22 r=0.17H),
+  1920x1080 exact export. Masters + pipeline + provenance: `assets/front-end/`.
 - Sunweaver: luminous sun capital, lattice towers, suspended bridge, plaza
   terraces, sailcraft traffic, warm white/amber/gold/cyan/indigo, calm right side.
 - Gravemark: fractured moon + cratered asteroid ring, terraced quarry-city,
@@ -32,10 +31,20 @@ base + authored packs; PR to open when green). Contract frozen:
   carrier, obsidian/steel/mineral-green/ice-blue, dense crystal foregrounds.
 - No flattened image: ships/strips/masks are separate animated assets; packs are
   distinct compositions, no hue-rotate (test forbids it).
-- Implementation in progress: scene compositor rewrite (`src/front-end-scene.ts`)
-  reads the manifests; builder brief `tasks/AAA-builder-brief.txt` (Luna, running).
-  After implementation: blind critic gate (zen vision) on live screenshots, then
-  push + PR (#11 base `codex/starhaven-menu-rebuild`).
+- Implementation (Luna builder, lead-verified): `src/front-end-scene.ts` rewritten
+  as authored layered compositor — public API + dataset contract preserved;
+  tests/front-end-scene.test.ts unchanged. New `tests/aaa-front-end-scene.test.ts`
+  (pack validation) + `scripts/qa-aaa-front-end.mjs` (2 civs x 2 modes, 1920x1080).
+- VERIFICATION (lead re-ran all gates): test:m0 PASS, test:aaa PASS, build PASS,
+  qa:aaa PASS (4 captures, canvases painted, 0 console errors), and the blind
+  critic (deepseek-v4-flash-vision-exp, gates a-g per image) reports **PASS on all
+  four** — loading screens intentionally simpler (UI overlay band).
+- Evidence: `/home/bobbyranka/workspace/evidence/starhaven-aaa/`.
+- KNOWN NITS (non-blocking): loading packs less lavish than menu masters (by
+  design); sunweaver far-right tower silhouette is plain; ships read slightly
+  toy-like at runtime scale.
+- NOT DEPLOYED to Cloudflare: PR still unmerged; production keeps the previously
+  approved front end (b406cb6 / e2e9a16c) until #10+#11 merge.
 
 ## Front-end rebuild (2026-08-24)
 
