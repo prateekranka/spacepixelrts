@@ -12,73 +12,17 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply-terminal-replay-fix:
-    name: Apply diagnosed terminal replay fix
-    if: github.event_name == 'pull_request' && github.head_ref == 'chatgpt/first-playable-browser-gate'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - name: Check out working branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-
-      - name: Patch stale replay terminal copy
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          def replace_once(path: str, old: str, new: str) -> bool:
-              file = Path(path)
-              text = file.read_text()
-              if new in text:
-                  return False
-              if text.count(old) != 1:
-                  raise SystemExit(f'{path}: expected one patch target, found {text.count(old)}')
-              file.write_text(text.replace(old, new))
-              return True
-
-          changed = False
-          changed |= replace_once(
-              'src/hud.ts',
-              "    this.matchEndEl.hidden = !isTerminal;\n    this.resultsEl.hidden = state !== 'Results';",
-              "    this.matchEndEl.hidden = !isTerminal;\n    if (isTerminal) this.drawMatchEnd();\n    this.resultsEl.hidden = state !== 'Results';",
-          )
-          changed |= replace_once(
-              'scripts/qa-vs3-results.mjs',
-              "    assertThat(defeatTerminal.title === 'DEFEAT' && defeatTerminal.sub === 'Your Nexus is ash' && !defeatTerminal.hidden, 'Defeat terminal copy/surface is wrong');\n    await page.screenshot({ path: path.join(out, 'defeat-terminal.png'), fullPage: true });",
-              "    await page.screenshot({ path: path.join(out, 'defeat-terminal.png'), fullPage: true });\n    assertThat(\n      defeatTerminal.title === 'DEFEAT' && defeatTerminal.sub === 'Your Nexus is ash' && !defeatTerminal.hidden,\n      `Defeat terminal copy/surface is wrong (${JSON.stringify(defeatTerminal)})`,\n    );",
-          )
-          print(f'patched={changed}')
-          PY
-
-          if git diff --quiet; then
-            echo "Terminal replay fix already present"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/hud.ts scripts/qa-vs3-results.mjs
-          git commit -m "fix: refresh terminal overlay between matches"
-          git push origin "HEAD:${HEAD_BRANCH}"
-
   deterministic-slice:
     name: Deterministic slice and production build
-    needs: apply-terminal-replay-fix
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
@@ -121,8 +65,6 @@ jobs:
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
