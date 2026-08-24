@@ -1,0 +1,95 @@
+name: Deploy Front-End Themes to Production
+
+on:
+  push:
+    branches: [chatgpt/cloudflare-front-end-deploy]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy Cloudflare Pages production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out certified branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgptpro2008
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Validate Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Cloudflare API token secret is missing"; exit 2; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Cloudflare account ID secret is missing"; exit 2; }
+
+      - name: Deploy as the production branch
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
+        run: npx wrangler pages deploy dist --project-name=spacepixelrts --branch=main --commit-hash=${{ github.sha }} --commit-message="Random Full-HD Starhaven front-end themes"
+
+  live-verification:
+    name: Verify production after deploy
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out certified branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgptpro2008
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for Cloudflare propagation
+        run: |
+          for attempt in $(seq 1 18); do
+            if curl -fsS https://spacepixelrts.pages.dev/front-end-theme.css | grep -q 'front-loading-screen'; then
+              echo "Production asset visible on attempt $attempt"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Production asset did not propagate"
+          exit 1
+
+      - name: Verify all four live themes
+        run: npm run qa:front-end-themes -- --url=https://spacepixelrts.pages.dev --out=/tmp/starhaven-live-front-end
+
+      - name: Upload live production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starhaven-live-front-end-production
+          path: /tmp/starhaven-live-front-end
+          if-no-files-found: warn
+          retention-days: 14
