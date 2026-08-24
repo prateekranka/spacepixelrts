@@ -1,0 +1,64 @@
+name: Verify Cloudflare Deploy Marker
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    name: Confirm production marker and approved front end
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out probe branch
+        uses: actions/checkout@v4
+
+      - name: Wait for Git-driven production deployment
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            marker="$(curl -fsS --max-time 20 https://spacepixelrts.pages.dev/deploy-revision.json || true)"
+            css="$(curl -fsS --max-time 20 https://spacepixelrts.pages.dev/approved-front-art.css || true)"
+            if printf '%s' "$marker" | grep -q 'pixel-r2-2026-08-24-01' \
+              && printf '%s' "$css" | grep -q 'front-approved-art-ready'; then
+              printf '%s\n' "$marker" > /tmp/live-deploy-revision.json
+              printf '%s\n' "$css" > /tmp/live-approved-front-art.css
+              echo "Cloudflare production serves the approved release."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Cloudflare production did not publish the main-branch marker."
+          exit 1
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live Full-HD front-end matrix
+        run: npm run qa:front-end-themes -- --url=https://spacepixelrts.pages.dev --out=/tmp/starhaven-live-deploy
+
+      - name: Upload live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starhaven-live-deploy-verification
+          path: |
+            /tmp/live-deploy-revision.json
+            /tmp/live-approved-front-art.css
+            /tmp/starhaven-live-deploy
+          if-no-files-found: warn
+          retention-days: 14
