@@ -183,4 +183,14 @@ All six PNGs and the MP4 are in this directory. Before frames are exact copies f
 
 The MP4 is H.264, `yuv420p`, 21.56 seconds, nonzero size, and has no audio. The measurement artifacts are `/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/measure.json` (SHA-256 `dc28e3968f89183f8d858e02f11ce00cbc95e7d2cd7b0289b5cf5967c176b312`) and `measure.png` (SHA-256 `bae87c8f2dcfcc6e48278f3093ae8ecd915874b15fd6941110f00451016abb13`).
 
-Honest limitations are unchanged: SwiftShader makes render/work p99 observational rather than a hardware gate; Loading stage 3 can be brief unless held by the truthful QA route; and this commit makes no deployment, push, or PR claim.
+## Delivery readback
+
+- Branch pushed to `origin/hermes/starhaven-pixel-ui-shell`.
+- Cloudflare Pages preview: https://ca49bd4f.spacepixelrts.pages.dev
+- Preview alias: https://hermes-starhaven-pixel-ui-sh.spacepixelrts.pages.dev
+- Local-to-live byte comparison passed for `desktop.html`, both generated JavaScript bundles, both front-end CSS files, Pixelify/Silkscreen/Kode fonts, Records/Dispatches SVGs, and both civilization manifests.
+- The deployed preview passed the 24-assertion `qa:front-end` browser regression with 9 screenshots and zero errors.
+- Pull request: https://github.com/prateekranka/spacepixelrts/pull/12, base `chatgptpro2008`, mergeable.
+- GitHub CI: `Deterministic slice and production build` PASS; `Browser progression, results, and front-end themes` PASS.
+
+Honest limitations are unchanged: SwiftShader makes render/work p99 observational rather than a hardware gate, and Loading stage 3 can be brief unless held by the truthful QA route.

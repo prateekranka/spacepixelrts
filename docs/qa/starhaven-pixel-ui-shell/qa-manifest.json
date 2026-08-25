@@ -39,10 +39,20 @@
       "reconciliation": "FPE-0 reconciled the authored art branch into the PR base; FPE-1 through FPE-5 are the accepted front-end shell commits on top. FPE-6 adds only integration QA repairs, evidence, documentation, and capture tooling."
     },
     "deployment": {
-      "pushed": false,
-      "deployed": false,
-      "pullRequestCreated": false,
-      "handoff": "Lead performs post-commit review and any push, deployment, or PR work."
+      "pushed": true,
+      "deployed": true,
+      "previewUrl": "https://ca49bd4f.spacepixelrts.pages.dev",
+      "previewAlias": "https://hermes-starhaven-pixel-ui-sh.spacepixelrts.pages.dev",
+      "deployedPreviewRegression": "PASS — 24 assertions, 9 screenshots, 0 errors",
+      "assetHashReadback": "PASS — HTML, JS, CSS, fonts, icons, and both civilization manifests match dist",
+      "pullRequestCreated": true,
+      "pullRequestNumber": 12,
+      "pullRequestUrl": "https://github.com/prateekranka/spacepixelrts/pull/12",
+      "pullRequestBase": "chatgptpro2008",
+      "ci": {
+        "Deterministic slice and production build": "PASS",
+        "Browser progression, results, and front-end themes": "PASS"
+      }
     }
   },
   "protectedVerification": {
