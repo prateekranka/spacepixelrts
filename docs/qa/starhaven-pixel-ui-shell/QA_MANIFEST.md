@@ -76,7 +76,21 @@ The first no-argument `npm run qa:vs3` invocation exposed a harness-only issue: 
 
 The final pixel matrix has 84 assertions, 80 captures, and zero errors. It covers both landscape orientations, both factions, all four landscape viewports, portrait rotate-gate sizes, utility/panel interactions, Reduced Motion, keyboard/focus/Escape, and touch contracts. Its manifest is `/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/pixel-front-end/manifest.json` with SHA-256 `9e556f0bbc76fbd9ef08e14c9c997434f4de58f32b3679a5dceec9c4dc213c87`.
 
-The built-preview front-end regression has 24 assertions, 9 screenshots, and zero errors. Its manifest is `/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/front-end-regression/manifest.json` with SHA-256 `ee79c6d27630cfdbd24f0904b0421a954e5592a3d12f0a4bc53a1ef3c7108df1`.
+The built-preview front-end regression has 24 assertions, 9 screenshots, and zero errors. Its manifest is `/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/front-end-regression/manifest.json` with SHA-256 `fd2cb302c0c15727c2baeb0054624dde58843b00e1e687469fef68660a9e666d`.
+
+## PR #12 CI readback
+
+The CI failure was a QA-only lifecycle defect: `qa-front-end-rebuild.mjs` used `http://127.0.0.1:4173` when `--url` was omitted, but did not start a server. The repair starts a detached Vite dev server on an available loopback port only for no-URL runs, records the resolved URL in its manifest, and stops the process group with bounded SIGTERM/SIGKILL cleanup. Explicit `--url` behavior remains unchanged.
+
+The exact workflow browser block passed locally:
+
+```text
+npm run qa:progression-handoff -- --out=/tmp/starhaven-progression  PASS
+npm run qa:vs3 -- --out=/tmp/starhaven-results                 PASS
+npm run qa:front-end-themes -- --out=/tmp/starhaven-front-end PASS
+```
+
+The no-URL themes manifest recorded `http://127.0.0.1:41279`, managed server port `41279`, 24 assertions, 9 captures, and zero errors. Its SHA-256 is `a5442ea621d4370e1b11a973086534bec15c0ccc0edb340231c96274e6772785`.
 
 ## Focused browser flow
 

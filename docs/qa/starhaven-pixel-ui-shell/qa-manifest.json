@@ -200,6 +200,35 @@
       "reason": "The existing script rejected the exact no-argument invocation because it required --out. FPE-6 added a durable external default and the exact command above was rerun successfully."
     }
   ],
+  "ciReadback": {
+    "workflow": ".github/workflows/first-playable.yml",
+    "rootCause": "qa-front-end-rebuild.mjs previously defaulted to 127.0.0.1:4173 without starting a server when --url was omitted.",
+    "repair": "No-url runs now start a detached local Vite dev server on an available 127.0.0.1 port, record its URL, and stop the process group with bounded SIGTERM/SIGKILL cleanup. Explicit --url runs do not start a server.",
+    "commands": [
+      {
+        "command": "npm run qa:progression-handoff -- --out=/tmp/starhaven-progression",
+        "status": "PASS",
+        "evidence": "/tmp/starhaven-progression/manifest.json"
+      },
+      {
+        "command": "npm run qa:vs3 -- --out=/tmp/starhaven-results",
+        "status": "PASS",
+        "evidence": "/tmp/starhaven-results"
+      },
+      {
+        "command": "npm run qa:front-end-themes -- --out=/tmp/starhaven-front-end",
+        "status": "PASS",
+        "evidence": "/tmp/starhaven-front-end/manifest.json",
+        "actualUrl": "http://127.0.0.1:41279",
+        "serverManaged": true,
+        "serverPort": 41279,
+        "assertions": 24,
+        "captures": 9,
+        "errors": 0,
+        "manifestSha256": "a5442ea621d4370e1b11a973086534bec15c0ccc0edb340231c96274e6772785"
+      }
+    ]
+  },
   "coverage": {
     "landscapeViewports": [
       { "width": 1920, "height": 1080 },
@@ -225,7 +254,7 @@
       "screenshots": 9,
       "errors": 0,
       "manifest": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/front-end-regression/manifest.json",
-      "manifestSha256": "ee79c6d27630cfdbd24f0904b0421a954e5592a3d12f0a4bc53a1ef3c7108df1"
+      "manifestSha256": "fd2cb302c0c15727c2baeb0054624dde58843b00e1e687469fef68660a9e666d"
     },
     "aaa": {
       "errorCount": 0,
@@ -349,7 +378,7 @@
     "progressionHandoff": { "errors": [] },
     "vs3": { "errors": [] },
     "vs5": { "consoleErrors": [], "errors": [] },
-    "frontEndRegression": { "errors": [], "manifestSha256": "ee79c6d27630cfdbd24f0904b0421a954e5592a3d12f0a4bc53a1ef3c7108df1" },
+    "frontEndRegression": { "errors": [], "manifestSha256": "fd2cb302c0c15727c2baeb0054624dde58843b00e1e687469fef68660a9e666d" },
     "video": { "issues": [] },
     "integrator": {
       "consoleErrors": [],

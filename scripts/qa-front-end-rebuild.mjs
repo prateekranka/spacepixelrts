@@ -7,6 +7,9 @@
  */
 
 import fs from 'node:fs';
+import { once } from 'node:events';
+import { spawn } from 'node:child_process';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -61,6 +64,79 @@ function resolveOutput(raw) {
 
 function normalizeUrl(raw) {
   return String(raw || DEFAULT_URL).replace(/\/$/, '');
+}
+
+function findOpenPort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (!address || typeof address === 'string') {
+        server.close();
+        reject(new Error('could not allocate a local QA port'));
+        return;
+      }
+      const port = address.port;
+      server.close((error) => (error ? reject(error) : resolve(port)));
+    });
+  });
+}
+
+async function stopServer(server) {
+  if (!server || server.stopped) return;
+  server.stopped = true;
+  const child = server.child;
+  if (server.exited || child.pid == null || child.exitCode !== null || child.signalCode !== null) return;
+  const signal = (name) => {
+    if (child.pid == null || child.exitCode !== null || child.signalCode !== null) return;
+    try {
+      process.kill(-child.pid, name);
+    } catch {
+      try { child.kill(name); } catch {}
+    }
+  };
+  signal('SIGTERM');
+  const stopped = await Promise.race([
+    once(child, 'exit').then(() => true).catch(() => true),
+    new Promise((resolve) => setTimeout(() => resolve(false), 3000)),
+  ]);
+  if (!stopped) {
+    signal('SIGKILL');
+    await Promise.race([
+      once(child, 'exit').catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
+  }
+}
+
+async function startServer() {
+  const port = await findOpenPort();
+  const url = `http://127.0.0.1:${port}`;
+  const vite = path.join(REPO_ROOT, 'node_modules', '.bin', 'vite');
+  const child = spawn(vite, ['--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
+    cwd: REPO_ROOT,
+    detached: true,
+    env: process.env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const state = { child, url, port, exited: false, stopped: false };
+  child.on('exit', () => { state.exited = true; });
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => process.stdout.write(`[qa-front-end] ${chunk}`));
+  child.stderr.on('data', (chunk) => process.stderr.write(`[qa-front-end] ${chunk}`));
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline && !state.exited) {
+    try {
+      const response = await fetch(`${url}/`, { signal: AbortSignal.timeout(1000) });
+      if (response.ok) return state;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  await stopServer(state);
+  throw new Error(`Vite did not become ready at ${url}`);
 }
 
 function visible(element) {
@@ -496,6 +572,7 @@ async function runContract(browser, baseUrl, output, manifest) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const explicitUrl = args.url !== undefined;
   let output;
   try {
     output = resolveOutput(args.out);
@@ -506,10 +583,11 @@ async function main() {
     return;
   }
 
-  const baseUrl = normalizeUrl(args.url);
+  let baseUrl = explicitUrl ? normalizeUrl(args.url) : null;
   const manifest = {
     tool: 'qa-front-end-rebuild',
     url: baseUrl,
+    server: { managed: !explicitUrl, port: null },
     dimensions: DIMENSIONS,
     sceneIds: [],
     controls: [],
@@ -521,13 +599,21 @@ async function main() {
     finishedAt: null,
   };
   let browser;
+  let server;
   try {
+    if (!explicitUrl) {
+      server = await startServer();
+      baseUrl = server.url;
+      manifest.url = baseUrl;
+      manifest.server.port = server.port;
+    }
     browser = await chromium.launch({ channel: 'chrome', headless: true }).catch(() => chromium.launch({ headless: true }));
     await runContract(browser, baseUrl, output, manifest);
   } catch (error) {
     appendError(manifest, error);
   } finally {
     await browser?.close();
+    await stopServer(server);
     manifest.finishedAt = new Date().toISOString();
     manifest.sceneIds = [...new Set(manifest.sceneIds)];
     manifest.status = manifest.errors.length === 0 && manifest.assertions.every((assertion) => assertion.status === 'PASS') ? 'PASS' : 'FAIL';
