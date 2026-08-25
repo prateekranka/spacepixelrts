@@ -108,6 +108,155 @@
   display: none !important;
 }
 
+/* FPE-5 PORTRAIT ORIENTATION GATE
+   The entry surface uses the same local roles and hard neutral frame as the shell. */
+#rotate-gate {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  color: var(--px-text);
+  background-color: var(--px-black);
+  font-family: var(--font-body);
+  text-align: center;
+}
+
+.rotate-gate-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  box-sizing: border-box;
+  width: min(640px, calc(100vw - 48px));
+  height: 280px;
+  max-width: 100%;
+  max-height: calc(100vh - 48px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 24px 32px;
+  border: 2px solid var(--px-border-mid);
+  background-color: var(--px-panel);
+  box-shadow: 4px 4px 0 var(--px-border-dark);
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+}
+
+.rotate-gate-card::before {
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  content: "";
+  border: 1px solid var(--px-border-mid);
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  pointer-events: none;
+}
+
+.rotate-gate-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rotate-gate-motif {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  margin-bottom: 12px;
+  border: 2px solid var(--px-border-mid);
+  background-color: var(--px-ink);
+}
+
+.rotate-gate-motif::before,
+.rotate-gate-motif::after,
+.rotate-gate-motif > span {
+  position: absolute;
+  display: block;
+  content: "";
+  background-color: var(--px-text-muted);
+}
+
+.rotate-gate-motif::before {
+  top: 10px;
+  left: 10px;
+  width: 24px;
+  height: 20px;
+  border: 2px solid var(--px-text-muted);
+  background-color: transparent;
+}
+
+.rotate-gate-motif::after {
+  top: 18px;
+  left: 18px;
+  width: 8px;
+  height: 4px;
+}
+
+.rotate-gate-motif > span {
+  top: 8px;
+  left: 20px;
+  width: 4px;
+  height: 28px;
+}
+
+.rotate-gate-kicker {
+  margin: 0;
+  color: var(--px-text-muted);
+  font-family: var(--font-interface);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.rotate-gate-card h1 {
+  margin: 8px 0 0;
+  color: var(--px-text);
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 36px;
+  letter-spacing: .04em;
+  text-shadow: 2px 2px 0 var(--px-border-dark);
+}
+
+.rotate-gate-copy {
+  max-width: 520px;
+  margin: 8px 0 0;
+  color: var(--px-text-muted);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.rotate-gate-note {
+  margin: 12px 0 0;
+  color: var(--px-text-muted);
+  font-family: var(--font-interface);
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+@media (orientation: portrait) {
+  #rotate-gate {
+    display: flex;
+  }
+
+  #app,
+  #hud {
+    visibility: hidden;
+  }
+}
+
 /* FPE-2 MAIN MENU PIXEL SHELL
    This section owns only the visible Main Menu. Keep selectors here flat,
    opaque, stepped, and integer placed. */
@@ -868,6 +1017,26 @@
   overflow: hidden;
 }
 
+/* The target canvases have an even inner width. Keep the two setup columns
+   within two pixels of the frozen ratio while making every control edge whole. */
+@media (min-width: 1600px) {
+  .setup-grid {
+    grid-template-columns: minmax(0, 844px) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1201px) and (max-width: 1599px) {
+  .setup-grid {
+    grid-template-columns: minmax(0, 590px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .setup-grid {
+    grid-template-columns: minmax(0, 506px) minmax(0, 1fr);
+  }
+}
+
 .setup-card {
   display: flex;
   flex-direction: column;
@@ -1333,12 +1502,35 @@
   width: min(880px, calc(100vw - 48px));
   max-width: 880px;
   max-height: calc(100vh - 48px);
-  min-height: 0;
   padding: 24px;
   overflow: auto;
   scrollbar-color: var(--civ-primary) var(--px-ink);
   scrollbar-width: auto;
   animation: panel-reveal 140ms steps(4, end);
+}
+
+.panel-card::after {
+  display: block;
+  position: static;
+  width: 100%;
+  flex: 0 0 auto;
+  margin-top: 16px;
+  content: "";
+  background-color: var(--civ-primary);
+  pointer-events: none;
+}
+
+.panel-card[data-panel-kind="tutorial"]::after,
+.panel-card[data-panel-kind="factions"]::after,
+.panel-card[data-panel-kind="settings"]::after,
+.panel-card[data-panel-kind="history"]::after {
+  height: 1px;
+}
+
+.panel-card[data-panel-kind="records"]::after,
+.panel-card[data-panel-kind="codex"]::after,
+.panel-card[data-panel-kind="dispatches"]::after {
+  height: 2px;
 }
 
 @keyframes panel-reveal {

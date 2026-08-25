@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Browser proof for the FPE-2/FPE-3 shell and FPE-4 segmented loading command panel.
+ * Browser proof for the responsive FPE-2/FPE-3/FPE-4/FPE-5 pixel shell.
  *
  * Usage:
  *   npm run qa:pixel-front-end -- --out /absolute/evidence/folder
@@ -23,6 +23,7 @@ const DIMENSIONS = [
   { width: 1366, height: 1024 },
   { width: 1180, height: 820 },
 ];
+const ORIENTATIONS = ['landscape-left', 'landscape-right'];
 const FACTIONS = ['sunweaver', 'gravemark'];
 const SCENES = {
   sunweaver: 'sunweaver-capital',
@@ -39,6 +40,15 @@ const LOADING_CONFIG = {
   seed: 424242,
 };
 const PANEL_ACTIONS = ['tutorial', 'factions', 'settings', 'records', 'history', 'codex', 'dispatches'];
+const PANEL_ACCENT_HEIGHTS = {
+  tutorial: 1,
+  factions: 1,
+  settings: 1,
+  history: 1,
+  records: 2,
+  codex: 2,
+  dispatches: 2,
+};
 const TIMEOUT_MS = 30000;
 
 function parseArgs(argv) {
@@ -179,21 +189,28 @@ function attachErrorCapture(page) {
   return errors;
 }
 
-function pageUrl(baseUrl) {
-  return `${baseUrl}/desktop.html`;
+function pageUrl(baseUrl, { page = 'desktop.html', orientation = 'landscape-left', holdLoading = false } = {}) {
+  const query = new URLSearchParams({ orientation });
+  if (holdLoading) query.set('qa-hold-loading', '1');
+  return `${baseUrl}/${page}?${query.toString()}`;
 }
 
-async function waitForMenu(page, faction) {
+function orientationSuffix(orientation) {
+  return orientation === 'landscape-right' ? '-landscape-right' : '';
+}
+
+async function waitForMenu(page, faction, orientation = 'landscape-left') {
   await page.locator('.menu-item[data-start-action="new-skirmish"]').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
-  await page.waitForFunction(({ expectedFaction, expectedScene }) => {
+  await page.waitForFunction(({ expectedFaction, expectedScene, expectedOrientation }) => {
     const scene = document.querySelector('.front-end-scene');
     const sceneContainer = document.querySelector('.menu-scene');
     const root = document.querySelector('#start-screen');
     return scene?.getAttribute('data-art-ready') === 'true'
       && scene.getAttribute('data-faction') === expectedFaction
       && sceneContainer?.getAttribute('data-scene-id') === expectedScene
-      && root?.dataset.civ === expectedFaction;
-  }, { expectedFaction: faction, expectedScene: SCENES[faction] }, { timeout: TIMEOUT_MS });
+      && root?.dataset.civ === expectedFaction
+      && document.documentElement.dataset.orientation === expectedOrientation;
+  }, { expectedFaction: faction, expectedScene: SCENES[faction], expectedOrientation: orientation }, { timeout: TIMEOUT_MS });
 }
 
 function loadingConfig(faction) {
@@ -220,8 +237,8 @@ async function configureLoading(page, faction) {
   }, config, { timeout: TIMEOUT_MS });
 }
 
-async function readLoadingContract(page, faction, dimension) {
-  return page.evaluate(({ expectedFaction, expectedScene, target, expectedConfig, segmentCount }) => {
+async function readLoadingContract(page, faction, dimension, orientation) {
+  return page.evaluate(({ expectedFaction, expectedScene, target, expectedConfig, segmentCount, expectedOrientation }) => {
     const visible = (element) => {
       if (!(element instanceof HTMLElement)) return false;
       const style = getComputedStyle(element);
@@ -308,6 +325,7 @@ async function readLoadingContract(page, faction, dimension) {
         reduced,
         activeAnimationName: activeStyle?.animationName || 'none',
         activeAnimationDuration: activeStyle?.animationDuration || '0s',
+        activeAnimationTimingFunction: activeStyle?.animationTimingFunction || 'none',
       },
       stageObservations: globalThis.__FPE4_STAGE_OBSERVATIONS__ || [],
       config: globalThis.__STARHAVEN_QA__?.config || null,
@@ -315,6 +333,8 @@ async function readLoadingContract(page, faction, dimension) {
       expectedScene,
       target,
       segmentCountExpected: segmentCount,
+      orientation: document.documentElement.dataset.orientation || '',
+      expectedOrientation,
       overflow: {
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
@@ -328,13 +348,15 @@ async function readLoadingContract(page, faction, dimension) {
     target: dimension,
     expectedConfig: loadingConfig(faction),
     segmentCount: LOADING_SEGMENT_COUNT,
+    expectedOrientation: orientation,
   });
 }
 
-function assertLoadingContract(details, faction, dimension, reducedMotion = false) {
+function assertLoadingContract(details, faction, dimension, reducedMotion = false, orientation = 'landscape-left') {
   const expected = loadingConfig(faction);
   assertThat(details.visible, `${faction} ${dimension.width}x${dimension.height}: loading screen is not visible`);
   assertThat(details.civ === faction, `${faction}: loading data-civ is ${details.civ}`);
+  assertThat(details.orientation === orientation, `${faction}: loading orientation is ${details.orientation}, expected ${orientation}`);
   assertThat(details.faction === faction && details.scene === SCENES[faction] && details.mode === 'loading', `${faction}: loading scene identity is incorrect`);
   assertThat(details.sceneId === SCENES[faction], `${faction}: loading container scene is ${details.sceneId}`);
   assertThat(details.artReady === 'true', `${faction}: authored loading scene is not ready`);
@@ -351,6 +373,8 @@ function assertLoadingContract(details, faction, dimension, reducedMotion = fals
   assertThat(details.segmentCount === LOADING_SEGMENT_COUNT && details.visibleSegmentCount === LOADING_SEGMENT_COUNT, `${faction}: expected 16 visible loading segments, found ${details.segmentCount}/${details.visibleSegmentCount}`);
   assertThat(details.states.complete === LOADING_SEGMENT_COUNT && !details.states.active && !details.states.future, `${faction}: stage 3 segment states are not fully complete (${JSON.stringify(details.states)})`);
   assertThat(details.segmentRectsInteger, `${faction}: loading segment rectangle is fractional`);
+  assertThat(details.cardRect && [details.cardRect.x, details.cardRect.y, details.cardRect.right, details.cardRect.bottom, details.cardRect.width, details.cardRect.height].every(Number.isInteger), `${faction}: loading card rectangle is fractional`);
+  assertThat(details.trackRect && [details.trackRect.x, details.trackRect.y, details.trackRect.right, details.trackRect.bottom, details.trackRect.width, details.trackRect.height].every(Number.isInteger), `${faction}: loading track rectangle is fractional`);
   assertThat(details.cardRect?.width === 704, `${faction}: loading panel width is ${details.cardRect?.width}`);
   const expectedHeight = dimension.height <= 820 ? 144 : 152;
   assertThat(details.cardRect?.height === expectedHeight, `${faction} ${dimension.width}x${dimension.height}: loading panel height is ${details.cardRect?.height}, expected ${expectedHeight}`);
@@ -367,10 +391,13 @@ function assertLoadingContract(details, faction, dimension, reducedMotion = fals
   assertThat(Object.keys(expected).every((key) => details.config?.[key] === expected[key]), `${faction}: held loading config differs from submitted config (${JSON.stringify(details.config)})`);
   assertThat(details.overflow.documentWidth <= details.overflow.viewportWidth && details.overflow.documentHeight <= details.overflow.viewportHeight, `${faction} ${dimension.width}x${dimension.height}: loading document overflow`);
   assertThat(!details.motion.reduced || (details.motion.activeAnimationName === 'none' && details.motion.activeAnimationDuration === '0s'), `${faction}: Reduced Motion leaves loading activity animation active`);
+  if (!details.motion.reduced && details.motion.activeAnimationName !== 'none') {
+    assertThat(/steps\(/i.test(details.motion.activeAnimationTimingFunction), `${faction}: loading activity animation uses a non-stepped timing function`);
+  }
   if (reducedMotion) assertThat(details.motion.reduced, `${faction}: Reduced Motion context was not active`);
 }
 
-async function runLoadingCase(browser, baseUrl, output, faction, dimension, manifest, { reducedMotion = false } = {}) {
+async function runLoadingCase(browser, baseUrl, output, faction, dimension, manifest, { reducedMotion = false, orientation = 'landscape-left' } = {}) {
   const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1, reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
   await context.addInitScript(({ key, value }) => {
     window.localStorage.setItem(key, JSON.stringify(value));
@@ -379,8 +406,8 @@ async function runLoadingCase(browser, baseUrl, output, faction, dimension, mani
   page.setDefaultTimeout(TIMEOUT_MS);
   const errors = attachErrorCapture(page);
   try {
-    await page.goto(`${pageUrl(baseUrl)}?qa-hold-loading=1`, { waitUntil: 'load', timeout: TIMEOUT_MS });
-    await waitForMenu(page, faction);
+    await page.goto(pageUrl(baseUrl, { orientation, holdLoading: true }), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, faction, orientation);
     await page.locator('.menu-item[data-start-action="new-skirmish"]').click();
     await page.locator('.setup-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
     await configureLoading(page, faction);
@@ -413,9 +440,9 @@ async function runLoadingCase(browser, baseUrl, output, faction, dimension, mani
     await page.waitForFunction(() => document.querySelector('.front-loading-screen')?.getAttribute('data-loading-screen-created') === 'true', undefined, { timeout: TIMEOUT_MS });
     await page.waitForFunction(() => document.querySelector('.front-loading-screen')?.getAttribute('data-loading-scene-ready') === 'true', undefined, { timeout: TIMEOUT_MS });
     await page.waitForFunction(() => document.querySelector('.front-loading-screen')?.getAttribute('data-loading-match-ready') === 'true', undefined, { timeout: TIMEOUT_MS });
-    const details = await readLoadingContract(page, faction, dimension);
-    assertLoadingContract(details, faction, dimension, reducedMotion);
-    const suffix = reducedMotion ? '-reduced-motion' : '';
+    const details = await readLoadingContract(page, faction, dimension, orientation);
+    assertLoadingContract(details, faction, dimension, reducedMotion, orientation);
+    const suffix = `${orientationSuffix(orientation)}${reducedMotion ? '-reduced-motion' : ''}`;
     const file = path.join(output, `loading-${faction}-${dimension.width}x${dimension.height}${suffix}.png`);
     await page.screenshot({ path: file, type: 'png' });
     manifest.captures.push(path.basename(file));
@@ -427,9 +454,9 @@ async function runLoadingCase(browser, baseUrl, output, faction, dimension, mani
     const finalProbe = await page.evaluate(() => globalThis.__STARHAVEN_QA__ ? JSON.parse(JSON.stringify(globalThis.__STARHAVEN_QA__)) : null);
     assertThat(finalProbe?.resetCount === 1, `${faction}: legal transition changed reset count to ${finalProbe?.resetCount}`);
     assertThat(errors.length === 0, `${faction} ${dimension.width}x${dimension.height}: loading browser/asset errors\n${errors.join('\n')}`);
-    manifest.assertions.push({ name: `segmented loading ${faction} ${dimension.width}x${dimension.height}${suffix}`, status: 'PASS', details: { loading: details, finalProbe: { state: finalProbe?.state, resetCount: finalProbe?.resetCount, transitionHistory: finalProbe?.transitionHistory } } });
+    manifest.assertions.push({ name: `segmented loading ${faction} ${dimension.width}x${dimension.height} ${orientation}${reducedMotion ? ' Reduced Motion' : ''}`, status: 'PASS', details: { loading: details, finalProbe: { state: finalProbe?.state, resetCount: finalProbe?.resetCount, transitionHistory: finalProbe?.transitionHistory } } });
   } catch (error) {
-    manifest.assertions.push({ name: `segmented loading ${faction} ${dimension.width}x${dimension.height}${reducedMotion ? ' Reduced Motion' : ''}`, status: 'FAIL', error: error?.message || String(error) });
+    manifest.assertions.push({ name: `segmented loading ${faction} ${dimension.width}x${dimension.height} ${orientation}${reducedMotion ? ' Reduced Motion' : ''}`, status: 'FAIL', error: error?.message || String(error) });
     manifest.errors.push(error?.stack || error?.message || String(error));
   } finally {
     if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
@@ -437,7 +464,7 @@ async function runLoadingCase(browser, baseUrl, output, faction, dimension, mani
   }
 }
 
-async function readMenuContract(page, faction, dimension) {
+async function readMenuContract(page, faction, dimension, orientation) {
   await page.evaluate(async () => {
     await Promise.all([
       document.fonts.load('700 80px "Pixelify Sans"'),
@@ -445,7 +472,7 @@ async function readMenuContract(page, faction, dimension) {
       document.fonts.load('400 14px "Kode Mono"'),
     ]);
   });
-  return page.evaluate(({ expectedFaction, expectedScene, target }) => {
+  return page.evaluate(({ expectedFaction, expectedScene, target, expectedOrientation }) => {
     const visible = (element) => {
       if (!(element instanceof HTMLElement)) return false;
       const style = getComputedStyle(element);
@@ -518,6 +545,10 @@ async function readMenuContract(page, faction, dimension) {
       ...menuItems,
       document.querySelector('.utility-dock'),
       ...utilityButtons,
+      document.querySelector('.menu-copy'),
+      document.querySelector('.start-heading'),
+      heading,
+      footer,
     ].filter(Boolean).map((element) => ({ className: element.className, rect: rect(element) }));
     const wholePixel = (value) => Number.isInteger(value);
     const integerEdges = controls.every(({ rect: box }) => [box.x, box.y, box.right, box.bottom, box.width, box.height].every(wholePixel));
@@ -526,6 +557,7 @@ async function readMenuContract(page, faction, dimension) {
       scene: sceneContainer?.getAttribute('data-scene-id') || '',
       artReady: scene?.getAttribute('data-art-ready') || '',
       rootCiv: root?.dataset.civ || '',
+      orientation: document.documentElement.dataset.orientation || '',
       primaryCount: primary.length,
       newActionCount: newAction.length,
       menuItemCount: menuItems.length,
@@ -544,16 +576,18 @@ async function readMenuContract(page, faction, dimension) {
         documentWidth: document.documentElement.scrollWidth,
         documentHeight: document.documentElement.scrollHeight,
       },
-      integerEdges: target.width === 1366 && target.height === 1024 ? integerEdges : null,
+      integerEdges,
+      expectedOrientation,
     };
-  }, { expectedFaction: faction, expectedScene: SCENES[faction], target: dimension });
+  }, { expectedFaction: faction, expectedScene: SCENES[faction], target: dimension, expectedOrientation: orientation });
 }
 
-function assertMenuContract(details, faction, dimension) {
+function assertMenuContract(details, faction, dimension, orientation = 'landscape-left') {
   assertThat(details.artReady === 'true', `${faction} ${dimension.width}x${dimension.height}: authored scene is not ready`);
   assertThat(details.faction === faction, `${faction} ${dimension.width}x${dimension.height}: scene faction is ${details.faction}`);
   assertThat(details.scene === SCENES[faction], `${faction} ${dimension.width}x${dimension.height}: scene is ${details.scene}`);
   assertThat(details.rootCiv === faction, `${faction} ${dimension.width}x${dimension.height}: data-civ is ${details.rootCiv}`);
+  assertThat(details.orientation === orientation, `${faction} ${dimension.width}x${dimension.height}: orientation is ${details.orientation}, expected ${orientation}`);
   assertThat(details.primaryCount === 1 && details.newActionCount === 1, `${faction} ${dimension.width}x${dimension.height}: expected one visible New Skirmish primary action`);
   assertThat(details.utilityCount === 4, `${faction} ${dimension.width}x${dimension.height}: expected four utility buttons, found ${details.utilityCount}`);
   assertThat(details.utilityDetails.every((utility) => utility.tagName === 'BUTTON'), `${faction}: utility control is not a button`);
@@ -574,7 +608,7 @@ function assertMenuContract(details, faction, dimension) {
   assertThat(details.footerBottomInset >= 24, `${faction} ${dimension.width}x${dimension.height}: visible footer bottom inset is below 24px (${details.footerBottomInset})`);
   assertThat(details.overflow.documentWidth <= details.overflow.viewportWidth, `${faction} ${dimension.width}x${dimension.height}: horizontal document overflow`);
   assertThat(details.overflow.documentHeight <= details.overflow.viewportHeight, `${faction} ${dimension.width}x${dimension.height}: vertical document overflow`);
-  if (details.integerEdges !== null) assertThat(details.integerEdges, `${faction}: a 1366x1024 shell edge is fractional`);
+  assertThat(details.integerEdges, `${faction} ${dimension.width}x${dimension.height}: a shell edge is fractional`);
 }
 
 async function waitForTooltip(page, selector) {
@@ -589,7 +623,7 @@ async function waitForTooltip(page, selector) {
   }, selector, { timeout: TIMEOUT_MS });
 }
 
-async function exerciseTooltipAndFocus(page, output, faction, dimension, manifest) {
+async function exerciseTooltipAndFocus(page, output, faction, dimension, manifest, orientation = 'landscape-left') {
   const selector = '.utility-button[data-start-action="records"]';
   const button = page.locator(selector);
   await button.hover();
@@ -615,9 +649,75 @@ async function exerciseTooltipAndFocus(page, output, faction, dimension, manifes
   assertThat(focused?.activeClass.includes('utility-button'), `${faction}: keyboard focus did not reach the utility button`);
   assertThat(focused.outlineWidth === '2px' && focused.outlineStyle !== 'none', `${faction}: utility focus is not visibly outlined`);
   assertThat(focused.tooltipVisible, `${faction}: tooltip is not visible after keyboard focus`);
-  const file = path.join(output, `focused-tooltip-${faction}-${dimension.width}x${dimension.height}.png`);
+  const file = path.join(output, `focused-tooltip-${faction}-${dimension.width}x${dimension.height}${orientationSuffix(orientation)}.png`);
   await page.screenshot({ path: file, type: 'png' });
   manifest.captures.push(path.basename(file));
+}
+
+async function readShellTiming(page, selector) {
+  return page.evaluate((targetSelector) => {
+    const element = document.querySelector(targetSelector);
+    const style = element ? getComputedStyle(element) : null;
+    return {
+      selector: targetSelector,
+      mediaMatches: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      transitionDuration: style?.transitionDuration || '0s',
+      transitionTimingFunction: style?.transitionTimingFunction || 'none',
+      animationName: style?.animationName || 'none',
+      animationDuration: style?.animationDuration || '0s',
+      animationTimingFunction: style?.animationTimingFunction || 'none',
+    };
+  }, selector);
+}
+
+function hasActiveDuration(value) {
+  return String(value).split(',').some((duration) => Number.parseFloat(duration) > 0);
+}
+
+function assertMotionContract(details, label, reducedMotion = false) {
+  assertThat(details, `${label}: representative element is missing`);
+  if (reducedMotion) {
+    assertThat(details.mediaMatches, `${label}: Reduced Motion media query was not active`);
+    assertThat(!hasActiveDuration(details.transitionDuration), `${label}: transition remains active (${JSON.stringify(details)})`);
+    assertThat(details.animationName === 'none' || !hasActiveDuration(details.animationDuration), `${label}: animation remains active (${JSON.stringify(details)})`);
+    return;
+  }
+  if (hasActiveDuration(details.transitionDuration)) {
+    assertThat(/steps\(/i.test(details.transitionTimingFunction), `${label}: transition timing is not stepped (${JSON.stringify(details)})`);
+  }
+  if (details.animationName !== 'none' && hasActiveDuration(details.animationDuration)) {
+    assertThat(/steps\(/i.test(details.animationTimingFunction), `${label}: animation timing is not stepped (${JSON.stringify(details)})`);
+  }
+}
+
+async function exercisePointerAndKeyboard(page, faction, manifest) {
+  const target = page.locator('.menu-item[data-start-action="tutorial"]');
+  await target.hover();
+  await page.waitForTimeout(120);
+  const hoverMotion = await page.evaluate(() => getComputedStyle(document.querySelector('.menu-item[data-start-action="tutorial"]')).transform);
+  assertThat(/matrix\(1, 0, 0, 1, 2, 0\)/.test(hoverMotion), `${faction}: mouse hover did not apply the exact 2px pixel move (${hoverMotion})`);
+  const box = await target.boundingBox();
+  assertThat(box, `${faction}: representative mouse target has no box`);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForFunction(() => /matrix\(1, 0, 0, 1, 0, 2\)/.test(getComputedStyle(document.querySelector('.menu-item[data-start-action="tutorial"]')).transform), undefined, { timeout: TIMEOUT_MS });
+  const pressMotion = await page.evaluate(() => getComputedStyle(document.querySelector('.menu-item[data-start-action="tutorial"]')).transform);
+  assertThat(/matrix\(1, 0, 0, 1, 0, 2\)/.test(pressMotion), `${faction}: mouse press did not apply the exact 2px pixel move (${pressMotion})`);
+  await page.mouse.up();
+  await page.locator('.start-panel').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+  await page.keyboard.press('Escape');
+  await page.locator('.start-panel').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
+
+  const primary = page.locator('.menu-item[data-start-action="new-skirmish"]');
+  await primary.focus();
+  await page.keyboard.press('Tab');
+  assertThat(await page.evaluate(() => document.activeElement?.getAttribute('data-start-action') === 'tutorial'), `${faction}: Tab did not reach the next menu control`);
+  await page.keyboard.press('Enter');
+  await page.locator('.start-panel').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+  await page.keyboard.press('Escape');
+  await page.locator('.start-panel').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
+  assertThat(await page.evaluate(() => document.activeElement?.getAttribute('data-start-action') === 'tutorial'), `${faction}: keyboard Escape did not restore focus to the opener`);
+  manifest.assertions.push({ name: `mouse hover/press and keyboard Tab/Enter/Escape (${faction})`, status: 'PASS' });
 }
 
 async function surfaceContract(page, selector) {
@@ -645,10 +745,25 @@ async function surfaceContract(page, selector) {
     }));
     const clipped = controls.filter(({ rect }) => rect.x < 0 || rect.y < 0 || rect.right > window.innerWidth || rect.bottom > window.innerHeight);
     const surfaceRect = box(surface);
+    const content = surface.querySelector('.panel-content');
+    const contentRect = content instanceof HTMLElement ? box(content) : null;
+    const accentStyle = getComputedStyle(surface, '::after');
+    const integerEdges = [surfaceRect, ...controls.map(({ rect }) => rect)]
+      .every((rect) => [rect.x, rect.y, rect.right, rect.bottom, rect.width, rect.height].every(Number.isInteger));
     return {
+      panelKind: surface.getAttribute('data-panel-kind') || '',
       surfaceRect,
+      contentRect,
+      accent: {
+        display: accentStyle.display,
+        position: accentStyle.position,
+        marginTop: accentStyle.marginTop,
+        height: accentStyle.height,
+        width: accentStyle.width,
+      },
       controls,
       clipped,
+      integerEdges,
       overflow: {
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
@@ -659,12 +774,16 @@ async function surfaceContract(page, selector) {
   }, selector);
 }
 
-function assertSurfaceContract(details, label, { minimumInset = 0 } = {}) {
+function assertSurfaceContract(details, label, { minimumInset = 0, expectedWidth = null } = {}) {
   assertThat(details, `${label}: surface is missing`);
   assertThat(details.clipped.length === 0, `${label}: visible control is clipped (${JSON.stringify(details.clipped)})`);
+  assertThat(details.integerEdges, `${label}: surface/control edge is fractional`);
   assertThat(details.controls.every(({ rect }) => rect.width >= 44 && rect.height >= 44), `${label}: a visible control is below 44x44 CSS pixels`);
   assertThat(details.overflow.documentWidth <= details.overflow.viewportWidth, `${label}: horizontal document overflow`);
   assertThat(details.overflow.documentHeight <= details.overflow.viewportHeight, `${label}: vertical document overflow`);
+  if (expectedWidth !== null) {
+    assertThat(details.surfaceRect.width === expectedWidth, `${label}: shared panel width changed (${details.surfaceRect.width}px)`);
+  }
   if (minimumInset > 0) {
     const { surfaceRect } = details;
     assertThat(surfaceRect.x >= minimumInset && surfaceRect.y >= minimumInset, `${label}: surface starts inside the ${minimumInset}px safe inset`);
@@ -672,7 +791,17 @@ function assertSurfaceContract(details, label, { minimumInset = 0 } = {}) {
   }
 }
 
-async function openAndClosePanel(page, selector, label, { capturePath = null } = {}) {
+function assertPanelGeometry(details, label, expectedPanelKind) {
+  assertThat(details.panelKind === expectedPanelKind, `${label}: panel kind is ${JSON.stringify(details.panelKind)}, expected ${expectedPanelKind}`);
+  assertThat(details.surfaceRect.width === 880, `${label}: shared panel width changed (${details.surfaceRect.width}px)`);
+  assertThat(details.accent.display === 'block', `${label}: panel accent is not a block flex item (${JSON.stringify(details.accent)})`);
+  assertThat(details.accent.position === 'static', `${label}: panel accent is not in flow (${JSON.stringify(details.accent)})`);
+  assertThat(details.accent.marginTop === '16px', `${label}: panel accent baseline spacing changed (${JSON.stringify(details.accent)})`);
+  assertThat(details.accent.height === `${PANEL_ACCENT_HEIGHTS[expectedPanelKind]}px`, `${label}: panel accent height is wrong (${JSON.stringify(details.accent)})`);
+  assertThat(Number.parseFloat(details.accent.width) % 1 === 0, `${label}: panel accent width is fractional (${JSON.stringify(details.accent)})`);
+}
+
+async function openAndClosePanel(page, selector, label, { capturePath = null, expectedPanelKind = null } = {}) {
   const opener = page.locator(selector);
   const openerHandle = await opener.elementHandle();
   await opener.click();
@@ -683,7 +812,15 @@ async function openAndClosePanel(page, selector, label, { capturePath = null } =
   await close.waitFor({ state: 'visible', timeout: TIMEOUT_MS });
   assertThat(await close.getAttribute('aria-label') === 'Close', `${label}: Close button has no exact aria-label`);
   const details = await surfaceContract(page, '.panel-card');
-  assertSurfaceContract(details, label, { minimumInset: 24 });
+  assertSurfaceContract(details, label, { minimumInset: 24, expectedWidth: expectedPanelKind === null ? null : 880 });
+  if (expectedPanelKind !== null) {
+    assertPanelGeometry(details, label, expectedPanelKind);
+    if (expectedPanelKind === 'history') {
+      assertThat(details.surfaceRect.height <= 240, `${label}: Match History remains a compact panel (${details.surfaceRect.height}px high)`);
+      assertThat(details.contentRect && details.surfaceRect.bottom - details.contentRect.bottom <= 48, `${label}: Match History has a large bottom void (${JSON.stringify({ surface: details.surfaceRect, content: details.contentRect })})`);
+    }
+  }
+  assertMotionContract(await readShellTiming(page, '.panel-card'), `${label} normal motion`);
   if (capturePath) await page.screenshot({ path: capturePath, type: 'png' });
 
   const focusables = panel.locator('.panel-card button:not(:disabled), .panel-card input:not(:disabled), .panel-card select:not(:disabled), .panel-card textarea:not(:disabled), .panel-card [href], .panel-card [tabindex]:not([tabindex="-1"])');
@@ -710,9 +847,10 @@ async function openAndClosePanel(page, selector, label, { capturePath = null } =
   const restored = await page.evaluate((element) => document.activeElement === element, openerHandle);
   assertThat(restored, `${label}: Escape did not restore focus to the exact opener`);
   await openerHandle?.dispose();
+  return details;
 }
 
-async function readSetupContract(page) {
+async function readSetupContract(page, orientation) {
   await page.evaluate(async () => {
     await Promise.all([
       document.fonts.load('700 32px "Pixelify Sans"'),
@@ -720,7 +858,7 @@ async function readSetupContract(page) {
       document.fonts.load('400 14px "Kode Mono"'),
     ]);
   });
-  return page.evaluate(() => {
+  return page.evaluate((expectedOrientation) => {
     const visible = (element) => {
       if (!(element instanceof HTMLElement)) return false;
       const style = getComputedStyle(element);
@@ -754,18 +892,23 @@ async function readSetupContract(page) {
     const seedInput = document.querySelector('[data-seed-input]');
     const start = document.querySelector('[data-start-action="start-match"]');
     const back = document.querySelector('[data-start-action="back"]');
+    const geometry = [setup, heading, ...cards, ...controls, start, back].filter(Boolean).map((element) => rect(element));
+    const integerEdges = geometry.every((box) => [box.x, box.y, box.right, box.bottom, box.width, box.height].every(Number.isInteger));
     const headingTitle = document.querySelector('.setup-heading h2');
     const label = document.querySelector('.setup-field legend');
     const status = document.querySelector('.setup-status');
     const explanation = document.querySelector('.faction-summary p');
     return {
       setupVisible: visible(setup),
+      orientation: document.documentElement.dataset.orientation || '',
+      expectedOrientation,
       setupRect: setup ? rect(setup) : null,
       headingRect: heading ? rect(heading) : null,
       cards: cards.map(rect),
       selected,
       controls: controlRects,
       clipped,
+      integerEdges,
       seedVisible: visible(seedRow),
       seedValue: seedInput?.value || '',
       seedInvalid: seedInput?.getAttribute('aria-invalid') || '',
@@ -790,12 +933,13 @@ async function readSetupContract(page) {
         documentHeight: document.documentElement.scrollHeight,
       },
     };
-  });
+  }, orientation);
 }
 
-function assertSetupContract(details, faction, dimension) {
+function assertSetupContract(details, faction, dimension, orientation = 'landscape-left') {
   const rival = faction === 'sunweaver' ? 'gravemark' : 'sunweaver';
   assertThat(details.setupVisible, `${faction} ${dimension.width}x${dimension.height}: setup view is not visible`);
+  assertThat(details.orientation === orientation, `${faction} ${dimension.width}x${dimension.height}: setup orientation is ${details.orientation}, expected ${orientation}`);
   assertThat(details.cards.length === 2, `${faction} ${dimension.width}x${dimension.height}: expected two framed setup sections`);
   assertThat(details.selected.playerFaction === faction, `${faction}: player faction selection is ${details.selected.playerFaction}`);
   assertThat(details.selected.aiFaction === rival, `${faction}: AI faction selection is ${details.selected.aiFaction}`);
@@ -806,6 +950,7 @@ function assertSetupContract(details, faction, dimension) {
   assertThat(details.selected.seedMode === 'random', `${faction}: default seed mode selection is ${details.selected.seedMode}`);
   assertThat(!details.seedVisible && !details.startDisabled, `${faction}: random-seed setup does not start in a valid state`);
   assertThat(details.clipped.length === 0, `${faction} ${dimension.width}x${dimension.height}: setup control is clipped (${JSON.stringify(details.clipped)})`);
+  assertThat(details.integerEdges, `${faction} ${dimension.width}x${dimension.height}: setup frame/control edge is fractional`);
   assertThat(details.controls.every(({ rect }) => rect.width >= 44 && rect.height >= 44), `${faction}: setup control is below 44x44 CSS pixels`);
   assertThat(details.overflow.documentWidth <= details.overflow.viewportWidth, `${faction} ${dimension.width}x${dimension.height}: setup horizontal overflow`);
   assertThat(details.overflow.documentHeight <= details.overflow.viewportHeight, `${faction} ${dimension.width}x${dimension.height}: setup vertical overflow`);
@@ -868,7 +1013,7 @@ async function exerciseSetupInteractions(page, faction) {
   assertThat(await page.locator('[data-config-field="seedMode"][data-config-value="deterministic"]').getAttribute('aria-pressed') === 'true', 'deterministic seed mode is not selected');
 }
 
-async function runSetupCase(browser, baseUrl, output, faction, dimension, manifest) {
+async function runSetupCase(browser, baseUrl, output, faction, dimension, manifest, orientation = 'landscape-left') {
   const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1 });
   await context.addInitScript(({ key, value }) => {
     window.localStorage.setItem(key, JSON.stringify(value));
@@ -877,24 +1022,26 @@ async function runSetupCase(browser, baseUrl, output, faction, dimension, manife
   page.setDefaultTimeout(TIMEOUT_MS);
   const errors = attachErrorCapture(page);
   try {
-    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
-    await waitForMenu(page, faction);
+    await page.goto(pageUrl(baseUrl, { orientation }), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, faction, orientation);
     await page.locator('.menu-item[data-start-action="new-skirmish"]').click();
     await page.locator('.setup-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
-    const details = await readSetupContract(page);
-    assertSetupContract(details, faction, dimension);
-    const file = path.join(output, `setup-${faction}-${dimension.width}x${dimension.height}.png`);
+    const details = await readSetupContract(page, orientation);
+    assertSetupContract(details, faction, dimension, orientation);
+    assertMotionContract(await readShellTiming(page, '[data-config-field="difficulty"]'), `${faction} ${dimension.width}x${dimension.height} normal setup motion`);
+    const suffix = orientationSuffix(orientation);
+    const file = path.join(output, `setup-${faction}-${dimension.width}x${dimension.height}${suffix}.png`);
     await page.screenshot({ path: file, type: 'png' });
     manifest.captures.push(path.basename(file));
     await exerciseSetupInteractions(page, faction);
-    const interacted = await readSetupContract(page);
+    const interacted = await readSetupContract(page, orientation);
     assertThat(interacted.seedVisible && interacted.seedValue === '424242' && !interacted.startDisabled, `${faction}: deterministic seed interaction did not finish valid`);
     await page.locator('.secondary-action[data-start-action="back"]').click();
     await page.locator('.menu-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
     assertThat(errors.length === 0, `${faction} ${dimension.width}x${dimension.height}: setup browser errors\n${errors.join('\n')}`);
-    manifest.assertions.push({ name: `match setup ${faction} ${dimension.width}x${dimension.height}`, status: 'PASS', details: { initial: details, interacted } });
+    manifest.assertions.push({ name: `match setup ${faction} ${dimension.width}x${dimension.height} ${orientation}`, status: 'PASS', details: { initial: details, interacted } });
   } catch (error) {
-    manifest.assertions.push({ name: `match setup ${faction} ${dimension.width}x${dimension.height}`, status: 'FAIL', error: error?.message || String(error) });
+    manifest.assertions.push({ name: `match setup ${faction} ${dimension.width}x${dimension.height} ${orientation}`, status: 'FAIL', error: error?.message || String(error) });
     manifest.errors.push(error?.stack || error?.message || String(error));
   } finally {
     if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
@@ -902,7 +1049,7 @@ async function runSetupCase(browser, baseUrl, output, faction, dimension, manife
   }
 }
 
-async function runPanelEvidence(browser, baseUrl, output, manifest) {
+async function runPanelEvidence(browser, baseUrl, output, manifest, orientation = 'landscape-left') {
   const dimension = { width: 1366, height: 1024 };
   const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1 });
   await context.addInitScript(({ key, value }) => {
@@ -912,25 +1059,40 @@ async function runPanelEvidence(browser, baseUrl, output, manifest) {
   page.setDefaultTimeout(TIMEOUT_MS);
   const errors = attachErrorCapture(page);
   try {
-    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
-    await waitForMenu(page, 'sunweaver');
+    await page.goto(pageUrl(baseUrl, { orientation }), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, 'sunweaver', orientation);
+    const suffix = orientationSuffix(orientation);
+    const panelGeometry = [];
     for (const action of PANEL_ACTIONS) {
       const selector = action === 'tutorial' || action === 'factions' || action === 'settings'
         ? `.menu-item[data-start-action="${action}"]`
         : `.utility-button[data-start-action="${action}"]`;
-      const file = path.join(output, `panel-${action}-1366x1024.png`);
-      await openAndClosePanel(page, selector, `${action} evidence`, { capturePath: file });
+      const file = path.join(output, `panel-${action}-1366x1024${suffix}.png`);
+      const details = await openAndClosePanel(page, selector, `${action} evidence`, { capturePath: file, expectedPanelKind: action });
+      panelGeometry.push({
+        kind: action,
+        rect: details.surfaceRect,
+        accent: details.accent,
+        contentTailGap: details.contentRect ? details.surfaceRect.bottom - details.contentRect.bottom : null,
+      });
       manifest.captures.push(path.basename(file));
     }
+    assertThat(panelGeometry.length === PANEL_ACTIONS.length, `panel evidence did not collect all seven panel rectangles (${panelGeometry.length})`);
+    assertThat(panelGeometry.every(({ rect }) => [rect.x, rect.y, rect.right, rect.bottom, rect.width, rect.height].every(Number.isInteger)), `panel evidence has a fractional panel rectangle (${JSON.stringify(panelGeometry)})`);
+    assertThat(panelGeometry.every(({ rect }) => rect.width === 880), `panel evidence changed the shared 880px panel width (${JSON.stringify(panelGeometry)})`);
+    const historyGeometry = panelGeometry.find(({ kind }) => kind === 'history');
+    assertThat(historyGeometry && historyGeometry.rect.height <= 240, `panel evidence left Match History too tall (${JSON.stringify(historyGeometry)})`);
+    assertThat(historyGeometry && historyGeometry.contentTailGap <= 48, `panel evidence left a large Match History bottom void (${JSON.stringify(historyGeometry)})`);
+    manifest.assertions.push({ name: `seven panel rectangles stay 880px wide, whole-pixel, and Match History is compact (${orientation})`, status: 'PASS', details: { panelGeometry } });
     await page.setViewportSize({ width: 1180, height: 820 });
-    await waitForMenu(page, 'sunweaver');
-    const smallFile = path.join(output, 'panel-records-1180x820.png');
-    await openAndClosePanel(page, '.utility-button[data-start-action="records"]', 'records 1180x820 evidence', { capturePath: smallFile });
+    await waitForMenu(page, 'sunweaver', orientation);
+    const smallFile = path.join(output, `panel-records-1180x820${suffix}.png`);
+    await openAndClosePanel(page, '.utility-button[data-start-action="records"]', 'records 1180x820 evidence', { capturePath: smallFile, expectedPanelKind: 'records' });
     manifest.captures.push(path.basename(smallFile));
     assertThat(errors.length === 0, `panel evidence browser errors\n${errors.join('\n')}`);
-    manifest.assertions.push({ name: 'all seven panels have evidence, focus containment, Escape close, and no clipping', status: 'PASS', details: { panels: PANEL_ACTIONS, smallViewport: 'records' } });
+    manifest.assertions.push({ name: `all seven panels have evidence, focus containment, Escape close, and no clipping (${orientation})`, status: 'PASS', details: { panels: PANEL_ACTIONS, smallViewport: 'records' } });
   } catch (error) {
-    manifest.assertions.push({ name: 'all seven panels have evidence, focus containment, Escape close, and no clipping', status: 'FAIL', error: error?.message || String(error) });
+    manifest.assertions.push({ name: `all seven panels have evidence, focus containment, Escape close, and no clipping (${orientation})`, status: 'FAIL', error: error?.message || String(error) });
     manifest.errors.push(error?.stack || error?.message || String(error));
   } finally {
     if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
@@ -938,7 +1100,7 @@ async function runPanelEvidence(browser, baseUrl, output, manifest) {
   }
 }
 
-async function runTouchContract(browser, baseUrl, manifest) {
+async function runTouchContract(browser, baseUrl, manifest, orientation = 'landscape-left') {
   const context = await browser.newContext({ viewport: { width: 1366, height: 1024 }, deviceScaleFactor: 1, hasTouch: true });
   await context.addInitScript(({ key, value }) => {
     window.localStorage.setItem(key, JSON.stringify(value));
@@ -947,8 +1109,8 @@ async function runTouchContract(browser, baseUrl, manifest) {
   page.setDefaultTimeout(TIMEOUT_MS);
   const errors = attachErrorCapture(page);
   try {
-    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
-    await waitForMenu(page, 'sunweaver');
+    await page.goto(pageUrl(baseUrl, { orientation }), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, 'sunweaver', orientation);
     await page.tap('.menu-item[data-start-action="tutorial"]');
     await page.locator('.start-panel').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
     await page.tap('.panel-close');
@@ -960,9 +1122,9 @@ async function runTouchContract(browser, baseUrl, manifest) {
     await page.tap('.secondary-action[data-start-action="back"]');
     await page.locator('.menu-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
     assertThat(errors.length === 0, `touch contract browser errors\n${errors.join('\n')}`);
-    manifest.assertions.push({ name: 'touch context taps panel opener, setup segment, and close control', status: 'PASS' });
+    manifest.assertions.push({ name: `touch context taps panel opener, setup segment, and close control (${orientation})`, status: 'PASS' });
   } catch (error) {
-    manifest.assertions.push({ name: 'touch context taps panel opener, setup segment, and close control', status: 'FAIL', error: error?.message || String(error) });
+    manifest.assertions.push({ name: `touch context taps panel opener, setup segment, and close control (${orientation})`, status: 'FAIL', error: error?.message || String(error) });
     manifest.errors.push(error?.stack || error?.message || String(error));
   } finally {
     if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
@@ -970,7 +1132,7 @@ async function runTouchContract(browser, baseUrl, manifest) {
   }
 }
 
-async function runReducedMotionContract(browser, baseUrl, output, manifest) {
+async function runReducedMotionContract(browser, baseUrl, output, manifest, orientation = 'landscape-left') {
   const dimension = { width: 1366, height: 1024 };
   const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1, reducedMotion: 'reduce' });
   await context.addInitScript(({ key, value }) => {
@@ -980,23 +1142,27 @@ async function runReducedMotionContract(browser, baseUrl, output, manifest) {
   page.setDefaultTimeout(TIMEOUT_MS);
   const errors = attachErrorCapture(page);
   try {
-    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
-    await waitForMenu(page, 'sunweaver');
+    await page.goto(pageUrl(baseUrl, { orientation }), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, 'sunweaver', orientation);
+    const menuMotion = await readShellTiming(page, '.menu-item[data-start-action="tutorial"]');
+    assertMotionContract(menuMotion, 'Reduced Motion Main Menu', true);
+    const menuFile = path.join(output, `menu-reduced-motion-1366x1024${orientationSuffix(orientation)}.png`);
+    await page.screenshot({ path: menuFile, type: 'png' });
+    manifest.captures.push(path.basename(menuFile));
+    await page.locator('.menu-item[data-start-action="new-skirmish"]').click();
+    await page.locator('.setup-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    const setupMotion = await readShellTiming(page, '[data-config-field="difficulty"]');
+    assertMotionContract(setupMotion, 'Reduced Motion Match Setup', true);
+    const setupFile = path.join(output, `setup-reduced-motion-1366x1024${orientationSuffix(orientation)}.png`);
+    await page.screenshot({ path: setupFile, type: 'png' });
+    manifest.captures.push(path.basename(setupFile));
+    await page.locator('.secondary-action[data-start-action="back"]').click();
+    await page.locator('.menu-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
     await page.locator('.utility-button[data-start-action="records"]').click();
     await page.locator('.start-panel').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
-    const motion = await page.evaluate(() => {
-      const panel = document.querySelector('.panel-card');
-      const style = panel ? getComputedStyle(panel) : null;
-      return {
-        mediaMatches: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-        animationName: style?.animationName || '',
-        animationDuration: style?.animationDuration || '',
-        transitionDuration: style?.transitionDuration || '',
-      };
-    });
-    assertThat(motion.mediaMatches, 'Reduced Motion media query was not active');
-    assertThat(motion.animationName === 'none' && motion.animationDuration === '0s', `decorative panel animation remains under Reduced Motion (${JSON.stringify(motion)})`);
-    const file = path.join(output, 'panel-reduced-motion-1366x1024.png');
+    const motion = await readShellTiming(page, '.panel-card');
+    assertMotionContract(motion, 'Reduced Motion Panel', true);
+    const file = path.join(output, `panel-reduced-motion-1366x1024${orientationSuffix(orientation)}.png`);
     await page.screenshot({ path: file, type: 'png' });
     manifest.captures.push(path.basename(file));
     await page.keyboard.press('Escape');
@@ -1008,9 +1174,9 @@ async function runReducedMotionContract(browser, baseUrl, output, manifest) {
     await page.keyboard.press('Escape');
     await page.locator('.start-panel').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
     assertThat(errors.length === 0, `Reduced Motion browser errors\n${errors.join('\n')}`);
-    manifest.assertions.push({ name: 'Reduced Motion removes panel animation while preserving faction state changes', status: 'PASS', details: motion });
+    manifest.assertions.push({ name: `Reduced Motion removes Main Menu, Match Setup, and panel movement (${orientation})`, status: 'PASS', details: motion });
   } catch (error) {
-    manifest.assertions.push({ name: 'Reduced Motion removes panel animation while preserving faction state changes', status: 'FAIL', error: error?.message || String(error) });
+    manifest.assertions.push({ name: `Reduced Motion removes Main Menu, Match Setup, and panel movement (${orientation})`, status: 'FAIL', error: error?.message || String(error) });
     manifest.errors.push(error?.stack || error?.message || String(error));
   } finally {
     if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
@@ -1025,11 +1191,13 @@ async function exerciseControls(page) {
   for (const action of ['records', 'history', 'codex', 'dispatches']) {
     await openAndClosePanel(page, `.utility-button[data-start-action="${action}"]`, action);
   }
-  await page.locator('.menu-item[data-start-action="new-skirmish"]').click();
+  const newSkirmish = page.locator('.menu-item[data-start-action="new-skirmish"]');
+  await newSkirmish.click();
   await page.locator('.setup-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
   assertThat(await page.locator('.menu-view').isHidden(), 'New Skirmish left the Main Menu visible');
   await page.locator('.secondary-action[data-start-action="back"]').click();
   await page.locator('.menu-view').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+  assertThat(await page.evaluate(() => document.activeElement?.getAttribute('data-start-action') === 'new-skirmish'), 'Back did not restore focus to New Skirmish');
 }
 
 async function exerciseFactionChoice(page, faction) {
@@ -1044,7 +1212,7 @@ async function exerciseFactionChoice(page, faction) {
   assertThat(stored.preferredFaction === rival, `Factions: preferred faction ${rival} did not persist after close`);
 }
 
-async function runMenuCase(browser, baseUrl, output, faction, dimension, manifest) {
+async function runMenuCase(browser, baseUrl, output, faction, dimension, manifest, orientation = 'landscape-left') {
   const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1 });
   await context.addInitScript(({ key, value }) => {
     if (window.localStorage.getItem(key) === null) window.localStorage.setItem(key, JSON.stringify(value));
@@ -1053,25 +1221,29 @@ async function runMenuCase(browser, baseUrl, output, faction, dimension, manifes
   page.setDefaultTimeout(TIMEOUT_MS);
   const errors = attachErrorCapture(page);
   try {
-    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
-    await waitForMenu(page, faction);
-    const details = await readMenuContract(page, faction, dimension);
-    assertMenuContract(details, faction, dimension);
-    manifest.assertions.push({ name: `menu contract ${faction} ${dimension.width}x${dimension.height}`, status: 'PASS', details });
-    const file = path.join(output, `menu-${faction}-${dimension.width}x${dimension.height}.png`);
+    await page.goto(pageUrl(baseUrl, { orientation }), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, faction, orientation);
+    const details = await readMenuContract(page, faction, dimension, orientation);
+    assertMenuContract(details, faction, dimension, orientation);
+    if (dimension.width === 1366 && dimension.height === 1024) {
+      assertMotionContract(await readShellTiming(page, '.menu-item[data-start-action="tutorial"]'), `${faction} normal Main Menu motion`);
+    }
+    manifest.assertions.push({ name: `menu contract ${faction} ${dimension.width}x${dimension.height} ${orientation}`, status: 'PASS', details });
+    const file = path.join(output, `menu-${faction}-${dimension.width}x${dimension.height}${orientationSuffix(orientation)}.png`);
     await page.screenshot({ path: file, type: 'png' });
     manifest.captures.push(path.basename(file));
 
     if (dimension.width === 1920 && dimension.height === 1080) {
-      await exerciseTooltipAndFocus(page, output, faction, dimension, manifest);
+      await exerciseTooltipAndFocus(page, output, faction, dimension, manifest, orientation);
     }
+    if (dimension.width === 1366 && dimension.height === 1024) await exercisePointerAndKeyboard(page, faction, manifest);
     await exerciseControls(page);
     if (dimension.width === 1366 && dimension.height === 1024) await exerciseFactionChoice(page, faction);
     assertThat(errors.length === 0, `${faction} ${dimension.width}x${dimension.height}: browser errors\n${errors.join('\n')}`);
-    manifest.assertions.push({ name: `interactions ${faction} ${dimension.width}x${dimension.height}`, status: 'PASS' });
+    manifest.assertions.push({ name: `interactions ${faction} ${dimension.width}x${dimension.height} ${orientation}`, status: 'PASS' });
   } catch (error) {
     manifest.assertions.push({
-      name: `menu case ${faction} ${dimension.width}x${dimension.height}`,
+      name: `menu case ${faction} ${dimension.width}x${dimension.height} ${orientation}`,
       status: 'FAIL',
       error: error?.message || String(error),
     });
@@ -1082,7 +1254,7 @@ async function runMenuCase(browser, baseUrl, output, faction, dimension, manifes
   }
 }
 
-async function runDispatchPersistence(browser, baseUrl, output, manifest) {
+async function runDispatchPersistence(browser, baseUrl, output, manifest, orientation = 'landscape-left') {
   const faction = 'sunweaver';
   const dimension = { width: 1366, height: 1024 };
   const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1 });
@@ -1093,8 +1265,8 @@ async function runDispatchPersistence(browser, baseUrl, output, manifest) {
   page.setDefaultTimeout(TIMEOUT_MS);
   const errors = attachErrorCapture(page);
   try {
-    await page.goto(pageUrl(baseUrl), { waitUntil: 'load', timeout: TIMEOUT_MS });
-    await waitForMenu(page, faction);
+    await page.goto(pageUrl(baseUrl, { orientation }), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await waitForMenu(page, faction, orientation);
     const badge = page.locator('[data-dispatch-badge]');
     assertThat(await badge.isVisible(), 'Dispatches badge is not visible on a fresh profile');
     await page.locator('.utility-button[data-start-action="dispatches"]').click();
@@ -1106,7 +1278,7 @@ async function runDispatchPersistence(browser, baseUrl, output, manifest) {
     await page.locator('.panel-close').click();
     await page.locator('.start-panel').waitFor({ state: 'hidden', timeout: TIMEOUT_MS });
     await page.reload({ waitUntil: 'load', timeout: TIMEOUT_MS });
-    await waitForMenu(page, faction);
+    await waitForMenu(page, faction, orientation);
     assertThat(!(await badge.isVisible()), 'Dispatches badge returned after profile reload');
     const stored = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) || '{}'), DEFAULT_PROFILE_KEY);
     assertThat(stored.lastSeenDispatchVersion === 1, `Dispatches profile path stored version ${stored.lastSeenDispatchVersion}`);
@@ -1114,6 +1286,89 @@ async function runDispatchPersistence(browser, baseUrl, output, manifest) {
     manifest.assertions.push({ name: 'Dispatches badge clears and persists through profile storage', status: 'PASS', details: { lastSeenDispatchVersion: stored.lastSeenDispatchVersion } });
   } catch (error) {
     manifest.assertions.push({ name: 'Dispatches badge clears and persists through profile storage', status: 'FAIL', error: error?.message || String(error) });
+    manifest.errors.push(error?.stack || error?.message || String(error));
+  } finally {
+    if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
+    await context.close();
+  }
+}
+
+async function runRotateGateCase(browser, baseUrl, output, dimension, manifest) {
+  const context = await browser.newContext({ viewport: dimension, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  page.setDefaultTimeout(TIMEOUT_MS);
+  const errors = attachErrorCapture(page);
+  try {
+    await page.goto(pageUrl(baseUrl, { page: 'index.html', orientation: 'landscape-left' }), { waitUntil: 'load', timeout: TIMEOUT_MS });
+    await page.locator('#rotate-gate').waitFor({ state: 'visible', timeout: TIMEOUT_MS });
+    const details = await page.evaluate(() => {
+      const visible = (element) => {
+        if (!(element instanceof HTMLElement)) return false;
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0;
+      };
+      const rect = (element) => {
+        const box = element.getBoundingClientRect();
+        return { x: box.x, y: box.y, right: box.right, bottom: box.bottom, width: box.width, height: box.height };
+      };
+      const gate = document.querySelector('#rotate-gate');
+      const card = document.querySelector('.rotate-gate-card');
+      const motif = document.querySelector('.rotate-gate-motif');
+      const title = document.querySelector('.rotate-gate-card h1');
+      const copy = document.querySelector('.rotate-gate-copy');
+      const kicker = document.querySelector('.rotate-gate-kicker');
+      const note = document.querySelector('.rotate-gate-note');
+      const cardStyle = card ? getComputedStyle(card) : null;
+      const cardHighlight = card ? getComputedStyle(card, '::before') : null;
+      return {
+        visible: visible(gate),
+        appHidden: getComputedStyle(document.querySelector('#app')).visibility === 'hidden',
+        text: gate?.textContent?.replace(/\s+/g, ' ').trim() || '',
+        cardRect: card ? rect(card) : null,
+        motifRect: motif ? rect(motif) : null,
+        cardFrame: {
+          border: cardStyle?.borderTopWidth || '',
+          background: cardStyle?.backgroundColor || '',
+          shadow: cardStyle?.boxShadow || '',
+          chamfer: cardStyle?.clipPath || '',
+          highlightBorder: cardHighlight?.borderTopWidth || '',
+        },
+        fonts: {
+          display: title ? getComputedStyle(title).fontFamily : '',
+          interface: kicker ? getComputedStyle(kicker).fontFamily : '',
+          body: copy ? getComputedStyle(copy).fontFamily : '',
+          note: note ? getComputedStyle(note).fontFamily : '',
+        },
+        integerEdges: [card, motif].filter(Boolean).map(rect).every((box) => [box.x, box.y, box.right, box.bottom, box.width, box.height].every(Number.isInteger)),
+        overflow: {
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          documentWidth: document.documentElement.scrollWidth,
+          documentHeight: document.documentElement.scrollHeight,
+        },
+      };
+    });
+    assertThat(details.visible, `rotate gate ${dimension.width}x${dimension.height}: gate is not visible`);
+    assertThat(details.appHidden, `rotate gate ${dimension.width}x${dimension.height}: app remains visible`);
+    assertThat(/ROTATE THE IPAD TO LANDSCAPE TO COMMAND STARHAVEN/i.test(details.text), `rotate gate ${dimension.width}x${dimension.height}: orientation message is missing`);
+    assertThat(details.cardRect?.width === 640 && details.cardRect?.height === 280, `rotate gate ${dimension.width}x${dimension.height}: frame geometry is ${JSON.stringify(details.cardRect)}`);
+    assertThat(details.cardRect.x >= 24 && details.cardRect.right <= dimension.width - 24 && details.cardRect.y >= 24 && details.cardRect.bottom <= dimension.height - 24, `rotate gate ${dimension.width}x${dimension.height}: frame misses the safe inset`);
+    assertThat(details.cardFrame.border === '2px' && details.cardFrame.highlightBorder === '1px', `rotate gate ${dimension.width}x${dimension.height}: hard frame weights are incorrect (${JSON.stringify(details.cardFrame)})`);
+    assertThat(/4px 4px 0px/.test(details.cardFrame.shadow), `rotate gate ${dimension.width}x${dimension.height}: frame shadow is not hard 4px (${details.cardFrame.shadow})`);
+    assertThat(/polygon\(8px 0px/.test(details.cardFrame.chamfer), `rotate gate ${dimension.width}x${dimension.height}: frame chamfer is not 8px`);
+    assertThat(details.integerEdges, `rotate gate ${dimension.width}x${dimension.height}: frame edge is fractional`);
+    assertThat(/Pixelify Sans/i.test(details.fonts.display), `rotate gate ${dimension.width}x${dimension.height}: title is not Pixelify Sans`);
+    assertThat(/Silkscreen/i.test(details.fonts.interface) && /Silkscreen/i.test(details.fonts.note), `rotate gate ${dimension.width}x${dimension.height}: interface copy is not Silkscreen`);
+    assertThat(/Kode Mono/i.test(details.fonts.body), `rotate gate ${dimension.width}x${dimension.height}: message is not Kode Mono`);
+    assertThat(details.overflow.documentWidth <= dimension.width && details.overflow.documentHeight <= dimension.height, `rotate gate ${dimension.width}x${dimension.height}: document overflow`);
+    const file = path.join(output, `rotate-gate-${dimension.width}x${dimension.height}.png`);
+    await page.screenshot({ path: file, type: 'png' });
+    manifest.captures.push(path.basename(file));
+    assertThat(errors.length === 0, `rotate gate ${dimension.width}x${dimension.height}: browser/asset errors\n${errors.join('\n')}`);
+    manifest.assertions.push({ name: `portrait rotate gate ${dimension.width}x${dimension.height}`, status: 'PASS', details });
+  } catch (error) {
+    manifest.assertions.push({ name: `portrait rotate gate ${dimension.width}x${dimension.height}`, status: 'FAIL', error: error?.message || String(error) });
     manifest.errors.push(error?.stack || error?.message || String(error));
   } finally {
     if (errors.length > 0) manifest.errors.push(...errors.map((error) => `browser: ${error}`));
@@ -1137,6 +1392,7 @@ async function main() {
     tool: 'qa-pixel-front-end',
     url: normalizeUrl(args.url),
     dimensions: DIMENSIONS,
+    orientations: ORIENTATIONS,
     factions: FACTIONS,
     assertions: [],
     captures: [],
@@ -1152,28 +1408,41 @@ async function main() {
     const baseUrl = normalizeUrl(args.url || preview.url);
     manifest.url = baseUrl;
     browser = await chromium.launch({ channel: 'chrome', headless: true }).catch(() => chromium.launch({ headless: true }));
-    for (const faction of FACTIONS) {
-      for (const dimension of DIMENSIONS) {
-        await runMenuCase(browser, baseUrl, output, faction, dimension, manifest);
+    for (const orientation of ORIENTATIONS) {
+      for (const faction of FACTIONS) {
+        for (const dimension of DIMENSIONS) {
+          await runMenuCase(browser, baseUrl, output, faction, dimension, manifest, orientation);
+        }
       }
     }
-    for (const faction of FACTIONS) {
-      for (const dimension of DIMENSIONS) {
-        await runSetupCase(browser, baseUrl, output, faction, dimension, manifest);
+    for (const orientation of ORIENTATIONS) {
+      for (const faction of FACTIONS) {
+        for (const dimension of DIMENSIONS) {
+          await runSetupCase(browser, baseUrl, output, faction, dimension, manifest, orientation);
+        }
       }
     }
-    for (const faction of FACTIONS) {
-      for (const dimension of DIMENSIONS) {
-        await runLoadingCase(browser, baseUrl, output, faction, dimension, manifest);
+    for (const orientation of ORIENTATIONS) {
+      for (const faction of FACTIONS) {
+        for (const dimension of DIMENSIONS) {
+          await runLoadingCase(browser, baseUrl, output, faction, dimension, manifest, { orientation });
+        }
       }
     }
-    for (const faction of FACTIONS) {
-      await runLoadingCase(browser, baseUrl, output, faction, { width: 1366, height: 1024 }, manifest, { reducedMotion: true });
+    for (const orientation of ORIENTATIONS) {
+      for (const faction of FACTIONS) {
+        await runLoadingCase(browser, baseUrl, output, faction, { width: 1366, height: 1024 }, manifest, { reducedMotion: true, orientation });
+      }
     }
-    await runPanelEvidence(browser, baseUrl, output, manifest);
-    await runTouchContract(browser, baseUrl, manifest);
-    await runReducedMotionContract(browser, baseUrl, output, manifest);
-    await runDispatchPersistence(browser, baseUrl, output, manifest);
+    for (const orientation of ORIENTATIONS) {
+      await runPanelEvidence(browser, baseUrl, output, manifest, orientation);
+      await runTouchContract(browser, baseUrl, manifest, orientation);
+      await runReducedMotionContract(browser, baseUrl, output, manifest, orientation);
+      await runDispatchPersistence(browser, baseUrl, output, manifest, orientation);
+    }
+    for (const dimension of [{ width: 820, height: 1180 }, { width: 768, height: 1024 }]) {
+      await runRotateGateCase(browser, baseUrl, output, dimension, manifest);
+    }
   } catch (error) {
     manifest.errors.push(error?.stack || error?.message || String(error));
   } finally {
@@ -1186,6 +1455,15 @@ async function main() {
       ? 'PASS'
       : 'FAIL';
     fs.writeFileSync(path.join(output, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(path.join(output, 'responsive-manifest.json'), `${JSON.stringify({
+      tool: manifest.tool,
+      status: manifest.status,
+      dimensions: manifest.dimensions,
+      orientations: manifest.orientations,
+      portrait: [{ width: 820, height: 1180 }, { width: 768, height: 1024 }],
+      captures: manifest.captures,
+      generatedAt: manifest.finishedAt,
+    }, null, 2)}\n`, 'utf8');
   }
   console.log(`qa-pixel-front-end: ${manifest.status}`);
   console.log(`qa-pixel-front-end: manifest ${path.join(output, 'manifest.json')}`);

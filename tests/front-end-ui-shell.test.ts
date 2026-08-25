@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -15,9 +15,15 @@ const uiRoot = path.join(repoRoot, 'public', 'front-end-ui');
 const fontsRoot = path.join(uiRoot, 'fonts');
 const iconsRoot = path.join(uiRoot, 'icons');
 const shellCssPath = path.join(repoRoot, 'public', 'front-end-shell.css');
+const indexPath = path.join(repoRoot, 'index.html');
+const generatedDesktopPath = path.join(repoRoot, 'dist', 'desktop.html');
+const desktopGeneratorPath = path.join(repoRoot, 'scripts', 'gen-desktop.mjs');
 const startScreenPath = path.join(repoRoot, 'src', 'start-screen.ts');
 const mainPath = path.join(repoRoot, 'src', 'main.ts');
 const shellCss = readFileSync(shellCssPath, 'utf8');
+const indexSource = readFileSync(indexPath, 'utf8');
+const generatedDesktop = existsSync(generatedDesktopPath) ? readFileSync(generatedDesktopPath, 'utf8') : '';
+const desktopGenerator = readFileSync(desktopGeneratorPath, 'utf8');
 const startScreen = readFileSync(startScreenPath, 'utf8');
 const mainSource = readFileSync(mainPath, 'utf8');
 
@@ -132,9 +138,45 @@ const productionFiles = [
 const productionSource = productionFiles.map((file) => readFileSync(file, 'utf8')).join('\n');
 assert.doesNotMatch(productionSource, /fonts\.(?:googleapis|gstatic)\.com/i, 'production has no runtime font CDN');
 
+const frontEndSurface = [shellCss, indexSource, generatedDesktop, startScreen, mainSource].join('\n');
+const bannedSurfaceStyle = /Trebuchet|Segoe(?: UI)?|Arial|generic\s+sans-serif|backdrop-filter|filter\s*:\s*blur|(?:linear|radial|conic)-gradient|cubic-bezier|hue-rotate/i;
+assert.doesNotMatch(frontEndSurface, bannedSurfaceStyle, 'front-end surface has no banned font, glass, gradient, easing, or hue treatment');
+assert.doesNotMatch(frontEndSurface, /box-shadow\s*:[^;]*(?:blur|\d+px\s+\d+px\s+\d+px)/i, 'front-end surface uses hard shadows only');
+assert.doesNotMatch(frontEndSurface, /\bborder-radius\s*:\s*(?:[3-9]|[1-9]\d|\d+\.\d+)px/i, 'front-end surface has no radius above 2px');
+assert.doesNotMatch(frontEndSurface, /\btranslate(?:X|Y)?\([^)]*\.\d/i, 'front-end surface has no fractional translate');
+assert.doesNotMatch(frontEndSurface, /FPE-\d+ LEGACY/i, 'front-end surface has no legacy marker');
+assert.match(desktopGenerator, /readFileSync\('dist\/index\.html'/, 'desktop.html is generated from the built index');
+assert.match(desktopGenerator, /writeFileSync\('dist\/desktop\.html'/, 'desktop.html has one generator owner');
+if (generatedDesktop !== '') {
+  assert.match(generatedDesktop, /id="rotate-gate"/, 'generated desktop preserves the corrected rotate gate markup');
+  assert.match(generatedDesktop, /id="desktop-override"/, 'generated desktop owns only the desktop visibility override');
+  assert.doesNotMatch(generatedDesktop, bannedSurfaceStyle, 'generated desktop has no banned inline surface style');
+}
+
+const sunweaverManifest = JSON.parse(readFileSync(path.join(repoRoot, 'public', 'front-end', 'civilizations', 'sunweaver', 'manifest.json'), 'utf8')) as Record<string, unknown>;
+const gravemarkManifest = JSON.parse(readFileSync(path.join(repoRoot, 'public', 'front-end', 'civilizations', 'gravemark', 'manifest.json'), 'utf8')) as Record<string, unknown>;
+assert.equal((sunweaverManifest.menu as { scene?: string }).scene, 'sunweaver-capital', 'Sunweaver manifest keeps its authored scene id');
+assert.equal((gravemarkManifest.menu as { scene?: string }).scene, 'gravemark-quarry', 'Gravemark manifest keeps its authored scene id');
+assert.notDeepEqual(sunweaverManifest, gravemarkManifest, 'authored faction manifests remain distinct');
+assert.match(`${startScreen}\n${mainSource}`, /mountFrontEndScene/);
+assert.doesNotMatch(`${startScreen}\n${mainSource}`, /procedural|drawFallback|fallbackPalette/i, 'production front-end path does not reference a procedural scene renderer');
+
 for (const glyph of ['▦', '◷', '✧', '✉', '✦', '◌']) {
   assert.equal(productionSource.includes(glyph), false, `old Unicode asset ${glyph} is absent from production TypeScript/HTML`);
 }
+const utilitySourceStart = startScreen.indexOf('private utilityButton');
+const utilitySource = utilitySourceStart >= 0 ? startScreen.slice(utilitySourceStart, startScreen.indexOf('private renderProfile', utilitySourceStart)) : '';
+assert.doesNotMatch(utilitySource, /[\u2190-\u2bff]/u, 'utility controls have no Unicode icon text');
+assert.doesNotMatch(startScreen, /class="panel-close"[^>]*>[^<]*[^\x00-\x7F]/u, 'close control has no Unicode icon text');
+
+const motionDeclarations = [...shellCss.matchAll(/\b(?:transition|animation)\s*:\s*([^;]+)/g)].map((match) => match[1]);
+assert.ok(motionDeclarations.length > 0, 'front-end shell has explicit motion declarations');
+for (const declaration of motionDeclarations) {
+  if (/\bnone\b/i.test(declaration)) continue;
+  assert.match(declaration, /steps\(/i, `active shell motion is stepped: ${declaration}`);
+}
+assert.doesNotMatch(shellCss, /\b(?:scale|skew)(?:X|Y)?\s*\(/i, 'front-end shell has no scale or skew motion');
+assert.doesNotMatch(shellCss, /\b(?:spring|drift)\b/i, 'front-end shell has no spring or drift motion');
 
 const utilityButtons: ReadonlyArray<readonly [string, string, string]> = [
   ['records', 'Records', 'records.svg'],
@@ -158,6 +200,29 @@ assert.match(startScreen, /aria-describedby="\$\{tooltipId\}"/);
 assert.match(startScreen, /class="utility-tooltip" id="\$\{tooltipId\}" role="tooltip"/);
 assert.match(startScreen, /sunweaver-sigil\.svg/);
 assert.match(startScreen, /gravemark-sigil\.svg/);
+
+const rotateGateMarkupStart = indexSource.indexOf('<div id="rotate-gate"');
+assert.ok(rotateGateMarkupStart >= 0, 'portrait rotate gate markup is present in index.html');
+const rotateGateMarkup = indexSource.slice(rotateGateMarkupStart, indexSource.indexOf('</div>\n    </div>', rotateGateMarkupStart) + '</div>\n    </div>'.length);
+assert.match(rotateGateMarkup, /class="rotate-gate-card"/);
+assert.match(rotateGateMarkup, /LANDSCAPE COMMAND REQUIRED/);
+assert.match(rotateGateMarkup, /Rotate the iPad to landscape to command Starhaven/);
+assert.doesNotMatch(rotateGateMarkup, /[\u2190-\u2bff]/u, 'rotate gate has no Unicode orientation icon text');
+
+const rotateCssStart = shellCss.indexOf('/* FPE-5 PORTRAIT ORIENTATION GATE');
+const rotateCssEnd = shellCss.indexOf('/* FPE-2 MAIN MENU PIXEL SHELL');
+assert.ok(rotateCssStart >= 0 && rotateCssEnd > rotateCssStart, 'rotate-gate CSS section is explicitly bounded');
+const rotateCss = shellCss.slice(rotateCssStart, rotateCssEnd);
+assert.match(rotateCss, /\.rotate-gate-card[\s\S]*width:\s*min\(640px/);
+assert.match(rotateCss, /\.rotate-gate-card[\s\S]*height:\s*280px/);
+assert.match(rotateCss, /\.rotate-gate-card[\s\S]*border:\s*2px\s+solid/);
+assert.match(rotateCss, /\.rotate-gate-card::before[\s\S]*border:\s*1px\s+solid/);
+assert.match(rotateCss, /\.rotate-gate-card[\s\S]*box-shadow:\s*4px\s+4px\s+0/);
+assert.match(rotateCss, /\.rotate-gate-card[\s\S]*clip-path:\s*polygon\(8px\s+0/);
+assert.match(rotateCss, /\.rotate-gate-kicker[\s\S]*font-family:\s*var\(--font-interface\)/);
+assert.match(rotateCss, /\.rotate-gate-card h1[\s\S]*font-family:\s*var\(--font-display\)/);
+assert.match(rotateCss, /\.rotate-gate-copy[\s\S]*font-family:\s*var\(--font-body\)/);
+assert.doesNotMatch(rotateCss, bannedSurfaceStyle, 'rotate-gate surface has no banned font, glass, gradient, easing, or hue treatment');
 
 assert.doesNotMatch(startScreen, /START_SCREEN_CSS|injectCss/, 'start-screen presentation is not injected at runtime');
 assert.match(startScreen, /this\.root\.dataset\.civ\s*=\s*this\.profile\.preferredFaction/);
@@ -220,6 +285,23 @@ assert.match(setupPanelCss, /border:\s*2px\s+solid/);
 assert.match(setupPanelCss, /border:\s*1px\s+solid/);
 assert.match(setupPanelCss, /box-shadow:\s*6px\s+6px\s+0\s+var\(--px-border-dark\)/);
 assert.match(setupPanelCss, /clip-path:\s*polygon\(8px\s+0/);
+const panelCardRule = setupPanelCss.match(/(?:^|\n)\.panel-card\s*\{\s*display:\s*flex[\s\S]*?\n\}/)?.[0] ?? '';
+const panelFrameRule = setupPanelCss.match(/\.setup-heading::after,[\s\S]*?\.panel-card::before\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+const panelAccentRule = setupPanelCss.match(/(?:^|\n)\.panel-card::after\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+const oddPanelAccentRule = setupPanelCss.match(/\.panel-card\[data-panel-kind="tutorial"\]::after,[\s\S]*?\.panel-card\[data-panel-kind="history"\]::after\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+const evenPanelAccentRule = setupPanelCss.match(/\.panel-card\[data-panel-kind="records"\]::after,[\s\S]*?\.panel-card\[data-panel-kind="dispatches"\]::after\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+assert.ok(panelCardRule, 'panel card rule is present');
+assert.match(panelCardRule, /width:\s*min\(880px,\s*calc\(100vw - 48px\)\)/, 'panel cards keep the shared 880px width');
+assert.doesNotMatch(panelCardRule, /min-height/, 'panel cards have no fixed minimum height');
+assert.match(panelFrameRule, /position:\s*absolute/);
+assert.match(panelFrameRule, /inset:\s*2px/);
+assert.match(panelFrameRule, /border:\s*1px\s+solid/);
+assert.match(panelAccentRule, /display:\s*block/);
+assert.match(panelAccentRule, /position:\s*static/, 'panel accent remains in normal flow');
+assert.match(panelAccentRule, /flex:\s*0 0 auto/);
+assert.match(panelAccentRule, /margin-top:\s*16px/);
+assert.match(oddPanelAccentRule, /height:\s*1px/);
+assert.match(evenPanelAccentRule, /height:\s*2px/);
 assert.match(setupPanelCss, /\.setup-heading h2[\s\S]*font-family:\s*var\(--font-display\)/);
 assert.match(setupPanelCss, /\.setup-field legend[\s\S]*font-family:\s*var\(--font-interface\)/);
 assert.match(setupPanelCss, /\.setup-status[\s\S]*font-family:\s*var\(--font-interface\)/);
@@ -240,6 +322,7 @@ assert.match(startScreen, /class="panel-close"[^>]*aria-label="Close"[^>]*><span
 for (const action of ['tutorial', 'factions', 'settings', 'records', 'history', 'codex', 'dispatches']) {
   assert.match(startScreen, new RegExp(`['"]${action}['"]`), `${action} panel action remains present`);
 }
+assert.match(startScreen, /setAttribute\('data-panel-kind', kind\)/, 'panel kind is exposed for responsive geometry QA');
 
 const loadingCssStart = shellCss.indexOf('/* FPE-4 SEGMENTED LOADING COMMAND PANEL');
 assert.ok(loadingCssStart === setupPanelCssEnd, 'segmented loading CSS section is explicitly bounded');
@@ -311,4 +394,4 @@ for (const relativePath of protectedFiles) {
   assert.deepEqual(current, baseline, `${relativePath} is unchanged from ${baselineCommit}`);
 }
 
-console.log('FPE-4 pixel front-end shell tests: PASS');
+console.log('FPE-5 pixel front-end shell tests: PASS');
