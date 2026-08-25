@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DEFAULT_OUT = path.resolve(REPO_ROOT, '..', 'evidence', 'starhaven-pixel-ui-shell', 'final', 'vs3-results');
 const VIEWPORT = { width: 1366, height: 1024 };
 const DT = 1 / 20;
 const MIN_RESULT_TICKS = Math.ceil(60 / DT);
@@ -35,10 +36,11 @@ function parseArgs(argv) {
 }
 
 function resolveOut(raw) {
-  if (typeof raw !== 'string' || raw.trim() === '' || !path.isAbsolute(raw)) {
-    throw new Error('--out is required and must be an absolute path outside the repository');
+  const requested = raw === undefined ? DEFAULT_OUT : String(raw).trim();
+  if (!requested || !path.isAbsolute(requested)) {
+    throw new Error(`--out must be an absolute path outside the repository (default: ${DEFAULT_OUT})`);
   }
-  const out = path.resolve(raw);
+  const out = path.resolve(requested);
   const relative = path.relative(REPO_ROOT, out);
   if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
     throw new Error(`--out must be outside the repository (${REPO_ROOT})`);

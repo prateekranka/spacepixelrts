@@ -1,0 +1,8 @@
+Findings:
+1. **Hierarchy:** PASS — Header → title → content reads correctly; the selected Sunweaver card is clearly dominant via gold border/icon, and the empty state is subdued. No clipping observed.
+2. **Empty-space balance / same width:** PASS with minor note — Both frames share the same panel width and content inset. Vertical spacing in the Factions frame is slightly taller due to content, but the footer rhythm matches the Match History frame.
+
+VERDICT: PASS
+
+SINGLE BIGGEST GAP:
+~20px empty strip between the footer divider and the bottom border on the Factions frame — largest whitespace pocket, but intentional and consistent with the other frame.

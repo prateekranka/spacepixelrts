@@ -1,0 +1,3 @@
+**VERDICT: PASS**
+
+**SINGLE BIGGEST GAP:** The discrete loading bar on the right-hand panels provides no percentage readout or textual progress stage, so players get "PREPARING STARFISH" but no numerical or temporal feedback on how close the match is to being ready.

@@ -1,0 +1,3 @@
+OCR: No matches recorded yet. Your recent Helios Rift sorties will appear here.
+VERDICT: PASS
+SINGLE BIGGEST GAP: Large empty vertical space below the empty-state message, making the layout feel top-heavy.

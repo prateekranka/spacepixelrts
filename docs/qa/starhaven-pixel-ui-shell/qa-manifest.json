@@ -1,0 +1,573 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS_WITH_DOCUMENTED_WARNINGS",
+  "blindVisualGate": {
+    "status": "PASS",
+    "model": "deepseek-v4-flash-vision-exp",
+    "flow": "Final Sunweaver/Gravemark Menu, Match Setup, and Loading contact sheet passed with no material style break.",
+    "panels": "Final compact Match History and Factions panels passed hierarchy, shared-width, empty-space, and clipping review.",
+    "historyOcr": "No matches recorded yet. Your recent Helios Rift sorties will appear here.",
+    "rawOutputs": [
+      "docs/qa/starhaven-pixel-ui-shell/final-flow-blind-critic.txt",
+      "docs/qa/starhaven-pixel-ui-shell/final-panels-blind-critic.txt",
+      "docs/qa/starhaven-pixel-ui-shell/final-history-ocr-control.txt"
+    ],
+    "videoVerification": {
+      "videoAnalyzeEndpoint": "HTTP 500; not used as evidence",
+      "inBrowserAssertions": "PASS",
+      "ffprobe": "PASS",
+      "extractedContactSheet": "PASS — utility panels and authored Sunweaver-to-Gravemark change visible"
+    }
+  },
+  "generatedAt": "2026-08-25T10:11:45+05:30",
+  "repository": {
+    "path": "/home/bobbyranka/workspace/spacepixelrts-pixel-ui-shell",
+    "branch": "hermes/starhaven-pixel-ui-shell",
+    "finalEvidenceParent": {
+      "commit": "edde763adda58279e5a8e231d6443be0166d65fe",
+      "subject": "FPE-5: polish responsive pixel shell and motion"
+    },
+    "sourceBaseArtReconciliation": {
+      "sourceIntegrationBranch": "hermes/starhaven-pixel-ui-shell",
+      "sourceIntegrationCommitBeforeEvidence": "edde763adda58279e5a8e231d6443be0166d65fe",
+      "prBaseRef": "origin/chatgptpro2008",
+      "prBaseCommit": "b406cb6c23fc562865963d31df1f4cb70e1d40a8",
+      "artBranchRef": "origin/hermes/starhaven-aaa-front-end",
+      "artBranchCommit": "9020475dd89a53ead0b3f2c0c01c189664879745",
+      "mergeBaseWithPrBase": "b406cb6c23fc562865963d31df1f4cb70e1d40a8",
+      "mergeBaseWithArtBranch": "9020475dd89a53ead0b3f2c0c01c189664879745",
+      "reconciliation": "FPE-0 reconciled the authored art branch into the PR base; FPE-1 through FPE-5 are the accepted front-end shell commits on top. FPE-6 adds only integration QA repairs, evidence, documentation, and capture tooling."
+    },
+    "deployment": {
+      "pushed": false,
+      "deployed": false,
+      "pullRequestCreated": false,
+      "handoff": "Lead performs post-commit review and any push, deployment, or PR work."
+    }
+  },
+  "protectedVerification": {
+    "baselineCommit": "645b0ec",
+    "baselineCommitFull": "645b0ec90c6f60906e1114dbe46e07b4fae23934",
+    "note": "The abbreviated baseline is the required FPE-0 baseline ref. The protected file comparison was performed with git diff against 645b0ec; the four source hashes and authored asset tree hash below match that baseline.",
+    "files": [
+      {
+        "path": "src/sim.ts",
+        "baselineSha256": "fb0f3d7b3e8d8a1ef97afebb7c23b3a7ad4e9bb04dc5ff6ac98437be6694dd0a",
+        "finalSha256": "fb0f3d7b3e8d8a1ef97afebb7c23b3a7ad4e9bb04dc5ff6ac98437be6694dd0a",
+        "byteIdentical": true
+      },
+      {
+        "path": "src/engine.ts",
+        "baselineSha256": "182830c08fb36041da67254890ba640c7fc50c251cb720bac27fd0174795c8e8",
+        "finalSha256": "182830c08fb36041da67254890ba640c7fc50c251cb720bac27fd0174795c8e8",
+        "byteIdentical": true
+      },
+      {
+        "path": "src/render.ts",
+        "baselineSha256": "e528bd3ffd43358bbed30e5bcf93baa2e87ce316082b79e838fffa324bc664b4",
+        "finalSha256": "e528bd3ffd43358bbed30e5bcf93baa2e87ce316082b79e838fffa324bc664b4",
+        "byteIdentical": true
+      },
+      {
+        "path": "src/front-end-scene.ts",
+        "baselineSha256": "270e4eaf7c3feaf84de40eead31fd64e324aaa7a9e00263952efeaa75e17a32b",
+        "finalSha256": "270e4eaf7c3feaf84de40eead31fd64e324aaa7a9e00263952efeaa75e17a32b",
+        "byteIdentical": true
+      }
+    ],
+    "authoredCivilizationAssets": {
+      "baselineCommit": "645b0ec",
+      "finalTreeSha256": "94d13254dba5072fd12d5d22b57036c44faddb9872b2c7e5f1150cf422f59cda",
+      "baselineTreeSha256": "94d13254dba5072fd12d5d22b57036c44faddb9872b2c7e5f1150cf422f59cda",
+      "byteIdentical": true,
+      "comparisonPath": "public/front-end/civilizations"
+    },
+    "gitDiffCheck": {
+      "command": "git diff --check HEAD",
+      "status": "PASS"
+    }
+  },
+  "scenePacks": {
+    "sunweaver": {
+      "menuScene": "sunweaver-capital",
+      "loadingScene": "sunweaver-capital",
+      "canvas": "960x540",
+      "files": 22,
+      "menuAssetLayers": 6,
+      "menuSpriteSheets": 5,
+      "loadingAssetLayers": 5,
+      "loadingSpriteSheets": 4,
+      "manifestSha256": "2c2bef314e7248cb1f21709c2ac9c74d151d5d3cc1a04318c532181039cc5f13",
+      "packBytes": 4501071
+    },
+    "gravemark": {
+      "menuScene": "gravemark-quarry",
+      "loadingScene": "gravemark-quarry",
+      "canvas": "960x540",
+      "files": 21,
+      "menuAssetLayers": 6,
+      "menuSpriteSheets": 4,
+      "loadingAssetLayers": 5,
+      "loadingSpriteSheets": 4,
+      "manifestSha256": "b9cdbc6ae85460e2271e3123bcdb2b5205d3f4dceaaa1abfd9d9e19f7bbb50c1",
+      "packBytes": 5169603
+    },
+    "combinedFiles": 43,
+    "combinedBytes": 9670674,
+    "activeSceneTruth": "Final pixel QA, regression QA, and video capture report authored scene readiness for both distinct scene IDs. The protected loader fallback remains present for safety but was not active in the final captures."
+  },
+  "commands": [
+    { "command": "npm run test:m0", "status": "PASS" },
+    { "command": "npm run test:aaa", "status": "PASS" },
+    { "command": "npm run test:pixel-front-end", "status": "PASS" },
+    { "command": "npm run test:m2", "status": "PASS" },
+    { "command": "npm run test:m2-ai", "status": "PASS" },
+    { "command": "npm run test:m3", "status": "PASS" },
+    { "command": "npm run test:m4", "status": "PASS" },
+    { "command": "npm run test:m5", "status": "PASS" },
+    { "command": "npm run test:vs2-ai", "status": "PASS" },
+    { "command": "npm run test:vs2b", "status": "PASS" },
+    { "command": "npm run test:vs3", "status": "PASS" },
+    { "command": "npm run test:vs4", "status": "PASS" },
+    { "command": "npm run test:vs5", "status": "PASS" },
+    { "command": "npm run build", "status": "PASS" },
+    {
+      "command": "npm run qa:pixel-front-end -- --out /home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/pixel-front-end",
+      "status": "PASS",
+      "evidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/pixel-front-end/manifest.json",
+      "summary": "84 assertions, 80 captures, 0 errors."
+    },
+    { "command": "npm run qa:aaa", "status": "PASS", "evidence": "/home/bobbyranka/workspace/evidence/starhaven-aaa" },
+    {
+      "command": "npm run qa:m1 -- --out /home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/m1-flow",
+      "status": "PASS",
+      "evidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/m1-flow/manifest.json",
+      "summary": "Main Menu -> Match Setup -> Loading -> Playing; one reset; software simulation-share gate passed."
+    },
+    { "command": "npm run qa:touch-contract", "status": "PASS" },
+    { "command": "npm run qa:progression-handoff", "status": "PASS" },
+    {
+      "command": "npm run qa:vs3",
+      "status": "PASS",
+      "evidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/vs3-results",
+      "summary": "Victory, defeat, Results, replay reset, and Main Menu return passed."
+    },
+    {
+      "command": "npm run qa:vs3 -- --out /home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/vs3-explicit-check",
+      "status": "PASS",
+      "evidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/vs3-explicit-check",
+      "summary": "Explicit --out override remained portable and functional."
+    },
+    {
+      "command": "npm run qa:vs5",
+      "status": "PASS",
+      "evidence": "/home/bobbyranka/workspace/evidence/starhaven-vs5-pacing/manifest.json",
+      "summary": "Deterministic fast QA route completed at terminal tick 10589; simShare 1.411 ms."
+    },
+    {
+      "command": "npm run qa:front-end -- --url http://127.0.0.1:4173 --out /home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/front-end-regression",
+      "status": "PASS",
+      "evidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/front-end-regression/manifest.json",
+      "summary": "24 assertions, 9 screenshots, 0 errors across all four landscape viewports."
+    },
+    {
+      "command": "node scripts/measure.mjs --url 'http://127.0.0.1:4173/desktop.html?qa=opening&qa-run=1' --state Playing --fps-seconds 4 --wait 3 --screenshot /home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/measure.png --out /home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/measure.json",
+      "status": "PASS_WITH_WARNINGS",
+      "evidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/measure.json",
+      "summary": "Measurement completed; four SwiftShader ReadPixels performance warnings were recorded, with no page/request errors."
+    },
+    {
+      "command": "npm run qa:front-end-video",
+      "status": "PASS",
+      "evidence": "docs/qa/starhaven-pixel-ui-shell/utility-panel-interaction.mp4",
+      "summary": "Final build, recorded WebM-to-MP4 conversion, and in-script panel/faction assertions passed; the Gravemark action waited for and recorded data-art-ready=\"true\"."
+    },
+    {
+      "command": "ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,pix_fmt -of default=noprint_wrappers=1 docs/qa/starhaven-pixel-ui-shell/utility-panel-interaction.mp4",
+      "status": "PASS",
+      "summary": "H.264, yuv420p, 1366x1024, 21.56 seconds, 3004408 bytes."
+    },
+    {
+      "command": "git diff --quiet 645b0ec -- src/sim.ts src/engine.ts src/render.ts src/front-end-scene.ts public/front-end/civilizations",
+      "status": "PASS",
+      "summary": "Protected gameplay/renderer/compositor source and authored civilization assets are unchanged."
+    },
+    { "command": "git diff --check HEAD", "status": "PASS" },
+    {
+      "command": "npm run qa:vs3 (pre-repair invocation)",
+      "status": "FAIL_BEFORE_FINAL_REPAIR",
+      "scope": "Harness invocation only; no product assertions ran.",
+      "reason": "The existing script rejected the exact no-argument invocation because it required --out. FPE-6 added a durable external default and the exact command above was rerun successfully."
+    }
+  ],
+  "coverage": {
+    "landscapeViewports": [
+      { "width": 1920, "height": 1080 },
+      { "width": 1366, "height": 768 },
+      { "width": 1366, "height": 1024 },
+      { "width": 1180, "height": 820 }
+    ],
+    "portraitRotateGateViewports": [
+      { "width": 820, "height": 1180 },
+      { "width": 768, "height": 1024 }
+    ],
+    "orientations": ["landscape-left", "landscape-right"],
+    "factions": ["sunweaver", "gravemark"],
+    "pixelMatrix": {
+      "assertions": 84,
+      "captures": 80,
+      "errors": 0,
+      "manifest": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/pixel-front-end/manifest.json",
+      "manifestSha256": "9e556f0bbc76fbd9ef08e14c9c997434f4de58f32b3679a5dceec9c4dc213c87"
+    },
+    "builtPreviewRegression": {
+      "assertions": 24,
+      "screenshots": 9,
+      "errors": 0,
+      "manifest": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/front-end-regression/manifest.json",
+      "manifestSha256": "ee79c6d27630cfdbd24f0904b0421a954e5592a3d12f0a4bc53a1ef3c7108df1"
+    },
+    "aaa": {
+      "errorCount": 0,
+      "evidence": "/home/bobbyranka/workspace/evidence/starhaven-aaa"
+    }
+  },
+  "interactionContracts": {
+    "mouse": "PASS: pixel matrix hover/press coverage; utility tooltips and real button presses verified.",
+    "keyboard": "PASS: Tab/Enter/Escape utility and panel coverage.",
+    "touch": "PASS: qa:touch-contract verified MOVE, GATHER, income, context-action, and mixed-input filtering.",
+    "focus": "PASS: every final utility panel and Factions flow restored focus to its real opener; dialog focus trap passed.",
+    "escape": "PASS: Escape closed the dialog and restored the opener focus.",
+    "reducedMotion": "PASS: normal and Reduced Motion menu, setup, loading, and panel surfaces matched their contracts in both factions/orientations.",
+    "tooltips": ["Records", "Match History", "Tech Codex", "Dispatches"],
+    "dispatchesPersistence": {
+      "status": "PASS",
+      "initialBadge": "NEW",
+      "afterOpen": "absent",
+      "afterReload": "absent"
+    }
+  },
+  "focusedIntegratorSession": {
+    "status": "PASS",
+    "browserEngine": "playwright-chromium",
+    "viewport": "1366x1024",
+    "durationMs": 313550,
+    "durationMinutes": 5.2258,
+    "evidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/integrator-session.json",
+    "evidenceSha256": "209eb6587b35b911d50cd9bde9d4a2e0a6c36d82c88142ea6e72dde865f7c444",
+    "actions": [
+      { "action": "main-menu", "result": "Sunweaver / sunweaver-capital authored scene" },
+      { "action": "records", "panelTextLength": 235, "heldMs": 12000, "focusRestored": true },
+      { "action": "history", "panelTextLength": 110, "heldMs": 12000, "focusRestored": true },
+      { "action": "codex", "panelTextLength": 333, "heldMs": 12000, "focusRestored": true },
+      { "action": "dispatches", "panelTextLength": 243, "heldMs": 12000, "focusRestored": true },
+      { "action": "tutorial", "panelTextLength": 318, "heldMs": 10000, "focusRestored": true },
+      { "action": "factions-select-gravemark", "result": "scene gravemark-quarry; immediate readiness sample false while asset settled" },
+      { "action": "factions-close-gravemark", "focusRestored": true },
+      { "action": "factions-select-sunweaver", "result": "scene sunweaver-capital; authoredSceneReady true", "focusRestored": true },
+      { "action": "settings", "panelTextLength": 224, "heldMs": 10000, "focusRestored": true },
+      {
+        "action": "setup-select-gravemark",
+        "config": {
+          "playerFaction": "gravemark",
+          "aiFaction": "sunweaver",
+          "map": "helios-rift",
+          "difficulty": "standard",
+          "fogOfWar": true,
+          "speed": 1,
+          "tacticalPause": "enabled",
+          "seedMode": "random",
+          "seed": 24301
+        }
+      },
+      {
+        "action": "setup-deterministic-ready",
+        "config": {
+          "playerFaction": "sunweaver",
+          "aiFaction": "gravemark",
+          "map": "helios-rift",
+          "difficulty": "veteran",
+          "fogOfWar": false,
+          "speed": 1.25,
+          "tacticalPause": "on-demand",
+          "seedMode": "deterministic",
+          "seed": 424242
+        }
+      },
+      {
+        "action": "loading-held",
+        "state": "Loading",
+        "stage": "3",
+        "stageHistory": [1, 2, 3],
+        "resetCount": 1,
+        "scene": "sunweaver-capital"
+      },
+      { "action": "playing-entered", "tick": 3, "resetCount": 1, "publishedP99FrameMs": 17.5 },
+      { "action": "playing-observation-hold", "requestedMs": 180000, "actualMs": 183219, "tick": 1331, "winner": -1 },
+      { "action": "terminal-victory", "tick": 1333, "winner": 0, "unitsTrained": [1, 0], "unitsLost": [0, 0], "coreDamage": [2, 0] },
+      { "action": "results-entered", "state": "Results", "duration": "01:06", "visible": true },
+      { "action": "returned-main-menu", "state": "MainMenu", "resetCount": 1, "hudHidden": true, "resultsHidden": true }
+    ],
+    "consoleErrors": [],
+    "pageErrors": [],
+    "requestErrors": [],
+    "consoleWarnings": "Four SwiftShader GL Driver Message ReadPixels performance warnings; no application errors."
+  },
+  "loading": {
+    "status": "PASS",
+    "config": {
+      "playerFaction": "sunweaver",
+      "aiFaction": "gravemark",
+      "map": "helios-rift",
+      "difficulty": "veteran",
+      "fogOfWar": false,
+      "speed": 1.25,
+      "tacticalPause": "on-demand",
+      "seedMode": "deterministic",
+      "seed": 424242
+    },
+    "stageHistory": [1, 2, 3],
+    "finalStage": 3,
+    "resetCount": 1,
+    "loadingEvidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/m1-flow/manifest.json",
+    "honestLimit": "Normal stage 3 can be too brief to watch; the held-loading route observes the actual lifecycle without adding a fake delay or changing the one-reset contract."
+  },
+  "resultsAndReturn": {
+    "status": "PASS",
+    "vs3Evidence": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/vs3-results",
+    "victory": { "fixtureTick": 1201, "winner": 0, "unitsLost": 1, "coreDamage": 2, "terminalTitle": "VICTORY", "resultsDuration": "01:00" },
+    "defeat": { "winner": 1, "terminalTitle": "DEFEAT", "resultsDuration": "01:00" },
+    "replay": { "resetCount": 2, "tick": 4, "winner": -1, "terrainChanged": true, "canvases": 1 },
+    "mainMenuReturn": { "starts": 1, "hudHidden": true, "terminalHidden": true, "resultsHidden": true },
+    "integratorReturn": { "state": "MainMenu", "resetCount": 1, "scene": "sunweaver-capital" }
+  },
+  "errors": {
+    "pixelFrontEnd": { "console": [], "page": [], "request": [] },
+    "aaa": { "browserErrors": [] },
+    "m1": { "errors": [] },
+    "touchContract": { "errors": [] },
+    "progressionHandoff": { "errors": [] },
+    "vs3": { "errors": [] },
+    "vs5": { "consoleErrors": [], "errors": [] },
+    "frontEndRegression": { "errors": [], "manifestSha256": "ee79c6d27630cfdbd24f0904b0421a954e5592a3d12f0a4bc53a1ef3c7108df1" },
+    "video": { "issues": [] },
+    "integrator": {
+      "consoleErrors": [],
+      "pageErrors": [],
+      "requestErrors": [],
+      "warnings": [
+        "[warning] GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (repeated three times)",
+        "[warning] GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+      ]
+    },
+    "measure": {
+      "consoleIssues": [
+        "[warning] GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (repeated three times)",
+        "[warning] GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+      ],
+      "pageErrors": [],
+      "requestIssues": []
+    }
+  },
+  "rendererAndPerformance": {
+    "hardwareRule": "Hardware GL gates live game-work p99 below 8 ms.",
+    "softwareRule": "SwiftShader/llvmpipe records render p99 and gates deterministic max-five-step simulation share below 8 ms.",
+    "m1Gate": {
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "softwareGl": true,
+      "renderP99FrameMs": 28.2,
+      "simStepMs": 0.2808,
+      "simShareMs": 1.404,
+      "gate": "software-sim-share-5-fixed-steps<8ms",
+      "status": "PASS"
+    },
+    "vs5Gate": { "simShareMs": 1.411, "gate": "software-sim-share-5-fixed-steps<8ms", "status": "PASS" },
+    "measure": {
+      "path": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/measure.json",
+      "sha256": "dc28e3968f89183f8d858e02f11ce00cbc95e7d2cd7b0289b5cf5967c176b312",
+      "browserEngine": "playwright-chromium",
+      "viewport": "1366x1024",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "softwareGl": true,
+      "rAF": { "averageFrameMs": 123.38, "p99FrameMs": 209.7, "fps": 8, "framesWorseThan45fps": 32 },
+      "publishedWork": { "state": "Playing", "tick": 75, "p99FrameMs": 528.7, "draws": 9, "entities": 46, "fps": 20 },
+      "gateUse": "Observational rAF/render/work p99 only; software sim-share gate above is the product gate on this machine."
+    }
+  },
+  "palette": {
+    "measure": {
+      "distinctQuantizedColors": 375,
+      "topColors": [
+        { "hex": "#000011", "sharePercent": 50.4 },
+        { "hex": "#111122", "sharePercent": 16.3 },
+        { "hex": "#221122", "sharePercent": 12.9 },
+        { "hex": "#221133", "sharePercent": 3.5 },
+        { "hex": "#222233", "sharePercent": 2.9 },
+        { "hex": "#110011", "sharePercent": 2.5 },
+        { "hex": "#000000", "sharePercent": 2.2 },
+        { "hex": "#332233", "sharePercent": 0.9 }
+      ],
+      "averageLuminance": 25,
+      "luminanceRange": [0, 250],
+      "nonBlackPixelSharePercent": 97.62
+    },
+    "aaaSampledMenuColors": {
+      "sunweaver": { "1920x1080": 5244, "1366x768": 5244, "1366x1024": 5250, "1180x820": 5244 },
+      "gravemark": { "1920x1080": 4736, "1366x768": 4728, "1366x1024": 4727, "1180x820": 4736 }
+    }
+  },
+  "buildSizes": {
+    "builtJs": [
+      { "path": "dist/assets/main-XOYmvciV.js", "bytes": 268953 },
+      { "path": "dist/assets/three.module-D3Ki9nFI.js", "bytes": 537741 },
+      { "path": "dist/assets/townCenter-P3qR8o-O.js", "bytes": 52829 }
+    ],
+    "builtCss": [
+      { "path": "dist/front-end-shell.css", "bytes": 45617 },
+      { "path": "dist/front-end-scene.css", "bytes": 1338 }
+    ],
+    "builtJsTotalBytes": 859523,
+    "builtCssTotalBytes": 46955,
+    "fontAssets": {
+      "bytesIncludingLicenseAndProvenance": 106959,
+      "files": [
+        "public/front-end-ui/fonts/KodeMono-Medium.woff2 (24836)",
+        "public/front-end-ui/fonts/KodeMono-Regular.woff2 (24532)",
+        "public/front-end-ui/fonts/PixelifySans-Bold.woff2 (27232)",
+        "public/front-end-ui/fonts/Silkscreen-Bold.woff2 (8136)",
+        "public/front-end-ui/fonts/Silkscreen-Regular.woff2 (9048)"
+      ]
+    },
+    "iconAssets": {
+      "bytes": 2044,
+      "files": [
+        "codex.svg (214)",
+        "dispatches.svg (249)",
+        "gravemark-sigil.svg (479)",
+        "history.svg (340)",
+        "records.svg (351)",
+        "sunweaver-sigil.svg (411)"
+      ]
+    },
+    "sceneAssets": { "sunweaverBytes": 4501071, "gravemarkBytes": 5169603, "combinedBytes": 9670674 },
+    "html": {
+      "dist/index.html": 1965,
+      "dist/desktop.html": 2135,
+      "desktop.html": 2020
+    },
+    "note": "Vite also emitted source maps and the existing viewer/progress/reference pages; dist is generated output and is not committed."
+  },
+  "prBaseImpact": {
+    "baseRef": "origin/chatgptpro2008",
+    "baseCommit": "b406cb6c23fc562865963d31df1f4cb70e1d40a8",
+    "diffFromFpe5Head": "FPE-6 changes are limited to the files in the final commit; the counts below are the accepted pre-FPE6 branch impact against the PR base.",
+    "filesChangedAgainstBase": 113,
+    "insertionsAgainstBase": 10497,
+    "deletionsAgainstBase": 3116,
+    "scenePackFilesAgainstBase": 43,
+    "frontEndUiAndShellFilesAgainstBase": 18,
+    "srcFilesAgainstBase": 7,
+    "baseHasCommittedDistFiles": false,
+    "bundleImpact": "The PR base has no committed dist tree, so there is no tracked bundle byte delta. The final build sizes above are the measured generated bundle footprint."
+  },
+  "staticTruth": {
+    "hueRotation": { "status": "PASS", "result": "No hue-rotate in front-end shell/style/HTML scope." },
+    "proceduralProductionScene": { "status": "PASS", "result": "Final captures use manifest-backed authored scene IDs and data-art-ready=true; no procedural production scene path was active." },
+    "bannedFrontEndStyleFontIcon": { "status": "PASS", "result": "Front-end-specific scan found no backdrop-filter, hue-rotate, banned Trebuchet/Segoe/Arial/generic sans stack, or Unicode icon in the shell scope. Gameplay comments/strings containing arrows are protected non-icon content." },
+    "protectedFallback": "The authored scene loader's fallback code remains byte-identical as required and was not selected by final browser captures.",
+    "worktreePolicy": "No dist, node_modules, logs, preview process, or temporary WebM is included in the final evidence set."
+  },
+  "artifacts": [
+    {
+      "name": "before-sunweaver-menu.png",
+      "path": "docs/qa/starhaven-pixel-ui-shell/before-sunweaver-menu.png",
+      "source": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/baseline/sunweaver-menu.png",
+      "bytes": 1095076,
+      "dimensions": "1920x1080",
+      "sha256": "a6c8c6ea0da5217066772009a3279cd2619bcfa3497b75901d9e21f61d103614",
+      "provenance": "Exact copy from recorded FPE-0 baseline; not recreated."
+    },
+    {
+      "name": "after-sunweaver-menu.png",
+      "path": "docs/qa/starhaven-pixel-ui-shell/after-sunweaver-menu.png",
+      "source": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/pixel-front-end/menu-sunweaver-1366x1024.png",
+      "bytes": 507220,
+      "dimensions": "1366x1024",
+      "sha256": "e86f9a5127d768e8e935ef1436605a8ff7a5df14d0656e4964e2eab152cbeb65",
+      "provenance": "Exact copy from final pixel QA capture."
+    },
+    {
+      "name": "before-gravemark-menu.png",
+      "path": "docs/qa/starhaven-pixel-ui-shell/before-gravemark-menu.png",
+      "source": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/baseline/gravemark-menu.png",
+      "bytes": 1146431,
+      "dimensions": "1920x1080",
+      "sha256": "97bdefcfa587f9fb9880ebbd885d0ef77f0032e61b0a286e7251e84c76293093",
+      "provenance": "Exact copy from recorded FPE-0 baseline; not recreated."
+    },
+    {
+      "name": "after-gravemark-menu.png",
+      "path": "docs/qa/starhaven-pixel-ui-shell/after-gravemark-menu.png",
+      "source": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/pixel-front-end/menu-gravemark-1366x1024.png",
+      "bytes": 525723,
+      "dimensions": "1366x1024",
+      "sha256": "47496498298879acd4968e69c97917d14cf0011da6f3299967167095866a20ea",
+      "provenance": "Exact copy from final pixel QA capture."
+    },
+    {
+      "name": "after-sunweaver-loading.png",
+      "path": "docs/qa/starhaven-pixel-ui-shell/after-sunweaver-loading.png",
+      "source": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/pixel-front-end/loading-sunweaver-1366x1024.png",
+      "bytes": 473388,
+      "dimensions": "1366x1024",
+      "sha256": "f550b822fab7f22a235e5f694494846659fadcb9abdf2eae760c1e2e0e2edb54",
+      "provenance": "Exact copy from final pixel QA capture."
+    },
+    {
+      "name": "after-gravemark-loading.png",
+      "path": "docs/qa/starhaven-pixel-ui-shell/after-gravemark-loading.png",
+      "source": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/pixel-front-end/loading-gravemark-1366x1024.png",
+      "bytes": 456172,
+      "dimensions": "1366x1024",
+      "sha256": "c4ddfa3523982e7923a374bff6a63cb1c01c12795fb158b44e4c01fce6b0a75b",
+      "provenance": "Exact copy from final pixel QA capture."
+    },
+    {
+      "name": "utility-panel-interaction.mp4",
+      "path": "docs/qa/starhaven-pixel-ui-shell/utility-panel-interaction.mp4",
+      "source": "npm run qa:front-end-video",
+      "bytes": 3004408,
+      "dimensions": "1366x1024",
+      "durationSeconds": 21.56,
+      "codec": "h264",
+      "pixelFormat": "yuv420p",
+      "audio": false,
+      "sha256": "0746cbfeea924ed8de523c9c402057ca0808fdc06b4de5f166bdf4a86e3ddbd6",
+      "provenance": "Playwright-recorded WebM converted by installed ffmpeg with libx264, yuv420p, and +faststart; temporary WebM removed.",
+      "verification": {
+        "gravemarkFaction": "gravemark",
+        "gravemarkScene": "gravemark-quarry",
+        "gravemarkDataArtReady": "true",
+        "focusRestored": true
+      }
+    }
+  ],
+  "measurementArtifacts": {
+    "json": {
+      "path": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/measure.json",
+      "sha256": "dc28e3968f89183f8d858e02f11ce00cbc95e7d2cd7b0289b5cf5967c176b312"
+    },
+    "png": {
+      "path": "/home/bobbyranka/workspace/evidence/starhaven-pixel-ui-shell/final/measure.png",
+      "sha256": "bae87c8f2dcfcc6e48278f3093ae8ecd915874b15fd6941110f00451016abb13",
+      "dimensions": "1366x1024"
+    }
+  },
+  "honestLimitations": [
+    "The final measurement and focused session used Playwright Chromium with SwiftShader software GL; their render/work p99 values are recorded observations, not hardware-GPU gate results.",
+    "The applicable software gate is deterministic five-fixed-step simulation share below 8 ms; M1 and VS-5 passed at 1.404 ms and 1.411 ms respectively.",
+    "Normal Loading stage 3 can be too brief to remain visible; the held-loading QA route observes the real stage history without artificial delay.",
+    "The focused integrator session sampled Gravemark scene readiness immediately after selection before the asset settled (scene identity was correct); the final pixel matrix and packaged video waited for and verified authored readiness true.",
+    "The final commit does not claim deployment, push, or PR creation."
+  ]
+}

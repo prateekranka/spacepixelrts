@@ -1,4 +1,4 @@
-/* Procedural front-end scenes use one 960x540 logical buffer. */
+/* Authored front-end scenes use one 960x540 logical buffer. */
 .front-end-scene {
   position: absolute;
   inset: 0;
