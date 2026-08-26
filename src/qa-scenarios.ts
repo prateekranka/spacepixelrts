@@ -133,10 +133,32 @@ const queryParam = (search: string, key: string): string | undefined => {
   return undefined;
 };
 
+/**
+ * FRD — seed correctness fix: `qa-seed=<0..2^32-1>` overrides the matched
+ * scenario's config to deterministic mode with the requested seed. Absent or
+ * invalid values keep the byte-identical legacy behavior (QA configs pin
+ * `QA_MATCH_CONFIG.seed = 0x5eed`; the old harness never overrode it).
+ */
+const parseQaSeed = (search: string): number | undefined => {
+  const raw = queryParam(search, 'qa-seed');
+  if (raw === undefined) return undefined;
+  if (!/^(0|[1-9][0-9]*)$/.test(raw.trim())) return undefined;
+  const value = Number(raw.trim());
+  if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) return undefined;
+  return value;
+};
+
 export function parseQaScenario(search: string): QaScenario | undefined {
   const requested = queryParam(search, 'qa');
   const candidate = requested !== undefined ? requested : search;
   const id = candidate.trim().toLowerCase();
   if (id.length === 0) return undefined;
-  return QA_SCENARIOS.find((scenario) => scenario.id === id);
+  const scenario = QA_SCENARIOS.find((entry) => entry.id === id);
+  if (!scenario) return undefined;
+  const seed = parseQaSeed(search);
+  if (seed === undefined) return scenario;
+  return {
+    ...scenario,
+    config: { ...scenario.config, seedMode: 'deterministic', seed },
+  };
 }
