@@ -89,14 +89,29 @@ async function main() {
   const baselineDir = path.join(BASELINES_DIR, assetId);
   const manifestPath = path.join(baselineDir, 'manifest.json');
   const pngPath = path.join(baselineDir, 'baseline.png');
-  if (!fs.existsSync(manifestPath) || !fs.existsSync(pngPath)) {
-    fail(7, `MISSING BASELINE for ${assetId} (expected ${manifestPath})`);
+  // --init: first-time seeding of ONE asset's accepted baseline. Allowed only
+  // when this asset has no accepted baseline AND no registry entry yet; every
+  // later accept of the same asset must go through the full replacement path.
+  const isInit = Boolean(args.init);
+  const missingBaseline = !fs.existsSync(manifestPath) || !fs.existsSync(pngPath);
+  if (missingBaseline && !isInit) {
+    fail(7, `MISSING BASELINE for ${assetId} (expected ${manifestPath}); pass --init only for first-time setup`);
+  }
+  if (!missingBaseline && isInit) {
+    fail(2, `--init refused: ${assetId} already has an accepted baseline (use normal acceptance)`);
+  }
+  if (isInit && registry.assets?.[assetId]) {
+    fail(2, `--init refused: ${assetId} already exists in the registry`);
   }
   let acceptedManifest;
-  try {
-    acceptedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  } catch (error) {
-    fail(1, `accepted manifest unparseable: ${error?.message ?? error}`);
+  if (!missingBaseline) {
+    try {
+      acceptedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch (error) {
+      fail(1, `accepted manifest unparseable: ${error?.message ?? error}`);
+    }
+  } else {
+    acceptedManifest = { schemaVersion: 1, assetId, label: def.label, faction: def.faction, category: def.category, revision: null, frames: [] };
   }
   let evidence;
   try {
@@ -181,8 +196,8 @@ async function main() {
   const changedFrames = frames
     .map((frame) => ({ key: frame.key, accepted: acceptedManifest.frames?.find((f) => f.key === frame.key)?.sha256 ?? null, candidate: candidateHashes[frame.key] }))
     .filter((row) => row.accepted !== row.candidate);
-  console.log(`plan: replace accepted baseline for ${assetId}`);
-  console.log(`  revision ${String(acceptedManifest.revision).slice(0, 10)} -> ${head.slice(0, 10)}`);
+  console.log(`plan: ${isInit ? 'initialize' : 'replace'} accepted baseline for ${assetId}`);
+  console.log(`  revision ${String(acceptedManifest.revision ?? 'none').slice(0, 10)} -> ${head.slice(0, 10)}`);
   console.log(`  frames changed: ${changedFrames.length}/${frames.length}`);
   for (const row of changedFrames.slice(0, 12)) {
     console.log(`    ${row.key}: ${(row.accepted ?? 'new').slice(0, 10)}… -> ${row.candidate.slice(0, 10)}…`);
