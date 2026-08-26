@@ -4,7 +4,31 @@
   "label": "Wind Strider",
   "faction": "sunweaver",
   "category": "unit",
-  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
+  "createdAt": "2026-08-26T15:51:26.652Z",
+  "source": {
+    "adapter": "scout",
+    "dims": [
+      128,
+      128
+    ]
+  },
+  "cellLayout": {
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 64,
+    "y": 127
+  },
+  "worldScale": {
+    "x": 0.96,
+    "y": 1.12
+  },
   "frames": [
     {
       "key": "hd",
@@ -12,5 +36,13 @@
       "alphaPixels": 6975
     }
   ],
-  "createdAt": "2026-08-26T11:54:55.208Z"
+  "paletteStats": {
+    "uniqueColors": 11,
+    "alphaPixels": 6975,
+    "alphaCoverage": 0.42572021484375,
+    "averageLuma": 82.69490927599061,
+    "brightMaterialShare": 0.6385663082437276
+  },
+  "thresholdsUsed": {},
+  "gates": {}
 }

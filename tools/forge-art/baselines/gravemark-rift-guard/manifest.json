@@ -4,7 +4,31 @@
   "label": "Rift Guard",
   "faction": "gravemark",
   "category": "unit",
-  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
+  "createdAt": "2026-08-26T15:51:23.681Z",
+  "source": {
+    "adapter": "combat",
+    "dims": [
+      512,
+      128
+    ]
+  },
+  "cellLayout": {
+    "cellW": 64,
+    "cellH": 64,
+    "cols": 8,
+    "rows": 2,
+    "order": "dir-major",
+    "count": 16
+  },
+  "anchor": {
+    "x": 32,
+    "y": 63
+  },
+  "worldScale": {
+    "x": 1.67,
+    "y": 1.92
+  },
   "frames": [
     {
       "key": "dir0-pose0",
@@ -87,5 +111,13 @@
       "alphaPixels": 1615
     }
   ],
-  "createdAt": "2026-08-26T11:54:52.340Z"
+  "paletteStats": {
+    "uniqueColors": 9,
+    "alphaPixels": 25852,
+    "alphaCoverage": 0.39447021484375,
+    "averageLuma": 113.63754457683362,
+    "brightMaterialShare": 0.7218010211975863
+  },
+  "thresholdsUsed": {},
+  "gates": {}
 }

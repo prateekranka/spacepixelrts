@@ -4,7 +4,31 @@
   "label": "Lumen Guard",
   "faction": "sunweaver",
   "category": "unit",
-  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
+  "createdAt": "2026-08-26T15:51:25.726Z",
+  "source": {
+    "adapter": "combat",
+    "dims": [
+      512,
+      128
+    ]
+  },
+  "cellLayout": {
+    "cellW": 64,
+    "cellH": 64,
+    "cols": 8,
+    "rows": 2,
+    "order": "dir-major",
+    "count": 16
+  },
+  "anchor": {
+    "x": 32,
+    "y": 63
+  },
+  "worldScale": {
+    "x": 1.59,
+    "y": 1.89
+  },
   "frames": [
     {
       "key": "dir0-pose0",
@@ -87,5 +111,13 @@
       "alphaPixels": 1311
     }
   ],
-  "createdAt": "2026-08-26T11:54:54.332Z"
+  "paletteStats": {
+    "uniqueColors": 8,
+    "alphaPixels": 21894,
+    "alphaCoverage": 0.334075927734375,
+    "averageLuma": 155.824015803433,
+    "brightMaterialShare": 0.7874303462135746
+  },
+  "thresholdsUsed": {},
+  "gates": {}
 }

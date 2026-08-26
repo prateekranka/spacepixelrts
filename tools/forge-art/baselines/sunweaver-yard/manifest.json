@@ -4,7 +4,31 @@
   "label": "Yard",
   "faction": "sunweaver",
   "category": "building",
-  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
+  "createdAt": "2026-08-26T15:51:27.452Z",
+  "source": {
+    "adapter": "building",
+    "dims": [
+      32,
+      32
+    ]
+  },
+  "cellLayout": {
+    "cellW": 32,
+    "cellH": 32,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 16,
+    "y": 31
+  },
+  "worldScale": {
+    "x": 1.85,
+    "y": 1.85
+  },
   "frames": [
     {
       "key": "iso",
@@ -12,5 +36,13 @@
       "alphaPixels": 511
     }
   ],
-  "createdAt": "2026-08-26T11:54:53.868Z"
+  "paletteStats": {
+    "uniqueColors": 11,
+    "alphaPixels": 511,
+    "alphaCoverage": 0.4990234375,
+    "averageLuma": 77.16666262230973,
+    "brightMaterialShare": 0.6594911937377691
+  },
+  "thresholdsUsed": {},
+  "gates": {}
 }

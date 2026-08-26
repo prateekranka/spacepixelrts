@@ -4,7 +4,31 @@
   "label": "Core",
   "faction": "gravemark",
   "category": "building",
-  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
+  "createdAt": "2026-08-26T15:51:22.463Z",
+  "source": {
+    "adapter": "building",
+    "dims": [
+      64,
+      64
+    ]
+  },
+  "cellLayout": {
+    "cellW": 64,
+    "cellH": 64,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 32,
+    "y": 63
+  },
+  "worldScale": {
+    "x": 2.4,
+    "y": 2.4
+  },
   "frames": [
     {
       "key": "iso",
@@ -12,5 +36,13 @@
       "alphaPixels": 1792
     }
   ],
-  "createdAt": "2026-08-26T11:54:50.295Z"
+  "paletteStats": {
+    "uniqueColors": 9,
+    "alphaPixels": 1792,
+    "alphaCoverage": 0.4375,
+    "averageLuma": 90.97285267856951,
+    "brightMaterialShare": 0.7287946428571429
+  },
+  "thresholdsUsed": {},
+  "gates": {}
 }

@@ -4,7 +4,31 @@
   "label": "Worker",
   "faction": "sunweaver",
   "category": "unit",
-  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
+  "createdAt": "2026-08-26T15:51:27.053Z",
+  "source": {
+    "adapter": "worker8",
+    "dims": [
+      256,
+      96
+    ]
+  },
+  "cellLayout": {
+    "cellW": 32,
+    "cellH": 48,
+    "cols": 8,
+    "rows": 2,
+    "order": "dir-major",
+    "count": 16
+  },
+  "anchor": {
+    "x": 16,
+    "y": 47
+  },
+  "worldScale": {
+    "x": 1.55,
+    "y": 2.32
+  },
   "frames": [
     {
       "key": "dir0-walk0",
@@ -87,5 +111,13 @@
       "alphaPixels": 804
     }
   ],
-  "createdAt": "2026-08-26T11:54:55.624Z"
+  "paletteStats": {
+    "uniqueColors": 15,
+    "alphaPixels": 12684,
+    "alphaCoverage": 0.51611328125,
+    "averageLuma": 69.59896187323169,
+    "brightMaterialShare": 0.5231788079470199
+  },
+  "thresholdsUsed": {},
+  "gates": {}
 }
