@@ -965,6 +965,7 @@ function buildCatalog(): void {
         el('span', { class: 'lbl' }, [def.label]),
         el('span', { class: 'cat' }, [def.category]),
       );
+      button.addEventListener('click', () => selectAsset(def.assetId));
       group.append(button);
     }
     catalogRoot.append(group);
