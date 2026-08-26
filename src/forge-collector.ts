@@ -336,13 +336,20 @@ export class ForgeTraceCollector {
       return;
     }
 
-    // Latch the original Core entities once (first post-baseline observation).
+    // Latch the original Core entities once (first post-baseline observation)
+    // and seed their hp baseline so the core-damage diff starts from reality.
     if (this.coreEntityIndex[0] < 0) {
       for (let i = 0; i < MAX_ENTS; i++) {
         const e = world.ents[i];
         if (!e.alive || e.kind !== Kind.Hall) continue;
-        if (e.team === 0 && this.coreEntityIndex[0] < 0) this.coreEntityIndex[0] = i;
-        if (e.team === 1 && this.coreEntityIndex[1] < 0) this.coreEntityIndex[1] = i;
+        if (e.team === 0 && this.coreEntityIndex[0] < 0) {
+          this.coreEntityIndex[0] = i;
+          this.prevCoreHp[0] = e.hp;
+        }
+        if (e.team === 1 && this.coreEntityIndex[1] < 0) {
+          this.coreEntityIndex[1] = i;
+          this.prevCoreHp[1] = e.hp;
+        }
       }
     }
 

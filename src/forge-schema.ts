@@ -133,7 +133,7 @@ const PAYLOAD_KEYS: Record<ForgeEventType, readonly string[]> = {
   'lumen-income': ['amount'],
   'lumen-vision-pulse': [],
   'combat-engagement': ['attackerId', 'victimId', 'damage', 'targetKind', 'targetTeam'],
-  'core-damage': ['damage'],
+  'core-damage': ['damage', 'hpBefore', 'hpAfter', 'byTeam'],
   'unit-death': ['kind'],
   'core-destruction': [],
   winner: [],
