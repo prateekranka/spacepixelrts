@@ -7,6 +7,30 @@ skirmish before deep controls or general polish: menu -> scout -> gather -> choo
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
 
+## Forge Review Deck v1 (2026-08-26) — DONE
+
+Spec: `docs/FORGE_REVIEW_DECK.md`. Branch `hermes/starhaven-aaa-front-end`, commits
+`13c3db5` / `66f7dbb` / `6014e59`. Developer-only; never deployed.
+
+- Seed correctness fixed: `?qa-seed=` overrides QA scenario seed (deterministic); requested ==
+  actual is a hard gate everywhere. Old harness always ran seed 24301 regardless of `--seed`.
+- Typed review control `window.__STARHAVEN_FORGE__` installs ONLY under vite dev + `forge=1`:
+  snapshot/metrics, reload-bearing route/seed/factions/orientation, display-only perspective
+  (player / rival-knowledge / omniscient — fog texture filled per side, World knowledge never
+  written), camera presets, freeze + step (<=600), six overlays. Production bundle verified:
+  control compiles to `return null`; panel import unreachable dead code; no `dist/tools`.
+- Workbench UI injects on game pages under the same guard (`forge-panel=0` suppresses it for
+  clean captures). Identity banner shows scenario/seeds/config/tick/perspective/camera/selection.
+- `npm run forge:review:capture` proof pack: 13 routes x both orientations, extras reusing one
+  load, synchronized perspective triptych at tick 600 (per-side fog veils verified by tile
+  luminance deltas), labeled board, console.txt, critic-brief.txt, `--clip` proof.webm.
+- Perf recorded as DISTINCT `gameWorkP99Ms` / `rafP99Ms`; absolute budget only via `--gate-p99`
+  (this host = SwiftShader software WebGL ~20 fps; not an iPad verdict).
+- Verification: test:m0 PASS, build PASS, tests/forge-review.test.ts 10/10, qa:forge-review
+  17/17 ok=true, capture pack 33/33 cells ok manifestValid=true. Evidence:
+  `/home/bobbyranka/workspace/evidence/starhaven-forge-review/20260826T110950Z/`.
+- Pending: fresh independent visual critic on the proof pack (builder does not self-grade).
+
 ## Self-view harness (2026-08-26) — DONE
 
 - `scripts/self-view-harness.mjs` (`npm run self-view -- --out=<abs dir>`): boots the dev server,
