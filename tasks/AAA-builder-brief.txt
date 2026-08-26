@@ -1,0 +1,135 @@
+# AAA front-end scene compositor — Builder brief (Luna)
+
+You are implementing the authored layered-scene compositor for Starhaven. Work in
+`~/workspace/spacepixelrts` on branch `hermes/starhaven-aaa-front-end` (already
+checked out). Follow the frozen specs exactly:
+
+- `docs/AAA_FRONT_END_INTEGRATION_SPEC.md` — the implementation contract (read first).
+- `docs/AAA_FRONT_END_ART_SPEC.md` — art/provenance context.
+- Current painter to replace: `src/front-end-scene.ts` (this branch's procedural
+  Canvas2D scene). READ IT fully before editing.
+
+## Deliverable
+
+Replace the procedural drawScene internals with an authored layered-asset compositor.
+
+### Hard constraints (do not break)
+
+1. Public API stays identical:
+   - `SCENE_WIDTH = 960`, `SCENE_HEIGHT = 540`, `SCENE_FPS = 12`, `SCENE_STEP_MS`
+     (keep the `sceneForFaction`, `sceneMotionFrame`, `sceneMotionOffset`,
+     `quantizeSceneTime` helpers and their exact behavior).
+   - `mountFrontEndScene(container, {faction, mode, reducedMotion})` returns a
+     controller with `root`, `canvas`, `sceneId`, `setFaction`, `setMode`,
+     `setReducedMotion`, `destroy`.
+   - Dataset contract: root has `data-scene`, `data-faction`, `data-mode`,
+     `data-reducedMotion`; container gets `data-sceneId` and `data-reducedMotion`.
+     ADD `data-art-ready="true"` on root once a pack painted (also
+     `data-art-ready="false"` + `data-art-error` briefly during fallback).
+   - Canvas is 960x540, `aria-hidden`, `imageSmoothingEnabled = false`.
+2. Existing test `tests/front-end-scene.test.ts` must pass unchanged
+   (`npm run test:m0` includes it). It asserts no `Math.random`, no `hue-rotate`,
+   no `front-end-theme-runtime` references in the source — keep them absent.
+3. No new dependencies. TypeScript (same style as the repo). tsc must pass.
+
+### Asset layout (already committed, do not regenerate)
+
+`public/front-end/civilizations/<civ>/<mode>/` where civ in {sunweaver, gravemark},
+mode in {menu, loading}. Each civ dir has `manifest.json`:
+`{ <mode>: {scene, mode, canvas:{width,height}, assets[], sprites[], twinkles?,
+fallbackPalette[]} }` (see spec schema; this build additionally uses per-sprite
+`places[].box` FIT-CONTAIN and optional `drift`).
+
+Manifest semantics (implement exactly):
+
+- `assets[]` entries: `{file, kind: 'cover'|'rect', blend: 'source-over'|'screen'}`
+  plus for 'rect' a `rect: [x,y,w,h]`. `cover` = scale-to-cover canvas (nearest
+  neighbor), center-crop. `rect` = FIT-CONTAIN inside rect preserving aspect ratio,
+  centered in the rect. Draw order = manifest order. `screen` blend = additive
+  (use `globalCompositeOperation = 'screen'`).
+- `sprites[]` entries: `{file, frames: [[x,y,w,h],...], frameRate, blend, drift?,
+  places: [{frame: -1|index, box: [x,y,w,h], anchor?: [x,y,w,h]}]}`.
+  - `frames` are source rects in the sheet PNG (1920x1080 space). frame index =
+    floor(frame * frameRate / 12) % frames.length, looping; a `place` with
+    `frame >= 0` pins the sprite to that frame; `frame === -1` animates.
+  - Each place draws the (possibly animated) frame FIT-CONTAIN into `box`.
+  - `drift: {amplitude, phase}` — vertical bob via `sceneMotionOffset(visualFrame,
+    amplitude, phase, reducedMotion)` applied to the place's box y.
+- `twinkles`: `{mask, fps}` — the mask is a white 'L' PNG covering the canvas;
+  draw it with `globalCompositeOperation = 'screen'` at `globalAlpha` pulsing
+  between `[0.35, 0.9]` at the given fps (use quantizeSceneTime with fps to step).
+  Non-essential; keep it cheap. With reducedMotion: alpha = 0.9.
+- `fallbackPalette`: if assets fail to load, paint a flat muted gradient
+  (palette[0] top → palette[1] horizon → palette[4] bottom) so the menu never
+  shows a blank canvas.
+
+### Runtime behavior
+
+- Lazy load per (civ,mode): fetch `front-end/civilizations/<civ>/<mode>/manifest.json`
+  (relative path, no leading slash required), then decode all referenced images
+  into `ImageBitmap` when available (fallback `HTMLImageElement`). Cache the pack.
+  If a request fails: use fallback paint + `data-art-ready="false"`.
+- On `mount`: paint fallback immediately, async-load the initial pack, repaint
+  when ready, then run the 12 fps rAF loop (existing `schedule()` pattern).
+- `setFaction`/`setMode`: swap packs when different; do NOT reset the rAF loop.
+- `reducedMotion`: always draw frame 0; strips use frame 0; drift = 0;
+  twinkles alpha = 0.9.
+- Draw all stats into the SINGLE existing canvas; no extra DOM nodes.
+
+### Tests (add)
+
+`tests/aaa-front-end-scene.test.ts` (tsx, node-only, console.log PASS like the
+other tests):
+- Strip frame math helper exported from `src/front-end-scene.ts`
+  (`sceneStripFrame(visualFrame, frameRate, framesCount)` returns the looped
+  source frame index; `sceneStripFrame(n, rate, n) === 0` when reduced).
+- Manifest validation helper `validatePack(manifest)`: rects within canvas
+  bounds, asset files referenced exist on disk under
+  `public/front-end/civilizations/<civ>/<mode>/` (walk all four packs), frames
+  arrays non-empty, blends in the allowed set, kinds in {cover,rect},
+  twinkles mask exists if declared, strip files are .png, scenic .webp.
+  FAIL with a clear message listing every broken file.
+
+Add npm scripts (edit package.json, keep everything else):
+- `"test:aaa": "tsx tests/aaa-front-end-scene.test.ts"`
+- `"qa:aaa": "node scripts/qa-aaa-front-end.mjs"`
+
+### Browser QA script (add `scripts/qa-aaa-front-end.mjs`)
+
+Mirror the harness pattern of `scripts/qa-front-end-rebuild.mjs` (spawn `vite
+preview` on 4173 or reuse its exact approach, then Playwright chromium at
+1920x1080). Steps:
+1. Before page load, set the profile faction via localStorage. Read
+   `src/player-profile.ts` to find the storage key + allowed values; set it to
+   `sunweaver` and `gravemark` per run (fresh context each).
+2. Menu capture: load `/desktop.html`, wait for `data-art-ready="true"`, wait
+   ~600 ms for a few frames, screenshot to
+   `~/workspace/evidence/starhaven-aaa/<civ>-menu.png`; assert canvas painted
+   (sample >= 200 distinct colors across a 120x60 grid on the canvas), assert no
+   console errors, assert `.front-end-scene__canvas` present and viewport full
+   1920x1080.
+3. Loading capture: click `NEW SKIRMISH`, then reach the loading screen. Look at
+   `src/main.ts` — `qa-hold-loading=1` URL param holds the loading screen; use
+   the existing QA scenario mechanism (`?qa-scenario=...`) or drive
+   `DispatchEvent` — simplest: load `/desktop.html?qa-hold-loading=1` and use the
+   app's QA scenario path in `src/qa-scenarios.ts` to transition into Loading
+   (read `src/main.ts` `runQaScenario`). If the QA mechanism is awkward, clicking
+   through New Skirmish → Start Match is acceptable as long as the loading screen
+   stays visible for the screenshot (use the hold param).
+4. Save all four captures (2 civs x 2 modes), print a table of results, exit
+   non-zero on failure.
+
+### Verification you must run and report
+
+1. `npm run test:m0` (existing scene + profile + app-flow tests) → PASS.
+2. `npm run test:aaa` → PASS.
+3. `npm run build` → PASS.
+4. `node scripts/qa-aaa-front-end.mjs` → all four captures written.
+5. `git diff --check` clean. Commit with message prefix
+   `aaa-front-end:` and push to origin (credentials exist in ~/.git-credentials;
+   use `git push` normally).
+
+Report: commits pushed, exact test/QA outputs (paste the PASS lines), the four
+screenshot paths, and any deviation you had to make from the spec (with reason).
+Do not regenerate or edit any file under `public/front-end/civilizations/` —
+the art is frozen.

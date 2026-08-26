@@ -21,7 +21,7 @@ def main() -> int:
         ext = 'jpeg' if path.lower().endswith(('.jpg', '.jpeg')) else 'png'
         b64 = base64.b64encode(open(path, 'rb').read()).decode()
         content.append({'type': 'image_url', 'image_url': {'url': f'data:image/{ext};base64,{b64}'}})
-    body = {'model': MODEL, 'max_tokens': 4000, 'messages': [{'role': 'user', 'content': content}]}
+    body = {'model': MODEL, 'max_tokens': 9000, 'messages': [{'role': 'user', 'content': content}]}
     req = urllib.request.Request(ENDPOINT, data=json.dumps(body).encode(),
                                  headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json',
                                           'User-Agent': 'curl/8.5.0'})

@@ -7,6 +7,87 @@ skirmish before deep controls or general polish: menu -> scout -> gather -> choo
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
 
+## Forge Review Deck v1 (2026-08-26) — DONE
+
+Spec: `docs/FORGE_REVIEW_DECK.md`. Branch `hermes/starhaven-aaa-front-end`, commits
+`13c3db5` / `66f7dbb` / `6014e59`. Developer-only; never deployed.
+
+- Seed correctness fixed: `?qa-seed=` overrides QA scenario seed (deterministic); requested ==
+  actual is a hard gate everywhere. Old harness always ran seed 24301 regardless of `--seed`.
+- Typed review control `window.__STARHAVEN_FORGE__` installs ONLY under vite dev + `forge=1`:
+  snapshot/metrics, reload-bearing route/seed/factions/orientation, display-only perspective
+  (player / rival-knowledge / omniscient — fog texture filled per side, World knowledge never
+  written), camera presets, freeze + step (<=600), six overlays. Production bundle verified:
+  control compiles to `return null`; panel import unreachable dead code; no `dist/tools`.
+- Workbench UI injects on game pages under the same guard (`forge-panel=0` suppresses it for
+  clean captures). Identity banner shows scenario/seeds/config/tick/perspective/camera/selection.
+- `npm run forge:review:capture` proof pack: 13 routes x both orientations, extras reusing one
+  load, synchronized perspective triptych at tick 600 (per-side fog veils verified by tile
+  luminance deltas), labeled board, console.txt, critic-brief.txt, `--clip` proof.webm.
+- Perf recorded as DISTINCT `gameWorkP99Ms` / `rafP99Ms`; absolute budget only via `--gate-p99`
+  (this host = SwiftShader software WebGL ~20 fps; not an iPad verdict).
+- Verification: test:m0 PASS, build PASS, tests/forge-review.test.ts 10/10, qa:forge-review
+  17/17 ok=true, capture pack 33/33 cells ok manifestValid=true. Evidence:
+  `/home/bobbyranka/workspace/evidence/starhaven-forge-review/20260826T110950Z/`.
+- Pending: fresh independent visual critic on the proof pack (builder does not self-grade).
+
+## Self-view harness (2026-08-26) — DONE
+
+- `scripts/self-view-harness.mjs` (`npm run self-view -- --out=<abs dir>`): boots the dev server,
+  captures all 13 `?qa=` routes plus 4 camera/selection extras from a real Chromium, verifies each
+  against `__STARHAVEN_QA__`, and composes ONE labeled board (`self-view.png`) with palette strip,
+  per-cell state/palette/p99/fps, and red-flagged gate failures. Purpose: one image feeds one blind
+  critic pass for cross-state coherence (palette weight, unit scale, HUD density).
+- Objective gates: probe state == expected route state; capture not black/empty; palette adherence
+  >= 0.35 (measured 0.91–1.00). Routes and palette are parsed from `src/qa-scenarios.ts` /
+  `src/palette.ts` so the tool cannot drift from source.
+- Perf budget is NOT gated by default on this Linux box: it has no GPU (SwiftShader WebGL,
+  steady ~20 fps / p99 100–180 ms in Playing states). The absolute 8 ms budget is host-specific;
+  opt back in with `--gate-p99=8` on GPU hardware. `qa-m0.mjs` still hardcodes Chrome and does
+  not run here.
+- Verified run (13/13 routes, 4/4 extras, ok=true) + blind critic PASS (labels readable, all
+  content non-black/distinct, no layout defects, coherent style):
+  `/home/bobbyranka/workspace/evidence/starhaven-self-view/20260826T082148Z/`.
+
+## AAA front-end art (2026-08-24) — DONE
+
+Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`). PR **#11** open
+(base `codex/starhaven-menu-rebuild`). Contract frozen:
+`docs/AAA_FRONT_END_ART_SPEC.md` + `docs/AAA_FRONT_END_INTEGRATION_SPEC.md`.
+
+- Replaces the two procedural placeholder scene packs (flat geometry) with four
+  MASTERWORK-authored illustrated packs: sunweaver menu/loading + gravemark
+  menu/loading, each a real layered stack (sky / celestial body / far terrain /
+  settlement or quarry-city / foreground / atmosphere / lights mask / ship sheets
+  / animation strips) aligned to one 1920x1080 coordinate system (`public/
+  front-end/civilizations/<civ>/<mode>/`), manifest-driven at 960x540 logical.
+- Art pipeline (lead-owned): 2 menu key-art candidates per civilization generated,
+  blind-reviewed, refined once, loading compositions matched, then per-layer
+  generated art with shared anchor geometry, chroma/black keying (luminance-aware
+  dither kill), body placement (sun 0.28/0.26 r=0.21H; moon 0.26/0.22 r=0.17H),
+  1920x1080 exact export. Masters + pipeline + provenance: `assets/front-end/`.
+- Sunweaver: luminous sun capital, lattice towers, suspended bridge, plaza
+  terraces, sailcraft traffic, warm white/amber/gold/cyan/indigo, calm right side.
+- Gravemark: fractured moon + cratered asteroid ring, terraced quarry-city,
+  gravity cranes, conveyors, smelter warning lights, Grav-Skimmers, heavy
+  carrier, obsidian/steel/mineral-green/ice-blue, dense crystal foregrounds.
+- No flattened image: ships/strips/masks are separate animated assets; packs are
+  distinct compositions, no hue-rotate (test forbids it).
+- Implementation (Luna builder, lead-verified): `src/front-end-scene.ts` rewritten
+  as authored layered compositor — public API + dataset contract preserved;
+  tests/front-end-scene.test.ts unchanged. New `tests/aaa-front-end-scene.test.ts`
+  (pack validation) + `scripts/qa-aaa-front-end.mjs` (2 civs x 2 modes, 1920x1080).
+- VERIFICATION (lead re-ran all gates): test:m0 PASS, test:aaa PASS, build PASS,
+  qa:aaa PASS (4 captures, canvases painted, 0 console errors), and the blind
+  critic (deepseek-v4-flash-vision-exp, gates a-g per image) reports **PASS on all
+  four** — loading screens intentionally simpler (UI overlay band).
+- Evidence: `/home/bobbyranka/workspace/evidence/starhaven-aaa/`.
+- KNOWN NITS (non-blocking): loading packs less lavish than menu masters (by
+  design); sunweaver far-right tower silhouette is plain; ships read slightly
+  toy-like at runtime scale.
+- NOT DEPLOYED to Cloudflare: PR still unmerged; production keeps the previously
+  approved front end (b406cb6 / e2e9a16c) until #10+#11 merge.
+
 ## Front-end rebuild (2026-08-24)
 
 - Replaced the four filtered copies of one flattened menu painting with two faction-owned 960 × 540

@@ -1,0 +1,274 @@
+/**
+ * Forge Review Deck (FRD-1) automated tests — pure logic only.
+ * NO browser, NO server spawn. Run: npx tsx tests/forge-review.test.ts
+ *
+ * NOTE (coordination): the first test asserts the FRD-B contract (qa-seed URL
+ * override in parseQaScenario). src/qa-scenarios.ts is owned by Builder B and
+ * may not have landed yet — if this single test is red while everything else
+ * passes, that is the expected cross-builder state, not a regression here.
+ */
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { PNG } from 'pngjs';
+
+import { parseQaScenario } from '../src/qa-scenarios';
+import { SCHEMA_VERSION, validateManifest } from '../tools/forge-review/lib/manifest.mjs';
+import {
+  analyzePng,
+  isBlack,
+  isEmpty,
+  loadPaletteRgb,
+} from '../tools/forge-review/lib/pixels.mjs';
+import { buildCapturePlan } from '../tools/forge-review/lib/capture.mjs';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+type Test = { name: string; run: () => void };
+const tests: Test[] = [];
+const test = (name: string, run: () => void) => tests.push({ name, run });
+
+// --- manifest fixture builders -----------------------------------------------
+
+function validConfig(seed = 777) {
+  return {
+    playerFaction: 'sunweaver',
+    aiFaction: 'gravemark',
+    map: 'helios-rift',
+    difficulty: 'standard',
+    fogOfWar: true,
+    speed: 1,
+    tacticalPause: 'enabled',
+    seedMode: 'deterministic',
+    seed,
+  };
+}
+
+function validCell(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'opening',
+    kind: 'route',
+    orientation: 'landscape-left',
+    url: 'http://127.0.0.1:12345/?qa=opening&qa-seed=777&orientation=landscape-left',
+    requestedSeed: 777,
+    actualSeed: 777,
+    expectedState: 'Playing',
+    actualState: 'Playing',
+    tick: 42,
+    perspective: 'player',
+    cameraMode: 'normal',
+    camera: { x: 12, z: 12, halfH: 30 },
+    selection: [1, 2, 3],
+    config: validConfig(),
+    image: {
+      file: '/tmp/forge/cells/opening-landscape-left.png',
+      width: 1366,
+      height: 1024,
+      minLuma: 2,
+      maxLuma: 240,
+      meanLuma: 42,
+      litRatio: 0.5,
+      distinctColors: 120,
+      paletteAdherence: 0.9,
+    },
+    perf: { fps: 60, gameWorkP99Ms: 8.4, rafP99Ms: 33.3 },
+    draws: 120,
+    entities: { live: 30, total: 64 },
+    errors: [],
+    gates: [],
+    ok: true,
+    ...overrides,
+  };
+}
+
+function validManifest(overrides: Record<string, unknown> = {}) {
+  return {
+    tool: 'forge-review-capture',
+    schemaVersion: SCHEMA_VERSION,
+    startedAt: '2026-08-26T00:00:00.000Z',
+    finishedAt: '2026-08-26T00:01:00.000Z',
+    git: { commit: 'a'.repeat(40), branch: 'hermes/starhaven-aaa-front-end', dirty: false },
+    args: { out: '/tmp/forge', seed: 777 },
+    requestedSeed: 777,
+    actualSeed: 777,
+    viewport: { width: 1366, height: 1024, deviceScaleFactor: 1 },
+    environment: { browser: 'chromium', webglRenderer: 'SwiftShader', softwareRenderer: true },
+    pack: {
+      routes: [validCell()],
+      extras: [],
+      perspectives: [],
+      board: '/tmp/forge/board.png',
+      consoleTxt: '/tmp/forge/console.txt',
+      criticBrief: '/tmp/forge/critic-brief.txt',
+      clip: null,
+    },
+    failures: [],
+    ok: true,
+    ...overrides,
+  };
+}
+
+// --- 1. seed propagation (FRD-B contract) ------------------------------------
+
+test('qa-seed propagates into the scenario config (FRD-B contract)', () => {
+  const withSeed = parseQaScenario('?qa=opening&qa-seed=424242');
+  assert.ok(
+    withSeed,
+    'FRD-B not landed yet: parseQaScenario(?qa=opening&qa-seed=424242) returned undefined. ' +
+      'Builder B owns src/qa-scenarios.ts; once qa-seed parsing lands this test passes.',
+  );
+  assert.equal(withSeed!.config.seed, 424242, 'qa-seed=424242 must override config.seed');
+  assert.equal(
+    withSeed!.config.seedMode,
+    'deterministic',
+    'qa-seed must imply seedMode deterministic',
+  );
+  const without = parseQaScenario('?qa=opening');
+  assert.equal(
+    without?.config.seed,
+    0x5eed,
+    'without qa-seed the canonical QA default 0x5eed (24301) must remain',
+  );
+});
+
+// --- 2. manifest validator ---------------------------------------------------
+
+test('manifest validator accepts a minimal valid fixture', () => {
+  assert.deepEqual(validateManifest(validManifest()), { valid: true, errors: [] });
+});
+
+test('manifest validator rejects wrong schemaVersion', () => {
+  const m = validManifest({ schemaVersion: 'forge-review-deck/0' });
+  const result = validateManifest(m);
+  assert.equal(result.valid, false);
+  assert.ok(
+    result.errors.some((e) => e.includes('schemaVersion')),
+    `expected a schemaVersion error, got: ${result.errors.join('; ')}`,
+  );
+});
+
+test('manifest validator rejects missing git.branch', () => {
+  const m = validManifest() as { git: Record<string, unknown> };
+  delete m.git.branch;
+  const result = validateManifest(m);
+  assert.equal(result.valid, false);
+  assert.ok(
+    result.errors.some((e) => e.includes('branch')),
+    `expected a git.branch error, got: ${result.errors.join('; ')}`,
+  );
+});
+
+test('manifest validator rejects ok cell with requestedSeed != actualSeed (hard gate)', () => {
+  const m = validManifest();
+  m.pack.routes = [validCell({ requestedSeed: 777, actualSeed: 24301 })];
+  const result = validateManifest(m);
+  assert.equal(result.valid, false);
+  assert.ok(
+    result.errors.some((e) => e.includes('seed') && e.includes('actualSeed')),
+    `expected a seed mismatch error, got: ${result.errors.join('; ')}`,
+  );
+});
+
+test('manifest validator rejects missing perf.gameWorkP99Ms', () => {
+  const m = validManifest();
+  delete m.pack.routes[0].perf.gameWorkP99Ms;
+  const result = validateManifest(m);
+  assert.equal(result.valid, false);
+  assert.ok(
+    result.errors.some((e) => e.includes('gameWorkP99Ms')),
+    `expected a perf.gameWorkP99Ms error, got: ${result.errors.join('; ')}`,
+  );
+});
+
+// --- 3. pixel analysis -------------------------------------------------------
+
+test('analyzePng reports sane numbers for a pure palette-color image', () => {
+  const paletteRgb = loadPaletteRgb(REPO_ROOT);
+  const png = new PNG({ width: 64, height: 64 });
+  // cream #F0E7D2 is a real palette token.
+  for (let i = 0; i < png.data.length; i += 4) {
+    png.data[i] = 0xf0;
+    png.data[i + 1] = 0xe7;
+    png.data[i + 2] = 0xd2;
+    png.data[i + 3] = 255;
+  }
+  const image = analyzePng(PNG.sync.write(png), paletteRgb);
+  assert.equal(image.width, 64);
+  assert.equal(image.height, 64);
+  assert.equal(image.distinctColors, 1, 'a solid color must quantize to one bucket');
+  assert.equal(image.paletteAdherence, 1, 'a pure palette token must adhere 100%');
+  assert.ok(image.meanLuma > 200, `cream meanLuma should be bright, got ${image.meanLuma}`);
+  assert.equal(isBlack(image), false);
+  assert.equal(isEmpty(image), false);
+});
+
+test('isBlack / isEmpty flag a black image', () => {
+  const png = new PNG({ width: 64, height: 64 }); // zero-filled = black
+  const image = analyzePng(PNG.sync.write(png), []);
+  assert.equal(isBlack(image), true);
+  assert.equal(isEmpty(image), true);
+});
+
+// --- 4. serial plan builder --------------------------------------------------
+
+test('buildCapturePlan yields stable route x orientation order with dedupe', () => {
+  const plan = buildCapturePlan(['opening', 'battle', 'opening'], [
+    'landscape-left',
+    'landscape-right',
+  ]);
+  assert.equal(plan.length, 4, 'duplicate route must be deduped');
+  assert.deepEqual(
+    plan.map((p) => `${p.route}/${p.orientation}`),
+    [
+      'opening/landscape-left',
+      'opening/landscape-right',
+      'battle/landscape-left',
+      'battle/landscape-right',
+    ],
+    'route-major stable order expected',
+  );
+});
+
+// --- 5. production isolation -------------------------------------------------
+
+test('production build inputs and index.html contain no forge-review artifacts', () => {
+  const viteConfig = fs.readFileSync(path.join(REPO_ROOT, 'vite.config.ts'), 'utf8');
+  const inputs = [...viteConfig.matchAll(/input:\s*\{([\s\S]*?)\}/g)].flatMap((m) =>
+    [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]),
+  );
+  assert.ok(inputs.length >= 1, 'expected at least one rollup input');
+  for (const input of inputs) {
+    assert.ok(
+      !input.includes('tools/'),
+      `rollup input "${input}" must not include tools/`,
+    );
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, 'dist'))) {
+    assert.ok(
+      !fs.existsSync(path.join(REPO_ROOT, 'dist', 'tools')),
+      'dist/tools must not exist in the production build output',
+    );
+  }
+  const indexHtml = fs.readFileSync(path.join(REPO_ROOT, 'index.html'), 'utf8');
+  assert.ok(
+    !indexHtml.includes('forge-review'),
+    'production index.html must not reference forge-review',
+  );
+});
+
+// --- runner ------------------------------------------------------------------
+
+let failed = 0;
+for (const t of tests) {
+  try {
+    t.run();
+    console.log(`ok   - ${t.name}`);
+  } catch (err) {
+    failed += 1;
+    console.log(`FAIL - ${t.name}`);
+    console.log(`       ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+console.log(`\nforge-review.test.ts: ${tests.length - failed}/${tests.length} passed${failed ? ` (${failed} failed)` : ''}`);
+process.exit(failed === 0 ? 0 : 1);

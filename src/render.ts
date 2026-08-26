@@ -1367,6 +1367,14 @@ export class GameRenderer {
   readonly overlay: HTMLCanvasElement;
   readonly octx: CanvasRenderingContext2D;
   readonly combatBranchMappings = COMBAT_BRANCH_MAPPINGS;
+  /** FRD-2a — dev overlay hooks run after this frame's overlay content is drawn.
+   *  Empty by default: iterating an empty array is the only cost. */
+  readonly reviewHooks: ((ctx: CanvasRenderingContext2D, view: GameRenderer) => void)[] = [];
+  /** FRD-2a — review fog display mode; null restores shipped fog behavior. */
+  reviewMode: { perspective: 'player' | 'rival' | 'omniscient'; showFog: boolean } | null = null;
+  private readonly warnedReviewHooks = new WeakSet<
+    (ctx: CanvasRenderingContext2D, view: GameRenderer) => void
+  >();
   atlas!: Atlas;
   spriteAtlas!: SpriteAtlas;
   private sdfMesh!: THREE.InstancedMesh;
@@ -1656,6 +1664,13 @@ export class GameRenderer {
     this.camera.left = -halfH * aspect;
     this.camera.right = halfH * aspect;
     this.camera.updateProjectionMatrix();
+  }
+
+  /** FRD-2a — display-only review fog mode; null restores shipped behavior. */
+  setReviewMode(
+    mode: { perspective: 'player' | 'rival' | 'omniscient'; showFog: boolean } | null,
+  ): void {
+    this.reviewMode = mode;
   }
 
   lookAt(x: number, z: number): void {
@@ -2061,12 +2076,60 @@ export class GameRenderer {
   private updateFog(world: World): void {
     this.fogMesh.visible = world.fogOfWarEnabled;
     if (!world.fogOfWarEnabled) return;
+    if (this.reviewMode !== null) {
+      this.updateReviewFog(world, this.reviewMode);
+      return;
+    }
     const vis = world.visible[0];
     const exp = world.explored[0];
     const d = this.fogData;
     for (let i = 0; i < MAP * MAP; i++) {
       const o = i * 4;
       if (vis[i]) {
+        d[o] = 0;
+        d[o + 1] = 0;
+        d[o + 2] = 0;
+        d[o + 3] = 0;
+      } else if (exp[i]) {
+        d[o] = 14;
+        d[o + 1] = 12;
+        d[o + 2] = 28;
+        d[o + 3] = 56;
+      } else {
+        d[o] = 20;
+        d[o + 1] = 16;
+        d[o + 2] = 34;
+        d[o + 3] = 32;
+      }
+    }
+    this.fogTex.needsUpdate = true;
+  }
+
+  /**
+   * FRD-2a — display-only fog for the forge review control. Fills the fog
+   * texture from the requested perspective's own discovery arrays (rival reads
+   * the SEEN_RIVAL-side arrays, i.e. visible[1]/explored[1]); omniscient or
+   * showFog=false fills the fully-visible pattern. NEVER writes World
+   * discovery/knowledge state — only this renderer's fog texture is touched.
+   */
+  private updateReviewFog(
+    world: World,
+    mode: { perspective: 'player' | 'rival' | 'omniscient'; showFog: boolean },
+  ): void {
+    const d = this.fogData;
+    const clear = !mode.showFog || mode.perspective === 'omniscient';
+    const useRival = !clear && mode.perspective === 'rival';
+    const vis = useRival ? world.visible[1] : world.visible[0];
+    const exp = useRival ? world.explored[1] : world.explored[0];
+    for (let i = 0; i < MAP * MAP; i++) {
+      const o = i * 4;
+      if (clear) {
+        // Fully-visible pattern: identical to the shipped "seen" fill (alpha 0).
+        d[o] = 0;
+        d[o + 1] = 0;
+        d[o + 2] = 0;
+        d[o + 3] = 0;
+      } else if (vis[i]) {
         d[o] = 0;
         d[o + 1] = 0;
         d[o + 2] = 0;
@@ -2240,6 +2303,26 @@ export class GameRenderer {
       ctx.strokeStyle = outline;
       ctx.lineWidth = 1;
       ctx.strokeRect(head.x - bw / 2 - 1, barY - 1, bw + 2, bh + 2);
+    }
+    this.runReviewHooks();
+  }
+
+  /**
+   * FRD-2a — run dev overlay hooks after this frame's overlay content.
+   * Empty array by default (zero cost); each hook is guarded so a failure
+   * warns once and never breaks the frame loop.
+   */
+  private runReviewHooks(): void {
+    if (this.reviewHooks.length === 0) return;
+    for (const hook of this.reviewHooks) {
+      try {
+        hook(this.octx, this);
+      } catch (error) {
+        if (!this.warnedReviewHooks.has(hook)) {
+          this.warnedReviewHooks.add(hook);
+          console.warn('Starhaven forge: review hook failed; skipping it from now on', error);
+        }
+      }
     }
   }
 
