@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-rift-guard",
+  "label": "Rift Guard",
+  "faction": "gravemark",
+  "category": "unit",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "dir0-pose0",
+      "sha256": "1df54d225d791dba1f83d72d7caf82b7899b8921adfb55ef26457beaf1ff1d9a",
+      "alphaPixels": 1620
+    },
+    {
+      "key": "dir1-pose0",
+      "sha256": "d6db05eca1b499753bdeaf63d061bfb405ce7611177531a17c2a8afce0610b1d",
+      "alphaPixels": 1617
+    },
+    {
+      "key": "dir2-pose0",
+      "sha256": "93ffdd9e419c6165325ebf688b631b3adecd651f47008db4456ae2f891ec9b09",
+      "alphaPixels": 1612
+    },
+    {
+      "key": "dir3-pose0",
+      "sha256": "fe641572a4fdf0cf99911771ed93d6cd73b87b2842c9f491ffa3e7c072dcf4b6",
+      "alphaPixels": 1617
+    },
+    {
+      "key": "dir4-pose0",
+      "sha256": "4de2055dd3ee70aabf218557e3ec0b55f3e7a9441560d1fec8ac2dc3a787e698",
+      "alphaPixels": 1620
+    },
+    {
+      "key": "dir5-pose0",
+      "sha256": "d9cb58ae055710573fd59751b010bc96fcc22de78059efda28fb15d8e4956980",
+      "alphaPixels": 1620
+    },
+    {
+      "key": "dir6-pose0",
+      "sha256": "d75f2baad959a1982a4464b97c573bf27154b15fa97ec196b49e910f437a7ba6",
+      "alphaPixels": 1620
+    },
+    {
+      "key": "dir7-pose0",
+      "sha256": "bf6339a863b6b6446e7c4fb1f51e25402958f7a34cdee981c7406e62effaaeb9",
+      "alphaPixels": 1620
+    },
+    {
+      "key": "dir0-pose1",
+      "sha256": "d87a28cda995b42894f796af4fbd86193c7738c887f110d373fd66e7c713a7fb",
+      "alphaPixels": 1615
+    },
+    {
+      "key": "dir1-pose1",
+      "sha256": "0f25a936420c690b5a379720ec9e31b3246e59db0711519448a22a7e59030139",
+      "alphaPixels": 1612
+    },
+    {
+      "key": "dir2-pose1",
+      "sha256": "a6e2fe5e7e857b0f250deae8a8b4b1618663037fca1462daddc42b88f551e12c",
+      "alphaPixels": 1607
+    },
+    {
+      "key": "dir3-pose1",
+      "sha256": "4f4920ea9a5b96e373234a31988e697ef556be6d86518fcee5cf71cebe3d70dc",
+      "alphaPixels": 1612
+    },
+    {
+      "key": "dir4-pose1",
+      "sha256": "34f49fa24c4638337faf58c5e3177885b2c1f42c99e968b1de66ebbf50db9f7c",
+      "alphaPixels": 1615
+    },
+    {
+      "key": "dir5-pose1",
+      "sha256": "612f489ce6243ccb8c8a8925f50a210f04c92e21d5371f8b3246c36b0aafa529",
+      "alphaPixels": 1615
+    },
+    {
+      "key": "dir6-pose1",
+      "sha256": "f4dc262f6fcbf3decc795f762101702b44da9a599384be9584d0e13209cbc779",
+      "alphaPixels": 1615
+    },
+    {
+      "key": "dir7-pose1",
+      "sha256": "0ee4e4ecbbe2a39f566d9d57914bf8b457ea3629afbdf315aede1ed3bab3fe23",
+      "alphaPixels": 1615
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:52.340Z"
+}

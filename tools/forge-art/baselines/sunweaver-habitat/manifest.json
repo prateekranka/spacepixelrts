@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-habitat",
+  "label": "Habitat",
+  "faction": "sunweaver",
+  "category": "building",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "e79f5ff330eeba57a840c0e82c52893058a7e957829da390c81e32e8757f2c86",
+      "alphaPixels": 459
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:53.502Z"
+}

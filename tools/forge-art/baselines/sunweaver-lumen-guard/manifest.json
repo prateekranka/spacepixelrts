@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-lumen-guard",
+  "label": "Lumen Guard",
+  "faction": "sunweaver",
+  "category": "unit",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "dir0-pose0",
+      "sha256": "d7741fab23ede149007a0799fe5c72fc9b5239f57e31bcae9b5e222f82957867",
+      "alphaPixels": 1530
+    },
+    {
+      "key": "dir1-pose0",
+      "sha256": "abcb42e56565b7cebdf12a0ead8a7dda4b437df75c31dad55ff263d8ac65d78e",
+      "alphaPixels": 1355
+    },
+    {
+      "key": "dir2-pose0",
+      "sha256": "95051ce2a89a70f0ecfe7e78fad93633ac187e7b4e860bdaf700dd4fddca90c3",
+      "alphaPixels": 1297
+    },
+    {
+      "key": "dir3-pose0",
+      "sha256": "1ea11ded1350ed0512e459a7fbc0a6c110165f9683c632f18efb4d1673f6a1ec",
+      "alphaPixels": 1355
+    },
+    {
+      "key": "dir4-pose0",
+      "sha256": "7dfc91b629d2ed1ddb7341154b2640c5a7209c02040fcb172cf5585b7ab2f0c0",
+      "alphaPixels": 1530
+    },
+    {
+      "key": "dir5-pose0",
+      "sha256": "f06a6bca3ae089d339dd87b15f45546c12a60480f99309f50532cd7378989376",
+      "alphaPixels": 1345
+    },
+    {
+      "key": "dir6-pose0",
+      "sha256": "5cfafcc0f89f6b93cdc707a8fb6bff3ce190635902e60bf8faecb11aea53d1fb",
+      "alphaPixels": 1296
+    },
+    {
+      "key": "dir7-pose0",
+      "sha256": "e76eb04d74d5707c992668867d11f8fbd1bf111ab71762d324274cbbd9912ce6",
+      "alphaPixels": 1345
+    },
+    {
+      "key": "dir0-pose1",
+      "sha256": "f0570dbeeb99814e04cfc5378fe8f4ded31f94362cdf2adb2f23bca006b90ee1",
+      "alphaPixels": 1520
+    },
+    {
+      "key": "dir1-pose1",
+      "sha256": "9b8a7787456ebd2f4d356ef6475e7c1a20bdc94454fdd303fb0e1d5e28a16073",
+      "alphaPixels": 1321
+    },
+    {
+      "key": "dir2-pose1",
+      "sha256": "f0caceda3d9f0404f56aed84c28ec146d9c081be0949cc12db64718f26624317",
+      "alphaPixels": 1265
+    },
+    {
+      "key": "dir3-pose1",
+      "sha256": "b46c042dc3b8ca4bdb3afdeb220e26735b7759e6d1ff56beec941c9c8f236b67",
+      "alphaPixels": 1321
+    },
+    {
+      "key": "dir4-pose1",
+      "sha256": "697663070098e81d9bd2919928e6a8a43ae92f9666eb3fe2f2179f3634955c96",
+      "alphaPixels": 1520
+    },
+    {
+      "key": "dir5-pose1",
+      "sha256": "fd1647320a5007b4400b44774f80231489c8350ee1bf8a3a2da86cf44adbff57",
+      "alphaPixels": 1311
+    },
+    {
+      "key": "dir6-pose1",
+      "sha256": "3e1b24b64422992d7b7fe9914da160eca3d1b248f224e7af26ce4e5380e149fe",
+      "alphaPixels": 1272
+    },
+    {
+      "key": "dir7-pose1",
+      "sha256": "161482b9eb4eb686076286c9094d6aef7ea14ef9eb39636a6f478622291327fb",
+      "alphaPixels": 1311
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:54.332Z"
+}

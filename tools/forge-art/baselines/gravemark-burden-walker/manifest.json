@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-burden-walker",
+  "label": "Burden Walker",
+  "faction": "gravemark",
+  "category": "unit",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "dir0-pose0",
+      "sha256": "c4fd63b3313fc5919de9441a8ba71dc69a717b712fb41bc9bc0535d72bda88eb",
+      "alphaPixels": 1598
+    },
+    {
+      "key": "dir1-pose0",
+      "sha256": "b6ded6efd2cae76946d688bf44646035da0ad1125d9821b3e2088ed4e4972af8",
+      "alphaPixels": 1578
+    },
+    {
+      "key": "dir2-pose0",
+      "sha256": "ca0322156cb71e94756b3b2b4e2f840e8f8c55d5d831de6b846c2308e7709c45",
+      "alphaPixels": 1484
+    },
+    {
+      "key": "dir3-pose0",
+      "sha256": "9279ad48cfbe8ee2a56e1c91fd456b1def2b432c73040deea5e026a3680027e5",
+      "alphaPixels": 1578
+    },
+    {
+      "key": "dir4-pose0",
+      "sha256": "f41f25ce1fdce9fb02b33184117e74286285ca00857c84206b4bf3bb87693625",
+      "alphaPixels": 1598
+    },
+    {
+      "key": "dir5-pose0",
+      "sha256": "c1537b428225743f635b8bf5969afda80da29d12b92307605f84741c0b9b4bea",
+      "alphaPixels": 1578
+    },
+    {
+      "key": "dir6-pose0",
+      "sha256": "ca0322156cb71e94756b3b2b4e2f840e8f8c55d5d831de6b846c2308e7709c45",
+      "alphaPixels": 1484
+    },
+    {
+      "key": "dir7-pose0",
+      "sha256": "de10a4500f40e7625b0f774f5cfd830069ce7f2e386fbef7f37b6ac157c66080",
+      "alphaPixels": 1578
+    },
+    {
+      "key": "dir0-pose1",
+      "sha256": "7a743db67c4180797d1fb8495ae2b7541856291b4f1be8840ce1039301795a8e",
+      "alphaPixels": 1562
+    },
+    {
+      "key": "dir1-pose1",
+      "sha256": "f9f717ba56f7cb8df43bd91f7ac69e529ffb3346dfc2d862ea165eea676562bd",
+      "alphaPixels": 1546
+    },
+    {
+      "key": "dir2-pose1",
+      "sha256": "08f381a002321d0cd8acce11a6e015e6eb4a78ba9fea229cadfaa4f1c1c70111",
+      "alphaPixels": 1462
+    },
+    {
+      "key": "dir3-pose1",
+      "sha256": "b11044a9b467cf2ac4d2e8c6029780809ede0feb21f6803e8d306873cdc86c10",
+      "alphaPixels": 1546
+    },
+    {
+      "key": "dir4-pose1",
+      "sha256": "1fb3ee813f327004b431a3380120ca1af8211f6252d56a81121cfd6cf158e3b0",
+      "alphaPixels": 1562
+    },
+    {
+      "key": "dir5-pose1",
+      "sha256": "7021e526eb5b48f7c23878c7dabdb1731724c0ce8e54f6fb64afeb0ec81e2e1b",
+      "alphaPixels": 1546
+    },
+    {
+      "key": "dir6-pose1",
+      "sha256": "08f381a002321d0cd8acce11a6e015e6eb4a78ba9fea229cadfaa4f1c1c70111",
+      "alphaPixels": 1462
+    },
+    {
+      "key": "dir7-pose1",
+      "sha256": "750fa277bef4c8f563fd17db9a17595e366e26ddfdb6d99db71f790610c892a6",
+      "alphaPixels": 1546
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:51.467Z"
+}

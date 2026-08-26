@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-core",
+  "label": "Core",
+  "faction": "gravemark",
+  "category": "building",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "3554af5351c8efd05ceee7eb5cb61f7a4d876c2bb475162f3e046d4ce2cb0abc",
+      "alphaPixels": 1792
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:50.295Z"
+}

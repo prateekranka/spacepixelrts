@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-grav-skimmer",
+  "label": "Grav-Skimmer",
+  "faction": "gravemark",
+  "category": "unit",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "hd",
+      "sha256": "7b0f25f3d07b80ad8aaffa6abc32d5257782fd65175b80fe4ce0c70c03aa5183",
+      "alphaPixels": 7680
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:51.850Z"
+}

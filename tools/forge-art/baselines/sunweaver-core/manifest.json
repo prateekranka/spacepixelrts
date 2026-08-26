@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-core",
+  "label": "Core",
+  "faction": "sunweaver",
+  "category": "building",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "8f9a6d83d69cd1971bfb5105ab791719b241c90e42f77f199a0ba9a5146af72a",
+      "alphaPixels": 1792
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:53.122Z"
+}

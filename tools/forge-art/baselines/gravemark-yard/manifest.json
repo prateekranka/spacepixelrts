@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-yard",
+  "label": "Yard",
+  "faction": "gravemark",
+  "category": "building",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "c9734ee5e82c02479527956f5bc19d71958b33aa2bb9505218a9335d5e359109",
+      "alphaPixels": 511
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:50.979Z"
+}

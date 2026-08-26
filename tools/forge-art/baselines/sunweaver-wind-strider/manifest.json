@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-wind-strider",
+  "label": "Wind Strider",
+  "faction": "sunweaver",
+  "category": "unit",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "hd",
+      "sha256": "50541f1befba3def30e4718ba753fc0490e6b8bd506633f2109be3b8cc314625",
+      "alphaPixels": 6975
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:55.208Z"
+}

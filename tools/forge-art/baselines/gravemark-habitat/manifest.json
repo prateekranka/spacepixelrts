@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-habitat",
+  "label": "Habitat",
+  "faction": "gravemark",
+  "category": "building",
+  "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "6bffeb0231389be364c3f0ba9f5f5d5ab5710f5ba9fd7d2ccd23f17ecc9be755",
+      "alphaPixels": 459
+    }
+  ],
+  "createdAt": "2026-08-26T11:54:50.634Z"
+}

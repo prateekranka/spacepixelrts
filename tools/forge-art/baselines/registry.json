@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "assets": {
+    "gravemark-core": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:50.303Z",
+      "manifestSha256": "cb71d338199f8a48d87d0928979d4f590bc4a6a89e349aee464aebd14fb56c32",
+      "baselinePngSha256": "a8fa09e87ceb89dabfaf84dfd392a4c25232d0db05950e0020a09f4afdd2bee4",
+      "frameSha256": {
+        "iso": "3554af5351c8efd05ceee7eb5cb61f7a4d876c2bb475162f3e046d4ce2cb0abc"
+      }
+    },
+    "gravemark-habitat": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:50.637Z",
+      "manifestSha256": "fec9c5d34cc8c45f22233d220260c1e140c7955b3c98225b38e1467db53b6131",
+      "baselinePngSha256": "f6cb397e314ea5458730b88da65fda9cb643dc3323c25bd818978db04a49f7e6",
+      "frameSha256": {
+        "iso": "6bffeb0231389be364c3f0ba9f5f5d5ab5710f5ba9fd7d2ccd23f17ecc9be755"
+      }
+    },
+    "gravemark-yard": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:50.981Z",
+      "manifestSha256": "d33e60f48a77454bff22141199bb7bb8a189d8188af407aca5556cf0f13c9eae",
+      "baselinePngSha256": "8f72ebe414be7f1c3c0b8fc902e20e0160d1739badd4babad62dc5c65f58f437",
+      "frameSha256": {
+        "iso": "c9734ee5e82c02479527956f5bc19d71958b33aa2bb9505218a9335d5e359109"
+      }
+    },
+    "gravemark-burden-walker": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:51.481Z",
+      "manifestSha256": "d8fafc6e1f259e4552da7dcd4f463b220f8a8bf123262bdf527a143d9f438067",
+      "baselinePngSha256": "cfbd9357fd0ae1b31720c49b0e3b6ff8e3118d79fc6bf8a7be31062a2738bc95",
+      "frameSha256": {
+        "dir0-pose0": "c4fd63b3313fc5919de9441a8ba71dc69a717b712fb41bc9bc0535d72bda88eb",
+        "dir1-pose0": "b6ded6efd2cae76946d688bf44646035da0ad1125d9821b3e2088ed4e4972af8",
+        "dir2-pose0": "ca0322156cb71e94756b3b2b4e2f840e8f8c55d5d831de6b846c2308e7709c45",
+        "dir3-pose0": "9279ad48cfbe8ee2a56e1c91fd456b1def2b432c73040deea5e026a3680027e5",
+        "dir4-pose0": "f41f25ce1fdce9fb02b33184117e74286285ca00857c84206b4bf3bb87693625",
+        "dir5-pose0": "c1537b428225743f635b8bf5969afda80da29d12b92307605f84741c0b9b4bea",
+        "dir6-pose0": "ca0322156cb71e94756b3b2b4e2f840e8f8c55d5d831de6b846c2308e7709c45",
+        "dir7-pose0": "de10a4500f40e7625b0f774f5cfd830069ce7f2e386fbef7f37b6ac157c66080",
+        "dir0-pose1": "7a743db67c4180797d1fb8495ae2b7541856291b4f1be8840ce1039301795a8e",
+        "dir1-pose1": "f9f717ba56f7cb8df43bd91f7ac69e529ffb3346dfc2d862ea165eea676562bd",
+        "dir2-pose1": "08f381a002321d0cd8acce11a6e015e6eb4a78ba9fea229cadfaa4f1c1c70111",
+        "dir3-pose1": "b11044a9b467cf2ac4d2e8c6029780809ede0feb21f6803e8d306873cdc86c10",
+        "dir4-pose1": "1fb3ee813f327004b431a3380120ca1af8211f6252d56a81121cfd6cf158e3b0",
+        "dir5-pose1": "7021e526eb5b48f7c23878c7dabdb1731724c0ce8e54f6fb64afeb0ec81e2e1b",
+        "dir6-pose1": "08f381a002321d0cd8acce11a6e015e6eb4a78ba9fea229cadfaa4f1c1c70111",
+        "dir7-pose1": "750fa277bef4c8f563fd17db9a17595e366e26ddfdb6d99db71f790610c892a6"
+      }
+    },
+    "gravemark-grav-skimmer": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:51.854Z",
+      "manifestSha256": "8829d1115f1b574da2dac93c1600fb39e181cea66e8f1ee40314acf22d9447ac",
+      "baselinePngSha256": "58e156bbe8e84ab6c21841b5ab6a4ba590e71d8d0f7bf057bd97a8c9871b4ce7",
+      "frameSha256": {
+        "hd": "7b0f25f3d07b80ad8aaffa6abc32d5257782fd65175b80fe4ce0c70c03aa5183"
+      }
+    },
+    "gravemark-rift-guard": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:52.351Z",
+      "manifestSha256": "505921ed4139e95a2346c1bbf29eb424f8ee0c9c3f3513916bee296f9f80a2b1",
+      "baselinePngSha256": "1d77a0a6411ca5542fed30bb027fc73ab4c66e4983240519d52dc51f09ccc50c",
+      "frameSha256": {
+        "dir0-pose0": "1df54d225d791dba1f83d72d7caf82b7899b8921adfb55ef26457beaf1ff1d9a",
+        "dir1-pose0": "d6db05eca1b499753bdeaf63d061bfb405ce7611177531a17c2a8afce0610b1d",
+        "dir2-pose0": "93ffdd9e419c6165325ebf688b631b3adecd651f47008db4456ae2f891ec9b09",
+        "dir3-pose0": "fe641572a4fdf0cf99911771ed93d6cd73b87b2842c9f491ffa3e7c072dcf4b6",
+        "dir4-pose0": "4de2055dd3ee70aabf218557e3ec0b55f3e7a9441560d1fec8ac2dc3a787e698",
+        "dir5-pose0": "d9cb58ae055710573fd59751b010bc96fcc22de78059efda28fb15d8e4956980",
+        "dir6-pose0": "d75f2baad959a1982a4464b97c573bf27154b15fa97ec196b49e910f437a7ba6",
+        "dir7-pose0": "bf6339a863b6b6446e7c4fb1f51e25402958f7a34cdee981c7406e62effaaeb9",
+        "dir0-pose1": "d87a28cda995b42894f796af4fbd86193c7738c887f110d373fd66e7c713a7fb",
+        "dir1-pose1": "0f25a936420c690b5a379720ec9e31b3246e59db0711519448a22a7e59030139",
+        "dir2-pose1": "a6e2fe5e7e857b0f250deae8a8b4b1618663037fca1462daddc42b88f551e12c",
+        "dir3-pose1": "4f4920ea9a5b96e373234a31988e697ef556be6d86518fcee5cf71cebe3d70dc",
+        "dir4-pose1": "34f49fa24c4638337faf58c5e3177885b2c1f42c99e968b1de66ebbf50db9f7c",
+        "dir5-pose1": "612f489ce6243ccb8c8a8925f50a210f04c92e21d5371f8b3246c36b0aafa529",
+        "dir6-pose1": "f4dc262f6fcbf3decc795f762101702b44da9a599384be9584d0e13209cbc779",
+        "dir7-pose1": "0ee4e4ecbbe2a39f566d9d57914bf8b457ea3629afbdf315aede1ed3bab3fe23"
+      }
+    },
+    "gravemark-worker": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:52.749Z",
+      "manifestSha256": "db28bb495de1475c699068563013b49068bc3476560e6b5eef3fc9dc30a2ae9f",
+      "baselinePngSha256": "7b38c2ca6088180cc57f1718ce9ff9117c00e78c0338c24686b605ff73a33d35",
+      "frameSha256": {
+        "dir0-walk0": "50e2bb194b811ac6315c97cd618b975de47f46091b029fbce9d95b40973dbddc",
+        "dir1-walk0": "cbbdcd54b0475419f51eaf3e707908bdfa3c078d4e0f74d1f73e14c92d7c4e89",
+        "dir2-walk0": "cbbdcd54b0475419f51eaf3e707908bdfa3c078d4e0f74d1f73e14c92d7c4e89",
+        "dir3-walk0": "66ba2705d1cff30626c85dc1235e3fef6cb6335c78800c3a506220811dd34bc4",
+        "dir4-walk0": "882d63b1b9dbadbeb7c9b9ccd750af349e530eee1efcf8587fc471b3c37429f3",
+        "dir5-walk0": "c5ce18fce31d0a6b6a0c71e7edc925d9bf4970efd6005a3e2c29b1ccc9ce5830",
+        "dir6-walk0": "55a91455762074423b746bd3277595f7cdd6b5157006eba77fd481fa77a10670",
+        "dir7-walk0": "cd3374ad5d92bef5f8494992c2187083f3e54dc00389700692ca7604c055634b",
+        "dir0-walk1": "16488e03b3d81a3be4690256a28130491e9d61be42c3cfbfd48bb504fc860dcf",
+        "dir1-walk1": "f8b7819d4097c104e6047819e0f61aff2c5867225f3ca930447aba0b5c7d4eb7",
+        "dir2-walk1": "f8b7819d4097c104e6047819e0f61aff2c5867225f3ca930447aba0b5c7d4eb7",
+        "dir3-walk1": "b788bfed66cfba702ae003719d6133e5c3d6c6bc96b06c049269bae33f0d2581",
+        "dir4-walk1": "2c6c63cfe7654cf100c8333505b033a522a8723199234af9796ba27e850b1ce2",
+        "dir5-walk1": "50ac029b8b61742f0f1caf203dd400418977af63aad5b74480f5b7dcf9b92d3e",
+        "dir6-walk1": "0b0c41ad5c6526612019cd4cdb91826cac50380181c4e3ce120d0f2466f97426",
+        "dir7-walk1": "0ce0ebd80d36f212c9ac093138dffc0d4988a6ba5716a141291de72c687411fa"
+      }
+    },
+    "sunweaver-core": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:53.124Z",
+      "manifestSha256": "f6c842782ad2922c98b1248c67a4e34f5b87ed741c7d5d99517e10a22dbffffd",
+      "baselinePngSha256": "a8db464dba5a8e36ba7534b4d266dae4c80bc1ea517f1f6200db9fe5842a5c6b",
+      "frameSha256": {
+        "iso": "8f9a6d83d69cd1971bfb5105ab791719b241c90e42f77f199a0ba9a5146af72a"
+      }
+    },
+    "sunweaver-habitat": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:53.504Z",
+      "manifestSha256": "c55b22727bb27999e2d870342d2a23c8ea7fe00ca3153217f23090718cf2f822",
+      "baselinePngSha256": "1de5cf3c37fe9da2ade95552b84ab6025fe2fb5a83b5700ad8b0ac7d16c53c4c",
+      "frameSha256": {
+        "iso": "e79f5ff330eeba57a840c0e82c52893058a7e957829da390c81e32e8757f2c86"
+      }
+    },
+    "sunweaver-yard": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:53.870Z",
+      "manifestSha256": "5108cd26e0bc6f5bf6b2afca628d63a3fc98c1aa899f6019601c4ab32dd075e3",
+      "baselinePngSha256": "893f15c786811e3a746c5e1a75b96aceadd809f899771556a6a1489e925de72d",
+      "frameSha256": {
+        "iso": "9a8c5971b9cf929c781ca1f32e43b44c77e0118806693e633e4e6d1c12ec1bb0"
+      }
+    },
+    "sunweaver-lumen-guard": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:54.341Z",
+      "manifestSha256": "80de957886a93b87979c2b189e66a75d182d22d6acbd43948f145e5dd311ce39",
+      "baselinePngSha256": "12c0b7a9846bfbbf570ec97561aa05f3e282daff0413a61f761fab0a1b73e85d",
+      "frameSha256": {
+        "dir0-pose0": "d7741fab23ede149007a0799fe5c72fc9b5239f57e31bcae9b5e222f82957867",
+        "dir1-pose0": "abcb42e56565b7cebdf12a0ead8a7dda4b437df75c31dad55ff263d8ac65d78e",
+        "dir2-pose0": "95051ce2a89a70f0ecfe7e78fad93633ac187e7b4e860bdaf700dd4fddca90c3",
+        "dir3-pose0": "1ea11ded1350ed0512e459a7fbc0a6c110165f9683c632f18efb4d1673f6a1ec",
+        "dir4-pose0": "7dfc91b629d2ed1ddb7341154b2640c5a7209c02040fcb172cf5585b7ab2f0c0",
+        "dir5-pose0": "f06a6bca3ae089d339dd87b15f45546c12a60480f99309f50532cd7378989376",
+        "dir6-pose0": "5cfafcc0f89f6b93cdc707a8fb6bff3ce190635902e60bf8faecb11aea53d1fb",
+        "dir7-pose0": "e76eb04d74d5707c992668867d11f8fbd1bf111ab71762d324274cbbd9912ce6",
+        "dir0-pose1": "f0570dbeeb99814e04cfc5378fe8f4ded31f94362cdf2adb2f23bca006b90ee1",
+        "dir1-pose1": "9b8a7787456ebd2f4d356ef6475e7c1a20bdc94454fdd303fb0e1d5e28a16073",
+        "dir2-pose1": "f0caceda3d9f0404f56aed84c28ec146d9c081be0949cc12db64718f26624317",
+        "dir3-pose1": "b46c042dc3b8ca4bdb3afdeb220e26735b7759e6d1ff56beec941c9c8f236b67",
+        "dir4-pose1": "697663070098e81d9bd2919928e6a8a43ae92f9666eb3fe2f2179f3634955c96",
+        "dir5-pose1": "fd1647320a5007b4400b44774f80231489c8350ee1bf8a3a2da86cf44adbff57",
+        "dir6-pose1": "3e1b24b64422992d7b7fe9914da160eca3d1b248f224e7af26ce4e5380e149fe",
+        "dir7-pose1": "161482b9eb4eb686076286c9094d6aef7ea14ef9eb39636a6f478622291327fb"
+      }
+    },
+    "sunweaver-solar-strider": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:54.821Z",
+      "manifestSha256": "73a439746a765a30855f4b53b9d5d71fa78b9c74b577fad9ca4513248b42281d",
+      "baselinePngSha256": "ed16afac096ba5b6e72902208ff5669ef8b6661938e307e421c63949fec08ca1",
+      "frameSha256": {
+        "dir0-pose0": "09cc1118e0dac599af575896b13080811a7f5d87439ce94557b8a2e0fb74a71b",
+        "dir1-pose0": "53be7e31405ebab3afc15e53a9a0eb4899092dc4ce457641eb46df58389b33fa",
+        "dir2-pose0": "88767a73da68cc9ea992668cbae7e5ad0cfea1e2e7f4ed8e182a82a19c0e341e",
+        "dir3-pose0": "55642e2d078deee9d84ef6692af7ad31f14e0dff111b162374fa24180fd360b8",
+        "dir4-pose0": "2824426327c954786c2da9caa5314956ba6ae45fefceda1e656a2c09677163e3",
+        "dir5-pose0": "fd029555b067bf1bcda319de0510f3f1a09f86aebb42258dd2080c292db9dfc9",
+        "dir6-pose0": "88767a73da68cc9ea992668cbae7e5ad0cfea1e2e7f4ed8e182a82a19c0e341e",
+        "dir7-pose0": "79d53ccecbdcbbc20df502fc5b7b083c1440f7ca33506aa41a825e311c5a8faa",
+        "dir0-pose1": "2bc28f9b0ef9a9f8609899270d8f34031809a3d21bd378ab61afa930cc0dd0a4",
+        "dir1-pose1": "6b033117ff7d87453421c3182fcd7b3de01a33699c9466762c1e751a0bc73200",
+        "dir2-pose1": "69f1b8add69edd1bfa9bd27105af2a68a91b255b7a0a46dc853b6e0cb41ef95a",
+        "dir3-pose1": "ee94bf4d0cb3eeeb3b27b359af888a982afb0cb735472623bb8ee1d1e4467b3d",
+        "dir4-pose1": "ebbded433156f48e87a9ced93c0a123d3239e903f80e24437d4562a1ca924291",
+        "dir5-pose1": "16843912ba473f530945cc32c2ccf187b7d63a79ad79da201479c19d37787308",
+        "dir6-pose1": "69f1b8add69edd1bfa9bd27105af2a68a91b255b7a0a46dc853b6e0cb41ef95a",
+        "dir7-pose1": "67d61e78c3217c5ee405809545f2d2f7c7ce8cb5396cb523a2f2db335cce6795"
+      }
+    },
+    "sunweaver-wind-strider": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:55.213Z",
+      "manifestSha256": "6a485c8e7e582129f8353d4280232924f4d1900299716e0446996f7dfb2054ee",
+      "baselinePngSha256": "eb7adc5f0f3e6db46db4a11d422bb5f547a4dbd2e7dd4b7b31bb49f041c4b7ff",
+      "frameSha256": {
+        "hd": "50541f1befba3def30e4718ba753fc0490e6b8bd506633f2109be3b8cc314625"
+      }
+    },
+    "sunweaver-worker": {
+      "revision": "91439a0c09afadf11222c34fd37aaa52f21ccecc",
+      "acceptedAt": "2026-08-26T11:54:55.629Z",
+      "manifestSha256": "028c4d26a8f416845b5e2c817634f3ec35741057634331b74c1ec7347b92cf12",
+      "baselinePngSha256": "35b147ed056ff318c5ee160ba6f1d4fecd00d6093c1dbfafc1ee7c0192d73674",
+      "frameSha256": {
+        "dir0-walk0": "8fc5ec072c5c4a94a98c43225aa74c95d7d094bf1e5cf64af4d657c5bace3a7e",
+        "dir1-walk0": "b570c77f8dd2464944fc5a8e0ba81d1fe1cc55feec84d8c9fc6238082b46a468",
+        "dir2-walk0": "e496b78fbde8772793b9ab97b6cc685e8afa544024ca8a044ac9f82f280f0700",
+        "dir3-walk0": "42f58a724fb7efd254f2354faa549f51127da52135ba41765b2244ebf3d91af1",
+        "dir4-walk0": "7c72bf5e03f5e7238eaf411de4df7225de2ebc69027be54804f6c4fa95b1c126",
+        "dir5-walk0": "6446198ac6cf49d44ad34860c8477c74ad1a67b15c17b846c74e511ec5c79cef",
+        "dir6-walk0": "c1fa8a7bdaea911b61061a991c69af2f12b04d8d6b1c8d2296b31c0482627def",
+        "dir7-walk0": "ba3538cbd830b8f2a23cae3d9d2b5c91265d2263ffcd7ca4f1bde88e1079d303",
+        "dir0-walk1": "057d229145429a67679bec71f3cf705b1b1eb733e6b5cab580aede4037c30cc7",
+        "dir1-walk1": "4bb77f35f15592d440ae3c319585069cb2c1b6ad2761e1254c21f3564dfb93a3",
+        "dir2-walk1": "89ca73663391ae7e5293a013f84d4a0c03f477960e70e1d691b6755f4ce2abf6",
+        "dir3-walk1": "751a4111256e9751f62a084e817fce6211bbab2d4ee5a9abd17fd9d862a435c1",
+        "dir4-walk1": "7556234ef4bedd0878e73e914c7758f0b25afaa508c04129606cec3265372aef",
+        "dir5-walk1": "5a4fdffea2b560869463f8a5bc505d90c02c0fb82bd06644cf4ef3defb9ee189",
+        "dir6-walk1": "3db939adbed6852e7a37138b0f2cb499a189740eb8f06ac15a4b69461f249941",
+        "dir7-walk1": "6c9652e8c51dbdada60d484b5eb61aa629d2ca80e8f6ad8de112e0e4bda0cf27"
+      }
+    }
+  }
+}
