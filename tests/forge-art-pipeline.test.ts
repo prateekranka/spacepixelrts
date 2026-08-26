@@ -14,7 +14,7 @@ import * as adapterModule from '../tools/forge-art/src/adapters';
 
 const failures: string[] = [];
 const requireOk = (cond: boolean, msg: string): void => { if (!cond) failures.push(msg); };
-const sha256 = (bytes: Uint8Array): string => createHash('sha256').update(Buffer.from(bytes)).digest('hex');
+const sha256 = (bytes: Uint8Array | Uint8ClampedArray): string => createHash('sha256').update(Buffer.from(bytes as Uint8Array)).digest('hex');
 
 // ---- module surfaces ----
 const registryAny = registryModule as unknown as Record<string, unknown>;
@@ -22,9 +22,9 @@ const entries = (registryAny.CATALOG ?? registryAny.catalog) as Array<{ assetId:
 assert.ok(Array.isArray(entries), 'registry must export the public catalog (CATALOG)');
 const adaptersAny = (adapterModule as unknown as Record<string, unknown>);
 const getFrames = (adaptersAny.getFrames ?? (adaptersAny.adapters as Record<string, unknown> | undefined)?.getFrames) as
-  ((assetId: string, group?: string) => FrameSource[]) | undefined;
+  (assetId: string, group?: string) => FrameSource[];
 const getOverride = (adaptersAny.getSandboxOverride ?? (adaptersAny.adapters as Record<string, unknown> | undefined)?.getSandboxOverride) as
-  ((id: string) => unknown) | undefined;
+  (id: string) => unknown;
 assert.equal(typeof getFrames, 'function', 'adapters.getFrames must exist');
 assert.equal(typeof getOverride, 'function', 'adapters.getSandboxOverride must exist (§17)');
 
@@ -76,7 +76,7 @@ interface FrameSource { key: string; pix: { w: number; h: number; d: Uint8Clampe
 // ---- 2. manifest validation (baseline-schema) ----
 const schemaAny = schema as unknown as Record<string, unknown>;
 const validateBaselineManifest = schemaAny.validateBaselineManifest as ((json: unknown, bytes?: Uint8Array) => string[]) | undefined;
-const cellSha256FromBytes = schemaAny.cellSha256FromBytes as ((u8: Uint8Array) => string) | undefined;
+const cellSha256FromBytes = schemaAny.cellSha256FromBytes as (u8: Uint8Array | Uint8ClampedArray) => string;
 if (typeof validateBaselineManifest !== 'function') {
   failures.push('baseline-schema.validateBaselineManifest missing (contract §5 manifest validation)');
 } else {
@@ -105,7 +105,7 @@ if (typeof validateBaselineManifest !== 'function') {
       }
     }
   }
-  const pngBytes = PNG.sync.write(new PNG({ width: cellW * cols, height: cellH * rows, data: grid }));
+  const pngBytes = PNG.sync.write(new PNG({ width: cellW * cols, height: cellH * rows, data: grid } as unknown as ConstructorParameters<typeof PNG>[0]));
 
   const frameHashes = lumenFrames.map((f) => ({
     key: f.key,

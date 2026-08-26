@@ -91,7 +91,7 @@ const ID_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 for (const id of ids) {
   assert.ok(ID_RE.test(id), `assetId must be kebab-case lower: "${id}"`);
 }
-assert.deepEqual(Object.keys(ASSET_BY_ID).sort(), [...ids].sort(), 'ASSET_BY_ID must cover exactly the catalog ids');
+assert.deepEqual(Object.keys(ASSET_BY_ID as Record<string, unknown>).sort(), [...ids].sort(), 'ASSET_BY_ID must cover exactly the catalog ids');
 console.log(`registry ids: ${JSON.stringify(ids)}`);
 
 // ---- 2. factions + labels ----

@@ -42,7 +42,7 @@ interface Box { count: number; minX: number; minY: number; maxX: number; maxY: n
 
 const drawCombatSprite = sprites.drawCombatSprite as (row: number, dir: number, pose: number) => { w: number; h: number; d: Uint8ClampedArray };
 const drawWorker8Dir = sprites.drawWorker8Dir as (civ: number, dir: number, walk: number) => { w: number; h: number; d: Uint8ClampedArray };
-const scoutHdPainter = (sprites as unknown as Record<string, unknown>).drawScoutHdPix ?? (sprites as unknown as Record<string, unknown>).drawHelionScoutHdPix;
+const scoutHdPainter = ((sprites as unknown as Record<string, unknown>).drawScoutHdPix ?? (sprites as unknown as Record<string, unknown>).drawHelionScoutHdPix) as () => { w: number; h: number; d: Uint8ClampedArray };
 assert.equal(typeof scoutHdPainter, 'function', 'sprites must export drawScoutHdPix (alias of drawHelionScoutHdPix)');
 
 // Prefer the library's own Pix->RgbaImage bridge (A2 §2), fall back to the documented shape.
@@ -53,9 +53,9 @@ const img = (p: { w: number; h: number; d: Uint8ClampedArray }): RgbaImage => pi
 // ---- sandbox override surface (§17; adapters.getSandboxOverride) ----
 const adaptersAny = (adapterModule as unknown as Record<string, unknown>);
 const adapters = (adaptersAny.adapters ?? adaptersAny) as Record<string, unknown>;
-const getOverride = ((adapters.getSandboxOverride ?? adaptersAny.getSandboxOverride) as ((id: string) => unknown) | undefined);
+const getOverride = (adapters.getSandboxOverride ?? adaptersAny.getSandboxOverride) as (id: string) => unknown;
 assert.equal(typeof getOverride, 'function', 'adapters.getSandboxOverride must exist (§17 sandbox)');
-const getFrames = (adapters.getFrames ?? adaptersAny.getFrames) as ((assetId: string, group?: string) => FrameSource[]) | undefined;
+const getFrames = (adapters.getFrames ?? adaptersAny.getFrames) as (assetId: string, group?: string) => FrameSource[];
 assert.equal(typeof getFrames, 'function', 'adapters.getFrames must exist');
 interface FrameSource { key: string; pix: { w: number; h: number; d: Uint8ClampedArray }; error?: string }
 
