@@ -32,6 +32,8 @@ import {
   type PlayerProfile,
 } from './player-profile';
 import { mountFrontEndScene, type FrontEndSceneController } from './front-end-scene';
+import { installForgeReviewControl } from './dev/review-control';
+import { drawOverlays } from './dev/review-overlays';
 
 const VERSION = '0.12.0-front-end';
 const hostNode = document.getElementById('app');
@@ -66,6 +68,10 @@ let activeMatchId: string | null = null;
 let activeMatchStartedAt = 0;
 let hitSfx = 0;
 let acc = 0;
+/** FRD-2a — forge review freeze flag; only the review control ever sets it. */
+let forgeFreezeRequested = false;
+/** FRD-2a — one-shot registration of the forge overlay renderer hook. */
+let forgeHookRegistered = false;
 let last = performance.now();
 let fpsSmoothed = 60;
 let frames = 0;
@@ -408,7 +414,7 @@ function frame(now: number): void {
   }
 
   if (input && (flow.state === 'Playing' || flow.state === 'TacticalPause')) input.tick(raw);
-  if (flow.canAdvanceSimulation && world && !qaFrozen) {
+  if (flow.canAdvanceSimulation && world && !qaFrozen && !forgeFreezeRequested) {
     checkTerminalState();
     if (flow.canAdvanceSimulation) {
       acc += raw * activeConfig.speed;
@@ -564,6 +570,50 @@ function publish(): void {
   if (input) appWindow.__STARHOLD_INPUT__ = input;
   if (view) appWindow.__STARHOLD_VIEW__ = view;
   if (world) appWindow.__STARHOLD_WORLD__ = world;
+  if (forgeControl !== null && view && !forgeHookRegistered) {
+    forgeHookRegistered = true;
+    view.reviewHooks.push((ctx, renderer) => {
+      drawOverlays(ctx, world, renderer, forgeControl.overlaysState, forgeControl.perspectiveState);
+    });
+  }
+}
+
+/**
+ * FRD-2a — forge review control. Installs (and registers the overlay hook)
+ * only when running under Vite dev AND the query contains `forge`; otherwise
+ * installForgeReviewControl returns null and nothing here runs.
+ */
+const forgeControl = installForgeReviewControl({
+  getWorld: () => world,
+  getInput: () => input,
+  getView: () => view,
+  getState: () => flow.state,
+  getConfig: () => activeConfig,
+  getScenario: () => activeScenario?.id ?? null,
+  getHud: () => hud,
+  getFps: () => fpsSmoothed,
+  getP99FrameMs: () => Math.round(p99FrameMs * 100) / 100,
+  setFreeze: (frozen) => {
+    forgeFreezeRequested = frozen;
+  },
+  reloadWithParams: (mutate) => {
+    const next = new URLSearchParams();
+    for (const key of ['qa', 'qa-seed', 'orientation', 'ui', 'fog', 'forge']) {
+      const value = params.get(key);
+      if (value !== null) next.set(key, value);
+    }
+    mutate(next);
+    // Assigning location.search navigates and reloads with the full state.
+    window.location.search = next.toString();
+  },
+});
+if (forgeControl !== null) {
+  // Dev-only workbench UI. Native dynamic import (@vite-ignore, runtime
+  // specifier) keeps tools/forge-review/panel.ts and its CSS completely out
+  // of the production bundle: the control is null there, terser drops this
+  // branch, and Rollup never sees a static module to chunk.
+  const panelSpecifier = '/tools/forge-review/panel.ts';
+  void import(/* @vite-ignore */ panelSpecifier);
 }
 
 window.addEventListener('resize', () => {

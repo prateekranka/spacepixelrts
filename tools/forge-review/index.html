@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Starhaven — Forge Review Workbench</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        --fr-ink: #0b0a12;
+        --fr-cream: #f0e7d2;
+        --fr-amber: #d09a4e;
+        --fr-muted: #9ca6a5;
+        --fr-line: #2a203b;
+        --fr-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--fr-ink);
+        color: var(--fr-cream);
+        font: 14px/1.5 var(--fr-mono);
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 64px 24px 40px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 18px;
+        letter-spacing: 0.14em;
+        color: var(--fr-cream);
+      }
+      .sub { color: var(--fr-muted); font-size: 12px; margin: 0 0 28px; }
+      .sub code, li code {
+        background: #171326;
+        border: 1px solid var(--fr-line);
+        border-radius: 3px;
+        padding: 1px 5px;
+        font-size: 0.92em;
+        color: var(--fr-amber);
+      }
+      ol { margin: 0 0 28px; padding-left: 20px; }
+      li { margin-bottom: 10px; color: var(--fr-cream); }
+      .redirect { color: var(--fr-amber); font-size: 12px; letter-spacing: 0.1em; margin: 0 0 10px; }
+      a#go {
+        display: inline-block;
+        color: var(--fr-ink);
+        background: var(--fr-amber);
+        text-decoration: none;
+        padding: 8px 14px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        border-radius: 3px;
+      }
+      a#go:hover { background: #e0ad63; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>STARHAVEN FORGE REVIEW WORKBENCH</h1>
+      <p class="sub">
+        dev-only review surface · one live canvas · controls injected by
+        <code>tools/forge-review/panel.ts</code>
+      </p>
+      <ol>
+        <li>
+          This page redirects into the game with the forge control enabled
+          (<code>?forge=1</code>). The FORGE sidebar is injected into the game page
+          itself — no iframe, no second WebGL context.
+        </li>
+        <li>
+          All state reads go through the single typed control
+          (<code>window.__STARHAVEN_FORGE__</code>); every control is live.
+        </li>
+        <li>
+          Comparison panes are frozen identities captured via
+          <code>forge:review:capture</code> (pixels are CLI-composited, never
+          WebGL readback).
+        </li>
+        <li>
+          Open the workbench directly on any route with
+          <code>?qa=&lt;route&gt;&amp;forge=1&amp;qa-seed=&lt;n&gt;</code>.
+        </li>
+      </ol>
+      <p class="redirect">redirecting to the game with forge control…</p>
+      <a id="go" href="/?qa=opening&forge=1&qa-seed=424242">enter workbench now</a>
+    </main>
+    <script>
+      // Fallback landing page: hand off to the live game page with the forge
+      // control enabled after 1s. The workbench itself runs on the game page
+      // (panel.ts injects it there), so this page carries no game logic.
+      setTimeout(function () {
+        location.replace('/?qa=opening&forge=1&qa-seed=424242');
+      }, 1000);
+    </script>
+  </body>
+</html>
