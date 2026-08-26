@@ -40,7 +40,13 @@
     "test:m5": "tsx tests/m5-army.test.ts",
     "qa:m3-economies": "node scripts/qa-m3-economies.mjs",
     "qa:m4": "node scripts/qa-m4.mjs",
-    "test:m3": "tsx tests/m3-economies.test.ts && tsx tests/m3-rigs.test.ts && tsx tests/m3-boosts.test.ts"
+    "test:m3": "tsx tests/m3-economies.test.ts && tsx tests/m3-rigs.test.ts && tsx tests/m3-boosts.test.ts",
+    "test:forge-trace": "tsx tests/forge-trace-schema.test.ts && tsx tests/forge-trace-ids.test.ts && tsx tests/forge-trace-world-hash.test.ts && tsx tests/forge-trace-ordering.test.ts && tsx tests/forge-trace-cadence.test.ts && tsx tests/forge-trace-determinism.test.ts && tsx tests/forge-trace-policy.test.ts && tsx tests/forge-trace-faults.test.ts && tsx tests/forge-trace-classification.test.ts && tsx tests/forge-trace-divergence.test.ts",
+    "test:forge-trace:size": "tsx tests/forge-trace-size.test.ts",
+    "forge:trace": "node scripts/forge-trace-run.mjs",
+    "forge:trace:sweep": "node scripts/forge-trace-sweep.mjs",
+    "forge:trace:view": "node scripts/forge-trace-view.mjs",
+    "qa:forge-trace": "node scripts/qa-forge-trace.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"
