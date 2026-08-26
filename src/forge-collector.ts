@@ -98,6 +98,22 @@ function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
+/** Unit-kind guard (units only; buildings and resources are never combat victims). */
+function isUnitKind(kind: Kind): boolean {
+  return (
+    kind === Kind.Worker ||
+    kind === Kind.Scout ||
+    kind === Kind.Fighter ||
+    kind === Kind.Ravager ||
+    kind === Kind.Prism
+  );
+}
+
+/** True when the value was observed at least once (NaN sentinel = never). */
+function isObserved(value: number): boolean {
+  return !Number.isNaN(value);
+}
+
 /** Canonical faction of a sim team index (null for neutral/voidmarked/unmapped). */
 function factionOf(world: World, team: number): FactionId | null {
   if (team !== 0 && team !== 1) return null;
@@ -147,6 +163,9 @@ export class ForgeTraceCollector {
   private prevLumen: LumenPrev = { owner: -1, capturing: -1, contested: false, progress: 0, pulse: [0, 0] };
   private prevTechPath: (string | null)[] = [null, null];
   private prevPendingPath: (string | null)[] = [null, null];
+  /** Original player/rival Core ent index; -1 until first observation. */
+  private readonly coreEntityIndex: [number, number] = [-1, -1];
+  private readonly prevCoreHp: [number, number] = [Number.NaN, Number.NaN];
   private lastSampleTick = -1;
   private maxGain: [number, number] = [0, 0];
   private cachedHashTick = -1;
@@ -317,6 +336,16 @@ export class ForgeTraceCollector {
       return;
     }
 
+    // Latch the original Core entities once (first post-baseline observation).
+    if (this.coreEntityIndex[0] < 0) {
+      for (let i = 0; i < MAX_ENTS; i++) {
+        const e = world.ents[i];
+        if (!e.alive || e.kind !== Kind.Hall) continue;
+        if (e.team === 0 && this.coreEntityIndex[0] < 0) this.coreEntityIndex[0] = i;
+        if (e.team === 1 && this.coreEntityIndex[1] < 0) this.coreEntityIndex[1] = i;
+      }
+    }
+
     // Bounded-diff sampling: warm the world hash every hashEveryTicks ticks.
     if (tick % this.hashEveryTicks === 0) this.hashAt(world, tick);
 
@@ -357,11 +386,8 @@ export class ForgeTraceCollector {
         if (entity.kind === Kind.Scout) this.emit('scout-loss', factionOf(world, entity.team), [i], {});
       }
 
-      // Core damage: Hall hp decreased since the last observation.
-      if (nowAlive && entity.kind === Kind.Hall && teamOk && this.prevHp[i] > entity.hp) {
-        const damage = round1(Math.max(0, this.prevHp[i] - entity.hp));
-        if (damage > 0) this.emit('core-damage', factionOf(world, entity.team), [i], { damage });
-      }
+      // Core damage is handled once below via coreEntityIndex (reads the real
+      // Core hp; bystander tid heuristics cannot produce phantom damage).
 
       // Construction: a new alive building starts at progress < 1; completion
       // is the <1 -> >=1 progress transition.
@@ -435,9 +461,22 @@ export class ForgeTraceCollector {
 
       // Combat engagement: combatT 0 -> positive, with a damage attribution
       // heuristic — the victim's hp drop over the interval, rounded to 0.1.
-      if (nowAlive && teamOk && !resource && this.prevCombatT[i] === 0 && entity.combatT > 0) {
-        const victim = entity.tid >= 0 ? world.ents[entity.tid] : undefined;
-        if (victim !== undefined && (victim.alive || victim.hp <= 0) && this.prevHp[victim.id] > 0) {
+      // Combat is strictly cross-team: same-team tid targets (a worker building
+      // its own structure, a Hall under construction) are legal work, not
+      // combat, and must never emit engagement events.
+      const victimCandidate = entity.tid >= 0 ? world.ents[entity.tid] : undefined;
+      const isCrossTeamCombat =
+        nowAlive &&
+        teamOk &&
+        !resource &&
+        this.prevCombatT[i] === 0 &&
+        entity.combatT > 0 &&
+        victimCandidate !== undefined &&
+        isUnitKind(victimCandidate.kind) === true &&
+        victimCandidate.team !== entity.team;
+      if (isCrossTeamCombat && victimCandidate !== undefined) {
+        const victim = victimCandidate;
+        if ((victim.alive || victim.hp <= 0) && this.prevHp[victim.id] > 0) {
           const damage = round1(Math.max(0, this.prevHp[victim.id] - Math.max(0, victim.hp)));
           if (damage > 0) {
             this.emit('combat-engagement', factionOf(world, entity.team), [i, victim.id], {
@@ -449,6 +488,28 @@ export class ForgeTraceCollector {
             });
           }
         }
+      }
+    }
+
+    // Core damage: the player or rival Core's hp decreased. This reads the
+    // actual Core hp (never a bystander's tid), so self-repair and unrelated
+    // combat cannot produce phantom core-damage events.
+    for (const team of [0, 1] as const) {
+      const hallIndex = this.coreEntityIndex[team];
+      if (hallIndex < 0) continue;
+      const hall = world.ents[hallIndex];
+      if (hall === undefined || !hall.alive || hall.kind !== Kind.Hall) continue;
+      const prevCoreHp = this.prevCoreHp[team];
+      if (!isObserved(prevCoreHp)) continue;
+      this.prevCoreHp[team] = hall.hp;
+      if (hall.hp < prevCoreHp - 1e-9) {
+        const attackerTeam = team === 0 ? 1 : 0;
+        this.emit(
+          'core-damage',
+          factionOf(world, team),
+          [hall.id],
+          { hpBefore: round1(prevCoreHp), hpAfter: round1(hall.hp), byTeam: factionOf(world, attackerTeam) },
+        );
       }
     }
 
