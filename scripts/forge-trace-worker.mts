@@ -26,7 +26,6 @@ import {
   factionToLegacyCiv,
   DEFAULT_CAMERA_PRESET,
   TERMINAL_BY_TICK,
-  TICK_HZ,
   DIFFICULTIES,
   CANONICAL_FACTIONS,
   POLICY_IDS,
@@ -65,12 +64,7 @@ interface SweepArgs {
 }
 
 function parseWorkerArgs(argv: string[]): { command: 'single' | 'sweep'; args: Record<string, unknown> } {
-  const raw = argv[2];
-  if (raw !== undefined && raw.startsWith('{')) {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return { command: parsed.command === 'sweep' ? 'sweep' : 'single', args: parsed };
-  }
-  // Direct positional form: `worker.mts single <seed> <difficulty> <player> <rival> [--key=value...]`
+  // Direct form: `worker.mts single <seed> <difficulty> <player> <rival> [--key=value...]`
   const rest = argv.slice(2);
   const command: 'single' | 'sweep' = rest[0] === 'sweep' ? 'sweep' : 'single';
   const positionals: string[] = [];
@@ -588,12 +582,17 @@ function cmdSweep(args: SweepArgs): number {
 
   const rows = cells
     .map((c) => {
-      const cls = c.ok ? 'ok' : 'fail';
-      const badge = c.ok ? 'ok' : 'FAIL';
+      // Verdict is severity-aware: a cell with only warnings ran clean from a
+      // doctrine standpoint; only failure-severity classifications read FAIL.
+      const hasFailure = c.classifications.some((x) => x.severity === 'failure');
+      const hasWarning = c.classifications.length > 0;
+      const verdict = hasFailure ? 'FAIL' : hasWarning ? 'WARN' : 'PASS';
+      const cls = hasFailure ? 'fail' : hasWarning ? 'warn' : 'ok';
       return (
         `<tr class="${cls}"><td>${c.seed}</td><td>${c.difficulty}</td><td>${c.pairing}</td>` +
         `<td>${c.terminalTick}</td><td>${c.winner ?? 'none'}</td><td>${c.eventCount}</td>` +
-        `<td>${c.failures}</td><td class="${cls}-badge">${badge}</td></tr>`
+        `<td class="${cls}-badge">${verdict}</td>` +
+        `<td>${c.classifications.map((x) => `${x.id}@${x.firstTick}`).join('<br>') || '&mdash;'}</td></tr>`
       );
     })
     .join('\n');
@@ -607,19 +606,22 @@ function cmdSweep(args: SweepArgs): number {
   th, td { border: 1px solid #30363d; padding: 0.45rem 0.7rem; text-align: left; font-size: 0.85rem; }
   th { background:#161b22; color:#8b949e; font-weight: 600; }
   tr.ok td { background:#10241a; }
+  tr.warn td { background:#2a2313; }
   tr.fail td { background:#2d1517; }
   .ok-badge { color:#3fb950; font-weight: 700; }
+  .warn-badge { color:#d29922; font-weight: 700; }
   .fail-badge { color:#f85149; font-weight: 700; }
 </style></head>
 <body>
 <h1>Forge Trace Sweep Summary</h1>
 <p class="meta">seeds [${args.seeds.join(', ')}] &times; difficulties [${args.difficulties.join(', ')}] &times; pairings [${args.pairings.join(', ')}] &mdash; ${cells.length} cells</p>
 <table>
-<thead><tr><th>seed</th><th>difficulty</th><th>pairing</th><th>terminalTick</th><th>winner</th><th>eventCount</th><th>failures</th><th>ok</th></tr></thead>
+<thead><tr><th>seed</th><th>difficulty</th><th>pairing</th><th>terminalTick</th><th>winner</th><th>eventCount</th><th>verdict</th><th>findings</th></tr></thead>
 <tbody>
 ${rows}
 </tbody>
 </table>
+<p class="meta">verdict: PASS = clean &middot; WARN = warnings only (benign findings, reported) &middot; FAIL = failure-severity classification. Gate exit honors --fail-on-game-gate regardless of display.</p>
 </body></html>
 `;
   fs.writeFileSync(path.join(out, 'sweep-summary.html'), html);
