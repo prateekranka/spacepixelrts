@@ -224,10 +224,15 @@ input[type="range"] { accent-color: #D09A4E; }
 .fal-kv { display: grid; grid-template-columns: 92px 1fr; gap: 2px 8px; font-size: 11px; }
 .fal-kv dt { color: #9CA6A5; }
 .fal-kv dd { margin: 0; color: #F0E7D2; overflow-wrap: anywhere; }
-#fal-gates { width: 100%; border-collapse: collapse; font-size: 11px; }
+#fal-gates { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
 #fal-gates th { color: #9CA6A5; text-align: left; font-weight: 400; padding: 2px 4px;
   border-bottom: 1px solid #2A203B; }
-#fal-gates td { padding: 2px 4px; border-bottom: 1px solid #1E1A2E; vertical-align: top; }
+#fal-gates td { padding: 2px 4px; border-bottom: 1px solid #1E1A2E; vertical-align: top;
+  overflow-wrap: anywhere; }
+#fal-gates th:nth-child(1) { width: 42%; }
+#fal-gates th:nth-child(2) { width: 16%; }
+#fal-gates th:nth-child(3) { width: 24%; }
+#fal-gates th:nth-child(4) { width: 18%; }
 #fal-gates td.v { color: #9CA6A5; }
 #fal-gates tr[data-verdict="pass"] td.verdict { color: #4E8A5A; }
 #fal-gates tr[data-verdict="fail"] td.verdict { color: #B84B45; }
