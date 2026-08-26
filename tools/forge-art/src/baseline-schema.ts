@@ -33,7 +33,7 @@ export interface BaselineManifest {
   /** ISO-8601; informational only, never hashed into frames. */
   createdAt: string;
   source: { adapter: string; dims: [number, number] };
-  cellLayout: { cellW: number; cellH: number; cols: number; rows: number; order: 'dir-major' | 'grid' };
+  cellLayout: { cellW: number; cellH: number; cols: number; rows: number; order: 'dir-major' | 'grid'; count?: number };
   anchor: { x: number; y: number };
   worldScale: { x: number; y: number };
   /** One entry per primary frame key, in frame-key order. */

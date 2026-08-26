@@ -6,9 +6,12 @@
  * baseline after every check passes. Never commits. Never runs from the browser.
  *
  * Validation order (exit codes per spec §14):
- *   2 usage · 1 malformed evidence/registry · 7 missing baseline · 8 unknown asset
+ *   2 usage · 1 malformed evidence/registry/schema · 7 missing baseline · 8 unknown asset
  *   3 stale evidence · 4 failed gate · 5 hash mismatch · 6 unrelated drift
  *   9 partial candidate · 10 post-write verification failure
+ * The written manifest is always rebuilt in the complete §5 v1 shape (registry/
+ * adapter-derived fields + paletteStats; never spread from the accepted file) and
+ * re-validated with validateBaselineManifest() before the atomic rename (R1 M1).
  *
  * Usage:
  *   npx tsx scripts/forge-art-accept.mjs --asset=<id> --evidence=<abs-manifest> [--apply]
@@ -22,7 +25,7 @@ import { PNG } from 'pngjs';
 import { REPO_ROOT, parseArgs, sha256File } from './forge-art-lib.mjs';
 import { ASSET_BY_ID, CATALOG } from '../tools/forge-art/src/registry';
 import { getFrames } from '../tools/forge-art/src/adapters';
-import { gridGeometryFor, cellSha256FromBytes } from '../tools/forge-art/src/baseline-schema';
+import { gridGeometryFor, cellSha256FromBytes, validateBaselineManifest } from '../tools/forge-art/src/baseline-schema';
 
 const require = createRequire(import.meta.url);
 const BASELINES_DIR = path.join(REPO_ROOT, 'tools', 'forge-art', 'baselines');
@@ -111,6 +114,8 @@ async function main() {
       fail(1, `accepted manifest unparseable: ${error?.message ?? error}`);
     }
   } else {
+    // Plan-only stub for --init: the written manifest is rebuilt in full below,
+    // so this never lands on disk; it only feeds the plan/changed-frame report.
     acceptedManifest = { schemaVersion: 1, assetId, label: def.label, faction: def.faction, category: def.category, revision: null, frames: [] };
   }
   let evidence;
@@ -213,20 +218,39 @@ async function main() {
   }
 
   // Atomic swap: write temps, rename both, then rewrite registry entry atomically.
-  fs.mkdirSync(baselineDir, { recursive: true });
-  const tmpPng = renderGridPng(frames, geo);
-  const tmpPngPath = pngPath + '.tmp';
-  fs.writeFileSync(tmpPngPath, tmpPng);
+  // The manifest is rebuilt in FULL from the current registry/adapter data (never
+  // spread from the accepted file, which may be an older slim shape), so both
+  // --init and replacement writes produce the complete §5 v1 manifest. It must
+  // pass validateBaselineManifest() BEFORE any bytes hit disk (R1 M1).
   const newManifest = {
-    ...acceptedManifest,
+    schemaVersion: 1,
+    assetId,
+    label: def.label,
+    faction: def.faction,
+    category: def.category,
     revision: head,
     createdAt: new Date().toISOString(),
+    source: { adapter: def.adapterId, dims: [geo.cellW * geo.cols, geo.cellH * geo.rows] },
+    cellLayout: { cellW: geo.cellW, cellH: geo.cellH, cols: geo.cols, rows: geo.rows, order: 'dir-major', count: frames.length },
+    anchor: def.anchor,
+    worldScale: def.worldScale,
     frames: frames.map((frame) => ({
       key: frame.key,
       sha256: candidateHashes[frame.key],
       alphaPixels: countAlpha(frame.pix.d),
     })),
+    paletteStats: computePaletteStats(frames),
+    thresholdsUsed: {},
+    gates: {},
   };
+  const manifestErrors = validateBaselineManifest(newManifest);
+  if (manifestErrors.length > 0) {
+    fail(1, `generated manifest fails schema v1 (${assetId}): ${manifestErrors.join('; ')}`);
+  }
+  fs.mkdirSync(baselineDir, { recursive: true });
+  const tmpPng = renderGridPng(frames, geo);
+  const tmpPngPath = pngPath + '.tmp';
+  fs.writeFileSync(tmpPngPath, tmpPng);
   const tmpManifestPath = manifestPath + '.tmp';
   fs.writeFileSync(tmpManifestPath, JSON.stringify(newManifest, null, 2));
   fs.renameSync(tmpPngPath, pngPath);
@@ -264,6 +288,38 @@ function countAlpha(d) {
   let count = 0;
   for (let i = 3; i < d.length; i += 4) if (d[i] > 0) count++;
   return count;
+}
+
+/**
+ * Aggregate palette statistics across all frames of an asset (schema §5) — the
+ * same computation forge-art-baseline.mjs emits, so accepted manifests carry the
+ * full candidate shape instead of a slim subset.
+ */
+function computePaletteStats(frames) {
+  const colors = new Set();
+  let alphaPixels = 0;
+  let lumaTotal = 0;
+  let brightPixels = 0;
+  let cellArea = 0;
+  for (const frame of frames) {
+    const d = frame.pix.d;
+    cellArea += frame.pix.w * frame.pix.h;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] <= 0) continue;
+      alphaPixels++;
+      colors.add(`${d[i]},${d[i + 1]},${d[i + 2]}`);
+      const luma = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      lumaTotal += luma;
+      if (luma >= 65) brightPixels++;
+    }
+  }
+  return {
+    uniqueColors: colors.size,
+    alphaPixels,
+    alphaCoverage: alphaPixels / Math.max(1, cellArea),
+    averageLuma: alphaPixels ? lumaTotal / alphaPixels : 0,
+    brightMaterialShare: alphaPixels ? brightPixels / alphaPixels : 0,
+  };
 }
 
 function renderGridPng(frames, geo) {
