@@ -22,6 +22,7 @@
     "qa:front-end-themes": "node scripts/qa-front-end-rebuild.mjs",
     "qa:front-end": "node scripts/qa-front-end-rebuild.mjs",
     "qa:aaa": "node scripts/qa-aaa-front-end.mjs",
+    "self-view": "node scripts/self-view-harness.mjs",
     "test:vs2b": "tsx tests/vs2b-lumen-field.test.ts",
     "test:vs3": "tsx tests/vs3-results.test.ts",
     "test:vs4": "tsx tests/vs4-combat-assets.test.ts",

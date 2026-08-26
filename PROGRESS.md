@@ -7,6 +7,24 @@ skirmish before deep controls or general polish: menu -> scout -> gather -> choo
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
 
+## Self-view harness (2026-08-26) — DONE
+
+- `scripts/self-view-harness.mjs` (`npm run self-view -- --out=<abs dir>`): boots the dev server,
+  captures all 13 `?qa=` routes plus 4 camera/selection extras from a real Chromium, verifies each
+  against `__STARHAVEN_QA__`, and composes ONE labeled board (`self-view.png`) with palette strip,
+  per-cell state/palette/p99/fps, and red-flagged gate failures. Purpose: one image feeds one blind
+  critic pass for cross-state coherence (palette weight, unit scale, HUD density).
+- Objective gates: probe state == expected route state; capture not black/empty; palette adherence
+  >= 0.35 (measured 0.91–1.00). Routes and palette are parsed from `src/qa-scenarios.ts` /
+  `src/palette.ts` so the tool cannot drift from source.
+- Perf budget is NOT gated by default on this Linux box: it has no GPU (SwiftShader WebGL,
+  steady ~20 fps / p99 100–180 ms in Playing states). The absolute 8 ms budget is host-specific;
+  opt back in with `--gate-p99=8` on GPU hardware. `qa-m0.mjs` still hardcodes Chrome and does
+  not run here.
+- Verified run (13/13 routes, 4/4 extras, ok=true) + blind critic PASS (labels readable, all
+  content non-black/distinct, no layout defects, coherent style):
+  `/home/bobbyranka/workspace/evidence/starhaven-self-view/20260826T082148Z/`.
+
 ## AAA front-end art (2026-08-24) — DONE
 
 Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`). PR **#11** open
