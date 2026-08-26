@@ -2,10 +2,28 @@
 
 **Play:** https://spacepixelrts.pages.dev
 **Bar:** StarCraft II (space RTS, base building, asymmetric factions) — blind, on the running game.
+**Active Forge Art Lab:** `hermes/forge-art-lab` — complete.
 **Active goal:** **Playable Vertical Slice** — close one honest 12–18 minute iPad-first 4:3
 skirmish before deep controls or general polish: menu -> scout -> gather -> choose technology path ->
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
+
+## Forge Art Lab v1 (2026-08-26) — COMPLETE
+
+- Developer-only workbench is complete. It covers catalog selection, accepted/candidate A/B,
+  pixel passes, objective gates, roster scale, real-renderer context scenes, sandbox preview,
+  proof packs, and safe acceptance.
+- Accepted baselines were repaired to the complete v1 manifest shape. All 14 manifests validate
+  with `validateBaselineManifest()`. Registry hashes match the committed PNG and frame bytes.
+- Fixed catalog click selection and per-asset aria labels. Gate notes now use full-width rows, so
+  the inspector table stays inside the 1366 × 1024 viewport. Rig URLs now honor a valid `scene=`
+  value and fall back to `quiet-helios` only when the value is missing or invalid.
+- Verification: `npm run test:forge-art`, `npm run forge:art:typecheck`,
+  `npm run forge:art:build`, `npm run build`, and `scripts/forge-art-prod-isolation.sh` pass.
+- Real-browser gate: `npm run qa:forge-art -- --out=/tmp/fal-qa-final` passes 14/14 steps;
+  manifest `ok=true`, errors `[]`, screenshots exact 1366 × 1024, one live WebGL context in
+  the rig, and no leaked Vite process.
+- Forge Art Lab remains local and is not deployed to Cloudflare.
 
 ## Self-view harness (2026-08-26) — DONE
 
