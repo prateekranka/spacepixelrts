@@ -134,13 +134,15 @@ export async function launchChromium(playwright, { marker = 'forge-art' } = {}) 
   let lastError;
   for (const opts of attempts) {
     try {
+      const { executablePath, channel, ...rest } = opts;
+      void rest;
       return await playwright.chromium.launch({
         headless: true,
-        ...opts,
+        ...(executablePath ? { executablePath } : {}),
+        ...(channel ? { channel } : {}),
         args: [
           '--disable-background-timer-throttling',
           '--disable-renderer-backgrounding',
-          `--user-data-dir=/tmp/${marker}-${process.pid}-${Math.random().toString(36).slice(2, 8)}`,
         ],
       });
     } catch (error) {
