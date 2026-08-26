@@ -7,6 +7,37 @@ skirmish before deep controls or general polish: menu -> scout -> gather -> choo
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
 
+## Forge Trace FTR-1/2 (2026-08-26) — DONE, branch pushed, NOT merged/deployed
+
+- Branch `hermes/forge-trace` (isolated worktree `~/workspace/spacepixelrts-forge-trace`,
+  based at `ced0b94`), pushed to origin; PR open left to bobby. No merge into `chatgptpro2008`,
+  no deploy. Contract frozen in `docs/FORGE_TRACE.md`; shared constants in `src/pacing-contract.ts`.
+- Delivers: versioned v1 event traces (`trace.json` + `events.ndjson`), deterministic world-identity
+  hashes (FNV-1a over canonical integer snapshots, fog folded raw), instance-scoped collector over
+  the untouched World (`src/sim.ts` / `src/engine.ts` diff vs base = ZERO lines), legal automated
+  policies (`standard-opening`, `lost-scout-recovery` with explicit `fault-injection`), pacing/AI
+  diagnostics (10 classifications), first-divergence analysis, single + sweep CLIs, developer-only
+  interactive timeline (self-contained HTML + Chromium PNG), frameRef Review-Deck link contract,
+  and `npm run qa:forge-trace` (12-step real-Chromium gate).
+- Commands: `forge:trace`, `forge:trace:sweep`, `forge:trace:view`, `qa:forge-trace`,
+  `test:forge-trace` (+`:size`). Strict TDD: 12 RED suites committed first (`bf12610`), then GREEN.
+- Verification (lead-run): test:m0/vs2/vs5 PASS, build PASS, qa:vs5 PASS, qa:forge-trace 12/12 ok,
+  test:forge-trace 11 files PASS, dist contains zero forge strings, protected files untouched,
+  no leaked vite/chromium processes.
+- Determinism proven: same seed/config/policy twice -> identical 1,906-event streams (SHA match),
+  identical 578 checkpoint hashes, identical milestones. Evidence regenerated post-fixes:
+  `/home/bobbyranka/workspace/evidence/starhaven-forge-trace/20260826T113628Z/`
+  (single + single-repeat + 18-cell sweep + EVIDENCE_NOTES.md).
+- Sweep: seeds 24301/424242/57005 x cadet/standard/veteran x both pairings = 18/18 valid runs,
+  worst terminal 8:46 (cap 18:00); tool failures 0; invalid traces 0; game-gate findings are
+  warnings only (idle-production pre-path-lock by design; seed-57005 rejection bursts forensically
+  traced to legal channel-busy refusals). Reported, not hidden; `--fail-on-game-gate` available.
+- Reviewer-found defects fixed under FTR-2: phantom cross-team combat attribution, phantom early
+  attack from bystander hp deltas, idle-production firing before a Yard existed, and a dead
+  core-damage path (NaN sentinel never seeded). All re-verified with fresh runs + probes kept in
+  `tasks/forge-trace/probe-*.ts`.
+
+
 ## Self-view harness (2026-08-26) — DONE
 
 - `scripts/self-view-harness.mjs` (`npm run self-view -- --out=<abs dir>`): boots the dev server,
