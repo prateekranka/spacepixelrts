@@ -40,7 +40,15 @@
     "test:m5": "tsx tests/m5-army.test.ts",
     "qa:m3-economies": "node scripts/qa-m3-economies.mjs",
     "qa:m4": "node scripts/qa-m4.mjs",
-    "test:m3": "tsx tests/m3-economies.test.ts && tsx tests/m3-rigs.test.ts && tsx tests/m3-boosts.test.ts"
+    "test:m3": "tsx tests/m3-economies.test.ts && tsx tests/m3-rigs.test.ts && tsx tests/m3-boosts.test.ts",
+    "forge:art": "vite --config vite.forge-art.config.ts --port 5179 --host 127.0.0.1 --strictPort",
+    "forge:art:build": "vite build --config vite.forge-art.config.ts",
+    "forge:art:typecheck": "tsc --noEmit -p tsconfig.forge-art.json",
+    "forge:art:proof": "node scripts/forge-art-proof.mjs",
+    "forge:art:baseline": "node scripts/forge-art-baseline.mjs",
+    "forge:art:accept": "node scripts/forge-art-accept.mjs",
+    "test:forge-art": "tsx tests/forge-art-registry.test.ts && tsx tests/forge-art-metrics.test.ts && tsx tests/forge-art-pipeline.test.ts",
+    "qa:forge-art": "node scripts/qa-forge-art.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"

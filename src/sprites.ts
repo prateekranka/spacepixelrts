@@ -1172,7 +1172,7 @@ function drawHelionAction(dir: number, action: number): Pix {
   return drawHelionVariant(dir, false, action as HelionAction);
 }
 
-function drawHelionAction8Dir(dir: number, action: number): Pix {
+export function drawHelionAction8Dir(dir: number, action: number): Pix {
   const d = ((dir | 0) + 8) % 8;
   if (d === 3) return drawHelionAction(1, action).flipX();
   if (d === 4) return drawHelionAction(0, action).flipX();
@@ -1372,6 +1372,31 @@ export function drawWorker8Dir(civ: number, dir: number, walk: number): Pix {
   if (d === 4) return drawWorkerAuth(civ, 0, w).flipX();
   if (d === 5) return drawWorkerAuth(civ, 7, w).flipX();
   return drawWorkerAuth(civ, d, w);
+}
+
+/** Forge Art Lab seam — one scout-strip cell exactly as buildSpriteAtlas() blits it. */
+export function drawScoutStripCell(col: number): Pix {
+  const c = Math.max(0, Math.min(SCOUT_COLS - 1, Math.floor(col)));
+  const civ = Math.floor(c / UNIT_FRAMES);
+  const frame = c % UNIT_FRAMES;
+  if (civ === 0 && frame < 4) return drawHelionScoutHdPix();
+  const civs: Civ[] = ['vespari', 'aurion', 'voidmarked'];
+  return upscaleNearest4(drawUnitSprite(Kind.Scout, civs[civ], frame));
+}
+
+function upscaleNearest4(source: Pix): Pix {
+  const out = Pix.alloc(source.w * 4, source.h * 4);
+  for (let y = 0; y < out.h; y++) {
+    for (let x = 0; x < out.w; x++) {
+      const si = (Math.floor(x / 4) + Math.floor(y / 4) * source.w) * 4;
+      const di = (x + y * out.w) * 4;
+      out.d[di] = source.d[si];
+      out.d[di + 1] = source.d[si + 1];
+      out.d[di + 2] = source.d[si + 2];
+      out.d[di + 3] = source.d[si + 3];
+    }
+  }
+  return out;
 }
 
 // ── VS-4 combat strip — four authored role silhouettes, 64px source cells ───
@@ -2024,7 +2049,7 @@ function drawHelionScoutPix(): Pix {
 }
 
 /** 128px Helion Tri-Arc Surveyor for close-zoom, source-resolution art. */
-function drawHelionScoutHdPix(): Pix {
+export function drawHelionScoutHdPix(): Pix {
   const p = Pix.alloc(128, 128);
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
   const wideLine = (x0: number, y0: number, x1: number, y1: number, c: Rgba, width = 2) => {
