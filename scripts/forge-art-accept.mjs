@@ -132,8 +132,10 @@ async function main() {
   const allowedDirty = new Set([...(evidence.declaredDirtyFiles ?? []), ...gitDirtyFiles().filter(() => false)]);
   void allowedDirty;
   const dirty = gitDirtyFiles();
-  const declared = new Set(evidence.declaredDirtyFiles ?? []);
-  const unexpectedDirty = dirty.filter((file) => !declared.has(file));
+  const declared = new Set([...(evidence.declaredDirtyFiles ?? []), 'tools/forge-art/baselines']);
+  // Baseline writes themselves are the expected output of acceptance; anything
+  // else dirty makes the evidence stale.
+  const unexpectedDirty = dirty.filter((file) => !declared.has(file) && !file.startsWith('tools/forge-art/baselines'));
   if (unexpectedDirty.length > 0 && apply) {
     fail(3, `stale evidence: worktree dirty beyond declared files: ${unexpectedDirty.join(', ')}`);
   }
