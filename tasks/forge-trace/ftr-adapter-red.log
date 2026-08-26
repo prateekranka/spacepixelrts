@@ -1,0 +1,20 @@
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-frames' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-review-link.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+    at moduleResolve (node:internal/modules/esm/resolve:879:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:708:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:728:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///home/bobbyranka/workspace/spacepixelrts-forge-trace/node_modules/tsx/dist/register-C4vWVmug.mjs:2:10932)
+    at resolveDirectorySync (file:///home/bobbyranka/workspace/spacepixelrts-forge-trace/node_modules/tsx/dist/register-C4vWVmug.mjs:2:12238)
+    at resolveTsPathsSync (file:///home/bobbyranka/workspace/spacepixelrts-forge-trace/node_modules/tsx/dist/register-C4vWVmug.mjs:2:13445)
+    at resolve (file:///home/bobbyranka/workspace/spacepixelrts-forge-trace/node_modules/tsx/dist/register-C4vWVmug.mjs:2:15991) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-frames'
+}
+
+Node.js v26.7.0
