@@ -47,6 +47,10 @@ declare global {
 // 0) URL flags — read BEFORE constructing the renderer (readonly class fields).
 const params = new URLSearchParams(window.location.search);
 const flagsOk = params.get('mesh') === '0' && params.get('combat') === '1';
+const requestedScene = params.get('scene');
+const initialScene: SceneName = SCENE_NAMES.includes(requestedScene as SceneName)
+  ? (requestedScene as SceneName)
+  : 'quiet-helios';
 
 // 1) Host layout BEFORE `new GameRenderer(host)` — the constructor reads
 //    host.clientWidth/clientHeight for canvas size AND camera aspect (A4 §1).
@@ -181,12 +185,13 @@ export function disposeRig(): void {
 
 window.addEventListener('pagehide', disposeRig);
 
-// First paint: quiet-helios so the page is never a black canvas.
+// First paint: use the requested fixed scene when valid; fall back to
+// quiet-helios so a missing/invalid scene never produces a black canvas.
 wireSidebar();
-void show('quiet-helios').then((snap) => {
+void show(initialScene).then((snap) => {
   setStatus(
     `scene ${snap.name} · ids ${snap.ids.length} · tick ${snap.tick} · fog ${snap.fog} · ` +
       `zoom ${snap.camera.halfH} · ${flagsOk ? 'mesh=0&combat=1' : 'MISSING URL FLAGS'}`,
   );
-  document.querySelector<HTMLButtonElement>('[data-fal-scene="quiet-helios"]')?.classList.add('active');
+  document.querySelector<HTMLButtonElement>(`[data-fal-scene="${snap.name}"]`)?.classList.add('active');
 });

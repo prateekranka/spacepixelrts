@@ -1600,8 +1600,12 @@ function renderInspector(
         el('td', { class: 'v' }, [g.threshold]),
         el('td', { class: 'verdict' }, [!g.pass ? (g.proven ? 'FAIL' : 'WARN') : 'PASS']),
       );
-      if (g.note) tr.append(el('td', { class: 'note', colspan: '4' }, [g.note]));
       gatesTable.append(tr);
+      if (g.note) {
+        gatesTable.append(el('tr', { 'data-verdict': verdict }, [
+          el('td', { class: 'note', colspan: '4' }, [g.note]),
+        ]));
+      }
     }
   }
 
@@ -1664,8 +1668,10 @@ function updateRail(def: AssetDefinition, state: ForgeLabState): void {
         const known = railStatus.get(id);
         if (known) dot.setAttribute('data-state', stateAttrFor(known));
       }
-      if (id === def.assetId) button.setAttribute('aria-label', `Asset ${def.label} (stable ID ${id}) (selected)`);
-      else button.setAttribute('aria-label', `Asset ${def.label} (stable ID ${id})`);
+      const buttonDef = ASSET_BY_ID[id];
+      const buttonLabel = buttonDef?.label ?? id;
+      if (id === def.assetId) button.setAttribute('aria-label', `Asset ${buttonLabel} (stable ID ${id}) (selected)`);
+      else button.setAttribute('aria-label', `Asset ${buttonLabel} (stable ID ${id})`);
     }
   }
 }

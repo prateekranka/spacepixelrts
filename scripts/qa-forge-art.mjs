@@ -121,6 +121,13 @@ async function main() {
       const entries = await page.evaluate(() => globalThis.__FORGE_ART_QA__.catalog.entries.map((e) => e.id));
       for (const id of REQUIRED_IDS) assertThat(entries.includes(id), `catalog missing ${id}`);
       assertThat(entries.length === REQUIRED_IDS.length, `catalog size ${entries.length} != ${REQUIRED_IDS.length}`);
+      const ariaLabels = await page.locator('[data-fal-asset]').evaluateAll((buttons) =>
+        buttons.map((button) => ({ id: button.getAttribute('data-fal-asset'), label: button.getAttribute('aria-label') })),
+      );
+      for (const entry of ariaLabels) {
+        assertThat(entry.label?.includes(`stable ID ${entry.id}`) === true, `catalog aria-label missing stable ID for ${entry.id}`);
+      }
+      assertThat(new Set(ariaLabels.map((entry) => entry.label)).size === ariaLabels.length, 'catalog aria-labels must be unique');
     });
 
     await step('vocabulary-clean', async () => {
@@ -192,6 +199,8 @@ async function main() {
         waitUntil: 'load', timeout: NAV_TIMEOUT_MS,
       });
       await rigPage.waitForFunction(() => globalThis.__FORGE_RIG__?.ready === true, null, { timeout: PROBE_TIMEOUT_MS });
+      const initialScene = await rigPage.evaluate(() => globalThis.__FORGE_RIG__.current);
+      assertThat(initialScene === 'unit-selected', `rig ignored URL scene=unit-selected (current ${String(initialScene)})`);
       const webglCount = await rigPage.evaluate(() =>
         [...document.querySelectorAll('canvas')].filter((c) => {
           try { return c.getContext('webgl2') || c.getContext('webgl'); } catch { return false; }
