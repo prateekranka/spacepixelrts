@@ -186,8 +186,9 @@ async function main() {
 
     // ---- pixel sheets via composer page (Canvas2D only) ----
     const payloads = [];
+    const toArray = (buffer) => Array.from(buffer);
     for (const assetId of assetIds) {
-      const candidateFrames = getFrames(assetId).map((f) => ({ key: f.key, bytes: Buffer.from(f.pix.d) }));
+      const candidateFrames = getFrames(assetId).map((f) => ({ key: f.key, bytes: toArray(Buffer.from(f.pix.d)) }));
       const accepted = acceptedCells(assetId);
       const geo = gridGeometryFor(assetId);
       const scale = geo.cellW >= 64 ? 2 : 4;
@@ -199,10 +200,10 @@ async function main() {
       payloads.push({ id: `${assetId}-candidate-sil`, title: `${assetId} — silhouette`, frames: candidateFrames, labels: false, pass: 'silhouette', ...common });
       payloads.push({ id: `${assetId}-candidate-val`, title: `${assetId} — value`, frames: candidateFrames, labels: false, pass: 'value', ...common });
       if (accepted) {
-        payloads.push({ id: `${assetId}-accepted`, title: `${assetId} — ACCEPTED BASELINE`, frames: accepted.cells, labels: true, pass: 'none', ...common });
+        payloads.push({ id: `${assetId}-accepted`, title: `${assetId} — ACCEPTED BASELINE`, frames: accepted.cells.map((c) => ({ key: c.key, bytes: toArray(c.data) })), labels: true, pass: 'none', ...common });
         const diffFrames = accepted.cells.map((cell, index) => ({
           key: cell.key,
-          bytes: diffBytes(cell.data, candidateFrames[index]?.bytes ?? Buffer.alloc(cell.data.length)),
+          bytes: toArray(diffBytes(cell.data, candidateFrames[index] ? Buffer.from(candidateFrames[index].bytes) : Buffer.alloc(cell.data.length))),
         }));
         payloads.push({ id: `${assetId}-diff`, title: `${assetId} — DIFFERENCE (red = changed)`, frames: diffFrames, labels: true, pass: 'none', ...common });
       }
@@ -251,7 +252,8 @@ async function main() {
           'candidate-sil': 'silhouette-sheet.png',
           'candidate-val': 'value-sheet.png',
         };
-        const target = map[payload.id.replace(/^[^-]+-/, '')];
+        const suffix = payload.id.slice(assetIds[0].length + 1); // strip '<assetId>-'
+        const target = map[suffix];
         if (target) await el.screenshot({ path: path.join(outDir, target) });
       }
       // source sheet = candidate at 1x
