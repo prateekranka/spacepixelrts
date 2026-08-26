@@ -1,0 +1,110 @@
+=== forge-trace-schema.test.ts ===
+Command: npx tsx tests/forge-trace-schema.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-schema' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-schema.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-ids.test.ts ===
+Command: npx tsx tests/forge-trace-ids.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-collector' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-ids.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-determinism.test.ts ===
+Command: npx tsx tests/forge-trace-determinism.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-collector' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-determinism.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-world-hash.test.ts ===
+Command: npx tsx tests/forge-trace-world-hash.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-snapshot' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-world-hash.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-ordering.test.ts ===
+Command: npx tsx tests/forge-trace-ordering.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-collector' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-ordering.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-cadence.test.ts ===
+Command: npx tsx tests/forge-trace-cadence.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-collector' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-cadence.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-size.test.ts ===
+Command: npx tsx tests/forge-trace-size.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-collector' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-size.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-policy.test.ts ===
+Command: npx tsx tests/forge-trace-policy.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-collector' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-policy.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-faults.test.ts ===
+Command: npx tsx tests/forge-trace-faults.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-collector' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-faults.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-classification.test.ts ===
+Command: npx tsx tests/forge-trace-classification.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-diagnostics' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-classification.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
+=== forge-trace-divergence.test.ts ===
+Command: npx tsx tests/forge-trace-divergence.test.ts
+Exit: 1 (RED expected)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/bobbyranka/workspace/spacepixelrts-forge-trace/src/forge-diagnostics' imported from /home/bobbyranka/workspace/spacepixelrts-forge-trace/tests/forge-trace-divergence.test.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+
