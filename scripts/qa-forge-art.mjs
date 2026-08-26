@@ -383,10 +383,11 @@ async function main() {
     ];
     await delay(500);
     manifest.finishedAt = new Date().toISOString();
+    manifest.ok = manifest.errors.length === 0 && leaks.length === 0;
     fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
     const passed = Object.values(manifest.steps).filter((s) => s.pass).length;
     console.log('--- qa-forge-art summary ---');
-    console.log(`ok=${manifest.errors.length === 0} steps=${passed}/${Object.keys(manifest.steps).length} out=${outDir}`);
+    console.log(`ok=${manifest.ok} steps=${passed}/${Object.keys(manifest.steps).length} out=${outDir}`);
     for (const error of manifest.errors) console.log(`error: ${String(error).split('\n')[0]}`);
     if (leaks.length) console.log(`process leaks: ${leaks.join('; ')}`);
     if (manifest.errors.length > 0 || leaks.length > 0) process.exitCode = 1;
