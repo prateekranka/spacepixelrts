@@ -211,6 +211,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 #fal-stage-box[data-mode="diff"] #fal-diff-canvas { opacity: 0.5; pointer-events: none; }
 #fal-wipe-row { display: flex; align-items: center; gap: 8px; width: 280px; }
 #fal-wipe-row input[type="range"] { flex: 1; accent-color: #D09A4E; }
+#fal-wipe-divider {
+  position: absolute; top: 0; bottom: 0; width: 2px; z-index: 5;
+  background: #D09A4E; opacity: 0.85; pointer-events: none;
+}
 .ctrl-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .ctrl-row .row-label { color: #9CA6A5; font-size: 11px; letter-spacing: 0.06em; margin-right: 2px; }
 .facing-btn .mirror { font-size: 9px; color: #6B7280; margin-left: 3px; }
@@ -1134,13 +1138,25 @@ function filterCatalog(query: string): void {
   }
 }
 
+let wipeDivider: HTMLDivElement | null = null;
+
 function applyWipeClip(position: number): void {
   const mode = store.get().abMode;
   if (mode !== 'split') {
     candidateWrap.style.clipPath = 'none';
+    if (wipeDivider) wipeDivider.hidden = true;
     return;
   }
-  candidateWrap.style.clipPath = `inset(0 0 0 ${Math.max(0, Math.min(100, position))}%)`;
+  const clamped = Math.max(0, Math.min(100, position));
+  candidateWrap.style.clipPath = `inset(0 0 0 ${clamped}%)`;
+  // Visible split marker: the accepted/candidate seam must be locatable even
+  // when both sides are currently identical.
+  if (!wipeDivider) {
+    wipeDivider = el('div', { id: 'fal-wipe-divider', 'aria-hidden': 'true' });
+    stageBox.append(wipeDivider);
+  }
+  wipeDivider.hidden = false;
+  wipeDivider.style.left = `${clamped}%`;
 }
 
 // ---------------------------------------------------------------------------
