@@ -2,36 +2,36 @@
   "schemaVersion": 1,
   "assets": {
     "gravemark-core": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:22.478Z",
-      "manifestSha256": "9a77dfa991ca70435016294c7fd844d0092299f43c3357b82663decb13bea79d",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:56.093Z",
+      "manifestSha256": "0b73cd36a896f692792df8fe033d336441bfda027614e6d4d8b9bd7e7ccb577e",
       "baselinePngSha256": "a8fa09e87ceb89dabfaf84dfd392a4c25232d0db05950e0020a09f4afdd2bee4",
       "frameSha256": {
         "iso": "3554af5351c8efd05ceee7eb5cb61f7a4d876c2bb475162f3e046d4ce2cb0abc"
       }
     },
     "gravemark-habitat": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:23.243Z",
-      "manifestSha256": "602a650a4bd29ca86d368c577c677e33c395117fbbaf91e81b8740e24649115b",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:56.895Z",
+      "manifestSha256": "dfc11b89a9713919bc07201882990fdb428dc955b5ed4415d1549791fd28c150",
       "baselinePngSha256": "f6cb397e314ea5458730b88da65fda9cb643dc3323c25bd818978db04a49f7e6",
       "frameSha256": {
         "iso": "6bffeb0231389be364c3f0ba9f5f5d5ab5710f5ba9fd7d2ccd23f17ecc9be755"
       }
     },
     "gravemark-yard": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:24.513Z",
-      "manifestSha256": "bf888ab0863bd5c8edf9cc20e2852e212511cf8a5eb42e5d937e1588786ecf55",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:58.183Z",
+      "manifestSha256": "6818289c538d9f3c5811984ed598d6222570f7ef36ea0f648f59a3619a4d6b7f",
       "baselinePngSha256": "8f72ebe414be7f1c3c0b8fc902e20e0160d1739badd4babad62dc5c65f58f437",
       "frameSha256": {
         "iso": "c9734ee5e82c02479527956f5bc19d71958b33aa2bb9505218a9335d5e359109"
       }
     },
     "gravemark-burden-walker": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:22.098Z",
-      "manifestSha256": "92ab1924866c3280d8dd820532e31262e94548c93b9e583167e3e26bd6a061bf",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:55.706Z",
+      "manifestSha256": "8c0a63457e5d59bdcbf313a23bddad744167e4430faa9ab20caa40784e1f5b36",
       "baselinePngSha256": "cfbd9357fd0ae1b31720c49b0e3b6ff8e3118d79fc6bf8a7be31062a2738bc95",
       "frameSha256": {
         "dir0-pose0": "c4fd63b3313fc5919de9441a8ba71dc69a717b712fb41bc9bc0535d72bda88eb",
@@ -53,18 +53,18 @@
       }
     },
     "gravemark-grav-skimmer": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:22.865Z",
-      "manifestSha256": "f9abb4f50ad723c2ea131532255f4402229c5eb22bd0f5d92e1303974a71d641",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:56.511Z",
+      "manifestSha256": "0108f0a38e95f94727e25981724cbf7c45a0f02ba97f2dfbad5a3abd0ee1b61c",
       "baselinePngSha256": "58e156bbe8e84ab6c21841b5ab6a4ba590e71d8d0f7bf057bd97a8c9871b4ce7",
       "frameSha256": {
         "hd": "7b0f25f3d07b80ad8aaffa6abc32d5257782fd65175b80fe4ce0c70c03aa5183"
       }
     },
     "gravemark-rift-guard": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:23.720Z",
-      "manifestSha256": "72e626d2519e63d4a970992eb45d6eeeef00a1f013ba227796b0b2874ec80cc1",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:57.404Z",
+      "manifestSha256": "cbd915ecc4e6996581042e20af56ea3c07068ff877959b0633f91b7b4605442c",
       "baselinePngSha256": "1d77a0a6411ca5542fed30bb027fc73ab4c66e4983240519d52dc51f09ccc50c",
       "frameSha256": {
         "dir0-pose0": "1df54d225d791dba1f83d72d7caf82b7899b8921adfb55ef26457beaf1ff1d9a",
@@ -86,9 +86,9 @@
       }
     },
     "gravemark-worker": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:24.132Z",
-      "manifestSha256": "39e3359d98c9ff9c5b0cb51044c430b39292357bfb2461ebd29173df71aa0a8d",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:57.810Z",
+      "manifestSha256": "0ebedee77ac767b8652dfd05420bd2884fb21d53955961f1b765c1a445f14330",
       "baselinePngSha256": "7b38c2ca6088180cc57f1718ce9ff9117c00e78c0338c24686b605ff73a33d35",
       "frameSha256": {
         "dir0-walk0": "50e2bb194b811ac6315c97cd618b975de47f46091b029fbce9d95b40973dbddc",
@@ -110,36 +110,36 @@
       }
     },
     "sunweaver-core": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:24.907Z",
-      "manifestSha256": "950c2b6df8c944cd5ae34465bea8be0f5a44af2a508e79c91d2a7815b8b9d81f",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:58.594Z",
+      "manifestSha256": "2353376c54eabaf35f39eda3c231892cf0da7185d92c9a5a82599375595c188c",
       "baselinePngSha256": "a8db464dba5a8e36ba7534b4d266dae4c80bc1ea517f1f6200db9fe5842a5c6b",
       "frameSha256": {
         "iso": "8f9a6d83d69cd1971bfb5105ab791719b241c90e42f77f199a0ba9a5146af72a"
       }
     },
     "sunweaver-habitat": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:25.286Z",
-      "manifestSha256": "c63278df107b39ae372fc0fc32ecb751c550a60bf8ac920a925eeed635ec327a",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:58.978Z",
+      "manifestSha256": "8e1e346d4a7c6cddd7b8cc29cfb80379a12f5cb97aa84c2695529567c5dcbfb4",
       "baselinePngSha256": "1de5cf3c37fe9da2ade95552b84ab6025fe2fb5a83b5700ad8b0ac7d16c53c4c",
       "frameSha256": {
         "iso": "e79f5ff330eeba57a840c0e82c52893058a7e957829da390c81e32e8757f2c86"
       }
     },
     "sunweaver-yard": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:27.460Z",
-      "manifestSha256": "67b4793d344960533e793012ea7a16033e1aaf63d39559215894dbbd8a0a6df4",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:54:01.181Z",
+      "manifestSha256": "1b01db765ad0a879846f37adb6b83843d09bd8502926bfc9c4f8f7c113761e5f",
       "baselinePngSha256": "893f15c786811e3a746c5e1a75b96aceadd809f899771556a6a1489e925de72d",
       "frameSha256": {
         "iso": "9a8c5971b9cf929c781ca1f32e43b44c77e0118806693e633e4e6d1c12ec1bb0"
       }
     },
     "sunweaver-lumen-guard": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:25.773Z",
-      "manifestSha256": "79f790818e5a598925da3dcae2624a603eeae67fb53b13689b5962eb483d9482",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:59.464Z",
+      "manifestSha256": "b7ea521c86b9b3c47f286352190a9440dde60efdfbd9cd70fd8974f4e0883082",
       "baselinePngSha256": "12c0b7a9846bfbbf570ec97561aa05f3e282daff0413a61f761fab0a1b73e85d",
       "frameSha256": {
         "dir0-pose0": "d7741fab23ede149007a0799fe5c72fc9b5239f57e31bcae9b5e222f82957867",
@@ -161,9 +161,9 @@
       }
     },
     "sunweaver-solar-strider": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:26.271Z",
-      "manifestSha256": "41329a98f89a19c8708005f994fec05775e4da7ca4bfdd5b4e7b9276a6fc0eb5",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:53:59.980Z",
+      "manifestSha256": "28ce13e8ad3eae4f44fe54abff5fce2ba092e9b2ab5812d740962e4822722571",
       "baselinePngSha256": "ed16afac096ba5b6e72902208ff5669ef8b6661938e307e421c63949fec08ca1",
       "frameSha256": {
         "dir0-pose0": "09cc1118e0dac599af575896b13080811a7f5d87439ce94557b8a2e0fb74a71b",
@@ -185,18 +185,18 @@
       }
     },
     "sunweaver-wind-strider": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:26.677Z",
-      "manifestSha256": "e10865a6cec88b760395ef058a671e21df03755e8d55b310e28d062aab72f66f",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:54:00.386Z",
+      "manifestSha256": "2bd8c6074dac653335d37f74407c41fde475824230c5a155c7b3b432189680c4",
       "baselinePngSha256": "eb7adc5f0f3e6db46db4a11d422bb5f547a4dbd2e7dd4b7b31bb49f041c4b7ff",
       "frameSha256": {
         "hd": "50541f1befba3def30e4718ba753fc0490e6b8bd506633f2109be3b8cc314625"
       }
     },
     "sunweaver-worker": {
-      "revision": "855a1ddf9853e43d2a4942e8d5d57b79e6d26002",
-      "acceptedAt": "2026-08-26T15:51:27.085Z",
-      "manifestSha256": "130dfab21a92f21db3e7bd4931fe266730bb26daa1a94787d287df10e33123f7",
+      "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+      "acceptedAt": "2026-08-26T15:54:00.806Z",
+      "manifestSha256": "3ded8cdf3827f3523c5423bc0e282720d9bbb3fa2efeea5e3024279966d78e2f",
       "baselinePngSha256": "35b147ed056ff318c5ee160ba6f1d4fecd00d6093c1dbfafc1ee7c0192d73674",
       "frameSha256": {
         "dir0-walk0": "8fc5ec072c5c4a94a98c43225aa74c95d7d094bf1e5cf64af4d657c5bace3a7e",
