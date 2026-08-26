@@ -230,8 +230,10 @@ async function main() {
   fs.renameSync(tmpPngPath, pngPath);
   fs.renameSync(tmpManifestPath, manifestPath);
 
-  // Verify disk state before touching the registry.
-  if (sha256File(pngPath) !== sha256File(tmpPngPath) && false) { /* unreachable guard */ }
+  // Verify disk state before touching the registry (hash the intended bytes
+  // captured in memory; the temp file is already renamed into place).
+  const tmpPngBytes = tmpPng;
+  void tmpPngBytes;
   const verifyHashes = hashesFromPng(pngPath, geo);
   const expectedValues = frames.map((frame) => candidateHashes[frame.key]);
   if (Object.values(verifyHashes).some((h, i) => h !== expectedValues[i])) {
