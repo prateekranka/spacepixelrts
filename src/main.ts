@@ -32,6 +32,8 @@ import {
   type PlayerProfile,
 } from './player-profile';
 import { mountFrontEndScene, type FrontEndSceneController } from './front-end-scene';
+import { resolveCombatOverride } from './generated/sunweaver-lumen-guard-candidate';
+import type { CombatRowOverride } from './sprites';
 
 const VERSION = '0.12.0-front-end';
 const hostNode = document.getElementById('app');
@@ -43,6 +45,16 @@ const qaScenario = parseQaScenario(window.location.search);
 const qaFrozen = qaScenario !== undefined && params.get('qa-run') !== '1';
 const uiHidden = params.get('ui') === '0';
 const qaHoldLoading = params.get('qa-hold-loading') === '1';
+
+// Forge candidate seam (docs/LUMEN_GUARD_IMAGE_CANDIDATE.md): the optional
+// ?forge-art-candidate=<id> query selects ONLY that candidate's combat row at
+// atlas build time. Unknown/missing ids resolve to null -> accepted baseline.
+// It is never the default: the normal route has no query and no override.
+const forgeArtCandidateId: string | null = params.get('forge-art-candidate');
+const combatRowOverrides: readonly CombatRowOverride[] | undefined = (() => {
+  const override = resolveCombatOverride(forgeArtCandidateId);
+  return override ? [override] : undefined;
+})();
 const orientationParam = params.get('orientation');
 const orientation =
   orientationParam === 'landscape-right' ? 'landscape-right' : 'landscape-left';
@@ -133,7 +145,10 @@ function prepareMatch(config: MatchConfig): void {
     nextWorld.aiDifficulty = config.difficulty;
     nextWorld.reset(config.seed >>> 0);
 
-    const nextView = new GameRenderer(host);
+    const nextView = new GameRenderer(
+      host,
+      combatRowOverrides !== undefined ? { combatRowOverrides } : undefined,
+    );
     nextView.init(nextWorld);
     nextView.resize(host.clientWidth, host.clientHeight);
 
@@ -460,6 +475,7 @@ interface StarhavenQaProbe {
   readonly orientation: string;
   readonly frozen: boolean;
   readonly transitionHistory: readonly AppState[];
+  readonly forgeArtCandidate: string | null;
   readonly discoveries: readonly {
     team: number;
     tick: number;
@@ -535,6 +551,7 @@ function publish(): void {
     orientation,
     frozen: qaFrozen,
     transitionHistory: transitionHistory.slice(),
+    forgeArtCandidate: forgeArtCandidateId,
     discoveries: world?.discoveryLog.map((event) => ({ ...event })) ?? [],
     landmarks: world?.landmarks.map((landmark) => ({ ...landmark })) ?? [],
     dispatch: dispatchAppEvent,

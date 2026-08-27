@@ -1846,6 +1846,50 @@ export function drawCombatSprite(row: number, dir: number, pose: number): Pix {
   return authoredCombatSprite(row, d, p);
 }
 
+/**
+ * One optional, row-scoped combat override (Forge candidate seam).
+ * Feeds the normal combat atlas and sprite render path; absent callers keep
+ * byte-identical baselines. Candidate cells are RAW source (no artificial
+ * rim) — combatRowCell() applies the existing exterior rim exactly once.
+ */
+export interface CombatRowOverride {
+  /** Combat atlas row this override replaces (0..COMBAT_ROWS-1). */
+  readonly row: number;
+  /**
+   * Pure raw-source cell lookup for one frame. Returning null, a wrong-sized
+   * Pix, or throwing all fall back to the accepted baseline for that frame —
+   * a missing/unknown candidate never breaks the atlas.
+   */
+  readonly rawCell: (dir: number, pose: number) => Pix | null;
+}
+
+/**
+ * Row-scoped combat override seam: one cell through the normal path.
+ * With no override (or a candidate that reports no data) this is exactly
+ * drawCombatSprite(row, dir, pose). With an override, the raw candidate cell
+ * passes through the SAME exterior rim stage and colors as the baseline row.
+ */
+export function combatRowCell(
+  row: number,
+  dir: number,
+  pose: number,
+  override?: CombatRowOverride | null,
+): Pix {
+  if (override && override.row === row) {
+    try {
+      const raw = override.rawCell(dir, pose);
+      if (raw !== null && raw.w === COMBAT_CELL && raw.h === COMBAT_CELL) {
+        return row < 2
+          ? applyCombatExteriorRim(raw, SUN_AMBER, SUN_CREAM)
+          : applyCombatExteriorRim(raw, GRAVE_ICE, GRAVE_CRYSTAL);
+      }
+    } catch {
+      /* candidate lookup failed — fall back to baseline for this frame */
+    }
+  }
+  return drawCombatSprite(row, dir, pose);
+}
+
 // ── Worker (legacy 32px slot; living workers use 8-dir strip) ───────────────
 function drawWorkerPix(civ: number, frame: number): Pix {
   const p = Pix.alloc(32, 32);
@@ -2616,7 +2660,13 @@ function slotIndex(kind: number, civ: number, frame: number): number {
   return kind * CIVS * UNIT_FRAMES + civ * UNIT_FRAMES + frame;
 }
 
-export function buildSpriteAtlas(): SpriteAtlas {
+/**
+ * Build the full startup-rasterized atlas. `combatOverrides` is the optional
+ * row-scoped Forge candidate seam: only the listed combat rows change, and
+ * only while the candidate lookup reports data — every other row and every
+ * no-override caller stays byte-identical to the accepted baseline.
+ */
+export function buildSpriteAtlas(combatOverrides?: readonly CombatRowOverride[]): SpriteAtlas {
   const unitSlots = UNIT_KINDS * CIVS * UNIT_FRAMES;
   const unitRows = Math.ceil(unitSlots / ATLAS_COLS);
   const buildingRow = unitRows;
@@ -2744,10 +2794,14 @@ export function buildSpriteAtlas(): SpriteAtlas {
     }
   }
 
+  const overrideByRow = new Map<number, CombatRowOverride>();
+  for (const override of combatOverrides ?? []) overrideByRow.set(override.row, override);
+
   for (let row = 0; row < COMBAT_ROWS; row++) {
+    const override = overrideByRow.get(row) ?? null;
     for (let pose = 0; pose < COMBAT_LIVE_POSES; pose++) {
       for (let dir = 0; dir < 8; dir++) {
-        blitCombat(drawCombatSprite(row, dir, pose), row, dir + pose * 8);
+        blitCombat(combatRowCell(row, dir, pose, override), row, dir + pose * 8);
       }
     }
   }

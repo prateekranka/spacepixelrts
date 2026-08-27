@@ -13,9 +13,10 @@
  */
 
 import { mulberry32 } from '../../../src/engine';
-import { GameRenderer } from '../../../src/render';
+import { GameRenderer, type GameRendererOptions } from '../../../src/render';
 import { World } from '../../../src/sim';
 import { SCENE_NAMES, STAGE_SEED, stageScene, type SceneName } from './fixtures';
+import { resolveCombatOverride, SUNWEAVER_LUMEN_GUARD_CANDIDATE } from '../../../src/generated/sunweaver-lumen-guard-candidate';
 
 export interface SceneSnapshot {
   name: SceneName;
@@ -32,6 +33,8 @@ export interface ForgeRigApi {
   readonly ready: boolean;
   readonly sceneNames: readonly string[];
   readonly current: SceneName | null;
+  /** Active Forge candidate id ('sunweaver-lumen-guard') or null (baseline). */
+  readonly candidate: string | null;
   show(name: string): Promise<SceneSnapshot>;
   readonly view: GameRenderer;
   readonly world: World;
@@ -51,6 +54,15 @@ const requestedScene = params.get('scene');
 const initialScene: SceneName = SCENE_NAMES.includes(requestedScene as SceneName)
   ? (requestedScene as SceneName)
   : 'quiet-helios';
+
+// Forge candidate seam: ?candidate=sunweaver-lumen-guard applies the same
+// row-scoped override the game applies via ?forge-art-candidate=... Unknown or
+// missing ids fall back to the accepted baseline. One live WebGL context either way.
+const candidateId = params.get('candidate');
+const rendererOptions: GameRendererOptions | undefined = (() => {
+  const override = resolveCombatOverride(candidateId);
+  return override ? { combatRowOverrides: [override] } : undefined;
+})();
 
 // 1) Host layout BEFORE `new GameRenderer(host)` — the constructor reads
 //    host.clientWidth/clientHeight for canvas size AND camera aspect (A4 §1).
@@ -72,7 +84,7 @@ world.reset(STAGE_SEED >>> 0);
 Math.random = mulberry32(0xC0FFEE);
 
 // 4) The one live WebGL context on this page (A4 §1.2, §6.1).
-const view = new GameRenderer(host);
+const view = new GameRenderer(host, rendererOptions);
 view.init(world);
 view.resize(host.clientWidth, host.clientHeight);
 
@@ -133,6 +145,9 @@ const rig: ForgeRigApi = {
   },
   get current(): SceneName | null {
     return current;
+  },
+  get candidate(): string | null {
+    return candidateId === SUNWEAVER_LUMEN_GUARD_CANDIDATE.id ? candidateId : null;
   },
   show,
   view,
