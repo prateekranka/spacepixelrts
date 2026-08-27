@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { PNG } from 'pngjs';
 import { REPO_ROOT, parseArgs, sha256File } from './forge-art-lib.mjs';
+import { approveCandidateManifest, canonicalApprovalJson } from './forge-art-approval-lib.mjs';
 import { STARHOLD_PALETTE } from '../src/palette';
 import { Pix, applyCombatExteriorRim } from '../src/sprites';
 import { ASSET_BY_ID, CATALOG } from '../tools/forge-art/src/registry';
@@ -172,10 +173,13 @@ async function candidateFramesForAcceptance(assetId) {
   }
   const outer = [...RIM_COLORS.outer, 255];
   const inner = [...RIM_COLORS.inner, 255];
-  return sheet.cells.map((cell) => ({
-    key: cell.key,
-    pix: applyCombatExteriorRim(new Pix(64, 64, new Uint8ClampedArray(cell.bytes)), outer, inner),
-  }));
+  return {
+    manifest: candidateManifest,
+    frames: sheet.cells.map((cell) => ({
+      key: cell.key,
+      pix: applyCombatExteriorRim(new Pix(64, 64, new Uint8ClampedArray(cell.bytes)), outer, inner),
+    })),
+  };
 }
 
 async function main() {
@@ -278,7 +282,8 @@ async function main() {
   }
 
   // V7 — recompute candidate hashes from CURRENT source; must equal evidence.
-  const frames = await candidateFramesForAcceptance(assetId);
+  const candidate = await candidateFramesForAcceptance(assetId);
+  const frames = candidate.frames;
   const partialFrames = frames.filter((f) => f.error);
   if (partialFrames.length > 0) fail(9, `current candidate partial: ${partialFrames.map((f) => f.key).join(', ')}`);
   const geo = gridGeometryFor(assetId);
@@ -333,18 +338,21 @@ async function main() {
   console.log(`plan: ${isInit ? 'initialize' : 'replace'} accepted baseline for ${assetId}`);
   console.log(`  revision ${String(acceptedManifest.revision ?? 'none').slice(0, 10)} -> ${head.slice(0, 10)}`);
   console.log(`  frames changed: ${changedFrames.length}/${frames.length}`);
+  console.log(`  candidate status: ${candidate.manifest.status} -> approved`);
   for (const row of changedFrames.slice(0, 12)) {
     console.log(`    ${row.key}: ${(row.accepted ?? 'new').slice(0, 10)}… -> ${row.candidate.slice(0, 10)}…`);
   }
   if (changedFrames.length > 12) console.log(`    … and ${changedFrames.length - 12} more`);
-  console.log(`  files: ${pngPath}\n         ${manifestPath}\n         ${path.join(BASELINES_DIR, 'registry.json')}`);
+  const candidateManifestPath = path.join(REPO_ROOT, 'tools', 'forge-art', 'candidates', assetId, 'manifest.json');
+  console.log(`  files: ${pngPath}\n         ${manifestPath}\n         ${path.join(BASELINES_DIR, 'registry.json')}\n         ${candidateManifestPath}`);
 
   if (!apply) {
     console.log('DRY-RUN complete — nothing written. Pass --apply to update this one baseline.');
     return;
   }
 
-  // Atomic swap: write temps, rename both, then rewrite registry entry atomically.
+  // Atomic swap: stage every accepted artifact first, rename the baseline pair,
+  // rewrite the registry entry, then mark the reviewed candidate APPROVED last.
   // The manifest is rebuilt in FULL from the current registry/adapter data (never
   // spread from the accepted file, which may be an older slim shape), so both
   // --init and replacement writes produce the complete §5 v1 manifest. It must
@@ -380,6 +388,10 @@ async function main() {
   fs.writeFileSync(tmpPngPath, tmpPng);
   const tmpManifestPath = manifestPath + '.tmp';
   fs.writeFileSync(tmpManifestPath, JSON.stringify(newManifest, null, 2));
+  const approvedCandidateManifest = approveCandidateManifest(candidate.manifest);
+  const tmpCandidateManifestPath = candidateManifestPath + '.tmp';
+  fs.writeFileSync(tmpCandidateManifestPath, canonicalApprovalJson(approvedCandidateManifest));
+  const approvedCandidateManifestSha256 = sha256File(tmpCandidateManifestPath);
   fs.renameSync(tmpPngPath, pngPath);
   fs.renameSync(tmpManifestPath, manifestPath);
 
@@ -390,6 +402,7 @@ async function main() {
   const verifyHashes = hashesFromPng(pngPath, geo);
   const expectedValues = frames.map((frame) => candidateHashes[frame.key]);
   if (Object.values(verifyHashes).some((h, i) => h !== expectedValues[i])) {
+    fs.rmSync(tmpCandidateManifestPath, { force: true });
     fail(10, 'post-write verification failed: baseline.png cells do not match candidate hashes');
   }
 
@@ -408,7 +421,18 @@ async function main() {
   fs.writeFileSync(tmpReg, JSON.stringify(nextRegistry, null, 2));
   fs.renameSync(tmpReg, regFile);
 
-  console.log(`APPLIED: accepted baseline updated for ${assetId} at revision ${head.slice(0, 10)}. Not committed.`);
+  fs.renameSync(tmpCandidateManifestPath, candidateManifestPath);
+  let approvedReadback;
+  try {
+    approvedReadback = JSON.parse(fs.readFileSync(candidateManifestPath, 'utf8'));
+  } catch (error) {
+    fail(10, `post-write verification failed: approved candidate manifest is unreadable (${error?.message ?? error})`);
+  }
+  if (approvedReadback.status !== 'approved' || sha256File(candidateManifestPath) !== approvedCandidateManifestSha256) {
+    fail(10, 'post-write verification failed: candidate manifest was not atomically promoted to approved');
+  }
+
+  console.log(`APPLIED: accepted baseline updated and candidate marked approved for ${assetId} at revision ${head.slice(0, 10)}. Not committed.`);
 }
 
 function countAlpha(d) {
