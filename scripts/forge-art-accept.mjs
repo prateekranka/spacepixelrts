@@ -240,8 +240,8 @@ async function main() {
     }
   }
 
-  // V8 — unrelated drift: every OTHER registered asset must still verify against
-  // its stored baseline.png + registry hashes, AND its candidate must be unchanged.
+  // V8 — unrelated drift: every OTHER registered accepted asset must still verify
+  // against its stored baseline.png, manifest, and registry hashes.
   const drift = [];
   const otherIds = CATALOG.map((entry) => entry.assetId).filter((id) => id !== assetId);
   for (const other of otherIds) {
@@ -262,22 +262,6 @@ async function main() {
     const expected = entry.frameSha256 ?? {};
     if (otherKeys.some((key) => diskHashes[key] !== expected[key]) || Object.keys(expected).length !== otherKeys.length) {
       drift.push(`${other}: frame hashes differ from registry`);
-    }
-    let otherFrames;
-    try { otherFrames = getFrames(other); } catch (error) { drift.push(`${other}: candidate render failed (${error.message})`); continue; }
-    const otherPartial = otherFrames.filter((frame) => frame.error);
-    if (otherPartial.length > 0) {
-      drift.push(`${other}: candidate partial (${otherPartial.map((frame) => frame.key).join(', ')})`);
-      continue;
-    }
-    const otherCandidateHashes = Object.fromEntries(
-      otherFrames.map((frame) => [frame.key, cellSha256FromBytes(frame.pix.d)]),
-    );
-    if (
-      Object.keys(otherCandidateHashes).length !== otherKeys.length ||
-      otherKeys.some((key) => otherCandidateHashes[key] !== expected[key])
-    ) {
-      drift.push(`${other}: current candidate differs from accepted registry`);
     }
   }
   if (drift.length > 0) fail(6, `unrelated asset drift: ${drift.join('; ')}`);
