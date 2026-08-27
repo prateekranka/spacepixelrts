@@ -12,7 +12,7 @@
   "sourceHeight": 1132,
   "candidatePath": "tools/forge-art/candidates/sunweaver-lumen-guard/candidate.png",
   "candidateSourcePath": "src/generated/sunweaver-lumen-guard-candidate.ts",
-  "generatedAt": "2026-08-27T08:55:13.233Z",
+  "generatedAt": "2026-08-27T10:43:42.197Z",
   "algorithm": "combat-reference-v1",
   "status": "draft",
   "target": {
@@ -47,116 +47,116 @@
   "frames": [
     {
       "key": "dir0-pose0",
-      "sha256": "5b51365cfeddf3386c521b1a261b90aa833c584809e436ecb2bfba0c93c47b42",
+      "sha256": "7e949ab71d84705fdc6d8bdb527a08801580e5a0a71147f87b162673b1cd7318",
       "width": 64,
       "height": 64,
-      "alphaPixels": 919
+      "alphaPixels": 858
     },
     {
       "key": "dir1-pose0",
-      "sha256": "8ba9d2836b5a57aaf5b6e723d4c0ae80796b8da340a0e77d6747ef18cce8c06a",
+      "sha256": "12af4ffbaf483aaf545e736df8767529539a74ba1ccd798aa4a7197297d32d1b",
       "width": 64,
       "height": 64,
-      "alphaPixels": 742
+      "alphaPixels": 737
     },
     {
       "key": "dir2-pose0",
-      "sha256": "def0b3edac56f0c302dbb67b0396077b91ee99cd9f8523a7ed23a4187e08521a",
+      "sha256": "421eb0e39be002b1145c534f4ad26fe87b41e9317bc3881be65dfc40bb6c3baf",
       "width": 64,
       "height": 64,
-      "alphaPixels": 735
+      "alphaPixels": 703
     },
     {
       "key": "dir3-pose0",
-      "sha256": "095535278a879398da24c29b7429b4a562a67a0f6cd871f080994fadb19a8176",
+      "sha256": "ffb31cba4db49b8b0ef4913e8f4c9e03945b4121244b77af3e044461a01e61b6",
       "width": 64,
       "height": 64,
-      "alphaPixels": 742
+      "alphaPixels": 737
     },
     {
       "key": "dir4-pose0",
-      "sha256": "8cc67f0903179702bfeedaf8cc6b6a843c2438b87010913ea609e8b6381f135b",
+      "sha256": "b455a0b7739b6a62d8f220050c409764e0176aa93068afd6fb136b85657a69d6",
       "width": 64,
       "height": 64,
-      "alphaPixels": 919
+      "alphaPixels": 858
     },
     {
       "key": "dir5-pose0",
-      "sha256": "77f1c5cb8eddce6e7785f90dfbe88e426a1094f95dc3098c8023a2dc3cd758e9",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 820
-    },
-    {
-      "key": "dir6-pose0",
-      "sha256": "c70fc22b04b7887c6006af91d8ad6628572ca40d4bd655e58040286db1dc487b",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 829
-    },
-    {
-      "key": "dir7-pose0",
-      "sha256": "ccf3c260547a2ffd246d4c3779f1bd692881732c54cd34c0be1a9c931f86d181",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 820
-    },
-    {
-      "key": "dir0-pose1",
-      "sha256": "e83ba10400ae3a9d7cbd34be72a4339b6235ca841ba8826d8f2d77684d1e2ce6",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 919
-    },
-    {
-      "key": "dir1-pose1",
-      "sha256": "4bf019e704b348183cb035e52944774a2471d4eafb59e3231a363046922a8e60",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 739
-    },
-    {
-      "key": "dir2-pose1",
-      "sha256": "321d9d8cfb2fd803929609d79bb43b97e972b1a831cd41df83cb58abe4e36515",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 726
-    },
-    {
-      "key": "dir3-pose1",
-      "sha256": "375dee258ad744ed4ca35cf9626bc05ad1dcb12ecd5566bd16a7cd2988472784",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 739
-    },
-    {
-      "key": "dir4-pose1",
-      "sha256": "06c276c3e995a8406dc1daaf2caae44b1762fdf6c3548f9bedc6db4c849c191a",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 919
-    },
-    {
-      "key": "dir5-pose1",
-      "sha256": "7a84fffa13ecdbbe451bd24ea6c780de1eb17ed98367c378c571ccd8e1691e88",
-      "width": 64,
-      "height": 64,
-      "alphaPixels": 809
-    },
-    {
-      "key": "dir6-pose1",
-      "sha256": "b1a55cd57b36f7692e4c2525cb9d3e7e4217f9783bfe7d7e939db57fd94b70d3",
+      "sha256": "7612044d34456f250962393168e5df637d52532844ab9c250b81ac79ecc67406",
       "width": 64,
       "height": 64,
       "alphaPixels": 819
     },
     {
-      "key": "dir7-pose1",
-      "sha256": "40e72d07ad36c9e8f2ddd402ffc0ea9be818ff78670cb9911262d31ee385a1a2",
+      "key": "dir6-pose0",
+      "sha256": "b5656d85f278726e13eaaa05e4395ff87f2b57f8588094e78d21f7cfebeed8a1",
       "width": 64,
       "height": 64,
-      "alphaPixels": 809
+      "alphaPixels": 797
+    },
+    {
+      "key": "dir7-pose0",
+      "sha256": "b593e616159382ec1c6819e010de1703dc495d9ecdafd69cd6963e6585083505",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 819
+    },
+    {
+      "key": "dir0-pose1",
+      "sha256": "84bf80c9e795e9addfa0f04796867ecc0b46454c7d3d00ddd0e3ee257d67afe0",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 851
+    },
+    {
+      "key": "dir1-pose1",
+      "sha256": "0edde64d80b20c97bfe0bce09e1db64aa82a971992350f63667f65b161c8fef5",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 730
+    },
+    {
+      "key": "dir2-pose1",
+      "sha256": "fb025a67ad80a0f4bcd893368eda68a276e1cef27c005fd2b60222ee949d37ec",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 695
+    },
+    {
+      "key": "dir3-pose1",
+      "sha256": "7d7455e2d4341989cde5bb04886ccdec0106df7fc12285c66ee6055b8f97c552",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 730
+    },
+    {
+      "key": "dir4-pose1",
+      "sha256": "af3b0a898497928bcbb14fcda3632d56850324d5cbc0bd697defc44e51f18e7a",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 851
+    },
+    {
+      "key": "dir5-pose1",
+      "sha256": "6d549582d6b29506a66598aa1fbfffd17affc8125e5abb7198ea310183901a4e",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 812
+    },
+    {
+      "key": "dir6-pose1",
+      "sha256": "bd9f382e14d29e155119d95f2ff9453d494b3643e3dfde9dc6d8016615ffb87e",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 790
+    },
+    {
+      "key": "dir7-pose1",
+      "sha256": "d489a25d4028c1e61c564f08fafe306a3378339449d5a5ef9f5d8b60c0dcb350",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 812
     }
   ],
-  "notes": "RAW 64x64 cells (no combat rim; lumenGuardCandidateRimmed applies it once). Palette: ink/cream/ochre/amber/red + MAG lens at shield boss. Evidence: generated outside repo."
+  "notes": "RAW 64x64 cells (no combat rim; lumenGuardCandidateRimmed applies it once). Palette: ink/cream/ochre/amber/red + 8 isolated MAG team accents between the shield rays. Evidence: generated outside repo."
 }

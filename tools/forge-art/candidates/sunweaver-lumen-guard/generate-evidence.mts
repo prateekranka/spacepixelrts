@@ -316,7 +316,7 @@ function main(): void {
       height: 64,
       alphaPixels: alphaPixelsAll[i],
     })),
-    notes: 'RAW 64x64 cells (no combat rim; lumenGuardCandidateRimmed applies it once). Palette: ink/cream/ochre/amber/red + MAG lens at shield boss. Evidence: generated outside repo.',
+    notes: 'RAW 64x64 cells (no combat rim; lumenGuardCandidateRimmed applies it once). Palette: ink/cream/ochre/amber/red + 8 isolated MAG team accents between the shield rays. Evidence: generated outside repo.',
   };
   writeFileSync(join(CAND_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(`wrote ${join(CAND_DIR, 'manifest.json')}`);
