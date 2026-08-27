@@ -4,6 +4,7 @@
  */
 
 import { Kind, type Civ } from './engine';
+import { lumenGuardAcceptedFrame } from './generated/sunweaver-lumen-guard-accepted';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export type Rgba = readonly [number, number, number, number];
@@ -1497,60 +1498,13 @@ function combatMagCross(p: Pix, x: number, y: number): void {
   }
 }
 
+/**
+ * Row 0: accepted Lumen Guard snapshot. The normal combat atlas stage adds the
+ * exterior rim exactly once; mutable Forge candidates stay on the query seam.
+ */
 function drawLumenGuardCombat(dir: number, pose: number): Pix {
-  const p = Pix.alloc(COMBAT_CELL, COMBAT_CELL);
-  const side = dir === 0;
-  const back = dir === 2;
-  const front = dir === 6;
-  const threeQuarter = dir === 1 || dir === 7;
-  const cx = side ? 31 : threeQuarter ? 33 : 31;
-  const bodyW = side ? 11 : back || front ? 9 : 11;
-  const bodyX = cx - Math.floor(bodyW / 2);
-  const shieldX = side ? 46 : dir === 1 ? 43 : back ? 40 : front ? 41 : 43;
-  const shieldY = back ? 31 : 30;
-  const spearX = side ? 11 : back ? 20 : front ? 21 : dir === 1 ? 18 : 20;
-  const gaitA = pose ? (side || back ? 2 : 1) : 0;
-  const gaitB = pose ? (side || back ? 0 : 2) : 0;
-
-  // Opposite-side spear: its 2px shaft remains continuous from the connected
-  // row-0 tip to the held bridge, leaving a 16px+ weapon extension above the
-  // compressed main body.
-  p.fillRect(spearX - 1, 0, 2, 50, COMBAT_INK);
-  p.fillRect(spearX, 1, 1, 48, SUN_GOLD);
-  p.fillRect(spearX - 2, 0, 4, 5, COMBAT_INK);
-  p.fillRect(spearX - 1, 1, 2, 3, SUN_AMBER);
-  p.set(spearX, 0, SUN_CREAM);
-
-  // Planted legs are painted before the body so their joins stay ink-connected.
-  const legAX = side ? 24 : cx - 6;
-  const legBX = side ? 35 : cx + 2;
-  combatLeg(p, legAX + (pose ? 1 : 0), 38 - gaitA, 49, 4, SUN_TEAL, SUN_CREAM, SUN_TEAL_D);
-  combatLeg(p, legBX - (pose ? 1 : 0), 38 - gaitB, 49, 4, SUN_TEAL_D, SUN_SAND, COMBAT_INK);
-
-  combatRect(p, bodyX - 1, 28, bodyW + 2, 12, SUN_SAND, SUN_CREAM, SUN_TEAL_D);
-  p.fillRect(bodyX, 32, bodyW, 5, SUN_TEAL);
-  p.fillRect(bodyX + 2, 36, bodyW - 4, 3, SUN_SAND);
-  p.fillRect(cx - 4, 16, 8, 9, COMBAT_INK);
-  p.fillRect(cx - 3, 17, 6, 6, SUN_CREAM);
-  p.fillRect(cx - 6, 16, 12, 3, SUN_GOLD);
-  p.fillRect(cx - 3, 21, 6, 3, SUN_TEAL_D);
-  p.fillRect(cx - 1, 24, 2, 5, COMBAT_INK);
-  p.set(cx - 1, 22, SUN_AMBER);
-
-  // Shield arm bridges body to face; the face is deliberately over the torso.
-  linePix(p, bodyX + bodyW - 2, 31, shieldX - 10, shieldY, COMBAT_INK);
-  p.circ(shieldX, shieldY, 12, COMBAT_INK);
-  p.circ(shieldX, shieldY, 10, SUN_GOLD);
-  p.circ(shieldX, shieldY, 8, SUN_CREAM);
-  p.circ(shieldX, shieldY, 5, SUN_AMBER);
-  p.circ(shieldX, shieldY, 3, SUN_SAND);
-  combatMagCross(p, shieldX, shieldY);
-  p.set(shieldX - 7, shieldY - 6, SUN_CREAM);
-  p.set(shieldX + 6, shieldY + 7, SUN_TEAL_D);
-
-  // A second ink bridge makes the spear read as held, never as a detached prop.
-  linePix(p, bodyX + 1, 31, spearX + 1, 31, COMBAT_INK);
-  return p;
+  const accepted = lumenGuardAcceptedFrame(dir, pose);
+  return new Pix(accepted.w, accepted.h, new Uint8ClampedArray(accepted.d));
 }
 
 function drawSolarStriderCombat(dir: number, pose: number): Pix {

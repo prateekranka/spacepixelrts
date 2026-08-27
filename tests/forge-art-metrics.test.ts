@@ -61,22 +61,22 @@ interface FrameSource { key: string; pix: { w: number; h: number; d: Uint8Clampe
 
 // ---- frozen R3 cell digests (rows 0,1,3 x 8 dirs x 2 poses), copied from tests/vs4-combat-assets.test.ts ----
 const FROZEN_R3_CELL_SHA256: Record<string, string> = {
-  '0:0:0': 'd7741fab23ede149007a0799fe5c72fc9b5239f57e31bcae9b5e222f82957867',
-  '0:0:1': 'f0570dbeeb99814e04cfc5378fe8f4ded31f94362cdf2adb2f23bca006b90ee1',
-  '0:1:0': 'abcb42e56565b7cebdf12a0ead8a7dda4b437df75c31dad55ff263d8ac65d78e',
-  '0:1:1': '9b8a7787456ebd2f4d356ef6475e7c1a20bdc94454fdd303fb0e1d5e28a16073',
-  '0:2:0': '95051ce2a89a70f0ecfe7e78fad93633ac187e7b4e860bdaf700dd4fddca90c3',
-  '0:2:1': 'f0caceda3d9f0404f56aed84c28ec146d9c081be0949cc12db64718f26624317',
-  '0:3:0': '1ea11ded1350ed0512e459a7fbc0a6c110165f9683c632f18efb4d1673f6a1ec',
-  '0:3:1': 'b46c042dc3b8ca4bdb3afdeb220e26735b7759e6d1ff56beec941c9c8f236b67',
-  '0:4:0': '7dfc91b629d2ed1ddb7341154b2640c5a7209c02040fcb172cf5585b7ab2f0c0',
-  '0:4:1': '697663070098e81d9bd2919928e6a8a43ae92f9666eb3fe2f2179f3634955c96',
-  '0:5:0': 'f06a6bca3ae089d339dd87b15f45546c12a60480f99309f50532cd7378989376',
-  '0:5:1': 'fd1647320a5007b4400b44774f80231489c8350ee1bf8a3a2da86cf44adbff57',
-  '0:6:0': '5cfafcc0f89f6b93cdc707a8fb6bff3ce190635902e60bf8faecb11aea53d1fb',
-  '0:6:1': '3e1b24b64422992d7b7fe9914da160eca3d1b248f224e7af26ce4e5380e149fe',
-  '0:7:0': 'e76eb04d74d5707c992668867d11f8fbd1bf111ab71762d324274cbbd9912ce6',
-  '0:7:1': '161482b9eb4eb686076286c9094d6aef7ea14ef9eb39636a6f478622291327fb',
+  '0:0:0': '2775f085c85d329f9bcbd2b67a3d7b39b09955cc562f25a3c7c7a6d33c9c30b2',
+  '0:0:1': '8c3283bb9d02c238ab973ea44525b7e666cf7ac460de5799293df0ed704b91c2',
+  '0:1:0': 'be18e2e50844db15888ca3a1577d4a967e2aee739df4c5aa7d20a12ffc8c2e75',
+  '0:1:1': 'bff9c1d96d94fbf6c10b70a9e50b358cf4fac8367dabde4ff4e5107afd830383',
+  '0:2:0': 'a2be8af761e176708fa1eaf0ef6bb7c5cda1538f5841075154ad698842f67eb2',
+  '0:2:1': 'afaaf5a4acdba51062bf11181a63599f3d8d13885317852ae67269910a6a277d',
+  '0:3:0': 'b91edc67b60ae8d5451772f13e6d7f8f1a86e09ee90d4e074d4427bee9e44bad',
+  '0:3:1': '86b2c40afce5a541d172e29c2dde6cd08ff1b833842c65a85375a1f16dcf9dba',
+  '0:4:0': '1578b249c1d07a2d36e856687b7a680201542842387eee92afe8538e96cd05a0',
+  '0:4:1': '0743c77514f454b84b59e8de075671e16e858bca37b2bdbcc9020981b55a5675',
+  '0:5:0': '90d9ef1e0463de42918e5aa6f8f32d02a1f31ef44af9f3351166253a7c267078',
+  '0:5:1': 'ff1017acc3819bc2a80fad501cf72806ae2d54462358b61d419019ec9451250f',
+  '0:6:0': '17f205cdf0c99a1dc6697852cc356ac4c8b3f156282209853c4c18af8130c1d5',
+  '0:6:1': 'ab7ffa3a520173571b8bace0d192cf5960c04fbe2bfc6d3a9aabe7991f4f6c4c',
+  '0:7:0': 'ff6f312cbcf18ad9c277450ffec5163b966ee899391f65c07512ea9b9ae936de',
+  '0:7:1': 'bf10e603a65ab7c5b541ccf61a0e59fc7ddd0f078bc37cfd12ab6d7f0be5dc3a',
   '1:0:0': '09cc1118e0dac599af575896b13080811a7f5d87439ce94557b8a2e0fb74a71b',
   '1:0:1': '2bc28f9b0ef9a9f8609899270d8f34031809a3d21bd378ab61afa930cc0dd0a4',
   '1:1:0': '53be7e31405ebab3afc15e53a9a0eb4899092dc4ce457641eb46df58389b33fa',
@@ -151,8 +151,8 @@ for (let row = 0; row < 4; row++) {
   const directionDelta = meanRgbaDelta(cells[row][2][0], cells[row][0][0]);
   requireOk(directionDelta > 18, `row ${row} N/E pose-0 meanRgbaDelta ${directionDelta} must be > 18`);
 }
-assert.deepEqual([Math.min(...alphaValues), Math.max(...alphaValues)], [1265, 1684],
-  `published alphaCount range across 64 cells must be exactly [1265, 1684] (got [${Math.min(...alphaValues)}, ${Math.max(...alphaValues)}])`);
+assert.deepEqual([Math.min(...alphaValues), Math.max(...alphaValues)], [1191, 1684],
+  `published alphaCount range across 64 cells must be exactly [1191, 1684] (got [${Math.min(...alphaValues)}, ${Math.max(...alphaValues)}])`);
 
 for (let dir = 0; dir < 8; dir++) {
   const guardIou = silhouetteIou(cells[0][dir][0], cells[2][dir][0]);

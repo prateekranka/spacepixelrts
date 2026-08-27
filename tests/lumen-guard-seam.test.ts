@@ -28,6 +28,7 @@ import {
   candidateCombatCell,
   resolveCombatOverride,
 } from '../src/generated/sunweaver-lumen-guard-candidate';
+import { lumenGuardAcceptedFrame } from '../src/generated/sunweaver-lumen-guard-accepted';
 import { STARHOLD_PALETTE } from '../src/palette';
 
 const sha = (pix: Pix): string => createHash('sha256').update(pix.d).digest('hex');
@@ -90,19 +91,27 @@ assert.equal(resolveCombatOverride(null), null, 'missing query must not resolve 
 assert.equal(resolveCombatOverride(''), null, 'empty query must not resolve an override');
 assert.equal(resolveCombatOverride('not-a-real-candidate'), null, 'unknown query must not resolve an override');
 
-// Resolved candidate changes row 0 through the normal rimmed atlas path.
+// Resolved candidate flows through the normal rimmed atlas path. After formal
+// acceptance, the no-query row-0 source must consume an independent accepted
+// snapshot. The draft candidate module remains isolated for the next art round.
 const resolved = resolveCombatOverride('sunweaver-lumen-guard');
 assert.ok(resolved !== null);
-let changedFrames = 0;
+let differingFrames = 0;
 for (const [dir, pose] of allDirPose()) {
-  const raw = candidateCombatCell(dir, pose);
-  assert.ok(raw !== null);
+  const candidateRaw = candidateCombatCell(dir, pose);
+  assert.ok(candidateRaw !== null);
+  const acceptedRaw = lumenGuardAcceptedFrame(dir, pose);
+  assert.deepEqual(
+    Array.from(acceptedRaw.d),
+    Array.from(candidateRaw.d),
+    `accepted snapshot must begin byte-identical to approved candidate dir${dir}-pose${pose}`,
+  );
   const actual = combatRowCell(0, dir, pose, resolved);
-  const expected = applyCombatExteriorRim(raw, ROW0_RIM_A, ROW0_RIM_B);
+  const expected = applyCombatExteriorRim(acceptedRaw, ROW0_RIM_A, ROW0_RIM_B);
   assert.deepEqual(Array.from(actual.d), Array.from(expected.d), `candidate rim mismatch dir${dir}-pose${pose}`);
-  if (sha(actual) !== sha(drawCombatSprite(0, dir, pose))) changedFrames++;
+  if (sha(expected) !== sha(drawCombatSprite(0, dir, pose))) differingFrames++;
 }
-assert.equal(changedFrames, 16, 'all 16 row-0 frames must use the candidate in override mode');
+assert.equal(differingFrames, 0, 'accepted no-query row 0 must equal all 16 approved snapshot frames');
 
 // ── 3. Default path is byte-identical (existing callers pass no override) ──
 
