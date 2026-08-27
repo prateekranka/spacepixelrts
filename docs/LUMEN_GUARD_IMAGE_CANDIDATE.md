@@ -1,13 +1,30 @@
 # Lumen Guard image-backed candidate contract
 
-Status: **ACTIVE LEAD CONTRACT**
+Status: **COMPLETE — accepted baseline and normal-route source**
 
 Target: `sunweaver-lumen-guard` — Sunweaver combat unit, combat row `0`.
 
-The existing Forge Art Lab v1 implementation is inherited and remains the workbench
-foundation. It currently has procedural baseline inspection, A/B views, pixel passes,
-context scenes, proof, and dry-run acceptance. It has no image-backed candidate model.
-This contract adds only the smallest vertical slice needed for one Lumen Guard replacement.
+The existing Forge Art Lab v1 implementation remains the workbench foundation. It now
+includes the first disk-backed reference/candidate lifecycle, while preserving the prior
+baseline inspection, A/B views, pixel passes, context scenes, proof, and safe acceptance.
+This contract remains the smallest vertical slice needed for one Lumen Guard replacement.
+
+## Executed result — 2026-08-27
+
+- Imported the authoritative `1389×1132` reference with SHA-256
+  `1832b400a6291f8887697203d1a8968fe9b4211844feec9b352fe75b5e89943c`.
+- Authored and verified 16 raw `64×64` cells in direction-major order. Directions
+  `0,1,2,6,7` are authored; `3,4,5` are exact mirrors; both poses are distinct.
+- Fresh blind critics returned `PASS` at exact 1× and in normal no-query lineup and
+  moving-battle captures.
+- Applied acceptance at source revision `dc59112`; the candidate is `approved` and
+  accepted baseline/registry post-write hashes verified.
+- The normal route now consumes the immutable accepted snapshot in
+  `src/generated/sunweaver-lumen-guard-accepted.ts`. The mutable draft-candidate
+  module stays isolated on the explicit query seam for future art rounds.
+- Forge browser QA passes 15/15. VS4 gameplay QA has `ok=true`, all 16 approved cells
+  equal the normal atlas, rows 1–3 byte-identical, real movement, equal draw calls,
+  zero captured errors, and one shared rim stage.
 
 ## Immutable boundaries
 
@@ -18,8 +35,8 @@ This contract adds only the smallest vertical slice needed for one Lumen Guard r
 - Keep accepted baseline state separate from draft candidate state.
 - The browser must not write accepted baselines or production source.
 - Candidate/reference files are Forge Art data. They must not enter `dist/`.
-- Existing procedural painters and frozen rows remain the baseline until explicit lead
-  acceptance. The candidate override is never the normal route.
+- Existing procedural painters and frozen rows remained the baseline until explicit lead
+  acceptance. The mutable candidate override is never the normal route.
 - The existing exterior combat rim is applied by `authoredCombatSprite()` exactly once.
   Candidate source cells contain no artificial rim.
 
@@ -91,9 +108,10 @@ must differ by more than the existing proven minimum and remain the same unit.
 ## Candidate source and runtime seams
 
 `src/generated/sunweaver-lumen-guard-candidate.ts` exports deterministic raw source cells
-and a pure frame lookup. It remains inactive in the normal game until the lead performs
-formal replacement. The Forge adapters call the candidate source when the candidate view
-is selected. The existing `src/sprites.ts` source remains the baseline until acceptance.
+and a pure frame lookup. It stays isolated from the normal game. Forge adapters call the
+candidate source only when the candidate view is selected. After acceptance,
+`src/sprites.ts` consumes the independent immutable accepted snapshot; later draft edits
+cannot change production art before another explicit acceptance.
 
 The game and renderer use one narrow optional combat override callback. The query
 `?forge-art-candidate=sunweaver-lumen-guard` selects only row `0` and leaves all other
@@ -202,7 +220,8 @@ QA must prove:
   Lumen Guard after the separate source replacement;
 - simulation and unrelated combat rows remain unchanged;
 - proof → dry-run acceptance writes no accepted bytes;
-- apply updates only the intended Lumen baseline/registry/source activation;
+- apply updates only the intended Lumen baseline, registry entry, and candidate status;
+- a separate reviewed source-promotion commit updates normal row 0 and its frozen contracts;
 - production build contains no Forge candidate/reference files.
 
 Evidence stays outside the repository, with at least:

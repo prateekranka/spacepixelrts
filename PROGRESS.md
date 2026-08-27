@@ -2,13 +2,15 @@
 
 **Play:** https://spacepixelrts.pages.dev
 **Bar:** StarCraft II (space RTS, base building, asymmetric factions) — blind, on the running game.
-**Active Forge Art Lab:** `hermes/forge-art-lab` — Lumen Guard image-replacement vertical slice active.
+**Active Forge Art Lab:** `hermes/forge-art-lab` — Lumen Guard image-replacement vertical slice complete; release verification active.
 
-## 2026-08-27 — Lumen Guard image replacement (active)
+## 2026-08-27 — Lumen Guard image replacement — COMPLETE
 
-- Integrated the disk-backed reference/candidate path, Forge comparison UI, row-scoped gameplay override, and proof/acceptance path for `sunweaver-lumen-guard`. The reviewed `--apply` path now marks the candidate `APPROVED` only after baseline and registry writes verify.
-- Candidate-aware browser QA proves the persisted 512×128/16-frame lifecycle, row-0-only atlas change, rows 1–3 preservation, real movement, composited gameplay captures, and zero captured runtime errors.
-- Current visual state: the third deterministic candidate passes all 16 objective gates, exact 1× identity review, mirror/order checks, independent source review, and the fresh blind staged-gameplay gate. The critic confirmed that the gold/ivory palette, red crest, elongated solar spearhead, and dominant solar shield survive the downscale without broken pixels. Formal acceptance is applied at revision `dc59112`; the candidate is `APPROVED`, and the accepted PNG, manifest, and registry hashes agree. Normal-route source replacement remains pending.
+- Integrated the disk-backed reference/candidate path, Forge comparison UI, row-scoped gameplay override, and proof/acceptance path for `sunweaver-lumen-guard`. The reviewed `--apply` path marks a candidate `APPROVED` only after baseline and registry writes verify.
+- Candidate-aware browser QA proves both lifecycle states: a draft changes only combat row 0, while the approved candidate matches the normal atlas in all 16 cells. Rows 1–3 stay byte-identical. Deterministic lineup and battle fixtures prove real facing changes, real movement, equal draw calls, composited pixels, and zero captured runtime errors.
+- The third deterministic candidate passed all 16 objective gates, exact 1× identity review, mirror/order checks, independent source review, and fresh blind staged-gameplay review. Formal acceptance is applied at revision `dc59112`; candidate status is `APPROVED` and the accepted PNG, manifest, and registry hashes agree.
+- The normal no-query game route now reads the immutable accepted source in `src/generated/sunweaver-lumen-guard-accepted.ts`. The mutable draft candidate remains isolated on the explicit query seam. The shared combat exterior rim runs once. Frozen row-0 hashes match the accepted baseline; rows 1–3, `src/sim.ts`, `src/engine.ts`, unit identity, stats, balance, behavior, and controls are unchanged.
+- Final local evidence: `/tmp/final-lumen-vs4/manifest.json` has `ok=true`, approved `changedRow0Cells=0`, rows 1–3 unchanged, row-0 luminance `152.7143–157.7192`, both rim shares `1.0`, real movement through tick 40, and software-GL simulation share `1.2992 ms`. `/tmp/final-lumen-forge/` passes 15/15. A final fresh blind critic returned `PASS` on the normal no-query contact sheet, lineup, and moving battle.
 **Active goal:** **Playable Vertical Slice** — close one honest 12–18 minute iPad-first 4:3
 skirmish before deep controls or general polish: menu -> scout -> gather -> choose technology path ->
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
