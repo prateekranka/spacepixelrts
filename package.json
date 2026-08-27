@@ -45,6 +45,7 @@
     "forge:art:build": "vite build --config vite.forge-art.config.ts",
     "forge:art:typecheck": "tsc --noEmit -p tsconfig.forge-art.json",
     "forge:art:proof": "tsx scripts/forge-art-proof.mjs",
+    "forge:art:import": "tsx scripts/forge-art-import.mjs",
     "forge:art:baseline": "tsx scripts/forge-art-baseline.mjs",
     "forge:art:accept": "tsx scripts/forge-art-accept.mjs",
     "test:forge-art": "tsx tests/forge-art-registry.test.ts && tsx tests/forge-art-metrics.test.ts && tsx tests/forge-art-pipeline.test.ts && tsx tests/forge-art-baseline-schema.test.ts && tsx tests/forge-art-handoff.test.ts",

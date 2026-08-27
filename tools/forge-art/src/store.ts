@@ -21,12 +21,17 @@
 import { isPublicAssetId } from './registry';
 
 export type AbMode = 'split' | 'side-by-side' | 'diff';
+/** Stage view: single-side inspection or the classic A/B comparison modes. */
+export type ViewMode = 'baseline' | 'candidate' | 'split' | 'side-by-side' | 'diff';
 export type ZoomLevel = '1x' | '4x' | '8x';
 export type BackgroundId = 'checker' | 'ink' | 'slate';
 export type PassId = 'silhouette' | 'value' | 'alpha' | 'team' | 'emissive';
 
 /** UI order == compose order (A5 §2.1: "ordered booleans; UI order = this order"). */
 export const PASS_IDS: readonly PassId[] = ['silhouette', 'value', 'alpha', 'team', 'emissive'];
+
+/** data-fal-view order (FAL-IMAGE: baseline, candidate, split, side-by-side, diff). */
+export const VIEW_MODES: readonly ViewMode[] = ['baseline', 'candidate', 'split', 'side-by-side', 'diff'];
 
 export interface ForgeLabState {
   /** Canonical stable id, e.g. 'sunweaver-core', 'gravemark-rift-guard'. */
@@ -44,6 +49,12 @@ export interface ForgeLabState {
   cameraHalfH: number;
   background: BackgroundId;
   abMode: AbMode;
+  /**
+   * Stage view (FAL-IMAGE): 'baseline'/'candidate' show a single side;
+   * 'split'/'side-by-side'/'diff' are the classic A/B comparison modes and
+   * stay synchronized with abMode.
+   */
+  view: ViewMode;
   /** 0..100, split mode only. */
   wipePosition: number;
   zoom: ZoomLevel;
@@ -66,6 +77,7 @@ export const DEFAULT_STATE: ForgeLabState = {
   cameraHalfH: 14,
   background: 'checker',
   abMode: 'split',
+  view: 'split',
   wipePosition: 50,
   zoom: '1x',
   passes: { silhouette: false, value: false, alpha: false, team: false, emissive: false },
@@ -101,6 +113,7 @@ export function canonicalHash(s: ForgeLabState): string {
     ['c', String(s.cameraHalfH)],
     ['b', s.background],
     ['m', s.abMode],
+    ['v', s.view],
     ['w', String(s.wipePosition)],
     ['z', s.zoom],
     ['pa', PASS_IDS.filter((id) => s.passes[id]).join(',')],
@@ -169,7 +182,13 @@ export function parseHash(hash: string): Partial<ForgeLabState> | null {
         if ((BACKGROUNDS as readonly string[]).includes(raw)) out.background = raw as BackgroundId;
         break;
       case 'm':
-        if ((AB_MODES as readonly string[]).includes(raw)) out.abMode = raw as AbMode;
+        if ((AB_MODES as readonly string[]).includes(raw)) {
+          out.abMode = raw as AbMode;
+          out.view = raw as ViewMode;
+        }
+        break;
+      case 'v':
+        if ((VIEW_MODES as readonly string[]).includes(raw)) out.view = raw as ViewMode;
         break;
       case 'w': {
         const n = Number(raw);
@@ -209,7 +228,9 @@ function readSessionStorage(): Partial<ForgeLabState> | null {
     }
     if (typeof s.abMode === 'string' && (AB_MODES as readonly string[]).includes(s.abMode)) {
       out.abMode = s.abMode as AbMode;
+      out.view = s.abMode as ViewMode;
     }
+    if (typeof s.view === 'string' && (VIEW_MODES as readonly string[]).includes(s.view)) out.view = s.view as ViewMode;
     if (typeof s.wipePosition === 'number') out.wipePosition = clamp(Math.round(s.wipePosition), 0, 100);
     if (typeof s.zoom === 'string' && (ZOOMS as readonly string[]).includes(s.zoom)) out.zoom = s.zoom as ZoomLevel;
     if (s.passes && typeof s.passes === 'object') {
@@ -279,6 +300,11 @@ export class ForgeLabStore {
   update(partial: Partial<ForgeLabState>): void {
     const next: ForgeLabState = { ...this.state, ...partial };
     if (partial.passes) next.passes = { ...this.state.passes, ...partial.passes };
+    // view <-> abMode synchronization: ab modes are the same stage concept.
+    if (partial.view && (AB_MODES as readonly string[]).includes(partial.view)) {
+      next.abMode = partial.view as AbMode;
+    }
+    if (partial.abMode) next.view = partial.abMode;
     next.facing = (((Math.round(next.facing) % 8) + 8) % 8);
     next.speed = clamp(next.speed, 0.25, 4);
     next.wipePosition = clamp(Math.round(next.wipePosition), 0, 100);

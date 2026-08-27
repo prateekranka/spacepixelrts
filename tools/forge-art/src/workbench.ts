@@ -13,14 +13,23 @@
  * the rig iframe hosts the one live GameRenderer.
  */
 import { STARHOLD_PALETTE } from '../../../src/palette';
+import { Pix, applyCombatExteriorRim } from '../../../src/sprites';
 import { frameKeyOrder } from './baseline-schema';
 import { getFrames, getSandboxOverride, type FrameSource } from './adapters';
+import {
+  candidateStatusFor,
+  validateCandidateManifest,
+  type CandidateStatus,
+  type ForgeArtCandidateManifest,
+} from './candidate-schema';
 import {
   alphaCoverage,
   averageLuma,
   brightMaterialShare,
   differingPixels,
   imageSha256,
+  isMirrorPair,
+  jsSha256,
   magShare,
   meanRgbaDelta,
   pixView,
@@ -46,9 +55,11 @@ import {
   ForgeLabStore,
   loadInitialState,
   PASS_IDS,
+  VIEW_MODES,
   canonicalHash,
   type ForgeLabState,
   type PassId,
+  type ViewMode,
   type ZoomLevel,
 } from './store';
 import { THRESHOLDS, thresholdsFor, type ThresholdEntry } from './thresholds';
@@ -117,6 +128,34 @@ interface BaselineData {
 interface StatusResult {
   chip: ChipText;
   previewOverride: boolean;
+}
+
+/**
+ * Repo-backed imported candidate (tools/forge-art/candidates/<assetId>/) loaded
+ * over HTTP, with per-cell disk-authority hashes verified in the browser.
+ */
+interface ImportedCandidate {
+  manifest: ForgeArtCandidateManifest;
+  /** Full decoded candidate.png. */
+  sheet: RgbaImage;
+  /** key -> 64x64 cell pixels (dir-major order). */
+  cells: Map<string, PixelImage>;
+  /** Validation warnings (mirror pairs, etc.) — never fake gates. */
+  warnings: string[];
+}
+
+type ImportedCandidateState =
+  | { kind: 'none' }
+  | { kind: 'loaded'; candidate: ImportedCandidate }
+  | { kind: 'invalid'; error: string };
+
+/** Transient in-memory reference attach (never written to disk by the browser). */
+interface TransientReference {
+  name: string;
+  size: number;
+  width: number;
+  height: number;
+  sha256: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,6 +287,16 @@ input[type="range"] { accent-color: #D09A4E; }
 #fal-failures { background: #0B0A12; border: 1px solid #2A203B; border-radius: 4px;
   padding: 6px; font-size: 10px; overflow-x: auto; max-height: 180px; white-space: pre; color: #9CA6A5; }
 #fal-inspector .btn-row { display: flex; gap: 6px; margin-top: 6px; }
+#fal-reference-row input[type="file"] { max-width: 172px; font-size: 10px; }
+#fal-reference-preview { border: 1px solid #2A203B; border-radius: 3px; image-rendering: pixelated;
+  background: #0B0A12; width: 128px; height: 128px; margin: 4px 0; display: block; }
+.fal-kv .warn { color: #E8A33D; }
+#fal-reference-hint, .note { color: #6B7280; font-size: 10px; margin-top: 3px; }
+#fal-candidate-status { display: inline-block; margin-bottom: 4px; }
+#fal-candidate-status[data-state="missing"] { color: #D09A4E; border-color: #D09A4E; }
+#fal-candidate-status[data-state="partial"] { color: #E8A33D; border-color: #E8A33D; }
+#fal-candidate-status[data-state="review"] { color: #4E8A5A; border-color: #4E8A5A; }
+#fal-candidate-status[data-state="current"] { color: #5AC8FA; border-color: #5AC8FA; }
 
 #fal-strip .line { display: flex; gap: 8px; align-items: center; min-width: 0; }
 #fal-strip .line .k { color: #6B7280; }
@@ -331,6 +380,11 @@ let selectedFrameKey = '';
 let lastBaselineSha: string | undefined;
 let lastCandidateSha: string | undefined;
 
+// FAL-IMAGE: imported-candidate + transient-reference state
+const importedCache = new Map<string, ImportedCandidateState>();
+const referenceThumbCache = new Map<string, RgbaImage>();
+let transientReference: TransientReference | null = null;
+
 // Live DOM refs
 let stageBox: HTMLDivElement;
 let baselineCanvas: HTMLCanvasElement;
@@ -362,6 +416,14 @@ let rosterUnlabeled: HTMLInputElement;
 let rosterScaleNote: HTMLSpanElement;
 let contextFrame: HTMLIFrameElement;
 let contextScenes: HTMLDivElement;
+let referenceInput: HTMLInputElement;
+let referenceClearBtn: HTMLButtonElement;
+let referencePreviewCanvas: HTMLCanvasElement;
+let referenceInfoDl: HTMLDListElement;
+let candidateStatusChip: HTMLSpanElement;
+let candidateMetadataDl: HTMLDListElement;
+let buildingNoteEl: HTMLDivElement;
+let viewRow: HTMLDivElement;
 
 // ---------------------------------------------------------------------------
 // Candidate + baseline retrieval
@@ -371,16 +433,49 @@ function cacheKey(assetId: string, group: string): string {
   return `${assetId}:${group}`;
 }
 
-/** Candidate frames for an asset+group, cached; sandbox override applied when active. */
+/** Apply the §17 sandbox override when active (scoped to one asset). */
+function applySandbox(def: AssetDefinition, frames: FrameSource[]): FrameSource[] {
+  if (!sandboxActive) return frames;
+  const override = getSandboxOverride(def.assetId);
+  return override ? frames.map((f) => ({ key: f.key, pix: override(f.pix), error: f.error })) : frames;
+}
+
+/**
+ * Candidate frames for an asset+group. For the primary group the repo-backed
+ * imported candidate (candidate.png, disk authority) is preferred when it
+ * loaded and verified; otherwise the procedural painters remain the candidate.
+ * Baseline mode is untouched: the accepted baseline PNG always drives the
+ * baseline side of the A/B stage.
+ */
 function getCandidate(def: AssetDefinition, group: string): FrameSource[] {
+  if (group === 'primary') {
+    const imported = importedCache.get(def.assetId);
+    if (imported && imported.kind === 'loaded') {
+      const frames = def.frames.map((key) => {
+        const cell = imported.candidate.cells.get(key);
+        if (!cell) {
+          return {
+            key,
+            pix: Pix.alloc(def.dims.w, def.dims.h),
+            error: `imported candidate missing cell ${key}`,
+          };
+        }
+        return {
+          key,
+          pix: applyCombatExteriorRim(
+            new Pix(cell.w, cell.h, new Uint8ClampedArray(cell.d)),
+            [...RIM_COLORS.outer, 255],
+            [...RIM_COLORS.inner, 255],
+          ),
+        };
+      });
+      return applySandbox(def, frames);
+    }
+  }
   const key = cacheKey(def.assetId, group);
   let frames = candidateCache.get(key);
   if (!frames) {
-    frames = getFrames(def.assetId, group);
-    if (sandboxActive) {
-      const override = getSandboxOverride(def.assetId);
-      if (override) frames = frames.map((f) => ({ key: f.key, pix: override(f.pix), error: f.error }));
-    }
+    frames = applySandbox(def, getFrames(def.assetId, group));
     candidateCache.set(key, frames);
   }
   return frames;
@@ -389,7 +484,91 @@ function getCandidate(def: AssetDefinition, group: string): FrameSource[] {
 function invalidateCandidates(): void {
   candidateCache.clear();
   gateCache.clear();
+  importedCache.clear();
   rosterDirty = true;
+}
+
+/**
+ * Load the repo-backed imported candidate over HTTP (the reload path): fetch
+ * manifest.json + candidate.png, validate the exact v1 schema, verify the
+ * sheet dims and every per-cell hash against the manifest (disk authority),
+ * and collect honest warnings (exact mirror pairs). Absent files -> 'none';
+ * any violation -> 'invalid' with a named error.
+ */
+async function loadImportedCandidate(def: AssetDefinition): Promise<ImportedCandidateState> {
+  const cached = importedCache.get(def.assetId);
+  if (cached) return cached;
+  const base = `./candidates/${def.assetId}/`;
+  let state: ImportedCandidateState;
+  try {
+    const manifestResp = await fetch(`${base}manifest.json`);
+    if (!manifestResp.ok) {
+      state = { kind: 'none' };
+    } else {
+      const json = (await manifestResp.json()) as unknown;
+      const schemaErrors = validateCandidateManifest(json);
+      if (schemaErrors.length > 0) {
+        state = { kind: 'invalid', error: `manifest invalid: ${schemaErrors.join('; ')}` };
+      } else {
+        const manifest = json as ForgeArtCandidateManifest;
+        const pngResp = await fetch(`${base}candidate.png`);
+        if (!pngResp.ok) {
+          state = { kind: 'invalid', error: 'candidate.png missing' };
+        } else {
+          const sheet = await decodeImage(await pngResp.blob());
+          const t = manifest.target;
+          const expectW = t.cellW * t.cols;
+          const expectH = t.cellH * t.rows;
+          if (sheet.width !== expectW || sheet.height !== expectH) {
+            state = { kind: 'invalid', error: `candidate.png is ${sheet.width}x${sheet.height}, expected ${expectW}x${expectH}` };
+          } else {
+            const cells = new Map<string, PixelImage>();
+            const warnings: string[] = [];
+            let hashOk = true;
+            manifest.frames.forEach((frame, i) => {
+              const ox = (i % t.cols) * t.cellW;
+              const oy = Math.floor(i / t.cols) * t.cellH;
+              const d = new Uint8ClampedArray(t.cellW * t.cellH * 4);
+              for (let y = 0; y < t.cellH; y++) {
+                d.set(
+                  sheet.data.subarray((oy + y) * sheet.width * 4 + ox * 4, (oy + y) * sheet.width * 4 + ox * 4 + t.cellW * 4),
+                  y * t.cellW * 4,
+                );
+              }
+              if (jsSha256(d) !== frame.sha256) {
+                hashOk = false;
+                warnings.push(`cell ${frame.key} hash mismatch`);
+              }
+              cells.set(frame.key, { w: t.cellW, h: t.cellH, d });
+            });
+            if (!hashOk) {
+              state = { kind: 'invalid', error: 'candidate.png cells do not match manifest frame hashes (disk authority violated)' };
+            } else {
+              // Exact mirrors [3,4,5] of [1,0,7] (binding contract) — honest
+              // warnings via the shared metric, never a fake gate.
+              const mirrorPairs: Array<[string, string]> = [
+                ['dir1-pose0', 'dir3-pose0'],
+                ['dir0-pose0', 'dir4-pose0'],
+                ['dir7-pose0', 'dir5-pose0'],
+              ];
+              for (const [a, b] of mirrorPairs) {
+                const ca = cells.get(a);
+                const cb = cells.get(b);
+                if (ca && cb && !isMirrorPair({ width: ca.w, height: ca.h, data: ca.d }, { width: cb.w, height: cb.h, data: cb.d })) {
+                  warnings.push(`mirror pair ${a}/${b} is not an exact flipX mirror`);
+                }
+              }
+              state = { kind: 'loaded', candidate: { manifest, sheet, cells, warnings } };
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    state = { kind: 'invalid', error: err instanceof Error ? err.message : String(err) };
+  }
+  importedCache.set(def.assetId, state);
+  return state;
 }
 
 /** Fetch + decode the accepted baseline for an asset. null => confirmed missing. */
@@ -888,6 +1067,8 @@ function buildLayout(): void {
     (passRow = el('div', { class: 'ctrl-row', id: 'fal-pass-row' }, [el('span', { class: 'row-label' }, ['passes'])])),
     el('div', { class: 'ctrl-row' }, [
       (zoomRow = el('div', { class: 'ctrl-row', id: 'fal-zoom-row', style: 'gap:4px' })),
+      el('span', { class: 'row-label', style: 'margin-left:10px' }, ['view']),
+      (viewRow = el('div', { class: 'ctrl-row', id: 'fal-view-row', style: 'gap:4px' })),
       el('span', { class: 'row-label', style: 'margin-left:10px' }, ['A/B']),
       (abRow = el('div', { class: 'ctrl-row', id: 'fal-ab-row', style: 'gap:4px' })),
       el('span', { class: 'row-label', style: 'margin-left:10px' }, ['bg']),
@@ -897,6 +1078,39 @@ function buildLayout(): void {
 
   // ── inspector ────────────────────────────────────────────────────────────
   const inspector = el('aside', { id: 'fal-inspector' }, [
+    el('h2', {}, ['reference']),
+    el('div', { class: 'ctrl-row', id: 'fal-reference-row' }, [
+      (referenceInput = el('input', {
+        id: 'fal-reference-input',
+        type: 'file',
+        accept: 'image/png',
+        'data-fal-reference-input': '',
+        'aria-label': 'Attach reference image (PNG, transient preview only)',
+      })),
+      (referenceClearBtn = el('button', {
+        id: 'fal-reference-clear',
+        'data-fal-reference-clear': '',
+        'aria-label': 'Clear transient reference preview',
+      }, ['clear'])),
+    ]),
+    (referencePreviewCanvas = el('canvas', {
+      id: 'fal-reference-preview',
+      'data-fal-reference-preview': '',
+      'aria-label': 'Reference image preview',
+      width: '128',
+      height: '128',
+    })),
+    (referenceInfoDl = el('dl', { class: 'fal-kv' })),
+    el('h2', {}, ['candidate']),
+    (candidateStatusChip = el('span', {
+      id: 'fal-candidate-status',
+      'data-fal-candidate-status': '',
+      class: 'chip-status',
+      role: 'status',
+      'aria-live': 'polite',
+    })),
+    (candidateMetadataDl = el('dl', { class: 'fal-kv', 'data-fal-candidate-metadata': '' })),
+    (buildingNoteEl = el('div', { id: 'fal-building-note', class: 'note', hidden: 'true' })),
     el('h2', {}, ['asset']),
     (metadataDl = el('dl', { class: 'fal-kv' })),
     el('h2', {}, ['objective gates']),
@@ -1123,6 +1337,13 @@ function wireControls(): void {
     pushEvent('proof is CLI-side: npm run forge:art:proof -- --asset=' + store.get().assetId);
   });
   document.getElementById('fal-sandbox')?.addEventListener('click', toggleSandbox);
+
+  // FAL-IMAGE: transient reference attach (in-memory preview only; disk
+  // persistence is proven by the CLI and the reload path).
+  referenceInput.addEventListener('change', () => {
+    void attachTransientReference();
+  });
+  referenceClearBtn.addEventListener('click', clearTransientReference);
 }
 
 function filterCatalog(query: string): void {
@@ -1167,8 +1388,8 @@ function applyWipeClip(position: number): void {
 function selectAsset(assetId: string): void {
   if (!isPublicAssetId(assetId)) return;
   const def = ASSET_BY_ID[assetId];
-  store.update({ assetId, pose: 'primary', frame: 0, facing: 0 });
-  void loadBaseline(def).then(() => {
+  store.update({ assetId, pose: 'primary', frame: 0, facing: 0, view: 'split' });
+  void Promise.all([loadBaseline(def), loadImportedCandidate(def)]).then(() => {
     pushEvent(`asset ${assetId} · baseline ${baselineCache.get(assetId) ? 'loaded' : 'missing'}`);
     render();
   });
@@ -1203,6 +1424,11 @@ function togglePass(pass: PassId): void {
 
 function setAbMode(mode: ForgeLabState['abMode']): void {
   store.update({ abMode: mode });
+}
+
+/** FAL-IMAGE: single-side views + the classic A/B comparison modes. */
+function setView(view: ViewMode): void {
+  store.update({ view });
 }
 
 function setZoom(zoom: ZoomLevel): void {
@@ -1313,6 +1539,10 @@ function render(): void {
   // inspector
   renderInspector(def, frames, baseline, gates, state);
 
+  // FAL-IMAGE: reference + candidate panels
+  renderReferencePanel(def);
+  renderCandidatePanel(def, gates);
+
   // strip
   hashReadout.textContent = canonicalHash(state);
 
@@ -1350,6 +1580,16 @@ function buildStaticControlRows(): void {
     }, [level]);
     button.addEventListener('click', () => setZoom(level));
     zoomRow.append(button);
+  }
+  // View (FAL-IMAGE): baseline | candidate | split | side-by-side | diff
+  for (const view of VIEW_MODES) {
+    const button = el('button', {
+      'data-fal-view': view,
+      'aria-pressed': 'false',
+      'aria-label': `View: ${view}`,
+    }, [view]);
+    button.addEventListener('click', () => setView(view));
+    viewRow.append(button);
   }
   // A/B mode
   for (const mode of ['split', 'side-by-side', 'diff'] as const) {
@@ -1429,6 +1669,13 @@ function updateTransport(def: AssetDefinition, rows: number, state: ForgeLabStat
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
   }
+  for (const view of VIEW_MODES) {
+    const button = viewRow.querySelector<HTMLButtonElement>(`[data-fal-view="${view}"]`);
+    if (!button) continue;
+    const active = state.view === view;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  }
   for (const mode of ['split', 'side-by-side', 'diff'] as const) {
     const button = abRow.querySelector<HTMLButtonElement>(`[data-fal-abmode="${mode}"]`);
     if (!button) continue;
@@ -1495,11 +1742,18 @@ function paintStage(
     }
   }
 
-  // mode-dependent stage layout
-  stageBox.dataset.mode = state.abMode;
+  // mode-dependent stage layout (FAL-IMAGE: view = baseline | candidate | A/B modes)
+  const view = state.view;
+  const showBaseline = view === 'baseline' || view === 'split' || view === 'side-by-side' || view === 'diff';
+  const showCandidate = view === 'candidate' || view === 'split' || view === 'side-by-side' || view === 'diff';
+  const abMode = (view === 'split' || view === 'side-by-side' || view === 'diff') ? view : 'split';
+  baselineCanvas.style.display = showBaseline ? '' : 'none';
+  candidateWrap.style.display = showCandidate ? '' : 'none';
+  if (!showCandidate) candidateWrap.style.clipPath = 'none';
+  stageBox.dataset.mode = abMode;
   const gap = 12;
-  const diffMode = state.abMode === 'diff';
-  const sideMode = state.abMode === 'side-by-side';
+  const diffMode = abMode === 'diff';
+  const sideMode = abMode === 'side-by-side';
   const boxW = sideMode ? backingW * 2 + gap : backingW;
   stageBox.style.width = `${boxW}px`;
   stageBox.style.height = `${backingH}px`;
@@ -1512,7 +1766,7 @@ function paintStage(
   } else {
     candidateWrap.style.left = '0px';
     candidateWrap.style.top = '0px';
-    applyWipeClip(state.wipePosition);
+    if (view === 'split') applyWipeClip(state.wipePosition);
   }
   const transform = `scale(${zoomFactor})`;
   candidateWrap.style.transform = transform;
@@ -1546,9 +1800,9 @@ function paintStage(
     diffCanvas.remove();
   }
 
-  // wipe row visibility: split only
+  // wipe row visibility: split view only
   const wipeRow = document.getElementById('fal-wipe-row');
-  if (wipeRow) wipeRow.style.display = state.abMode === 'split' ? 'flex' : 'none';
+  if (wipeRow) wipeRow.style.display = view === 'split' ? 'flex' : 'none';
 }
 
 function renderInspector(
@@ -1838,6 +2092,200 @@ function pushEvent(text: string): void {
 }
 
 // ---------------------------------------------------------------------------
+// FAL-IMAGE: reference + candidate panels
+// ---------------------------------------------------------------------------
+
+/** Draw an RgbaImage centered/scaled into the 128px preview canvas. */
+function drawImageScaledTo(canvas: HTMLCanvasElement, img: RgbaImage): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+  const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const ox = Math.floor((canvas.width - w) / 2);
+  const oy = Math.floor((canvas.height - h) / 2);
+  const temp = document.createElement('canvas');
+  temp.width = img.width;
+  temp.height = img.height;
+  const tctx = temp.getContext('2d');
+  if (!tctx) return;
+  const data = tctx.createImageData(img.width, img.height);
+  data.data.set(img.data);
+  tctx.putImageData(data, 0, 0);
+  ctx.drawImage(temp, 0, 0, img.width, img.height, ox, oy, w, h);
+}
+
+async function loadReferenceThumb(def: AssetDefinition): Promise<RgbaImage | null> {
+  const cached = referenceThumbCache.get(def.assetId);
+  if (cached) return cached;
+  try {
+    const resp = await fetch(`./candidates/${def.assetId}/reference.png`);
+    if (!resp.ok) return null;
+    const img = await decodeImage(await resp.blob());
+    referenceThumbCache.set(def.assetId, img);
+    return img;
+  } catch {
+    return null;
+  }
+}
+
+function fmtBytes(size: number): string {
+  if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  if (size >= 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${size} B`;
+}
+
+/** Attach a transient in-memory reference preview (image/png only). */
+async function attachTransientReference(): Promise<void> {
+  const file = referenceInput.files?.[0];
+  if (!file) return;
+  const assetId = store.get().assetId;
+  try {
+    const bytes = await file.arrayBuffer();
+    const head = new Uint8Array(bytes.slice(0, 8));
+    const isPng =
+      head.length === 8 &&
+      head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47 &&
+      head[4] === 0x0d && head[5] === 0x0a && head[6] === 0x1a && head[7] === 0x0a;
+    if (!isPng) {
+      transientReference = null;
+      referenceInput.value = '';
+      pushEvent(`reference attach refused: ${file.name} is not a PNG (image/png required)`);
+      render();
+      return;
+    }
+    const img = await decodeImage(new Blob([bytes], { type: 'image/png' }));
+    let sha256: string | null = null;
+    try {
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      sha256 = null; // subtle unavailable — dims/name still shown
+    }
+    transientReference = { name: file.name, size: file.size, width: img.width, height: img.height, sha256 };
+    drawImageScaledTo(referencePreviewCanvas, img);
+    pushEvent(`reference attached (transient): ${file.name} ${img.width}x${img.height} — disk import via forge:art:import`);
+    render();
+  } catch (err) {
+    transientReference = null;
+    referenceInput.value = '';
+    pushEvent(`reference attach failed: ${err instanceof Error ? err.message : String(err)}`);
+    render();
+  }
+}
+
+/** Clear ONLY the transient preview; never touches disk, baselines, or candidates. */
+function clearTransientReference(): void {
+  if (!transientReference) {
+    pushEvent('no transient reference to clear');
+    return;
+  }
+  transientReference = null;
+  referenceInput.value = '';
+  pushEvent('transient reference cleared (disk state unchanged)');
+  render();
+}
+
+function renderReferencePanel(def: AssetDefinition): void {
+  referenceInfoDl.textContent = '';
+  const imported = importedCache.get(def.assetId);
+  const hasImported = imported?.kind === 'loaded';
+  const rows: Array<[string, string, boolean]> = [];
+  if (transientReference) {
+    rows.push(['name', transientReference.name, false]);
+    rows.push(['source', 'transient preview (in memory only)', true]);
+    rows.push(['dims', `${transientReference.width}×${transientReference.height}`, false]);
+    rows.push(['size', fmtBytes(transientReference.size), false]);
+    rows.push(['sha256', transientReference.sha256 ?? 'unavailable', false]);
+    // thumbnail already drawn at attach time; leave it in place
+  } else if (hasImported) {
+    const manifest = imported.candidate.manifest;
+    rows.push(['name', 'reference.png', false]);
+    rows.push(['path', manifest.sourcePath, false]);
+    rows.push(['dims', `${manifest.sourceWidth}×${manifest.sourceHeight}`, false]);
+    rows.push(['sha256', manifest.sourceSha256, false]);
+    void loadReferenceThumb(def).then((img) => {
+      if (img && store.get().assetId === def.assetId) drawImageScaledTo(referencePreviewCanvas, img);
+    });
+  } else {
+    rows.push(['name', '—', false]);
+    rows.push(['path', `tools/forge-art/candidates/${def.assetId}/reference.png`, false]);
+    rows.push(['dims', '—', false]);
+    rows.push(['sha256', '—', false]);
+    referencePreviewCanvas.getContext('2d')?.clearRect(0, 0, referencePreviewCanvas.width, referencePreviewCanvas.height);
+  }
+  for (const [k, v, warn] of rows) {
+    referenceInfoDl.append(
+      el('dt', {}, [k]),
+      el('dd', { class: warn ? 'warn' : '' }, [v]),
+    );
+  }
+  if (!document.getElementById('fal-reference-hint')) {
+    referenceInfoDl.after(el('div', { id: 'fal-reference-hint', class: 'note' }, [
+      'attach = transient preview only. Disk import: npm run forge:art:import -- --asset=<id> --reference=/abs/path.png',
+    ]));
+  }
+}
+
+function renderCandidatePanel(def: AssetDefinition, gates: GateRow[]): void {
+  const imported = importedCache.get(def.assetId);
+  const manifest = imported?.kind === 'loaded' ? imported.candidate.manifest : null;
+  const gatesOk = !gates.some((g) => g.proven && !g.pass);
+  const status: CandidateStatus = candidateStatusFor(manifest, gatesOk);
+  candidateStatusChip.textContent = status;
+  const stateAttr: Record<CandidateStatus, string> = {
+    'NO CANDIDATE': 'missing',
+    DRAFT: 'partial',
+    'READY FOR REVIEW': 'review',
+    APPROVED: 'current',
+  };
+  candidateStatusChip.dataset.state = stateAttr[status];
+
+  candidateMetadataDl.textContent = '';
+  const rows: Array<[string, string, boolean]> = [];
+  if (manifest) {
+    rows.push(['status', manifest.status, false]);
+    rows.push(['output', manifest.candidatePath, false]);
+    rows.push(['generated source', manifest.candidateSourcePath, false]);
+    rows.push(['sheet', `${manifest.target.cellW * manifest.target.cols}×${manifest.target.cellH * manifest.target.rows}`, false]);
+    rows.push(['cells', `${manifest.frames.length} × ${manifest.target.cellW}×${manifest.target.cellH}`, false]);
+    rows.push(['frame order', `dir-major (${manifest.frames.length})`, false]);
+    rows.push(['authored dirs', manifest.directions.authored.join(', '), false]);
+    rows.push(['mirrored dirs', `${manifest.directions.mirrored.join(', ')} (of 1,0,7)`, false]);
+    rows.push(['generatedAt', manifest.generatedAt.slice(0, 19).replace('T', ' '), false]);
+    const warnings = imported?.kind === 'loaded' ? imported.candidate.warnings : [];
+    for (const warning of warnings) rows.push(['warning', warning, true]);
+  } else {
+    rows.push(['status', 'no repo-backed candidate', false]);
+    rows.push(['output', `tools/forge-art/candidates/${def.assetId}/candidate.png`, false]);
+    rows.push(['generated source', `src/generated/${def.assetId}-candidate.ts`, false]);
+    rows.push(['frame order', 'dir-major (16)', false]);
+    rows.push(['authored dirs', '0, 1, 2, 6, 7', false]);
+    rows.push(['mirrored dirs', '3, 4, 5 (of 1,0,7)', false]);
+    if (imported?.kind === 'invalid') rows.push(['validation error', imported.error, true]);
+  }
+  for (const [k, v, warn] of rows) {
+    candidateMetadataDl.append(
+      el('dt', {}, [k]),
+      el('dd', { class: warn ? 'warn' : '' }, [v]),
+    );
+  }
+  if (!manifest && imported?.kind !== 'invalid') {
+    candidateMetadataDl.append(el('dt', {}, ['hint']), el('dd', { class: 'warn' }, [
+      'run forge:art:import to create the repo-backed candidate',
+    ]));
+  }
+
+  // Visible building-category limitation note (manifest schema supports
+  // unit|building; this vertical slice converts combat reference images only).
+  buildingNoteEl.hidden = def.category !== 'building';
+  buildingNoteEl.textContent =
+    'Note: the manifest schema supports unit | building, but this vertical slice converts combat reference images only.';
+}
+
+// ---------------------------------------------------------------------------
 // Keyboard (A5 §1.6 amended)
 // ---------------------------------------------------------------------------
 
@@ -1972,6 +2420,10 @@ function publishProbe(def: AssetDefinition, state: ForgeLabState, key: string): 
   );
   lastCandidateSha = sha256Bytes(candidateSheet.data);
   lastBaselineSha = baseline ? baseline.manifestSha256 : undefined;
+  const imported = importedCache.get(def.assetId);
+  const manifest = imported?.kind === 'loaded' ? imported.candidate.manifest : null;
+  const gatesOk = !computeGates(def, frames, baseline, key).some((g) => g.proven && !g.pass);
+  const candidateStatus = candidateStatusFor(manifest, gatesOk);
   window.__FORGE_ART_QA__ = Object.freeze({
     version: 'fal-1',
     ready: renderedOnce,
@@ -1982,6 +2434,32 @@ function publishProbe(def: AssetDefinition, state: ForgeLabState, key: string): 
     ab: {
       baselineSha256: lastBaselineSha,
       candidateSha256: lastCandidateSha,
+    },
+    reference: {
+      imported: Boolean(manifest),
+      path: manifest?.sourcePath ?? null,
+      sha256: manifest?.sourceSha256 ?? null,
+      width: manifest?.sourceWidth ?? null,
+      height: manifest?.sourceHeight ?? null,
+      transient: transientReference,
+    },
+    candidate: {
+      present: Boolean(manifest),
+      status: candidateStatus,
+      manifestPath: manifest ? `tools/forge-art/candidates/${def.assetId}/manifest.json` : null,
+      candidatePath: manifest?.candidatePath ?? null,
+      sourcePath: manifest?.candidateSourcePath ?? null,
+      sheetWidth: manifest ? manifest.target.cellW * manifest.target.cols : null,
+      sheetHeight: manifest ? manifest.target.cellH * manifest.target.rows : null,
+      frameCount: manifest?.frames.length ?? 0,
+      authored: manifest ? [...manifest.directions.authored] : [],
+      mirrored: manifest ? [...manifest.directions.mirrored] : [],
+      warnings:
+        imported?.kind === 'loaded'
+          ? [...imported.candidate.warnings]
+          : imported?.kind === 'invalid'
+            ? [imported.error]
+            : [],
     },
     errors: [...errors],
   });
@@ -1995,7 +2473,7 @@ function wireHmr(): void {
   window.addEventListener('vite:afterUpdate' as keyof WindowEventMap, () => {
     invalidateCandidates();
     const def = ASSET_BY_ID[store.get().assetId];
-    void loadBaseline(def).then(() => {
+    void Promise.all([loadBaseline(def), loadImportedCandidate(def)]).then(() => {
       pushEvent('candidate HMR · metrics re-ran');
       render();
     });
@@ -2044,7 +2522,7 @@ export function boot(): void {
   if (frame !== store.get().frame) store.update({ frame });
 
   store.subscribe(() => render());
-  void loadBaseline(def).then(() => {
+  void Promise.all([loadBaseline(def), loadImportedCandidate(def)]).then(() => {
     pushEvent(`baseline ${baselineCache.get(def.assetId) ? 'loaded' : 'missing'} for ${def.assetId}`);
     render();
   });
