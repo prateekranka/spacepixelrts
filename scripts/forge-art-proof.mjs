@@ -18,6 +18,7 @@ import { createRequire } from 'node:module';
 import { PNG } from 'pngjs';
 import playwright from 'playwright';
 import { STARHOLD_PALETTE } from '../src/palette';
+import { Pix, applyCombatExteriorRim } from '../src/sprites';
 import {
   REPO_ROOT,
   VIEWPORT,
@@ -34,6 +35,7 @@ import {
 } from './forge-art-lib.mjs';
 import { ASSET_BY_ID, CATALOG } from '../tools/forge-art/src/registry';
 import { getFrames } from '../tools/forge-art/src/adapters';
+import { loadCandidateSheetFromDisk } from '../tools/forge-art/src/candidate-disk';
 import { gridGeometryFor } from '../tools/forge-art/src/baseline-schema';
 import {
   alphaCoverage,
@@ -98,6 +100,30 @@ function acceptedCells(assetId) {
     }
   }
   return { cells, manifest, geo };
+}
+
+/**
+ * Candidate frames for proof. The disk candidate is raw and is intentionally
+ * passed through the same exterior combat rim as the runtime atlas before any
+ * gate, comparison, or screenshot is produced. Missing candidate state falls
+ * back to the accepted procedural candidate for roster proofs; a malformed or
+ * tampered target candidate fails loudly.
+ */
+function candidateFramesFor(assetId) {
+  const loaded = loadCandidateSheetFromDisk(assetId);
+  if ('missing' in loaded) return getFrames(assetId);
+  if ('error' in loaded) throw new Error(`candidate sheet invalid for ${assetId}: ${loaded.error}`);
+  if (assetId !== 'sunweaver-lumen-guard') return getFrames(assetId);
+  const outer = [...RIM_COLORS.outer, 255];
+  const inner = [...RIM_COLORS.inner, 255];
+  return loaded.cells.map((cell) => ({
+    key: cell.key,
+    pix: applyCombatExteriorRim(
+      new Pix(64, 64, new Uint8ClampedArray(cell.bytes)),
+      outer,
+      inner,
+    ),
+  }));
 }
 
 /** Build an HTML page that composes labeled/unlabeled sheets from raw RGBA bytes. */
@@ -468,7 +494,7 @@ async function main() {
     const payloads = [];
     const toArray = (buffer) => Array.from(buffer);
     for (const assetId of assetIds) {
-      const sourceFrames = getFrames(assetId);
+      const sourceFrames = candidateFramesFor(assetId);
       candidateFramesByAsset.set(assetId, sourceFrames);
       manifest.failedFrames.push(...sourceFrames.filter((frame) => frame.error).map((frame) => (
         isRoster ? `${assetId}:${frame.key}` : frame.key
@@ -542,7 +568,7 @@ async function main() {
         if (target) await el.screenshot({ path: path.join(outDir, target) });
       }
       // source sheet = candidate at 1x
-      const first = getFrames(assetIds[0]);
+      const first = candidateFramesFor(assetIds[0]);
       writeSourceSheet(first, gridGeometryFor(assetIds[0]), path.join(outDir, 'source-sheet.png'));
     }
     await composerPage.close();

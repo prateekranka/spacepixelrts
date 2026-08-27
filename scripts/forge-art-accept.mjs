@@ -23,8 +23,11 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { PNG } from 'pngjs';
 import { REPO_ROOT, parseArgs, sha256File } from './forge-art-lib.mjs';
+import { STARHOLD_PALETTE } from '../src/palette';
+import { Pix, applyCombatExteriorRim } from '../src/sprites';
 import { ASSET_BY_ID, CATALOG } from '../tools/forge-art/src/registry';
-import { getFrames } from '../tools/forge-art/src/adapters';
+import { loadCandidateManifestFromDisk, loadCandidateSheetFromDisk, referenceInfoFromDisk } from '../tools/forge-art/src/candidate-disk';
+import { loadGeneratedCandidateSource } from '../tools/forge-art/src/candidate-source';
 import {
   frameKeyOrder,
   gridGeometryFor,
@@ -117,6 +120,62 @@ function sameSet(a, b) {
 
 function nonBaselineFiles(files) {
   return files.filter((file) => !file.startsWith('tools/forge-art/baselines'));
+}
+
+const RIM_COLORS = {
+  outer: hexRgb(STARHOLD_PALETTE.amber),
+  inner: hexRgb(STARHOLD_PALETTE.cream),
+};
+
+function hexRgb(hex) {
+  const value = Number.parseInt(hex.slice(1), 16);
+  return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+}
+
+/**
+ * Read the repo-backed raw candidate, verify the generated source agrees with
+ * candidate.png, then apply the normal row-0 exterior rim exactly once. This
+ * is the only frame source accepted by the baseline promotion path.
+ */
+async function candidateFramesForAcceptance(assetId) {
+  if (assetId !== 'sunweaver-lumen-guard') {
+    fail(9, `candidate acceptance is not implemented for ${assetId}; the image vertical slice targets sunweaver-lumen-guard`);
+  }
+  const manifestLoad = loadCandidateManifestFromDisk(assetId);
+  if ('missing' in manifestLoad) fail(9, `candidate manifest missing for ${assetId}`);
+  if ('error' in manifestLoad) fail(1, manifestLoad.error);
+  const candidateManifest = manifestLoad.manifest;
+  const reference = referenceInfoFromDisk(assetId);
+  if ('missing' in reference) fail(9, `reference.png missing for ${assetId}`);
+  if ('error' in reference) fail(1, reference.error);
+  if (
+    reference.sha256 !== candidateManifest.sourceSha256 ||
+    reference.width !== candidateManifest.sourceWidth ||
+    reference.height !== candidateManifest.sourceHeight
+  ) {
+    fail(1, `reference.png does not match candidate manifest for ${assetId}`);
+  }
+  const source = await loadGeneratedCandidateSource(assetId);
+  if (!source.present) fail(9, source.message);
+  const sheet = loadCandidateSheetFromDisk(assetId);
+  if ('missing' in sheet) fail(9, `candidate.png missing for ${assetId}`);
+  if ('error' in sheet) fail(1, sheet.error);
+  if (source.module.cells.length !== sheet.cells.length) {
+    fail(9, `generated source and candidate.png frame counts differ for ${assetId}`);
+  }
+  for (let i = 0; i < sheet.cells.length; i++) {
+    const diskHash = cellSha256FromBytes(sheet.cells[i].bytes);
+    const sourceHash = cellSha256FromBytes(source.module.cells[i].bytes);
+    if (diskHash !== sourceHash) {
+      fail(5, `candidate source mismatch for ${sheet.cells[i].key}: generated source ${sourceHash} != candidate.png ${diskHash}`);
+    }
+  }
+  const outer = [...RIM_COLORS.outer, 255];
+  const inner = [...RIM_COLORS.inner, 255];
+  return sheet.cells.map((cell) => ({
+    key: cell.key,
+    pix: applyCombatExteriorRim(new Pix(64, 64, new Uint8ClampedArray(cell.bytes)), outer, inner),
+  }));
 }
 
 async function main() {
@@ -219,7 +278,7 @@ async function main() {
   }
 
   // V7 — recompute candidate hashes from CURRENT source; must equal evidence.
-  const frames = getFrames(assetId);
+  const frames = await candidateFramesForAcceptance(assetId);
   const partialFrames = frames.filter((f) => f.error);
   if (partialFrames.length > 0) fail(9, `current candidate partial: ${partialFrames.map((f) => f.key).join(', ')}`);
   const geo = gridGeometryFor(assetId);
