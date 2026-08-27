@@ -8,6 +8,8 @@ Branch: `hermes/forge-art-lab` (base `ced0b94`). Worktree:
 `spacepixelrts-forge-trace` / `hermes/forge-trace`. Never merges to `chatgptpro2008`.
 Never deploys. Evidence always goes OUTSIDE the repo.
 
+Operator tutorial: `docs/FORGE_ART_LAB_USER_GUIDE.md`.
+
 ---
 
 ## 1. Purpose

@@ -25,7 +25,12 @@ import { PNG } from 'pngjs';
 import { REPO_ROOT, parseArgs, sha256File } from './forge-art-lib.mjs';
 import { ASSET_BY_ID, CATALOG } from '../tools/forge-art/src/registry';
 import { getFrames } from '../tools/forge-art/src/adapters';
-import { gridGeometryFor, cellSha256FromBytes, validateBaselineManifest } from '../tools/forge-art/src/baseline-schema';
+import {
+  frameKeyOrder,
+  gridGeometryFor,
+  cellSha256FromBytes,
+  validateBaselineManifest,
+} from '../tools/forge-art/src/baseline-schema';
 
 const require = createRequire(import.meta.url);
 const BASELINES_DIR = path.join(REPO_ROOT, 'tools', 'forge-art', 'baselines');
@@ -57,7 +62,7 @@ function readRegistry() {
 }
 
 /** Re-derive per-frame hashes from an on-disk baseline.png using the grid geometry. */
-function hashesFromPng(pngPath, geo) {
+function hashesFromPng(pngPath, geo, keys = []) {
   const png = PNG.sync.read(fs.readFileSync(pngPath));
   if (png.width !== geo.cellW * geo.cols || png.height !== geo.cellH * geo.rows) {
     throw new Error(`baseline.png is ${png.width}x${png.height}, expected ${geo.cellW * geo.cols}x${geo.cellH * geo.rows}`);
@@ -71,11 +76,47 @@ function hashesFromPng(pngPath, geo) {
         const srcStart = ((col * geo.cellW) + (row * geo.cellH + y) * png.width) * 4;
         png.data.copy(bytes, y * geo.cellW * 4, srcStart, srcStart + geo.cellW * 4);
       }
-      hashes[`cell${index}`] = cellSha256FromBytes(bytes);
+      hashes[keys[index] ?? `cell${index}`] = cellSha256FromBytes(bytes);
       index++;
     }
   }
   return hashes;
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Accept both proof.metrics[assetId] and a direct proof.metrics object. */
+function normalizeMetricPack(evidence, assetId) {
+  if (!isRecord(evidence.metrics)) return null;
+  const direct = evidence.metrics;
+  if (isRecord(direct.candidateHashes)) return direct;
+  const keyed = direct[assetId];
+  if (isRecord(keyed) && isRecord(keyed.candidateHashes)) return keyed;
+  return null;
+}
+
+function normalizeCandidateHashes(evidence, assetId) {
+  const pack = normalizeMetricPack(evidence, assetId);
+  if (!pack) fail(1, `malformed evidence: metrics must expose candidateHashes for ${assetId}`);
+  const hashes = pack.candidateHashes;
+  const entries = Object.entries(hashes);
+  if (entries.length === 0) fail(1, 'malformed evidence: candidateHashes must be non-empty');
+  for (const [key, hash] of entries) {
+    if (!key || typeof hash !== 'string' || !/^[0-9a-f]{64}$/.test(hash)) {
+      fail(1, `malformed evidence: candidateHashes.${key} must be a 64-char hex sha256`);
+    }
+  }
+  return hashes;
+}
+
+function sameSet(a, b) {
+  return a.size === b.size && [...a].every((value) => b.has(value));
+}
+
+function nonBaselineFiles(files) {
+  return files.filter((file) => !file.startsWith('tools/forge-art/baselines'));
 }
 
 async function main() {
@@ -124,36 +165,56 @@ async function main() {
   } catch (error) {
     fail(1, `evidence unparseable: ${error?.message ?? error}`);
   }
-  if (!evidence || evidence.schemaVersion !== 1 || !evidence.metrics) {
+  if (!isRecord(evidence) || evidence.schemaVersion !== 1 || !evidence.metrics) {
     fail(1, 'unsupported or malformed evidence (schemaVersion/metrics missing)');
+  }
+  if (evidence.assetId !== undefined && evidence.assetId !== assetId) {
+    fail(1, `evidence assetId ${String(evidence.assetId)} does not match selected asset ${assetId}`);
   }
 
   // V5 — freshness: evidence revision must equal HEAD; tree must be clean
   // outside the declared candidate source files.
   const head = gitRevision();
+  if (typeof evidence.sourceRevision !== 'string' || evidence.sourceRevision.length === 0) {
+    fail(1, 'malformed evidence: sourceRevision is required');
+  }
   if (evidence.sourceRevision !== head) {
     fail(3, `stale evidence: generated at ${String(evidence.sourceRevision).slice(0, 10)}, HEAD is ${head.slice(0, 10)}`);
   }
-  const allowedDirty = new Set([...(evidence.declaredDirtyFiles ?? []), ...gitDirtyFiles().filter(() => false)]);
-  void allowedDirty;
-  const dirty = gitDirtyFiles();
-  const declared = new Set([...(evidence.declaredDirtyFiles ?? []), 'tools/forge-art/baselines']);
-  // Baseline writes themselves are the expected output of acceptance; anything
-  // else dirty makes the evidence stale.
-  const unexpectedDirty = dirty.filter((file) => !declared.has(file) && !file.startsWith('tools/forge-art/baselines'));
-  if (unexpectedDirty.length > 0 && apply) {
-    fail(3, `stale evidence: worktree dirty beyond declared files: ${unexpectedDirty.join(', ')}`);
+  if (!Array.isArray(evidence.declaredDirtyFiles) || evidence.declaredDirtyFiles.some((file) => typeof file !== 'string')) {
+    fail(1, 'malformed evidence: declaredDirtyFiles must be a string array');
+  }
+  const declared = new Set(nonBaselineFiles(evidence.declaredDirtyFiles));
+  const dirty = new Set(nonBaselineFiles(gitDirtyFiles()));
+  if (!sameSet(declared, dirty)) {
+    const unexpected = [...dirty].filter((file) => !declared.has(file));
+    const missing = [...declared].filter((file) => !dirty.has(file));
+    const detail = [
+      unexpected.length ? `unexpected: ${unexpected.join(', ')}` : '',
+      missing.length ? `missing: ${missing.join(', ')}` : '',
+    ].filter(Boolean).join('; ');
+    fail(3, `stale evidence: worktree dirty state differs from declaration${detail ? ` (${detail})` : ''}`);
   }
 
   // V6 — gates.
-  const gateResults = evidence.gates ?? {};
+  if (!isRecord(evidence.gates) || Object.keys(evidence.gates).length === 0) {
+    fail(1, 'malformed evidence: gates must be a non-empty boolean map');
+  }
+  const gateResults = evidence.gates;
+  const malformedGates = Object.entries(gateResults).filter(([, value]) => typeof value !== 'boolean');
+  if (malformedGates.length > 0) {
+    fail(1, `malformed evidence: gates must contain booleans (${malformedGates.map(([key]) => key).join(', ')})`);
+  }
   const failedGates = Object.entries(gateResults).filter(([, v]) => v !== true);
   if (failedGates.length > 0) {
     fail(4, `failed gates: ${failedGates.map(([k]) => k).join(', ')}`);
   }
 
   // Partial candidate refusal.
-  if (Array.isArray(evidence.failedFrames) && evidence.failedFrames.length > 0) {
+  if (!Array.isArray(evidence.failedFrames) || evidence.failedFrames.some((frame) => typeof frame !== 'string')) {
+    fail(1, 'malformed evidence: failedFrames must be a string array');
+  }
+  if (evidence.failedFrames.length > 0) {
     fail(9, `partial candidate: ${evidence.failedFrames.length} frame(s) failed to generate`);
   }
 
@@ -167,9 +228,15 @@ async function main() {
   }
   const candidateHashes = {};
   frames.forEach((frame) => { candidateHashes[frame.key] = cellSha256FromBytes(frame.pix.d); });
-  for (const [key, sha] of Object.entries(evidence.metrics.candidateHashes ?? {})) {
-    if (candidateHashes[key] !== sha) {
-      fail(5, `hash mismatch for ${key}: current source ${candidateHashes[key]} != evidence ${sha}`);
+  const evidenceHashes = normalizeCandidateHashes(evidence, assetId);
+  const evidenceKeys = Object.keys(evidenceHashes);
+  const currentKeys = Object.keys(candidateHashes);
+  if (evidenceKeys.length !== currentKeys.length || !sameSet(new Set(evidenceKeys), new Set(currentKeys))) {
+    fail(5, `hash mismatch: candidateHashes keys ${evidenceKeys.length} do not equal current frame keys ${currentKeys.length}`);
+  }
+  for (const key of currentKeys) {
+    if (candidateHashes[key] !== evidenceHashes[key]) {
+      fail(5, `hash mismatch for ${key}: current source ${candidateHashes[key]} != evidence ${evidenceHashes[key]}`);
     }
   }
 
@@ -189,12 +256,28 @@ async function main() {
       continue;
     }
     const oGeo = gridGeometryFor(other);
+    const otherKeys = frameKeyOrder(other);
     let diskHashes;
-    try { diskHashes = hashesFromPng(oPng, oGeo); } catch (error) { drift.push(`${other}: ${error.message}`); continue; }
-    const values = Object.values(diskHashes);
-    const expected = Object.values(entry.frameSha256 ?? {});
-    if (values.length !== expected.length || values.some((h, i) => h !== expected[i])) {
+    try { diskHashes = hashesFromPng(oPng, oGeo, otherKeys); } catch (error) { drift.push(`${other}: ${error.message}`); continue; }
+    const expected = entry.frameSha256 ?? {};
+    if (otherKeys.some((key) => diskHashes[key] !== expected[key]) || Object.keys(expected).length !== otherKeys.length) {
       drift.push(`${other}: frame hashes differ from registry`);
+    }
+    let otherFrames;
+    try { otherFrames = getFrames(other); } catch (error) { drift.push(`${other}: candidate render failed (${error.message})`); continue; }
+    const otherPartial = otherFrames.filter((frame) => frame.error);
+    if (otherPartial.length > 0) {
+      drift.push(`${other}: candidate partial (${otherPartial.map((frame) => frame.key).join(', ')})`);
+      continue;
+    }
+    const otherCandidateHashes = Object.fromEntries(
+      otherFrames.map((frame) => [frame.key, cellSha256FromBytes(frame.pix.d)]),
+    );
+    if (
+      Object.keys(otherCandidateHashes).length !== otherKeys.length ||
+      otherKeys.some((key) => otherCandidateHashes[key] !== expected[key])
+    ) {
+      drift.push(`${other}: current candidate differs from accepted registry`);
     }
   }
   if (drift.length > 0) fail(6, `unrelated asset drift: ${drift.join('; ')}`);
@@ -203,6 +286,7 @@ async function main() {
   const changedFrames = frames
     .map((frame) => ({ key: frame.key, accepted: acceptedManifest.frames?.find((f) => f.key === frame.key)?.sha256 ?? null, candidate: candidateHashes[frame.key] }))
     .filter((row) => row.accepted !== row.candidate);
+  console.log(`selected asset: ${assetId}`);
   console.log(`plan: ${isInit ? 'initialize' : 'replace'} accepted baseline for ${assetId}`);
   console.log(`  revision ${String(acceptedManifest.revision ?? 'none').slice(0, 10)} -> ${head.slice(0, 10)}`);
   console.log(`  frames changed: ${changedFrames.length}/${frames.length}`);

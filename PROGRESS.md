@@ -18,11 +18,19 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
 - Fixed catalog click selection and per-asset aria labels. Gate notes now use full-width rows, so
   the inspector table stays inside the 1366 × 1024 viewport. Rig URLs now honor a valid `scene=`
   value and fall back to `quiet-helios` only when the value is missing or invalid.
+- Public proof-to-promotion handoff repaired: the published proof, baseline, and acceptance
+  package commands now execute through `tsx`; single-asset proof manifests carry source,
+  dirty-file, frame, hard-gate, and candidate-hash evidence; generated evidence feeds the real
+  dry-run acceptance command directly. Empty or malformed gates are refused.
+- Operator tutorial: `docs/FORGE_ART_LAB_USER_GUIDE.md`.
 - Verification: `npm run test:forge-art`, `npm run forge:art:typecheck`,
-  `npm run forge:art:build`, `npm run build`, and `scripts/forge-art-prod-isolation.sh` pass.
-- Real-browser gate: `npm run qa:forge-art -- --out=/tmp/fal-qa-final` passes 14/14 steps;
-  manifest `ok=true`, errors `[]`, screenshots exact 1366 × 1024, one live WebGL context in
-  the rig, and no leaked Vite process.
+  `npm run forge:art:build`, and `npm run build` pass.
+- Real-browser gate: `npm run qa:forge-art -- --out=/tmp/fal-qa-handoff-final` passes 15/15
+  steps; manifest `ok=true`, generated proof feeds dry-run acceptance, refusal fixtures pass,
+  screenshots are exact 1366 × 1024, the rig has one live WebGL context, and no process leaks.
+- Live handoff proof: `/tmp/fal-teach-proof/manifest.json` has 15 passing hard gates and no
+  browser errors. Dry-run acceptance reported 0/16 changed frames and did not change the SHA-256
+  of the accepted PNG, accepted manifest, or registry.
 - Forge Art Lab remains local and is not deployed to Cloudflare.
 
 ## Self-view harness (2026-08-26) — DONE

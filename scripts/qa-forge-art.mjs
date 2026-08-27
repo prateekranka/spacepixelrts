@@ -38,6 +38,7 @@ import {
   attachErrors,
   settleFrames,
   findLeakedProcesses,
+  sha256File,
 } from './forge-art-lib.mjs';
 
 const NAV_TIMEOUT_MS = 30000;
@@ -70,6 +71,48 @@ function gitDirtyFiles() {
     .split('\n').map((line) => line.slice(3).trim()).filter(Boolean);
 }
 
+function runPublicForgeCommand(script, args) {
+  try {
+    const output = execFileSync('npm', ['run', script, '--', ...args], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: 'pipe',
+      timeout: 300000,
+    });
+    return { code: 0, output };
+  } catch (error) {
+    return {
+      code: error?.status ?? -1,
+      output: `${error?.stdout ?? ''}${error?.stderr ?? ''}`,
+    };
+  }
+}
+
+function acceptedSnapshot() {
+  const files = [
+    path.join(REPO_ROOT, 'tools/forge-art/baselines/sunweaver-lumen-guard/baseline.png'),
+    path.join(REPO_ROOT, 'tools/forge-art/baselines/sunweaver-lumen-guard/manifest.json'),
+    path.join(REPO_ROOT, 'tools/forge-art/baselines/registry.json'),
+  ];
+  return Object.fromEntries(files.map((file) => {
+    const stat = fs.statSync(file);
+    return [file, { sha256: sha256File(file), mtimeMs: stat.mtimeMs, size: stat.size }];
+  }));
+}
+
+function assertSnapshotUnchanged(before, after) {
+  for (const [file, original] of Object.entries(before)) {
+    const current = after[file];
+    assertThat(current && current.sha256 === original.sha256, `${file} hash changed during dry-run`);
+    assertThat(current.mtimeMs === original.mtimeMs, `${file} mtime changed during dry-run`);
+    assertThat(current.size === original.size, `${file} size changed during dry-run`);
+  }
+}
+
+function cloneEvidence(manifest) {
+  return JSON.parse(JSON.stringify(manifest));
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const outDir = resolveOut(args.out);
@@ -89,6 +132,10 @@ async function main() {
   let server = null;
   let browser = null;
   const pages = [];
+  let proofDir = '';
+  let proofManifestPath = '';
+  let proofManifest = null;
+  let acceptedBefore = null;
   const step = async (name, fn) => {
     try {
       await fn();
@@ -235,104 +282,188 @@ async function main() {
     });
 
     await step('proof-pack-generation', async () => {
-      const proofDir = path.join(outDir, 'proof-lumen-guard');
-      execFileSync('node_modules/.bin/tsx', [
-        'scripts/forge-art-proof.mjs', '--asset=sunweaver-lumen-guard', `--out=${proofDir}`,
-      ], { cwd: REPO_ROOT, stdio: 'ignore', timeout: 300000 });
+      proofDir = path.join(outDir, 'proof-lumen-guard');
+      proofManifestPath = path.join(proofDir, 'manifest.json');
+      acceptedBefore = acceptedSnapshot();
+      const proof = runPublicForgeCommand('forge:art:proof', [
+        '--asset=sunweaver-lumen-guard', `--out=${proofDir}`,
+      ]);
+      assertThat(proof.code === 0, `public proof command failed (${proof.code}): ${proof.output.slice(-1200)}`);
       const requiredFiles = [
         'manifest.json', 'asset.json', 'metrics.json', 'changes.json', 'source-sheet.png',
-        'candidate-sheet.png', 'silhouette-sheet.png', 'value-sheet.png',
+        'candidate-sheet.png', 'accepted-sheet.png', 'difference-sheet.png',
+        'silhouette-sheet.png', 'value-sheet.png',
         'normal-context.png', 'close-context.png', 'far-context.png',
         'console.txt', 'critic-brief.txt',
       ];
       for (const file of requiredFiles) {
         assertThat(fs.existsSync(path.join(proofDir, file)), `proof pack missing ${file}`);
       }
-      const proofManifest = JSON.parse(fs.readFileSync(path.join(proofDir, 'manifest.json'), 'utf8'));
+      proofManifest = JSON.parse(fs.readFileSync(proofManifestPath, 'utf8'));
       assertThat(proofManifest.ok === true, 'proof manifest ok=false');
+      assertThat(proofManifest.schemaVersion === 1, 'proof manifest schemaVersion must be 1');
+      assertThat(proofManifest.tool === 'forge-art-proof', 'proof manifest tool marker missing');
+      assertThat(proofManifest.assetId === 'sunweaver-lumen-guard', 'proof manifest assetId missing or wrong');
       assertThat(proofManifest.git && proofManifest.git.revision, 'proof manifest missing git revision');
+      assertThat(proofManifest.sourceRevision === proofManifest.git.revision,
+        'proof sourceRevision must equal proof git revision');
+      assertThat(Array.isArray(proofManifest.declaredDirtyFiles), 'proof declaredDirtyFiles missing');
+      assertThat(JSON.stringify(proofManifest.declaredDirtyFiles) === JSON.stringify(proofManifest.git.dirty),
+        'proof declaredDirtyFiles must equal git.dirty');
+      assertThat(Array.isArray(proofManifest.failedFrames), 'proof failedFrames missing');
+      assertThat(proofManifest.failedFrames.length === 0, 'proof unexpectedly contains failed frames');
+      assertThat(proofManifest.gates && typeof proofManifest.gates === 'object', 'proof gates missing');
+      const gateEntries = Object.entries(proofManifest.gates);
+      assertThat(gateEntries.length > 0, 'proof gates must be non-empty');
+      assertThat(gateEntries.every(([, value]) => typeof value === 'boolean'), 'proof gates must be boolean values');
+      assertThat(gateEntries.every(([, value]) => value === true), 'proof contains a failed hard gate');
+      const metricPack = proofManifest.metrics?.['sunweaver-lumen-guard'];
+      assertThat(metricPack && typeof metricPack === 'object', 'proof asset-keyed metric pack missing');
+      assertThat(metricPack.candidateHashes && Object.keys(metricPack.candidateHashes).length === 16,
+        'proof candidate hash map must contain all 16 frames');
+    });
+
+    await step('proof-to-accept-dry-run', async () => {
+      assertThat(proofManifestPath && proofManifest, 'proof manifest unavailable for acceptance handoff');
+      const acceptance = runPublicForgeCommand('forge:art:accept', [
+        '--asset=sunweaver-lumen-guard', `--evidence=${proofManifestPath}`,
+      ]);
+      assertThat(acceptance.code === 0, `public acceptance dry-run failed (${acceptance.code}): ${acceptance.output.slice(-1600)}`);
+      assertThat(acceptance.output.includes('selected asset: sunweaver-lumen-guard'),
+        'dry-run output must name the selected asset');
+      assertThat(/frames changed: \d+\/16/.test(acceptance.output), 'dry-run output must name changed-frame count');
+      assertThat(acceptance.output.includes('tools/forge-art/baselines/sunweaver-lumen-guard/baseline.png'),
+        'dry-run output must name the destination baseline PNG');
+      assertThat(acceptance.output.includes('tools/forge-art/baselines/sunweaver-lumen-guard/manifest.json'),
+        'dry-run output must name the destination accepted manifest');
+      assertThat(acceptance.output.includes('DRY-RUN complete — nothing written.'),
+        'dry-run output must state that nothing was written');
+      const acceptedAfter = acceptedSnapshot();
+      assertSnapshotUnchanged(acceptedBefore, acceptedAfter);
+      manifest.captures.proofManifest = proofManifestPath;
+      manifest.captures.acceptanceDryRun = acceptance.output;
     });
 
     await step('acceptance-refusals', async () => {
-      // Build evidence with a WRONG revision -> stale refusal (exit 3).
-      const tmpEvidence = path.join(os.tmpdir(), `fal-stale-${process.pid}.json`);
-      fs.writeFileSync(tmpEvidence, JSON.stringify({
-        schemaVersion: 1,
-        sourceRevision: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
-        declaredDirtyFiles: [],
-        gates: {},
-        metrics: { candidateHashes: {} },
-      }));
-      let code3 = 0;
+      assertThat(proofManifest && proofManifestPath, 'generated proof is required for refusal fixtures');
+      const tempEvidence = [];
+      const writeFixture = (name, value) => {
+        const file = path.join(os.tmpdir(), `fal-${name}-${process.pid}.json`);
+        fs.writeFileSync(file, JSON.stringify(value, null, 2));
+        tempEvidence.push(file);
+        return file;
+      };
+      const runAcceptance = (file, apply = false) => runPublicForgeCommand('forge:art:accept', [
+        '--asset=sunweaver-lumen-guard', `--evidence=${file}`, ...(apply ? ['--apply'] : []),
+      ]);
       try {
-        execFileSync('node_modules/.bin/tsx', [
-          'scripts/forge-art-accept.mjs',
-          '--asset=sunweaver-lumen-guard', `--evidence=${tmpEvidence}`, '--apply',
-        ], { cwd: REPO_ROOT, stdio: 'ignore' });
-      } catch (error) { code3 = error.status ?? -1; }
-      assertThat(code3 === 3, `stale evidence expected exit 3, got ${code3}`);
-      fs.rmSync(tmpEvidence, { force: true });
+        // Wrong revision -> stale refusal (exit 3).
+        const stale = cloneEvidence(proofManifest);
+        stale.sourceRevision = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+        assertThat(runAcceptance(writeFixture('stale', stale), true).code === 3,
+          'stale evidence must refuse with exit 3');
 
-      // Failed gate -> exit 4.
-      const head = gitRevision();
-      const badGate = path.join(os.tmpdir(), `fal-gate-${process.pid}.json`);
-      fs.writeFileSync(badGate, JSON.stringify({
-        schemaVersion: 1,
-        sourceRevision: head,
-        declaredDirtyFiles: gitDirtyFiles(),
-        gates: { readability: false },
-        metrics: { candidateHashes: {} },
-      }));
-      let code4 = 0;
-      try {
-        execFileSync('node_modules/.bin/tsx', [
-          'scripts/forge-art-accept.mjs',
-          '--asset=sunweaver-lumen-guard', `--evidence=${badGate}`, '--apply',
-        ], { cwd: REPO_ROOT, stdio: 'ignore' });
-      } catch (error) { code4 = error.status ?? -1; }
-      assertThat(code4 === 4, `failed gate expected exit 4, got ${code4}`);
-      fs.rmSync(badGate, { force: true });
+        // Failed hard gate -> exit 4.
+        const badGate = cloneEvidence(proofManifest);
+        badGate.gates['proof-complete'] = false;
+        assertThat(runAcceptance(writeFixture('gate', badGate), true).code === 4,
+          'failed gate must refuse with exit 4');
 
-      // Dry-run writes nothing.
-      const regBefore = fs.statSync(path.join(REPO_ROOT, 'tools/forge-art/baselines/registry.json')).mtimeMs;
-      const goodEvidence = path.join(os.tmpdir(), `fal-good-${process.pid}.json`);
-      fs.writeFileSync(goodEvidence, JSON.stringify({
-        schemaVersion: 1,
-        sourceRevision: head,
-        declaredDirtyFiles: [],
-        gates: { all: true },
-        metrics: { candidateHashes: {} },
-      }));
-      execFileSync('node_modules/.bin/tsx', [
-        'scripts/forge-art-accept.mjs',
-        '--asset=sunweaver-lumen-guard', `--evidence=${goodEvidence}`,
-      ], { cwd: REPO_ROOT, stdio: 'ignore' });
-      const regAfter = fs.statSync(path.join(REPO_ROOT, 'tools/forge-art/baselines/registry.json')).mtimeMs;
-      assertThat(regBefore === regAfter, 'dry-run mutated registry.json');
-      fs.rmSync(goodEvidence, { force: true });
+        // Hash mismatch -> exit 5.
+        const badHash = cloneEvidence(proofManifest);
+        badHash.metrics['sunweaver-lumen-guard'].candidateHashes['dir0-pose0'] = '0'.repeat(64);
+        assertThat(runAcceptance(writeFixture('hash', badHash)).code === 5,
+          'candidate hash mismatch must refuse with exit 5');
+
+        // Partial generated frames -> exit 9.
+        const partial = cloneEvidence(proofManifest);
+        partial.failedFrames = ['dir0-pose0'];
+        assertThat(runAcceptance(writeFixture('partial', partial)).code === 9,
+          'partial candidate must refuse with exit 9');
+
+        // Empty gates, including --apply, -> malformed evidence exit 1.
+        const emptyGates = cloneEvidence(proofManifest);
+        emptyGates.gates = {};
+        assertThat(runAcceptance(writeFixture('empty-gates', emptyGates), true).code === 1,
+          'empty gates must refuse with exit 1');
+
+        // Corrupt an unrelated accepted manifest temporarily -> exit 6.
+        const driftFile = path.join(REPO_ROOT, 'tools/forge-art/baselines/gravemark-yard/manifest.json');
+        const driftBytes = fs.readFileSync(driftFile);
+        const driftStat = fs.statSync(driftFile);
+        try {
+          fs.writeFileSync(driftFile, Buffer.concat([driftBytes, Buffer.from('\n')]));
+          assertThat(runAcceptance(writeFixture('drift', cloneEvidence(proofManifest)), true).code === 6,
+            'unrelated accepted-artifact drift must refuse with exit 6');
+        } finally {
+          fs.writeFileSync(driftFile, driftBytes);
+          fs.utimesSync(driftFile, driftStat.atime, driftStat.mtime);
+        }
+      } finally {
+        for (const file of tempEvidence) fs.rmSync(file, { force: true });
+      }
     });
 
     await step('sandbox-unrelated-preservation', async () => {
-      // Pure-side proof (already covered by tests) re-verified via CLI:
-      // sandbox changes lumen only; other assets keep their accepted hashes.
-      const script = `
-        import { getFrames, getSandboxOverride } from '${JSON.stringify(path.join(REPO_ROOT, 'tools/forge-art/src/adapters.ts'))}';
-      `;
-      void script;
-      // The heavy lifting is asserted in tests/forge-art-pipeline.test.ts; here we assert
-      // the sandbox override exists and is scoped.
-      const overrideProbe = execFileSync('node_modules/.bin/tsx', ['-e', `
-        import { getSandboxOverride } from './tools/forge-art/src/adapters';
-        import { drawCombatSprite } from './src/sprites';
-        const o = getSandboxOverride('sunweaver-lumen-guard');
-        if (!o) throw new Error('sandbox override missing');
-        const pix = drawCombatSprite(0, 0, 0);
-        const before = Buffer.from(pix.d).toString('hex');
-        const after = Buffer.from(o(pix).d).toString('hex');
-        if (before === after) throw new Error('sandbox override changed nothing');
-        console.log('sandbox-ok');
-      `], { cwd: REPO_ROOT, encoding: 'utf8' });
-      assertThat(overrideProbe.includes('sandbox-ok'), 'sandbox override probe failed');
+      const sandboxPage = await context.newPage();
+      pages.push(sandboxPage);
+      attachErrors(sandboxPage, manifest, 'sandbox-workbench');
+      await sandboxPage.goto(`${server.url}/tools/forge-art/index.html?mesh=0&combat=1&sandbox=1`, {
+        waitUntil: 'load', timeout: NAV_TIMEOUT_MS,
+      });
+      await sandboxPage.waitForFunction(() => globalThis.__FORGE_ART_QA__?.ready === true, null, { timeout: PROBE_TIMEOUT_MS });
+      await sandboxPage.evaluate(() => globalThis.__FORGE_ART_TOOL__.selectAsset('sunweaver-lumen-guard'));
+      await sandboxPage.waitForFunction(
+        () => globalThis.__FORGE_ART_QA__?.selection?.assetId === 'sunweaver-lumen-guard' &&
+          Boolean(globalThis.__FORGE_ART_QA__?.ab?.candidateSha256),
+        null,
+        { timeout: PROBE_TIMEOUT_MS },
+      );
+      await settleFrames(sandboxPage);
+      const sandboxAb = await sandboxPage.evaluate(() => globalThis.__FORGE_ART_QA__.ab);
+      assertThat(sandboxAb.baselineSha256 !== sandboxAb.candidateSha256,
+        'sandbox candidate must differ from accepted baseline');
+      const status = await sandboxPage.locator('#fal-status').getAttribute('data-state');
+      assertThat(status === 'fail', `sandbox objective status must be FAIL, got ${status}`);
+      assertThat(await sandboxPage.locator('#fal-gates tr[data-verdict="fail"]').count() > 0,
+        'sandbox must display a failed proven objective gate');
+
+      // Compare every unrelated catalog candidate against its non-sandboxed page.
+      const normalHashes = {};
+      for (const id of REQUIRED_IDS.filter((entry) => entry !== 'sunweaver-lumen-guard')) {
+        await page.evaluate((assetId) => globalThis.__FORGE_ART_TOOL__.selectAsset(assetId), id);
+        await page.waitForFunction(
+          (assetId) => globalThis.__FORGE_ART_QA__?.selection?.assetId === assetId &&
+            Boolean(globalThis.__FORGE_ART_QA__?.ab?.candidateSha256),
+          id,
+          { timeout: PROBE_TIMEOUT_MS },
+        );
+        normalHashes[id] = await page.evaluate(() => globalThis.__FORGE_ART_QA__.ab.candidateSha256);
+        await sandboxPage.evaluate((assetId) => globalThis.__FORGE_ART_TOOL__.selectAsset(assetId), id);
+        await sandboxPage.waitForFunction(
+          (assetId) => globalThis.__FORGE_ART_QA__?.selection?.assetId === assetId &&
+            Boolean(globalThis.__FORGE_ART_QA__?.ab?.candidateSha256),
+          id,
+          { timeout: PROBE_TIMEOUT_MS },
+        );
+        const sandboxHash = await sandboxPage.evaluate(() => globalThis.__FORGE_ART_QA__.ab.candidateSha256);
+        assertThat(sandboxHash === normalHashes[id], `sandbox changed unrelated asset ${id}`);
+      }
+
+      // A sandbox-shaped candidate hash must be refused by the real acceptance CLI.
+      const sandboxEvidence = cloneEvidence(proofManifest);
+      sandboxEvidence.metrics['sunweaver-lumen-guard'].candidateHashes['dir0-pose0'] = '0'.repeat(64);
+      const sandboxEvidencePath = path.join(os.tmpdir(), `fal-sandbox-${process.pid}.json`);
+      fs.writeFileSync(sandboxEvidencePath, JSON.stringify(sandboxEvidence, null, 2));
+      try {
+        const sandboxAcceptance = runPublicForgeCommand('forge:art:accept', [
+          '--asset=sunweaver-lumen-guard', `--evidence=${sandboxEvidencePath}`,
+        ]);
+        assertThat(sandboxAcceptance.code === 5, `sandbox evidence must refuse with exit 5, got ${sandboxAcceptance.code}`);
+      } finally {
+        fs.rmSync(sandboxEvidencePath, { force: true });
+      }
+      await sandboxPage.close();
     });
 
     await step('screenshots-exact-nonblack', async () => {
