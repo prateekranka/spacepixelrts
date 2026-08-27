@@ -2,7 +2,13 @@
 
 **Play:** https://spacepixelrts.pages.dev
 **Bar:** StarCraft II (space RTS, base building, asymmetric factions) — blind, on the running game.
-**Active Forge Art Lab:** `hermes/forge-art-lab` — complete.
+**Active Forge Art Lab:** `hermes/forge-art-lab` — Lumen Guard image-replacement vertical slice active.
+
+## 2026-08-27 — Lumen Guard image replacement (active)
+
+- Integrated the disk-backed reference/candidate path, Forge comparison UI, row-scoped gameplay override, and proof/acceptance dry-run path for `sunweaver-lumen-guard`.
+- Candidate-aware browser QA proves the persisted 512×128/16-frame lifecycle, row-0-only atlas change, rows 1–3 preservation, real movement, composited gameplay captures, and zero captured runtime errors.
+- Current visual state: the second candidate passed objective gates but failed the strict reference critic because the spear tip was too small at 1×. The accepted baseline and normal runtime source remain unchanged while the art workstream corrects that gap.
 **Active goal:** **Playable Vertical Slice** — close one honest 12–18 minute iPad-first 4:3
 skirmish before deep controls or general polish: menu -> scout -> gather -> choose technology path ->
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:

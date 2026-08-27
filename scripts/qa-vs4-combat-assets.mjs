@@ -663,11 +663,14 @@ function attachErrors(page, manifest, label) {
   page.on('pageerror', (error) => manifest.errors.push(`${label} pageerror: ${error?.stack ?? String(error)}`));
 }
 
-async function openPlayingPage(browser, server, manifest, label) {
+async function openPlayingPage(browser, server, manifest, label, candidateAsset = null) {
   const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
   page.setDefaultTimeout(PROBE_TIMEOUT_MS);
   attachErrors(page, manifest, label);
-  await page.goto(`${server.url}/?qa=opening&qa-run=1&ui=0&combat=1`, {
+  const candidateQuery = candidateAsset === null
+    ? ''
+    : `&forge-art-candidate=${encodeURIComponent(candidateAsset)}`;
+  await page.goto(`${server.url}/?qa=opening&qa-run=1&ui=0&combat=1${candidateQuery}`, {
     waitUntil: 'load',
     timeout: NAV_TIMEOUT_MS,
   });
@@ -676,7 +679,7 @@ async function openPlayingPage(browser, server, manifest, label) {
   return page;
 }
 
-async function exportCombatCanvases(page, out) {
+async function exportCombatCanvases(page, out, stem = null) {
   const data = await page.evaluate(() => {
     const view = globalThis.__STARHOLD_VIEW__;
     if (!view?.spriteAtlas?.combatCanvas) throw new Error('combat atlas is not exposed');
@@ -725,6 +728,7 @@ async function exportCombatCanvases(page, out) {
       },
       runtime: {
         combatEnabled: view.combatEnabled,
+        overrideRows: (view.combatRowOverrides ?? []).map((override) => override.row),
         mappings: JSON.parse(JSON.stringify(view.combatBranchMappings)),
         combatMeshCount: [...view.scene.children].filter((object) => object.isInstancedMesh && object.material?.uniforms?.uCombatAtlas).length,
         instancedMeshCount: [...view.scene.children].filter((object) => object.isInstancedMesh).length,
@@ -744,8 +748,8 @@ async function exportCombatCanvases(page, out) {
       },
     };
   });
-  const atlasPath = path.join(out, 'combat-atlas.png');
-  const contactPath = path.join(out, 'contact-sheet.png');
+  const atlasPath = path.join(out, stem ? `${stem}-atlas.png` : 'combat-atlas.png');
+  const contactPath = path.join(out, stem ? `${stem}-contact-sheet.png` : 'contact-sheet.png');
   fs.writeFileSync(atlasPath, dataUrlBuffer(data.atlasDataUrl));
   fs.writeFileSync(contactPath, dataUrlBuffer(data.contact));
   return {
@@ -1006,6 +1010,76 @@ async function main() {
       legacyCorpseFrames: [4, 5, 6],
     };
 
+    // Candidate vertical slice: the query selects row 0 only, while the
+    // remaining combat rows stay byte-identical to the accepted baseline.
+    const candidatePage = await openPlayingPage(browser, server, manifest, 'candidate', 'sunweaver-lumen-guard');
+    pages.push(candidatePage);
+    const candidateData = await exportCombatCanvases(candidatePage, out, 'candidate');
+    manifest.captures.candidateAtlas = { file: path.basename(candidateData.atlasPath), image: candidateData.atlasImage };
+    manifest.captures.candidateContactSheet = { file: path.basename(candidateData.contactPath), image: candidateData.contactImage };
+    const candidateProbe = await candidatePage.evaluate(() => ({
+      qa: globalThis.__STARHAVEN_QA__,
+      overrides: (globalThis.__STARHOLD_VIEW__?.combatRowOverrides ?? []).map((override) => override.row),
+    }));
+    const baselineCellsByRow = exportData.sourceMetrics.rows.map((row) => row.cells.map((cell) => cell.sha256));
+    const candidateCellsByRow = candidateData.sourceMetrics.rows.map((row) => row.cells.map((cell) => cell.sha256));
+    const candidateRow0Changed = candidateCellsByRow[0].some((sha, index) => sha !== baselineCellsByRow[0][index]);
+    const candidateOtherRowsUnchanged = [1, 2, 3].every((row) =>
+      JSON.stringify(candidateCellsByRow[row]) === JSON.stringify(baselineCellsByRow[row]));
+    const candidateRow0Metrics = candidateData.sourceMetrics.rows[0];
+    manifest.checks.candidateOverride = {
+      assetId: candidateProbe.qa?.forgeArtCandidate ?? null,
+      overrideRows: candidateProbe.overrides,
+      atlas: candidateData.atlas,
+      changedRow0Cells: candidateCellsByRow[0].filter((sha, index) => sha !== baselineCellsByRow[0][index]).length,
+      row0: {
+        averageLuma: candidateRow0Metrics.averageLuma,
+        rimOuterShare: candidateRow0Metrics.rimOuterShare,
+        rimInnerShare: candidateRow0Metrics.rimInnerShare,
+      },
+      row0Changed: candidateRow0Changed,
+      rows1To3Unchanged: candidateOtherRowsUnchanged,
+      noConsoleOrPageErrors: manifest.errors.length === 0,
+    };
+    assertThat(candidateProbe.qa?.state === 'Playing', 'candidate override did not reach Playing');
+    assertThat(candidateProbe.qa?.forgeArtCandidate === 'sunweaver-lumen-guard', 'candidate query was not retained in QA probe');
+    assertThat(JSON.stringify(candidateProbe.overrides) === JSON.stringify([0]), `candidate override rows are ${JSON.stringify(candidateProbe.overrides)}`);
+    assertThat(candidateRow0Changed, 'candidate override did not change combat row 0');
+    assertThat(candidateOtherRowsUnchanged, 'candidate override changed a combat row other than row 0');
+    assertThat(candidateRow0Metrics.averageLuma.min >= R3_LUMA_FLOOR, 'candidate row 0 luminance is below the gameplay floor');
+    assertThat(candidateRow0Metrics.rimOuterShare.min >= 0.85 && candidateRow0Metrics.rimInnerShare.min >= 0.85, 'candidate row 0 lost the runtime exterior rim');
+    assertThat(candidateData.atlas.width === 1024 && candidateData.atlas.height === 256, 'candidate combat atlas dimensions changed');
+
+    const candidateLineup = await stageFixture(candidatePage, 'lineup');
+    await settleFrames(candidatePage);
+    const candidateLineupPath = path.join(out, 'candidate-lineup-after.png');
+    await candidatePage.screenshot({ path: candidateLineupPath, type: 'png' });
+    const candidateLineupImage = analyzePng(candidateLineupPath, VIEWPORT.width, VIEWPORT.height);
+    manifest.captures.candidateLineup = { file: path.basename(candidateLineupPath), image: candidateLineupImage };
+    manifest.checks.candidateLineup = { fixture: candidateLineup, noRuntimeMagenta: candidateLineupImage.exactMagenta === 0 };
+    assertThat(candidateLineupImage.exactMagenta === 0, `candidate lineup contains ${candidateLineupImage.exactMagenta} exact MAG pixels`);
+    await candidatePage.close();
+
+    const candidateBattlePage = await openPlayingPage(browser, server, manifest, 'candidate-battle', 'sunweaver-lumen-guard');
+    pages.push(candidateBattlePage);
+    const candidateBattle = await stageFixture(candidateBattlePage, 'battle');
+    await settleFrames(candidateBattlePage);
+    const candidateBattlePath = path.join(out, 'candidate-battle-after.png');
+    await candidateBattlePage.screenshot({ path: candidateBattlePath, type: 'png' });
+    const candidateBattleImage = analyzePng(candidateBattlePath, VIEWPORT.width, VIEWPORT.height);
+    const candidateBattleRenderer = await readRenderer(candidateBattlePage);
+    manifest.captures.candidateBattle = { file: path.basename(candidateBattlePath), image: candidateBattleImage };
+    manifest.checks.candidateBattle = {
+      fixture: candidateBattle,
+      renderer: candidateBattleRenderer,
+      noRuntimeMagenta: candidateBattleImage.exactMagenta === 0,
+      overrideRows: await candidateBattlePage.evaluate(() => (globalThis.__STARHOLD_VIEW__?.combatRowOverrides ?? []).map((override) => override.row)),
+    };
+    assertThat(candidateBattleImage.exactMagenta === 0, `candidate battle contains ${candidateBattleImage.exactMagenta} exact MAG pixels`);
+    assertThat(candidateBattle.before.some((entry) => entry.order === 6), 'candidate battle fixture did not issue opposing orders');
+    assertThat(candidateBattle.after.some((entry, index) => entry.x !== candidateBattle.before[index].x || entry.z !== candidateBattle.before[index].z), 'candidate battle fixture did not take actual movement steps');
+    await candidateBattlePage.close();
+
     const lineup = await stageFixture(exportPage, 'lineup');
     await settleFrames(exportPage);
     const worldScales = await readCombatInstanceScales(exportPage);
@@ -1088,6 +1162,10 @@ async function main() {
     console.log(`ok=${manifest.ok}`);
     console.log(`atlas=${path.join(out, 'combat-atlas.png')}`);
     console.log(`contact=${path.join(out, 'contact-sheet.png')}`);
+    console.log(`candidateAtlas=${path.join(out, 'candidate-atlas.png')}`);
+    console.log(`candidateContact=${path.join(out, 'candidate-contact-sheet.png')}`);
+    console.log(`candidateLineup=${path.join(out, 'candidate-lineup-after.png')}`);
+    console.log(`candidateBattle=${path.join(out, 'candidate-battle-after.png')}`);
     console.log(`lineup=${path.join(out, 'lineup-after.png')}`);
     console.log(`battle=${path.join(out, 'battle-after.png')}`);
     console.log(`drawCalls=${JSON.stringify(manifest.checks.drawCalls ?? null)}`);

@@ -202,12 +202,14 @@ async function main() {
         assertThat(facing === target, `facing set to ${target} failed (got ${facing})`);
       }
       await page.evaluate(() => globalThis.__FORGE_ART_TOOL__.play());
-      await delay(350);
-      const frameA = await page.evaluate(() => globalThis.__FORGE_ART_QA__.state.frame);
-      await delay(350);
-      const frameB = await page.evaluate(() => globalThis.__FORGE_ART_QA__.state.frame);
-      assertThat(frameB !== frameA || (await page.evaluate(() => globalThis.__FORGE_ART_QA__.state.playing)) === false,
-        'playback did not advance and is not paused');
+      const playbackFrames = [await page.evaluate(() => globalThis.__FORGE_ART_QA__.state.frame)];
+      for (let sample = 0; sample < 8; sample++) {
+        await delay(120);
+        playbackFrames.push(await page.evaluate(() => globalThis.__FORGE_ART_QA__.state.frame));
+      }
+      const playing = await page.evaluate(() => globalThis.__FORGE_ART_QA__.state.playing);
+      assertThat(new Set(playbackFrames).size > 1 || playing === false,
+        `playback did not advance (samples ${playbackFrames.join(',')}) and is not paused`);
       await page.evaluate(() => globalThis.__FORGE_ART_TOOL__.pause());
       const pausedFrame = await page.evaluate(() => globalThis.__FORGE_ART_QA__.state.frame);
       await delay(250);
@@ -218,11 +220,24 @@ async function main() {
       );
     });
 
-    await step('ab-baseline-hash-equality', async () => {
+    await step('ab-candidate-lifecycle', async () => {
       const hashes = await page.evaluate(() => globalThis.__FORGE_ART_QA__.ab);
+      const candidate = await page.evaluate(() => globalThis.__FORGE_ART_QA__.candidate);
       assertThat(hashes && hashes.baselineSha256 && hashes.candidateSha256, 'A/B hashes missing');
-      assertThat(hashes.baselineSha256 === hashes.candidateSha256,
-        'accepted baseline must equal candidate at ced0b94 state');
+      assertThat(candidate?.present === true, 'Lumen Guard candidate not loaded from disk');
+      if (candidate.status === 'READY FOR REVIEW') {
+        assertThat(hashes.baselineSha256 !== hashes.candidateSha256,
+          'review candidate must differ from the accepted baseline before approval');
+      } else if (candidate.status === 'APPROVED') {
+        assertThat(hashes.baselineSha256 === hashes.candidateSha256,
+          'approved candidate must equal the accepted baseline');
+      } else {
+        throw new Error(`candidate status ${String(candidate?.status)} is neither reviewable nor approved`);
+      }
+      assertThat(candidate.sheetWidth === 512 && candidate.sheetHeight === 128, 'candidate sheet dimensions must be 512x128');
+      assertThat(candidate.frameCount === 16, 'candidate must expose 16 frames');
+      const reference = await page.evaluate(() => globalThis.__FORGE_ART_QA__.reference);
+      assertThat(reference?.imported === true, 'reference image is not persisted');
     });
 
     await step('passes-render', async () => {
