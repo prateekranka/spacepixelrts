@@ -545,6 +545,7 @@ export const cells = LUMEN_GUARD_CANDIDATE_RAW.map((frame, index) => ({
 }));
 
 export const SUNWEAVER_LUMEN_GUARD_CANDIDATE = {
+  id: assetId,
   assetId,
   row: 0,
   frameCount: 16,
