@@ -8,7 +8,7 @@
 
 - Integrated the disk-backed reference/candidate path, Forge comparison UI, row-scoped gameplay override, and proof/acceptance path for `sunweaver-lumen-guard`. The reviewed `--apply` path now marks the candidate `APPROVED` only after baseline and registry writes verify.
 - Candidate-aware browser QA proves the persisted 512×128/16-frame lifecycle, row-0-only atlas change, rows 1–3 preservation, real movement, composited gameplay captures, and zero captured runtime errors.
-- Current visual state: the third deterministic candidate passes all 16 objective gates, exact 1× identity review, mirror/order checks, independent source review, and the fresh blind staged-gameplay gate. The critic confirmed that the gold/ivory palette, red crest, elongated solar spearhead, and dominant solar shield survive the downscale without broken pixels. Formal acceptance and normal-route replacement remain pending.
+- Current visual state: the third deterministic candidate passes all 16 objective gates, exact 1× identity review, mirror/order checks, independent source review, and the fresh blind staged-gameplay gate. The critic confirmed that the gold/ivory palette, red crest, elongated solar spearhead, and dominant solar shield survive the downscale without broken pixels. Formal acceptance is applied at revision `dc59112`; the candidate is `APPROVED`, and the accepted PNG, manifest, and registry hashes agree. Normal-route source replacement remains pending.
 **Active goal:** **Playable Vertical Slice** — close one honest 12–18 minute iPad-first 4:3
 skirmish before deep controls or general polish: menu -> scout -> gather -> choose technology path ->
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:

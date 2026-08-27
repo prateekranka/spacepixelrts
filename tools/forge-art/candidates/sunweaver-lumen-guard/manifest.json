@@ -14,7 +14,7 @@
   "candidateSourcePath": "src/generated/sunweaver-lumen-guard-candidate.ts",
   "generatedAt": "2026-08-27T10:43:42.197Z",
   "algorithm": "combat-reference-v1",
-  "status": "draft",
+  "status": "approved",
   "target": {
     "cellW": 64,
     "cellH": 64,
