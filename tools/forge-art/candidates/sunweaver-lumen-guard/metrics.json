@@ -1,0 +1,457 @@
+{
+  "candidate": "src/generated/sunweaver-lumen-guard-candidate.ts",
+  "active": false,
+  "frames": [
+    {
+      "key": "dir0-pose0",
+      "rawAlpha": 919,
+      "rimAlpha": 1605,
+      "rawAlphaCoverage": 0.2244,
+      "rimAlphaCoverage": 0.3918,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 89.9,
+      "rimAvgLuma": 142.2,
+      "rimBrightShare": 0.7103,
+      "rimBounds": [
+        "56x52"
+      ],
+      "rawBounds": [
+        "52x50"
+      ],
+      "bodyTop": 17,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0098,
+      "rimMagShare": 0.0056,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir1-pose0",
+      "rawAlpha": 742,
+      "rimAlpha": 1322,
+      "rawAlphaCoverage": 0.1812,
+      "rimAlphaCoverage": 0.3228,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 91.9,
+      "rimAvgLuma": 145.1,
+      "rimBrightShare": 0.7179,
+      "rimBounds": [
+        "46x52"
+      ],
+      "rawBounds": [
+        "42x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0121,
+      "rimMagShare": 0.0068,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir2-pose0",
+      "rawAlpha": 735,
+      "rimAlpha": 1239,
+      "rawAlphaCoverage": 0.1794,
+      "rimAlphaCoverage": 0.3025,
+      "rawConnected": 0.9973,
+      "rimConnected": 1,
+      "rawAvgLuma": 90.6,
+      "rimAvgLuma": 139.7,
+      "rimBrightShare": 0.7191,
+      "rimBounds": [
+        "40x52"
+      ],
+      "rawBounds": [
+        "36x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0122,
+      "rimMagShare": 0.0073,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir3-pose0",
+      "rawAlpha": 742,
+      "rimAlpha": 1322,
+      "rawAlphaCoverage": 0.1812,
+      "rimAlphaCoverage": 0.3228,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 91.9,
+      "rimAvgLuma": 145.1,
+      "rimBrightShare": 0.7179,
+      "rimBounds": [
+        "46x52"
+      ],
+      "rawBounds": [
+        "42x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0121,
+      "rimMagShare": 0.0068,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir4-pose0",
+      "rawAlpha": 919,
+      "rimAlpha": 1605,
+      "rawAlphaCoverage": 0.2244,
+      "rimAlphaCoverage": 0.3918,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 89.9,
+      "rimAvgLuma": 142.2,
+      "rimBrightShare": 0.7103,
+      "rimBounds": [
+        "56x52"
+      ],
+      "rawBounds": [
+        "52x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0098,
+      "rimMagShare": 0.0056,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir5-pose0",
+      "rawAlpha": 820,
+      "rimAlpha": 1427,
+      "rawAlphaCoverage": 0.2002,
+      "rimAlphaCoverage": 0.3484,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 84.8,
+      "rimAvgLuma": 139.2,
+      "rimBrightShare": 0.691,
+      "rimBounds": [
+        "49x52"
+      ],
+      "rawBounds": [
+        "45x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.011,
+      "rimMagShare": 0.0063,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir6-pose0",
+      "rawAlpha": 829,
+      "rimAlpha": 1348,
+      "rawAlphaCoverage": 0.2024,
+      "rimAlphaCoverage": 0.3291,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 85.9,
+      "rimAvgLuma": 133.9,
+      "rimBrightShare": 0.6743,
+      "rimBounds": [
+        "44x52"
+      ],
+      "rawBounds": [
+        "40x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0109,
+      "rimMagShare": 0.0067,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir7-pose0",
+      "rawAlpha": 820,
+      "rimAlpha": 1427,
+      "rawAlphaCoverage": 0.2002,
+      "rimAlphaCoverage": 0.3484,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 84.8,
+      "rimAvgLuma": 139.2,
+      "rimBrightShare": 0.691,
+      "rimBounds": [
+        "49x52"
+      ],
+      "rawBounds": [
+        "45x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.011,
+      "rimMagShare": 0.0063,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir0-pose1",
+      "rawAlpha": 919,
+      "rimAlpha": 1618,
+      "rawAlphaCoverage": 0.2244,
+      "rimAlphaCoverage": 0.395,
+      "rawConnected": 0.9663,
+      "rimConnected": 1,
+      "rawAvgLuma": 89.6,
+      "rimAvgLuma": 142.7,
+      "rimBrightShare": 0.7114,
+      "rimBounds": [
+        "56x52"
+      ],
+      "rawBounds": [
+        "52x50"
+      ],
+      "bodyTop": 17,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0098,
+      "rimMagShare": 0.0056,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir1-pose1",
+      "rawAlpha": 739,
+      "rimAlpha": 1322,
+      "rawAlphaCoverage": 0.1804,
+      "rimAlphaCoverage": 0.3228,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 91.6,
+      "rimAvgLuma": 145.1,
+      "rimBrightShare": 0.7171,
+      "rimBounds": [
+        "46x52"
+      ],
+      "rawBounds": [
+        "42x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0122,
+      "rimMagShare": 0.0068,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir2-pose1",
+      "rawAlpha": 726,
+      "rimAlpha": 1222,
+      "rawAlphaCoverage": 0.1772,
+      "rimAlphaCoverage": 0.2983,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 89.8,
+      "rimAvgLuma": 139.3,
+      "rimBrightShare": 0.7144,
+      "rimBounds": [
+        "40x52"
+      ],
+      "rawBounds": [
+        "36x50"
+      ],
+      "bodyTop": 17,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0124,
+      "rimMagShare": 0.0074,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir3-pose1",
+      "rawAlpha": 739,
+      "rimAlpha": 1322,
+      "rawAlphaCoverage": 0.1804,
+      "rimAlphaCoverage": 0.3228,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 91.6,
+      "rimAvgLuma": 145.1,
+      "rimBrightShare": 0.7171,
+      "rimBounds": [
+        "46x52"
+      ],
+      "rawBounds": [
+        "42x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0122,
+      "rimMagShare": 0.0068,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir4-pose1",
+      "rawAlpha": 919,
+      "rimAlpha": 1618,
+      "rawAlphaCoverage": 0.2244,
+      "rimAlphaCoverage": 0.395,
+      "rawConnected": 0.9663,
+      "rimConnected": 1,
+      "rawAvgLuma": 89.6,
+      "rimAvgLuma": 142.7,
+      "rimBrightShare": 0.7114,
+      "rimBounds": [
+        "56x52"
+      ],
+      "rawBounds": [
+        "52x50"
+      ],
+      "bodyTop": 16,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0098,
+      "rimMagShare": 0.0056,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir5-pose1",
+      "rawAlpha": 809,
+      "rimAlpha": 1404,
+      "rawAlphaCoverage": 0.1975,
+      "rimAlphaCoverage": 0.3428,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 84.4,
+      "rimAvgLuma": 138.8,
+      "rimBrightShare": 0.6866,
+      "rimBounds": [
+        "49x52"
+      ],
+      "rawBounds": [
+        "45x50"
+      ],
+      "bodyTop": 17,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0111,
+      "rimMagShare": 0.0064,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir6-pose1",
+      "rawAlpha": 819,
+      "rimAlpha": 1335,
+      "rawAlphaCoverage": 0.2,
+      "rimAlphaCoverage": 0.3259,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 85.4,
+      "rimAvgLuma": 134.1,
+      "rimBrightShare": 0.6697,
+      "rimBounds": [
+        "44x52"
+      ],
+      "rawBounds": [
+        "40x50"
+      ],
+      "bodyTop": 17,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.011,
+      "rimMagShare": 0.0067,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    },
+    {
+      "key": "dir7-pose1",
+      "rawAlpha": 809,
+      "rimAlpha": 1404,
+      "rawAlphaCoverage": 0.1975,
+      "rimAlphaCoverage": 0.3428,
+      "rawConnected": 1,
+      "rimConnected": 1,
+      "rawAvgLuma": 84.4,
+      "rimAvgLuma": 138.8,
+      "rimBrightShare": 0.6866,
+      "rimBounds": [
+        "49x52"
+      ],
+      "rawBounds": [
+        "45x50"
+      ],
+      "bodyTop": 17,
+      "coreTop": 0,
+      "row0CorePixels": 2,
+      "rawMagShare": 0.0111,
+      "rimMagShare": 0.0064,
+      "rimOuterShare": 1,
+      "rimInnerShare": 1
+    }
+  ],
+  "poseDeltaPercent": {
+    "dir0": {
+      "raw": 12.84,
+      "rim": 15.51
+    },
+    "dir1": {
+      "raw": 12.13,
+      "rim": 17.3
+    },
+    "dir2": {
+      "raw": 14.88,
+      "rim": 19.75
+    },
+    "dir3": {
+      "raw": 12.13,
+      "rim": 17.3
+    },
+    "dir4": {
+      "raw": 12.84,
+      "rim": 15.51
+    },
+    "dir5": {
+      "raw": 11.84,
+      "rim": 17.47
+    },
+    "dir6": {
+      "raw": 11.83,
+      "rim": 16.74
+    },
+    "dir7": {
+      "raw": 11.84,
+      "rim": 17.47
+    }
+  },
+  "nVsEMeanRgbaDelta": 50.76,
+  "facingVariancePose0": {
+    "meanDelta": 39.05,
+    "maxDelta": 44.76,
+    "minDelta": 28.8
+  },
+  "mirrors": {
+    "dir3-pose0<-dir1": true,
+    "dir3-pose1<-dir1": true,
+    "dir4-pose0<-dir0": true,
+    "dir4-pose1<-dir0": true,
+    "dir5-pose0<-dir7": true,
+    "dir5-pose1<-dir7": true
+  },
+  "rimAddsAlpha": 9535,
+  "gatesPassed": true,
+  "failures": []
+}

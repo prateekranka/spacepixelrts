@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-lumen-guard",
+  "label": "Lumen Guard image candidate",
+  "civilization": "sunweaver",
+  "category": "unit",
+  "adapter": "combat",
+  "sourceKind": "reference-image",
+  "sourcePath": "tools/forge-art/candidates/sunweaver-lumen-guard/reference.png",
+  "sourceSha256": "1832b400a6291f8887697203d1a8968fe9b4211844feec9b352fe75b5e89943c",
+  "sourceWidth": 1389,
+  "sourceHeight": 1132,
+  "candidatePath": "tools/forge-art/candidates/sunweaver-lumen-guard/candidate.png",
+  "candidateSourcePath": "src/generated/sunweaver-lumen-guard-candidate.ts",
+  "generatedAt": "2026-08-27T08:55:13.233Z",
+  "algorithm": "combat-reference-v1",
+  "status": "draft",
+  "target": {
+    "cellW": 64,
+    "cellH": 64,
+    "cols": 8,
+    "rows": 2,
+    "order": "dir-major",
+    "frameCount": 16
+  },
+  "directions": {
+    "authored": [
+      0,
+      1,
+      2,
+      6,
+      7
+    ],
+    "mirrored": [
+      3,
+      4,
+      5
+    ]
+  },
+  "poses": {
+    "count": 2,
+    "names": [
+      "primary",
+      "alternate"
+    ]
+  },
+  "frames": [
+    {
+      "key": "dir0-pose0",
+      "sha256": "5b51365cfeddf3386c521b1a261b90aa833c584809e436ecb2bfba0c93c47b42",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 919
+    },
+    {
+      "key": "dir1-pose0",
+      "sha256": "8ba9d2836b5a57aaf5b6e723d4c0ae80796b8da340a0e77d6747ef18cce8c06a",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 742
+    },
+    {
+      "key": "dir2-pose0",
+      "sha256": "def0b3edac56f0c302dbb67b0396077b91ee99cd9f8523a7ed23a4187e08521a",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 735
+    },
+    {
+      "key": "dir3-pose0",
+      "sha256": "095535278a879398da24c29b7429b4a562a67a0f6cd871f080994fadb19a8176",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 742
+    },
+    {
+      "key": "dir4-pose0",
+      "sha256": "8cc67f0903179702bfeedaf8cc6b6a843c2438b87010913ea609e8b6381f135b",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 919
+    },
+    {
+      "key": "dir5-pose0",
+      "sha256": "77f1c5cb8eddce6e7785f90dfbe88e426a1094f95dc3098c8023a2dc3cd758e9",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 820
+    },
+    {
+      "key": "dir6-pose0",
+      "sha256": "c70fc22b04b7887c6006af91d8ad6628572ca40d4bd655e58040286db1dc487b",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 829
+    },
+    {
+      "key": "dir7-pose0",
+      "sha256": "ccf3c260547a2ffd246d4c3779f1bd692881732c54cd34c0be1a9c931f86d181",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 820
+    },
+    {
+      "key": "dir0-pose1",
+      "sha256": "e83ba10400ae3a9d7cbd34be72a4339b6235ca841ba8826d8f2d77684d1e2ce6",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 919
+    },
+    {
+      "key": "dir1-pose1",
+      "sha256": "4bf019e704b348183cb035e52944774a2471d4eafb59e3231a363046922a8e60",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 739
+    },
+    {
+      "key": "dir2-pose1",
+      "sha256": "321d9d8cfb2fd803929609d79bb43b97e972b1a831cd41df83cb58abe4e36515",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 726
+    },
+    {
+      "key": "dir3-pose1",
+      "sha256": "375dee258ad744ed4ca35cf9626bc05ad1dcb12ecd5566bd16a7cd2988472784",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 739
+    },
+    {
+      "key": "dir4-pose1",
+      "sha256": "06c276c3e995a8406dc1daaf2caae44b1762fdf6c3548f9bedc6db4c849c191a",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 919
+    },
+    {
+      "key": "dir5-pose1",
+      "sha256": "7a84fffa13ecdbbe451bd24ea6c780de1eb17ed98367c378c571ccd8e1691e88",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 809
+    },
+    {
+      "key": "dir6-pose1",
+      "sha256": "b1a55cd57b36f7692e4c2525cb9d3e7e4217f9783bfe7d7e939db57fd94b70d3",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 819
+    },
+    {
+      "key": "dir7-pose1",
+      "sha256": "40e72d07ad36c9e8f2ddd402ffc0ea9be818ff78670cb9911262d31ee385a1a2",
+      "width": 64,
+      "height": 64,
+      "alphaPixels": 809
+    }
+  ],
+  "notes": "RAW 64x64 cells (no combat rim; lumenGuardCandidateRimmed applies it once). Palette: ink/cream/ochre/amber/red + MAG lens at shield boss. Evidence: generated outside repo."
+}
