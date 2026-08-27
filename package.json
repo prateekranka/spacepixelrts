@@ -48,7 +48,7 @@
     "forge:art:import": "tsx scripts/forge-art-import.mjs",
     "forge:art:baseline": "tsx scripts/forge-art-baseline.mjs",
     "forge:art:accept": "tsx scripts/forge-art-accept.mjs",
-    "test:forge-art": "tsx tests/forge-art-registry.test.ts && tsx tests/forge-art-metrics.test.ts && tsx tests/forge-art-pipeline.test.ts && tsx tests/forge-art-baseline-schema.test.ts && tsx tests/forge-art-handoff.test.ts",
+    "test:forge-art": "tsx tests/forge-art-registry.test.ts && tsx tests/forge-art-metrics.test.ts && tsx tests/forge-art-pipeline.test.ts && tsx tests/forge-art-baseline-schema.test.ts && tsx tests/forge-art-handoff.test.ts && tsx tests/forge-art-image.test.ts",
     "qa:forge-art": "node scripts/qa-forge-art.mjs"
   },
   "dependencies": {

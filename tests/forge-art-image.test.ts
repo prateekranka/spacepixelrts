@@ -298,9 +298,10 @@ assert.ok(COMMITTED_REF_SHA.length === 64, 'test constant: committed reference s
   requireOk(!unsupported.present && unsupported.reason === 'unsupported-category' && /combat reference images only/.test(unsupported.message),
     'non-combat seam must refuse with the combat-only note');
 
-  const missing = await seam.loadGeneratedCandidateSource(ASSET);
+  const missingPath = `${path.dirname(seam.generatedCandidateSourcePath(ASSET)!)}/.missing-lumen-guard-candidate.ts`;
+  const missing = await seam.loadGeneratedCandidateSource(ASSET, missingPath);
   requireOk(!missing.present && missing.reason === 'missing-module', 'absent generated module must be reported explicitly');
-  requireOk(missing.present === false && missing.sourcePath !== null && missing.sourcePath.endsWith(rel),
+  requireOk(missing.present === false && missing.sourcePath === missingPath,
     `missing-module seam must name the exact path (${missing.sourcePath})`);
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fal-image-seam-'));
@@ -363,12 +364,21 @@ assert.ok(COMMITTED_REF_SHA.length === 64, 'test constant: committed reference s
     requireOk(badSig.code === 1 && /signature/.test(badSig.output), `non-PNG bytes must exit 1 (got ${badSig.code})`);
 
     // Valid committed PNG but Builder 2's generated module is absent -> explicit partial refusal.
-    const before = fs.existsSync(path.join(CANDIDATE_DIR, 'candidate.png'));
-    const missingModule = runCli(['--asset=sunweaver-lumen-guard', `--reference=${COMMITTED_REFERENCE}`]);
-    requireOk(missingModule.code === 9 && /generated candidate source missing/.test(missingModule.output),
-      `missing generated module must exit 9 with the explicit path (code ${missingModule.code})`);
-    requireOk(fs.existsSync(path.join(CANDIDATE_DIR, 'candidate.png')) === before,
-      'refused import must not write candidate.png');
+    // Temporarily move the real module. The test must never destroy the committed
+    // candidate source while it proves the missing-module branch.
+    const generatedBackup = `${GENERATED_PATH}.fal-image-missing-backup`;
+    const movedGenerated = fs.existsSync(GENERATED_PATH);
+    if (movedGenerated) fs.renameSync(GENERATED_PATH, generatedBackup);
+    try {
+      const before = fs.existsSync(path.join(CANDIDATE_DIR, 'candidate.png'));
+      const missingModule = runCli(['--asset=sunweaver-lumen-guard', `--reference=${COMMITTED_REFERENCE}`]);
+      requireOk(missingModule.code === 9 && /generated candidate source missing/.test(missingModule.output),
+        `missing generated module must exit 9 with the explicit path (code ${missingModule.code})`);
+      requireOk(fs.existsSync(path.join(CANDIDATE_DIR, 'candidate.png')) === before,
+        'refused import must not write candidate.png');
+    } finally {
+      if (movedGenerated) fs.renameSync(generatedBackup, GENERATED_PATH);
+    }
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -379,8 +389,13 @@ assert.ok(COMMITTED_REF_SHA.length === 64, 'test constant: committed reference s
 {
   const refBefore = fs.readFileSync(COMMITTED_REFERENCE);
   const generatedExisted = fs.existsSync(GENERATED_PATH);
-  const candidateExisted = fs.existsSync(path.join(CANDIDATE_DIR, 'candidate.png'));
-  const manifestExisted = fs.existsSync(path.join(CANDIDATE_DIR, 'manifest.json'));
+  const candidatePath = path.join(CANDIDATE_DIR, 'candidate.png');
+  const manifestPath = path.join(CANDIDATE_DIR, 'manifest.json');
+  const candidateExisted = fs.existsSync(candidatePath);
+  const manifestExisted = fs.existsSync(manifestPath);
+  const generatedBefore = generatedExisted ? fs.readFileSync(GENERATED_PATH) : null;
+  const candidateBefore = candidateExisted ? fs.readFileSync(candidatePath) : null;
+  const manifestBefore = manifestExisted ? fs.readFileSync(manifestPath) : null;
   try {
     fs.mkdirSync(path.dirname(GENERATED_PATH), { recursive: true });
     fs.writeFileSync(GENERATED_PATH, fixtureModuleSource());
@@ -423,16 +438,19 @@ assert.ok(COMMITTED_REF_SHA.length === 64, 'test constant: committed reference s
     requireOk(fs.readFileSync(path.join(CANDIDATE_DIR, 'manifest.json')).equals(manifestBytes), 'idempotent import must not rewrite manifest');
     requireOk(fs.readFileSync(path.join(CANDIDATE_DIR, 'candidate.png')).equals(candidateBytes), 'idempotent import must not rewrite candidate.png');
   } finally {
-    fs.rmSync(GENERATED_PATH, { force: true });
-    if (!generatedExisted) fs.rmSync(path.dirname(GENERATED_PATH), { recursive: true, force: true });
-    // Never remove the committed reference.png or the candidate directory:
-    // only fixture-written candidate.png/manifest.json are removed.
-    if (!candidateExisted) fs.rmSync(path.join(CANDIDATE_DIR, 'candidate.png'), { force: true });
-    if (!manifestExisted) fs.rmSync(path.join(CANDIDATE_DIR, 'manifest.json'), { force: true });
+    if (generatedExisted && generatedBefore) fs.writeFileSync(GENERATED_PATH, generatedBefore);
+    else fs.rmSync(GENERATED_PATH, { force: true });
+    if (candidateExisted && candidateBefore) fs.writeFileSync(candidatePath, candidateBefore);
+    else fs.rmSync(candidatePath, { force: true });
+    if (manifestExisted && manifestBefore) fs.writeFileSync(manifestPath, manifestBefore);
+    else fs.rmSync(manifestPath, { force: true });
   }
-  requireOk(!fs.existsSync(GENERATED_PATH), 'cleanup must remove the generated fixture');
-  requireOk(!fs.existsSync(path.join(CANDIDATE_DIR, 'candidate.png')), 'cleanup must remove the fixture candidate.png');
-  requireOk(!fs.existsSync(path.join(CANDIDATE_DIR, 'manifest.json')), 'cleanup must remove the fixture manifest.json');
+  requireOk(fs.existsSync(GENERATED_PATH) === generatedExisted, 'cleanup must restore generated candidate source state');
+  requireOk(fs.existsSync(candidatePath) === candidateExisted, 'cleanup must restore candidate.png state');
+  requireOk(fs.existsSync(manifestPath) === manifestExisted, 'cleanup must restore manifest.json state');
+  if (generatedExisted && generatedBefore) requireOk(fs.readFileSync(GENERATED_PATH).equals(generatedBefore), 'generated source must be byte-identical after cleanup');
+  if (candidateExisted && candidateBefore) requireOk(fs.readFileSync(candidatePath).equals(candidateBefore), 'candidate.png must be byte-identical after cleanup');
+  if (manifestExisted && manifestBefore) requireOk(fs.readFileSync(manifestPath).equals(manifestBefore), 'manifest.json must be byte-identical after cleanup');
   requireOk(sha256(fs.readFileSync(COMMITTED_REFERENCE)) === COMMITTED_REF_SHA, 'committed reference must be byte-identical after cleanup');
   console.log('CLI happy path: PNG import + atomic writes + hash verification + idempotency + cleanup');
 }
