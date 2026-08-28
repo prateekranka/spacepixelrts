@@ -22,8 +22,20 @@ import {
   type MatchConfig,
 } from './match-config';
 import { QA_SCENARIOS, parseQaScenario, type QaScenario } from './qa-scenarios';
+import {
+  clonePlayerProfile,
+  loadPlayerProfile,
+  markCurrentDispatchVersionSeen,
+  recordMatch,
+  savePlayerProfile,
+  setPreferredFaction,
+  type PlayerProfile,
+} from './player-profile';
+import { mountFrontEndScene, type FrontEndSceneController } from './front-end-scene';
+import { resolveCombatOverride } from './generated/sunweaver-lumen-guard-candidate';
+import type { CombatRowOverride } from './sprites';
 
-const VERSION = '0.11.0-m1';
+const VERSION = '0.12.0-front-end';
 const hostNode = document.getElementById('app');
 if (!hostNode) throw new Error('Starhaven boot: #app host missing');
 const host: HTMLElement = hostNode;
@@ -33,6 +45,16 @@ const qaScenario = parseQaScenario(window.location.search);
 const qaFrozen = qaScenario !== undefined && params.get('qa-run') !== '1';
 const uiHidden = params.get('ui') === '0';
 const qaHoldLoading = params.get('qa-hold-loading') === '1';
+
+// Forge candidate seam (docs/LUMEN_GUARD_IMAGE_CANDIDATE.md): the optional
+// ?forge-art-candidate=<id> query selects ONLY that candidate's combat row at
+// atlas build time. Unknown/missing ids resolve to null -> accepted baseline.
+// It is never the default: the normal route has no query and no override.
+const forgeArtCandidateId: string | null = params.get('forge-art-candidate');
+const combatRowOverrides: readonly CombatRowOverride[] | undefined = (() => {
+  const override = resolveCombatOverride(forgeArtCandidateId);
+  return override ? [override] : undefined;
+})();
 const orientationParam = params.get('orientation');
 const orientation =
   orientationParam === 'landscape-right' ? 'landscape-right' : 'landscape-left';
@@ -40,6 +62,7 @@ document.documentElement.dataset.orientation = orientation;
 document.documentElement.dataset.appState = 'Boot';
 
 let activeScenario: QaScenario | null = qaScenario ?? null;
+let playerProfile = loadPlayerProfile();
 let activeConfig = qaScenario ? cloneMatchConfig(qaScenario.config) : normalBootConfig();
 let world: World | null = null;
 let view: GameRenderer | null = null;
@@ -47,9 +70,12 @@ let input: Input | null = null;
 let hud: Hud | null = null;
 let startScreen: StartScreen | null = null;
 let loadingScreen: HTMLDivElement | null = null;
+let loadingScene: FrontEndSceneController | null = null;
 let matchResetCount = 0;
 let matchStartInFlight = false;
 let terminalStateDispatched = false;
+let activeMatchId: string | null = null;
+let activeMatchStartedAt = 0;
 let hitSfx = 0;
 let acc = 0;
 let last = performance.now();
@@ -67,11 +93,17 @@ const flow = new AppFlow({
   onTransition: (transition) => {
     transitionHistory.push(transition.to);
     syncPresentation(transition);
+    if (transition.to === 'Victory') recordCompletedMatch('win');
+    if (transition.to === 'Defeat') recordCompletedMatch('loss');
   },
 });
 
 function normalBootConfig(): MatchConfig {
-  let config = cloneMatchConfig(DEFAULT_MATCH_CONFIG);
+  let config = normalizeMatchConfig({
+    ...cloneMatchConfig(DEFAULT_MATCH_CONFIG),
+    playerFaction: playerProfile.preferredFaction,
+    aiFaction: playerProfile.preferredFaction === 'sunweaver' ? 'gravemark' : 'sunweaver',
+  });
   const legacy = parseBootCiv(window.location.search);
   const canonical = legacy ? fromLegacyCiv(legacy) : null;
   if (canonical) {
@@ -113,7 +145,10 @@ function prepareMatch(config: MatchConfig): void {
     nextWorld.aiDifficulty = config.difficulty;
     nextWorld.reset(config.seed >>> 0);
 
-    const nextView = new GameRenderer(host);
+    const nextView = new GameRenderer(
+      host,
+      combatRowOverrides !== undefined ? { combatRowOverrides } : undefined,
+    );
     nextView.init(nextWorld);
     nextView.resize(host.clientWidth, host.clientHeight);
 
@@ -175,9 +210,12 @@ async function startConfiguredMatch(config: MatchConfig): Promise<void> {
 
   activeScenario = null;
   activeConfig = resolveMatchConfig(config);
+  activeMatchStartedAt = Date.now();
+  activeMatchId = createMatchId(activeConfig.seed, activeMatchStartedAt);
   matchStartInFlight = true;
   const started = flow.dispatch('START_MATCH');
   if (!started.accepted) {
+    activeMatchId = null;
     matchStartInFlight = false;
     return;
   }
@@ -228,33 +266,30 @@ function showLoadingScreen(): void {
     ? `Deterministic seed ${activeConfig.seed >>> 0}`
     : `Random seed ${activeConfig.seed >>> 0}`;
   const root = document.createElement('div');
+  root.className = 'front-loading-screen';
   root.setAttribute('role', 'status');
   root.setAttribute('aria-live', 'polite');
+  root.setAttribute('aria-label', `Loading Helios Rift for ${faction}`);
   root.innerHTML = `
-    <div style="letter-spacing:.24em;font-size:12px;color:#bfc8d6">STARHAVEN // HELIOS RIFT</div>
-    <strong style="font-size:clamp(28px,5vw,54px);font-weight:650">Preparing skirmish</strong>
-    <div style="font-size:13px;color:#bfc8d6">${faction} · ${difficulty} · ${seedLabel}</div>
-    <div style="width:min(320px,55vw);height:3px;background:#202938;overflow:hidden">
-      <span style="display:block;width:64%;height:100%;background:#52d7c7"></span>
-    </div>`;
-  Object.assign(root.style, {
-    position: 'absolute',
-    inset: '0',
-    zIndex: '40',
-    display: 'grid',
-    placeContent: 'center',
-    gap: '18px',
-    padding: 'max(32px, env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(32px, env(safe-area-inset-left))',
-    color: '#edf7f5',
-    background: 'radial-gradient(circle at 50% 42%, #14283a 0%, #09121d 52%, #050911 100%)',
-    textAlign: 'center',
-    fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-  });
+    <section class="front-loading-card">
+      <p>STARHAVEN // HELIOS RIFT</p>
+      <h1>Preparing skirmish</h1>
+      <div>${faction} · ${difficulty} · ${seedLabel}</div>
+      <span class="front-loading-track" aria-hidden="true"><i></i></span>
+      <small>Survey the center before you commit your first production line.</small>
+    </section>`;
   host.append(root);
   loadingScreen = root;
+  loadingScene = mountFrontEndScene(root, {
+    faction: activeConfig.playerFaction,
+    mode: 'loading',
+    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  });
 }
 
 function hideLoadingScreen(): void {
+  loadingScene?.destroy();
+  loadingScene = null;
   loadingScreen?.remove();
   loadingScreen = null;
 }
@@ -292,12 +327,64 @@ function createStartScreen(): void {
     onBackToMenu: () => dispatchAppEvent('BACK'),
     onConfigChange: (config) => {
       activeConfig = normalizeMatchConfig(config);
+      persistPreferredFaction(activeConfig.playerFaction);
       publish();
     },
     onStartMatch: (config) => {
       void startConfiguredMatch(config);
     },
+    onPreferredFactionChange: (faction) => {
+      activeConfig = normalizeMatchConfig({
+        ...activeConfig,
+        playerFaction: faction,
+        aiFaction: faction === 'sunweaver' ? 'gravemark' : 'sunweaver',
+      });
+      persistPreferredFaction(faction);
+      publish();
+    },
+    onDispatchesRead: () => {
+      if (activeScenario !== null || qaScenario !== undefined) return;
+      playerProfile = markCurrentDispatchVersionSeen(playerProfile);
+      savePlayerProfile(playerProfile);
+      startScreen?.setProfile(playerProfile);
+      publish();
+    },
+  }, playerProfile);
+}
+
+function persistPreferredFaction(faction: MatchConfig['playerFaction']): void {
+  if (activeScenario !== null || qaScenario !== undefined) return;
+  playerProfile = setPreferredFaction(playerProfile, faction);
+  savePlayerProfile(playerProfile);
+  startScreen?.setProfile(playerProfile);
+}
+
+function createMatchId(seed: number, startedAt: number): string {
+  return `helios-rift-${startedAt}-${seed >>> 0}-${matchResetCount + 1}`;
+}
+
+function recordCompletedMatch(outcome: 'win' | 'loss'): void {
+  if (!world || activeMatchId === null || activeScenario !== null || qaScenario !== undefined) return;
+  const stats = world.matchStats();
+  const player = stats.teams[0];
+  const resourcesGathered = Math.max(
+    0,
+    Math.round(player.resources.ore + player.resources.gas + player.resources.energy),
+  );
+  playerProfile = recordMatch(playerProfile, {
+    id: activeMatchId,
+    playedAt: new Date(activeMatchStartedAt).toISOString(),
+    outcome,
+    playerFaction: activeConfig.playerFaction,
+    opponentFaction: activeConfig.aiFaction,
+    durationMs: Math.max(0, Math.round(stats.tick * DT * 1000)),
+    difficulty: activeConfig.difficulty,
+    resourcesGathered,
+    unitsTrained: Math.max(0, Math.round(player.unitsTrained)),
+    unitsLost: Math.max(0, Math.round(player.unitsLost)),
   });
+  savePlayerProfile(playerProfile);
+  activeMatchId = null;
 }
 
 createStartScreen();
@@ -374,6 +461,7 @@ interface StarhavenQaProbe {
   readonly state: AppState;
   readonly scenario: string | null;
   readonly config: MatchConfig;
+  readonly profile: PlayerProfile;
   readonly scenarios: readonly string[];
   readonly scenarioScaffolds: readonly { id: string; scaffold: boolean }[];
   readonly resetCount: number;
@@ -387,6 +475,7 @@ interface StarhavenQaProbe {
   readonly orientation: string;
   readonly frozen: boolean;
   readonly transitionHistory: readonly AppState[];
+  readonly forgeArtCandidate: string | null;
   readonly discoveries: readonly {
     team: number;
     tick: number;
@@ -448,6 +537,7 @@ function publish(): void {
     state: flow.state,
     scenario: activeScenario?.id ?? null,
     config: cloneMatchConfig(activeConfig),
+    profile: clonePlayerProfile(playerProfile),
     scenarios: QA_SCENARIOS.map((scenario) => scenario.id),
     scenarioScaffolds: QA_SCENARIOS.map((scenario) => ({ id: scenario.id, scaffold: scenario.scaffold })),
     resetCount: matchResetCount,
@@ -461,6 +551,7 @@ function publish(): void {
     orientation,
     frozen: qaFrozen,
     transitionHistory: transitionHistory.slice(),
+    forgeArtCandidate: forgeArtCandidateId,
     discoveries: world?.discoveryLog.map((event) => ({ ...event })) ?? [],
     landmarks: world?.landmarks.map((landmark) => ({ ...landmark })) ?? [],
     dispatch: dispatchAppEvent,

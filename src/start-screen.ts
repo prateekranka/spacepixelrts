@@ -9,15 +9,23 @@ import {
   type SeedMode,
   type TacticalPauseMode,
 } from './match-config';
+import {
+  CURRENT_DISPATCH_VERSION,
+  clonePlayerProfile,
+  type PlayerProfile,
+} from './player-profile';
+import { mountFrontEndScene } from './front-end-scene';
 
 export interface StartScreenCallbacks {
   onNewSkirmish: () => void;
   onBackToMenu: () => void;
   onConfigChange: (config: MatchConfig) => void;
   onStartMatch: (config: MatchConfig) => void;
+  onPreferredFactionChange: (faction: FactionId) => void;
+  onDispatchesRead: () => void;
 }
 
-type PanelKind = 'tutorial' | 'factions' | 'settings';
+type PanelKind = 'tutorial' | 'factions' | 'settings' | 'records' | 'history' | 'codex' | 'dispatches';
 type ConfigField =
   | 'playerFaction'
   | 'aiFaction'
@@ -64,6 +72,16 @@ function seedEntryErrorFor(raw: string): string | null {
   return null;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character] ?? character);
+}
+
 export class StartScreen {
   readonly root: HTMLElement;
   private readonly callbacks: StartScreenCallbacks;
@@ -71,17 +89,24 @@ export class StartScreen {
   private readonly setupView: HTMLElement;
   private readonly panel: HTMLElement;
   private readonly live: HTMLElement;
+  private readonly profileBadge: HTMLElement;
+  private readonly sceneController: ReturnType<typeof mountFrontEndScene>;
+  private readonly reducedMotionQuery: MediaQueryList | null;
+  private readonly reducedMotionHandler: (event: MediaQueryListEvent) => void;
+  private profile: PlayerProfile;
   private config: MatchConfig;
   private startEnabled = false;
   private seedEntryError: string | null = null;
   private panelTrigger: HTMLElement | null = null;
+  private activePanelKind: PanelKind | null = null;
   private readonly keyHandler: (event: KeyboardEvent) => void;
 
-  constructor(host: HTMLElement, callbacks: StartScreenCallbacks) {
+  constructor(host: HTMLElement, callbacks: StartScreenCallbacks, profile: PlayerProfile) {
     this.callbacks = callbacks;
+    this.profile = clonePlayerProfile(profile);
     this.config = {
-      playerFaction: 'sunweaver',
-      aiFaction: 'gravemark',
+      playerFaction: this.profile.preferredFaction,
+      aiFaction: otherFaction(this.profile.preferredFaction),
       map: 'helios-rift',
       difficulty: 'standard',
       fogOfWar: true,
@@ -96,28 +121,35 @@ export class StartScreen {
     this.root.innerHTML = `
       <div class="start-shell">
         <section class="menu-view">
-          <header class="start-heading">
-            <p class="start-kicker">FRONTIER COMMAND DECK</p>
-            <h1>Starhaven</h1>
-            <p class="start-promise">Take the Helios Rift before your rival does.</p>
-            <p class="start-note">A touch-first skirmish for one decisive front.</p>
-          </header>
+          <div class="menu-scene" data-scene-container aria-hidden="true"></div>
+          <div class="menu-copy">
+            <header class="start-heading">
+              <p class="start-kicker">FRONTIER COMMAND DECK</p>
+              <h1>Starhaven</h1>
+              <p class="start-promise">Take the Helios Rift before your rival does.</p>
+              <p class="start-note">A touch-first skirmish for one decisive front.</p>
+              <div class="profile-badge" data-profile-badge aria-label="Player profile"></div>
+            </header>
+          </div>
           <nav class="menu-list" aria-label="Main menu">
-            <button type="button" class="menu-item" data-start-action="continue" disabled>
-              <strong>Continue</strong><small>No saved match</small>
-            </button>
-            <button type="button" class="menu-item primary" data-start-action="new-skirmish">
+            <button type="button" class="menu-item primary" data-start-action="new-skirmish" title="New Skirmish">
               <strong>New Skirmish</strong><small>Deploy into the Helios Rift</small>
             </button>
-            <button type="button" class="menu-item" data-start-action="tutorial">
+            <button type="button" class="menu-item" data-start-action="tutorial" title="Tutorial">
               <strong>Tutorial</strong><small>The first ninety seconds</small>
             </button>
-            <button type="button" class="menu-item" data-start-action="factions">
+            <button type="button" class="menu-item" data-start-action="factions" title="Factions">
               <strong>Factions</strong><small>Sunweaver · Gravemark</small>
             </button>
-            <button type="button" class="menu-item" data-start-action="settings">
-              <strong>Settings</strong><small>Presentation only</small>
+            <button type="button" class="menu-item" data-start-action="settings" title="Settings">
+              <strong>Settings</strong><small>Display and input</small>
             </button>
+          </nav>
+          <nav class="utility-dock" aria-label="Starhaven utilities">
+            ${this.utilityButton('records', 'Records', '▦')}
+            ${this.utilityButton('history', 'Match History', '◷')}
+            ${this.utilityButton('codex', 'Tech Codex', '✧')}
+            ${this.utilityButton('dispatches', 'Dispatches', '✉')}
           </nav>
           <footer class="start-footer">
             <span>STARHAVEN // HELIOS RIFT</span><span>RECON · CLAIM · ADAPT</span>
@@ -215,13 +247,44 @@ export class StartScreen {
     this.setupView = this.root.querySelector('.setup-view')!;
     this.panel = this.root.querySelector('.start-panel')!;
     this.live = this.root.querySelector('.setup-live')!;
+    this.profileBadge = this.root.querySelector<HTMLElement>('[data-profile-badge]')!;
+    this.reducedMotionQuery = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+    const reducedMotion = this.reducedMotionQuery?.matches ?? false;
+    this.root.dataset.profileReady = 'true';
+    this.root.dataset.reducedMotion = String(reducedMotion);
+    const sceneContainer = this.root.querySelector<HTMLElement>('[data-scene-container]')!;
+    this.sceneController = mountFrontEndScene(sceneContainer, {
+      faction: this.profile.preferredFaction,
+      mode: 'menu',
+      reducedMotion,
+    });
+    this.reducedMotionHandler = (event) => {
+      this.root.dataset.reducedMotion = String(event.matches);
+      this.sceneController.setReducedMotion(event.matches);
+    };
+    if (this.reducedMotionQuery) {
+      if (typeof this.reducedMotionQuery.addEventListener === 'function') {
+        this.reducedMotionQuery.addEventListener('change', this.reducedMotionHandler);
+      } else {
+        this.reducedMotionQuery.addListener(this.reducedMotionHandler);
+      }
+    }
     this.keyHandler = (event) => {
-      if (event.key === 'Escape' && !this.panel.hidden) this.closePanel();
+      if (this.panel.hidden) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.closePanel();
+      } else if (event.key === 'Tab') {
+        this.trapPanelFocus(event);
+      }
     };
     window.addEventListener('keydown', this.keyHandler);
     this.root.addEventListener('click', (event) => this.handleClick(event));
     this.root.addEventListener('input', (event) => this.handleInput(event));
     this.injectCss();
+    this.renderProfile();
     this.showMainMenu();
   }
 
@@ -229,6 +292,9 @@ export class StartScreen {
     this.closePanel();
     this.menuView.hidden = false;
     this.setupView.hidden = true;
+    this.sceneController.setMode('menu');
+    this.sceneController.setFaction(this.profile.preferredFaction);
+    this.renderProfile();
     this.root.querySelector<HTMLButtonElement>('[data-start-action="new-skirmish"]')?.focus();
   }
 
@@ -239,6 +305,7 @@ export class StartScreen {
     this.seedEntryError = null;
     this.menuView.hidden = true;
     this.setupView.hidden = false;
+    this.sceneController.setMode('loading');
     this.live.textContent = '';
     this.renderSetup();
     this.root.querySelector<HTMLButtonElement>('[data-config-field="playerFaction"]')?.focus();
@@ -246,7 +313,40 @@ export class StartScreen {
 
   destroy(): void {
     window.removeEventListener('keydown', this.keyHandler);
+    if (this.reducedMotionQuery) {
+      if (typeof this.reducedMotionQuery.removeEventListener === 'function') {
+        this.reducedMotionQuery.removeEventListener('change', this.reducedMotionHandler);
+      } else {
+        this.reducedMotionQuery.removeListener(this.reducedMotionHandler);
+      }
+    }
+    this.sceneController.destroy();
     this.root.remove();
+  }
+
+  /** Update the visible profile state without writing storage. */
+  setProfile(profile: PlayerProfile): void {
+    this.profile = clonePlayerProfile(profile);
+    this.sceneController.setFaction(this.profile.preferredFaction);
+    this.renderProfile();
+    this.renderPanelIfOpen();
+  }
+
+  private utilityButton(action: PanelKind, label: string, glyph: string): string {
+    const badge = action === 'dispatches'
+      ? '<span class="utility-badge" data-dispatch-badge hidden aria-label="Unread dispatches">NEW</span>'
+      : '';
+    return `<button type="button" class="utility-button" data-start-action="${action}" title="${label}" aria-label="${label}"><span class="utility-icon" aria-hidden="true">${glyph}</span><span class="sr-only">${label}</span>${badge}</button>`;
+  }
+
+  private renderProfile(): void {
+    const faction = FACTIONS[this.profile.preferredFaction];
+    const fastest = this.profile.fastestVictoryMs === null
+      ? '—'
+      : `${Math.round(this.profile.fastestVictoryMs / 1000)}s`;
+    this.profileBadge.innerHTML = `<span class="profile-sigil" style="--faction-accent:${faction.accent}" aria-hidden="true">${faction.sigil}</span><span><small>COMMANDER PROFILE</small><strong>${faction.name}</strong><em>${this.profile.wins} wins · ${this.profile.matchesPlayed} matches · best ${fastest}</em></span>`;
+    const badge = this.root.querySelector<HTMLElement>('[data-dispatch-badge]');
+    if (badge) badge.hidden = this.profile.lastSeenDispatchVersion >= CURRENT_DISPATCH_VERSION;
   }
 
   private segmentRow(
@@ -278,6 +378,10 @@ export class StartScreen {
         case 'tutorial':
         case 'factions':
         case 'settings':
+        case 'records':
+        case 'history':
+        case 'codex':
+        case 'dispatches':
           this.openPanel(action.dataset.startAction, action);
           break;
         case 'close-panel': this.closePanel(); break;
@@ -286,8 +390,20 @@ export class StartScreen {
     }
 
     const control = target.closest<HTMLButtonElement>('[data-config-field]');
-    if (!control) return;
-    this.updateField(control.dataset.configField as ConfigField, control.dataset.configValue ?? '');
+    if (control) {
+      this.updateField(control.dataset.configField as ConfigField, control.dataset.configValue ?? '');
+      return;
+    }
+    const factionChoice = target.closest<HTMLButtonElement>('[data-faction-choice]');
+    if (factionChoice) {
+      const faction = factionChoice.dataset.factionChoice as FactionId;
+      if (faction !== 'sunweaver' && faction !== 'gravemark') return;
+      this.profile = { ...this.profile, preferredFaction: faction };
+      this.callbacks.onPreferredFactionChange(faction);
+      this.sceneController.setFaction(faction);
+      this.renderProfile();
+      this.renderPanelIfOpen();
+    }
   }
 
   private handleInput(event: Event): void {
@@ -398,10 +514,13 @@ export class StartScreen {
     status.classList.toggle('error', errors.length > 0);
   }
 
-  private openPanel(kind: PanelKind, trigger: HTMLElement): void {
+  private openPanel(kind: PanelKind, trigger: HTMLElement, notifyDispatchRead = true): void {
     this.panelTrigger = trigger;
+    this.activePanelKind = kind;
     const title = this.panel.querySelector('#panel-title')!;
     const content = this.panel.querySelector('.panel-content')!;
+    this.panel.dataset.panelKind = kind;
+    this.panel.querySelector<HTMLElement>('.panel-card')?.setAttribute('data-panel-kind', kind);
     if (kind === 'tutorial') {
       title.textContent = 'The first ninety seconds';
       content.innerHTML = `
@@ -414,18 +533,78 @@ export class StartScreen {
     } else if (kind === 'factions') {
       title.textContent = 'Two ways to take the Rift';
       content.innerHTML = `<div class="faction-list">${Object.values(FACTIONS).map((faction) => `
-        <div class="faction-row"><span class="faction-sigil" style="--faction-accent:${faction.accent}">${faction.sigil}</span>
-        <div class="faction-copy"><strong>${faction.name}</strong><p>${faction.summary}</p></div></div>`).join('')}</div>`;
-    } else {
-      title.textContent = 'Presentation';
+        <button type="button" class="faction-row faction-choice" data-faction-choice="${faction.id}" aria-pressed="${this.profile.preferredFaction === faction.id}">
+          <span class="faction-sigil" style="--faction-accent:${faction.accent}" aria-hidden="true">${faction.sigil}</span>
+          <span class="faction-copy"><strong>${faction.name}</strong><p>${faction.summary}</p><small>${this.profile.preferredFaction === faction.id ? 'SELECTED FOR NEXT SKIRMISH' : 'CHOOSE AS PREFERRED FACTION'}</small></span>
+        </button>`).join('')}</div><p class="panel-note">Your choice changes the front-end scene. It does not start a match.</p>`;
+    } else if (kind === 'settings') {
+      title.textContent = 'Presentation and input';
       content.innerHTML = `<div class="settings-list">
         <div><b>Display</b><span>Landscape-first · safe-area aware</span></div>
-        <div><b>Motion</b><span>Follows reduced-motion settings</span></div>
+        <div><b>Motion</b><span>Follows the device Reduced Motion setting</span></div>
         <div><b>Input</b><span>Touch-first · keyboard fallback</span></div>
       </div><p class="panel-note">No accounts, stores, or online services live here.</p>`;
+    } else if (kind === 'records') {
+      title.textContent = 'Records';
+      content.innerHTML = `<div class="record-grid"><div><small>MATCHES PLAYED</small><strong>${this.profile.matchesPlayed}</strong></div><div><small>WINS</small><strong>${this.profile.wins}</strong></div><div><small>LOSSES</small><strong>${this.profile.losses}</strong></div><div><small>FASTEST VICTORY</small><strong>${this.formatDuration(this.profile.fastestVictoryMs)}</strong></div></div>${this.profile.matchesPlayed === 0 ? '<p class="empty-state">No records yet. Take the Helios Rift to make your first record.</p>' : ''}<h3 class="panel-subhead">Achievements</h3>${this.profile.unlockedAchievements.length === 0 ? '<p class="empty-state">No achievements unlocked yet. Take the Helios Rift to make your first record.</p>' : `<ul class="achievement-list">${this.profile.unlockedAchievements.map((achievement) => `<li>${escapeHtml(achievement)}</li>`).join('')}</ul>`}`;
+    } else if (kind === 'history') {
+      title.textContent = 'Match History';
+      content.innerHTML = this.profile.recentMatches.length === 0
+        ? '<p class="empty-state">No matches recorded yet. Your recent Helios Rift sorties will appear here.</p>'
+        : `<div class="history-list">${this.profile.recentMatches.slice().reverse().map((match) => `<article class="history-entry"><div><strong>${match.outcome === 'win' ? 'Victory' : 'Defeat'}</strong><small>${this.formatDate(match.playedAt)} · ${FACTIONS[match.playerFaction].name} vs ${FACTIONS[match.opponentFaction].name}</small></div><span>${this.formatDuration(match.durationMs)}</span></article>`).join('')}</div>`;
+    } else if (kind === 'codex') {
+      title.textContent = 'Tech Codex';
+      content.innerHTML = `<div class="codex-list"><article><strong>Lumen Relay</strong><p>Sunweaver mobility and information systems keep workers supplied across contested ground.</p></article><article><strong>Gravimetric Foundry</strong><p>Gravemark extraction converts armor and heavy production into a patient advance.</p></article><article><strong>Helios Rift</strong><p>The shared center rewards scouting before either civilization commits its first push.</p></article></div>`;
+    } else {
+      title.textContent = 'Dispatches';
+      content.innerHTML = `<p class="panel-lead">Field notes from the Starhaven development front.</p><article class="dispatch-entry"><small>DISPATCH ${CURRENT_DISPATCH_VERSION.toString().padStart(2, '0')}</small><h3>Front-end command deck online</h3><p>Choose a preferred civilization, review your records, and enter the Helios Rift through one clear New Skirmish action.</p></article>`;
+      if (notifyDispatchRead) this.callbacks.onDispatchesRead();
+      if (this.profile.lastSeenDispatchVersion < CURRENT_DISPATCH_VERSION) {
+        this.profile = { ...this.profile, lastSeenDispatchVersion: CURRENT_DISPATCH_VERSION };
+      }
     }
+    this.renderProfile();
     this.panel.hidden = false;
     this.panel.querySelector<HTMLButtonElement>('.panel-close')?.focus();
+  }
+
+  private renderPanelIfOpen(): void {
+    if (this.panel.hidden || this.activePanelKind === null) return;
+    const trigger = this.panelTrigger;
+    if (trigger === null) return;
+    this.openPanel(this.activePanelKind, trigger, false);
+  }
+
+  private formatDuration(durationMs: number | null): string {
+    if (durationMs === null) return '—';
+    const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    return `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`;
+  }
+
+  private formatDate(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.valueOf())) return value;
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
+  }
+
+  private trapPanelFocus(event: KeyboardEvent): void {
+    const card = this.panel.querySelector<HTMLElement>('.panel-card');
+    if (!card) return;
+    const focusable = Array.from(card.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"])',
+    )).filter((element) => element.getClientRects().length > 0);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !card.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !card.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   private closePanel(): void {
@@ -433,6 +612,7 @@ export class StartScreen {
     this.panel.hidden = true;
     this.panelTrigger?.focus();
     this.panelTrigger = null;
+    this.activePanelKind = null;
   }
 
   private injectCss(): void {
@@ -448,17 +628,20 @@ const START_SCREEN_CSS = `
 #start-screen{position:fixed;inset:0;z-index:30;overflow:auto;color:${P.cream};font-family:"Trebuchet MS","Segoe UI",sans-serif;background:radial-gradient(circle at 78% 38%,${P.plum}88 0%,transparent 32%),radial-gradient(circle at 16% 82%,${P.rust}55 0%,transparent 36%),linear-gradient(125deg,${P.ink} 0%,${P.night} 55%,${P.deep} 100%)}
 #start-screen:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.14;background-image:linear-gradient(${P.cream}12 1px,transparent 1px),linear-gradient(90deg,${P.cream}12 1px,transparent 1px);background-size:54px 54px;mask-image:linear-gradient(90deg,black,transparent 88%)}
 .start-shell{position:relative;box-sizing:border-box;min-height:100%;width:min(1240px,100%);margin:0 auto;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + clamp(24px,4vh,48px)) calc(env(safe-area-inset-right) + clamp(20px,4vw,64px)) calc(env(safe-area-inset-bottom) + 18px) calc(env(safe-area-inset-left) + clamp(20px,4vw,64px))}
-.menu-view{display:grid;grid-template-columns:minmax(300px,.92fr) minmax(330px,.78fr);gap:clamp(30px,6vw,96px);align-items:center;flex:1}
+.menu-view{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,430px);grid-template-rows:auto 1fr auto auto;gap:clamp(16px,3vh,30px) clamp(30px,6vw,96px);align-items:center;flex:1}
 .menu-view[hidden],.setup-view[hidden],.start-panel[hidden],[hidden]{display:none!important}
+.menu-scene{position:fixed;inset:0;z-index:0;overflow:hidden;background:${P.deep}}.menu-scene:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 0 42%,${P.ink}55 72%,${P.ink}ee 100%)}.menu-scene canvas{display:block;width:100%;height:100%}.menu-view>:not(.menu-scene){position:relative;z-index:1}
+.menu-copy{grid-column:2;grid-row:1}.profile-badge{display:flex;align-items:center;gap:10px;margin-top:22px;padding:9px 10px;border:1px solid ${P.muted}33;background:${P.deep}99}.profile-badge small{display:block;color:${P.muted};font-size:8px;letter-spacing:.14em}.profile-badge strong{display:block;margin-top:2px;font-size:12px}.profile-badge em{display:block;margin-top:3px;color:${P.muted};font-size:9px;font-style:normal}.profile-sigil{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--faction-accent);border-radius:50%;color:var(--faction-accent);font-size:17px}
+.utility-dock{grid-column:1;grid-row:3;justify-self:start;display:grid;grid-template-columns:repeat(4,52px);gap:8px;padding:8px;border:1px solid ${P.muted}33;background:${P.ink}b8;backdrop-filter:blur(6px)}.utility-button{position:relative;display:grid;place-items:center;min-width:52px;min-height:52px;padding:0;border:1px solid ${P.muted}55;border-radius:3px;background:${P.ink}dd;color:${P.ice};font:inherit;cursor:pointer;touch-action:manipulation;transition:border-color .16s ease,background .16s ease,transform .16s ease}.utility-button:hover{border-color:${P.amber};background:${P.plum}}.utility-button:active{transform:translateY(1px);background:${P.rust}}.utility-icon{font-size:21px;line-height:1}.utility-badge{position:absolute;top:3px;right:3px;padding:2px 4px;border-radius:2px;background:${P.coral};color:${P.ink};font-size:7px;font-weight:700;letter-spacing:.08em}
 .start-kicker{margin:0;color:${P.amber};font-size:10px;letter-spacing:.22em;text-transform:uppercase}
 .start-heading h1{margin:14px 0 12px;font-size:clamp(56px,6vw,84px);line-height:.86;letter-spacing:.03em;text-transform:uppercase;text-shadow:0 5px 0 ${P.rust}88,0 0 28px ${P.amber}22}
 .start-promise{margin:0;color:${P.ice};font-size:clamp(17px,2vw,23px)}.start-note{color:${P.muted};font-size:13px}
-.menu-list{display:flex;flex-direction:column;gap:12px;width:min(430px,100%)}
+.menu-list{grid-column:2;grid-row:2;display:flex;flex-direction:column;gap:12px;width:min(430px,100%)}
 .menu-item,.secondary-action,.primary-action,.segment button{box-sizing:border-box;min-height:52px;border:1px solid ${P.muted}55;border-radius:3px;background:${P.ink}cc;color:${P.cream};font:inherit;cursor:pointer;touch-action:manipulation}
 .menu-item{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;width:100%;padding:10px 18px;text-align:left}.menu-item strong{font-size:14px;letter-spacing:.09em;text-transform:uppercase}.menu-item small{color:${P.muted};font-size:9px;letter-spacing:.13em;text-transform:uppercase}
 .menu-item.primary,.primary-action:not(:disabled){border-color:${P.amber};background:linear-gradient(135deg,${P.rust}ee,${P.ochre}66);box-shadow:0 0 24px ${P.amber}18}.menu-item:disabled,.primary-action:disabled{opacity:.42;cursor:not-allowed}
 button:focus-visible,input:focus-visible{outline:2px solid ${P.amber};outline-offset:3px}
-.start-footer{grid-column:1/-1;display:flex;justify-content:space-between;color:${P.muted};font-size:9px;letter-spacing:.16em}
+.start-footer{grid-column:1/-1;grid-row:4;display:flex;justify-content:space-between;color:${P.muted};font-size:9px;letter-spacing:.16em}
 .setup-view{display:grid;grid-template-rows:auto 1fr auto auto;gap:16px;flex:1;min-height:0}.setup-heading{display:flex;justify-content:space-between;gap:20px;align-items:end}.setup-heading h2{margin:7px 0 0;font-size:clamp(26px,3vw,38px);font-weight:500}.setup-code{color:${P.muted};font-size:9px;letter-spacing:.16em}
 .setup-grid{display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:18px;min-height:0}.setup-card{box-sizing:border-box;display:flex;flex-direction:column;padding:20px;border:1px solid ${P.amber}44;background:${P.ink}cc;box-shadow:0 18px 44px #0005}.card-heading{padding-bottom:12px;border-bottom:1px solid ${P.muted}2f}.card-heading h3{margin:5px 0 0;font-size:18px;font-weight:500}
 .setup-field{margin:14px 0 0;padding:0;border:0}.matchup-card .setup-field{display:flex;flex:1;flex-direction:column;justify-content:center}.setup-field legend,.rule-label{color:${P.muted};font-size:10px;letter-spacing:.12em;text-transform:uppercase}.segment{display:flex;gap:6px}.segment button{min-width:44px;min-height:44px;flex:1;padding:8px 10px;color:${P.muted};font-size:11px}.segment button.selected{border-color:${P.amber};background:${P.plum};color:${P.cream};box-shadow:inset 0 -3px 0 ${P.amber}}
@@ -468,7 +651,8 @@ button:focus-visible,input:focus-visible{outline:2px solid ${P.amber};outline-of
 .rules-card .rule-row,.rules-card .seed-row{flex:1}.rule-row,.seed-row{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;min-height:52px;border-bottom:1px solid ${P.muted}22}.seed-row span{display:flex;flex-direction:column;color:${P.muted};font-size:10px}.seed-row small{font-size:8px}.seed-row input{box-sizing:border-box;width:100%;min-height:44px;padding:8px 10px;border:1px solid ${P.muted}55;background:${P.deep};color:${P.cream};font:inherit}
 .setup-actions{display:grid;grid-template-columns:140px 1fr 230px;gap:14px;align-items:center}.secondary-action,.primary-action{padding:10px 16px}.primary-action{display:flex;flex-direction:column;align-items:flex-start}.primary-action strong{font-size:13px}.primary-action small{color:${P.muted};font-size:9px}.setup-status{margin:0;color:${P.muted};font-size:10px;text-align:center}.setup-status.error{color:${P.coral}}
 .start-panel{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:calc(env(safe-area-inset-top) + 22px) calc(env(safe-area-inset-right) + 22px) calc(env(safe-area-inset-bottom) + 22px) calc(env(safe-area-inset-left) + 22px)}.panel-scrim{position:absolute;inset:0;background:#05040bdd;backdrop-filter:blur(5px)}.panel-card{position:relative;box-sizing:border-box;width:min(560px,100%);max-height:90vh;overflow:auto;padding:30px;border:1px solid ${P.amber}88;background:linear-gradient(145deg,${P.ink},${P.deep})}.panel-card h2{margin:8px 44px 20px 0;font-size:28px}.panel-close{position:absolute;right:14px;top:10px;width:44px;height:44px;border:0;background:transparent;color:${P.muted};font-size:28px}.panel-lead,.panel-note,.faction-copy p{color:${P.muted};font-size:12px;line-height:1.5}.tutorial-list{display:grid;gap:12px;padding:0;list-style:none}.tutorial-list li{display:grid;grid-template-columns:80px 1fr;gap:12px}.faction-list,.settings-list{display:grid;gap:10px}.faction-row{display:flex;gap:14px;align-items:center;padding:12px 0;border-top:1px solid ${P.muted}2f}.settings-list div{display:flex;justify-content:space-between;gap:18px;padding:12px 0;border-top:1px solid ${P.muted}2f}.settings-list span{color:${P.muted};font-size:11px}
+.panel-close{cursor:pointer}.faction-row{width:100%;border:1px solid ${P.muted}2f;border-radius:2px;background:transparent;color:${P.cream};font:inherit;text-align:left;cursor:pointer}.faction-row:hover,.faction-row[aria-pressed="true"]{border-color:${P.amber};background:${P.plum}88}.faction-copy small{display:block;margin-top:7px;color:${P.amber};font-size:8px;letter-spacing:.1em}.settings-list div{display:flex;justify-content:space-between;gap:18px;padding:12px 0;border-top:1px solid ${P.muted}2f}.record-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.record-grid div{display:grid;gap:5px;padding:12px;border:1px solid ${P.muted}2f;background:${P.deep}88}.record-grid small,.dispatch-entry small{color:${P.muted};font-size:8px;letter-spacing:.12em}.record-grid strong{font-size:22px;color:${P.ice}}.panel-subhead{margin:22px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.1em}.empty-state{padding:16px;border:1px dashed ${P.muted}55;color:${P.muted};font-size:12px;line-height:1.5}.achievement-list{display:grid;gap:6px;margin:0;padding-left:18px;color:${P.ice};font-size:12px}.history-list{display:grid;gap:8px}.history-entry{display:flex;justify-content:space-between;gap:12px;padding:12px;border-top:1px solid ${P.muted}2f}.history-entry strong,.history-entry small{display:block}.history-entry small{margin-top:4px;color:${P.muted};font-size:10px}.history-entry>span{color:${P.amber};font-size:12px}.codex-list{display:grid;gap:12px}.codex-list article,.dispatch-entry{padding:12px;border:1px solid ${P.muted}2f;background:${P.deep}88}.codex-list p,.dispatch-entry p{margin:6px 0 0;color:${P.muted};font-size:12px;line-height:1.5}.dispatch-entry h3{margin:7px 0 0;font-size:16px;font-weight:500}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media (prefers-reduced-motion:reduce){#start-screen *{transition:none!important}}
-@media (max-width:900px){.menu-view,.setup-grid{grid-template-columns:1fr}.setup-view{overflow:auto}.setup-actions{grid-template-columns:1fr}.setup-status{text-align:left}}
+@media (max-width:900px){.menu-view,.setup-grid{grid-template-columns:1fr}.menu-view{grid-template-rows:auto 1fr auto auto auto}.menu-scene{position:fixed;inset:0}.menu-copy{grid-column:1;grid-row:1}.menu-list{grid-column:1;grid-row:3}.utility-dock{grid-column:1;grid-row:4}.start-footer{grid-column:1;grid-row:5}.setup-view{overflow:auto}.setup-actions{grid-template-columns:1fr}.setup-status{text-align:left}}
 `;

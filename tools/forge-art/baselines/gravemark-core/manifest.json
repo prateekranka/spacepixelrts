@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-core",
+  "label": "Core",
+  "faction": "gravemark",
+  "category": "building",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:53:56.078Z",
+  "source": {
+    "adapter": "building",
+    "dims": [
+      64,
+      64
+    ]
+  },
+  "cellLayout": {
+    "cellW": 64,
+    "cellH": 64,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 32,
+    "y": 63
+  },
+  "worldScale": {
+    "x": 2.4,
+    "y": 2.4
+  },
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "3554af5351c8efd05ceee7eb5cb61f7a4d876c2bb475162f3e046d4ce2cb0abc",
+      "alphaPixels": 1792
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 9,
+    "alphaPixels": 1792,
+    "alphaCoverage": 0.4375,
+    "averageLuma": 90.97285267856951,
+    "brightMaterialShare": 0.7287946428571429
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

@@ -1,7 +1,7 @@
 /** P90-v3 — startup-rasterized sprite atlas + instanced texture shader. */
 
 import { Kind, type Civ } from './engine';
-import { buildSpriteAtlas, type SpriteAtlas } from './sprites';
+import { buildSpriteAtlas, type CombatRowOverride, type SpriteAtlas } from './sprites';
 
 export function civIndex(civ: Civ): number {
   if (civ === 'vespari') return 0;
@@ -25,8 +25,8 @@ export const COMBAT_BRANCH_MAPPINGS = [
   { kind: Kind.Prism, civ: 1, row: 3 },
 ] as const;
 
-export function buildSprites(): SpriteAtlas {
-  return buildSpriteAtlas();
+export function buildSprites(combatOverrides?: readonly CombatRowOverride[]): SpriteAtlas {
+  return buildSpriteAtlas(combatOverrides);
 }
 
 export const SDF_VERT = /* glsl */ `

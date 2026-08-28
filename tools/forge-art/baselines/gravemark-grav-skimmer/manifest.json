@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-grav-skimmer",
+  "label": "Grav-Skimmer",
+  "faction": "gravemark",
+  "category": "unit",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:53:56.484Z",
+  "source": {
+    "adapter": "scout",
+    "dims": [
+      128,
+      128
+    ]
+  },
+  "cellLayout": {
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 64,
+    "y": 127
+  },
+  "worldScale": {
+    "x": 0.96,
+    "y": 1.12
+  },
+  "frames": [
+    {
+      "key": "hd",
+      "sha256": "7b0f25f3d07b80ad8aaffa6abc32d5257782fd65175b80fe4ce0c70c03aa5183",
+      "alphaPixels": 7680
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 11,
+    "alphaPixels": 7680,
+    "alphaCoverage": 0.46875,
+    "averageLuma": 93.87399416667715,
+    "brightMaterialShare": 0.5125
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

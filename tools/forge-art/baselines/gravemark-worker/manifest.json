@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-worker",
+  "label": "Worker",
+  "faction": "gravemark",
+  "category": "unit",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:53:57.776Z",
+  "source": {
+    "adapter": "worker8",
+    "dims": [
+      256,
+      96
+    ]
+  },
+  "cellLayout": {
+    "cellW": 32,
+    "cellH": 48,
+    "cols": 8,
+    "rows": 2,
+    "order": "dir-major",
+    "count": 16
+  },
+  "anchor": {
+    "x": 16,
+    "y": 47
+  },
+  "worldScale": {
+    "x": 1.55,
+    "y": 2.32
+  },
+  "frames": [
+    {
+      "key": "dir0-walk0",
+      "sha256": "50e2bb194b811ac6315c97cd618b975de47f46091b029fbce9d95b40973dbddc",
+      "alphaPixels": 897
+    },
+    {
+      "key": "dir1-walk0",
+      "sha256": "cbbdcd54b0475419f51eaf3e707908bdfa3c078d4e0f74d1f73e14c92d7c4e89",
+      "alphaPixels": 827
+    },
+    {
+      "key": "dir2-walk0",
+      "sha256": "cbbdcd54b0475419f51eaf3e707908bdfa3c078d4e0f74d1f73e14c92d7c4e89",
+      "alphaPixels": 827
+    },
+    {
+      "key": "dir3-walk0",
+      "sha256": "66ba2705d1cff30626c85dc1235e3fef6cb6335c78800c3a506220811dd34bc4",
+      "alphaPixels": 827
+    },
+    {
+      "key": "dir4-walk0",
+      "sha256": "882d63b1b9dbadbeb7c9b9ccd750af349e530eee1efcf8587fc471b3c37429f3",
+      "alphaPixels": 897
+    },
+    {
+      "key": "dir5-walk0",
+      "sha256": "c5ce18fce31d0a6b6a0c71e7edc925d9bf4970efd6005a3e2c29b1ccc9ce5830",
+      "alphaPixels": 875
+    },
+    {
+      "key": "dir6-walk0",
+      "sha256": "55a91455762074423b746bd3277595f7cdd6b5157006eba77fd481fa77a10670",
+      "alphaPixels": 866
+    },
+    {
+      "key": "dir7-walk0",
+      "sha256": "cd3374ad5d92bef5f8494992c2187083f3e54dc00389700692ca7604c055634b",
+      "alphaPixels": 875
+    },
+    {
+      "key": "dir0-walk1",
+      "sha256": "16488e03b3d81a3be4690256a28130491e9d61be42c3cfbfd48bb504fc860dcf",
+      "alphaPixels": 864
+    },
+    {
+      "key": "dir1-walk1",
+      "sha256": "f8b7819d4097c104e6047819e0f61aff2c5867225f3ca930447aba0b5c7d4eb7",
+      "alphaPixels": 818
+    },
+    {
+      "key": "dir2-walk1",
+      "sha256": "f8b7819d4097c104e6047819e0f61aff2c5867225f3ca930447aba0b5c7d4eb7",
+      "alphaPixels": 818
+    },
+    {
+      "key": "dir3-walk1",
+      "sha256": "b788bfed66cfba702ae003719d6133e5c3d6c6bc96b06c049269bae33f0d2581",
+      "alphaPixels": 818
+    },
+    {
+      "key": "dir4-walk1",
+      "sha256": "2c6c63cfe7654cf100c8333505b033a522a8723199234af9796ba27e850b1ce2",
+      "alphaPixels": 864
+    },
+    {
+      "key": "dir5-walk1",
+      "sha256": "50ac029b8b61742f0f1caf203dd400418977af63aad5b74480f5b7dcf9b92d3e",
+      "alphaPixels": 870
+    },
+    {
+      "key": "dir6-walk1",
+      "sha256": "0b0c41ad5c6526612019cd4cdb91826cac50380181c4e3ce120d0f2466f97426",
+      "alphaPixels": 860
+    },
+    {
+      "key": "dir7-walk1",
+      "sha256": "0ce0ebd80d36f212c9ac093138dffc0d4988a6ba5716a141291de72c687411fa",
+      "alphaPixels": 870
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 7,
+    "alphaPixels": 13673,
+    "alphaCoverage": 0.5563557942708334,
+    "averageLuma": 72.93615752214004,
+    "brightMaterialShare": 0.24537409493161705
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}
