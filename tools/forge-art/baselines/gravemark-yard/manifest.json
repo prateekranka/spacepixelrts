@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-yard",
+  "label": "Yard",
+  "faction": "gravemark",
+  "category": "building",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:53:58.172Z",
+  "source": {
+    "adapter": "building",
+    "dims": [
+      32,
+      32
+    ]
+  },
+  "cellLayout": {
+    "cellW": 32,
+    "cellH": 32,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 16,
+    "y": 31
+  },
+  "worldScale": {
+    "x": 1.85,
+    "y": 1.85
+  },
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "c9734ee5e82c02479527956f5bc19d71958b33aa2bb9505218a9335d5e359109",
+      "alphaPixels": 511
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 9,
+    "alphaPixels": 511,
+    "alphaCoverage": 0.4990234375,
+    "averageLuma": 78.82509315068556,
+    "brightMaterialShare": 0.5870841487279843
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

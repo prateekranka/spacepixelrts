@@ -6,9 +6,9 @@
  *   node scripts/qa-front-end-rebuild.mjs --url http://127.0.0.1:4173 --out /path/to/evidence
  */
 
-import fs from 'node:fs';
-import { once } from 'node:events';
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +34,7 @@ const UTILITY_CONTROLS = [
 ];
 const PANEL_CONTROLS = ['Records', 'Match History', 'Tech Codex', 'Dispatches'];
 const TIMEOUT_MS = 15000;
+const SERVER_BOOT_TIMEOUT_MS = 120000;
 
 function parseArgs(argv) {
   const result = {};
@@ -66,49 +67,25 @@ function normalizeUrl(raw) {
   return String(raw || DEFAULT_URL).replace(/\/$/, '');
 }
 
-function findOpenPort() {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.unref();
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      if (!address || typeof address === 'string') {
-        server.close();
-        reject(new Error('could not allocate a local QA port'));
-        return;
-      }
-      const port = address.port;
-      server.close((error) => (error ? reject(error) : resolve(port)));
-    });
-  });
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function stopServer(server) {
-  if (!server || server.stopped) return;
-  server.stopped = true;
-  const child = server.child;
-  if (server.exited || child.pid == null || child.exitCode !== null || child.signalCode !== null) return;
-  const signal = (name) => {
-    if (child.pid == null || child.exitCode !== null || child.signalCode !== null) return;
-    try {
-      process.kill(-child.pid, name);
-    } catch {
-      try { child.kill(name); } catch {}
-    }
-  };
-  signal('SIGTERM');
-  const stopped = await Promise.race([
-    once(child, 'exit').then(() => true).catch(() => true),
-    new Promise((resolve) => setTimeout(() => resolve(false), 3000)),
-  ]);
-  if (!stopped) {
-    signal('SIGKILL');
-    await Promise.race([
-      once(child, 'exit').catch(() => {}),
-      new Promise((resolve) => setTimeout(resolve, 1000)),
-    ]);
-  }
+function findOpenPort() {
+  return new Promise((resolve, reject) => {
+    const listener = net.createServer();
+    listener.unref();
+    listener.once('error', reject);
+    listener.listen(0, '127.0.0.1', () => {
+      const address = listener.address();
+      if (!address || typeof address === 'string') {
+        listener.close();
+        reject(new Error('could not allocate a private front-end QA port'));
+        return;
+      }
+      listener.close((error) => (error ? reject(error) : resolve(address.port)));
+    });
+  });
 }
 
 async function startServer() {
@@ -121,22 +98,63 @@ async function startServer() {
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  const state = { child, url, port, exited: false, stopped: false };
-  child.on('exit', () => { state.exited = true; });
-  child.stdout.setEncoding('utf8');
-  child.stderr.setEncoding('utf8');
-  child.stdout.on('data', (chunk) => process.stdout.write(`[qa-front-end] ${chunk}`));
-  child.stderr.on('data', (chunk) => process.stderr.write(`[qa-front-end] ${chunk}`));
-  const deadline = Date.now() + 60000;
-  while (Date.now() < deadline && !state.exited) {
-    try {
-      const response = await fetch(`${url}/`, { signal: AbortSignal.timeout(1000) });
-      if (response.ok) return state;
-    } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 200));
+  const server = { child, url, exited: false, launchError: null, stopped: false };
+  child.once('exit', () => {
+    server.exited = true;
+  });
+  const output = [];
+  child.once('error', (error) => {
+    server.launchError = error;
+    server.exited = true;
+    output.push(`[spawn error] ${error.message}`);
+  });
+  for (const stream of [child.stdout, child.stderr]) {
+    stream?.setEncoding('utf8');
+    stream?.on('data', (chunk) => output.push(chunk));
   }
-  await stopServer(state);
-  throw new Error(`Vite did not become ready at ${url}`);
+  const deadline = Date.now() + SERVER_BOOT_TIMEOUT_MS;
+  while (Date.now() < deadline && !server.exited) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(1200) });
+      if (response.ok) return server;
+    } catch {}
+    await delay(250);
+  }
+  await stopServer(server);
+  if (server.launchError) {
+    throw new Error(`front-end QA dev server failed to launch: ${server.launchError.message}`);
+  }
+  const detail = output.join('').trim();
+  throw new Error(server.exited
+    ? `front-end QA dev server exited before readiness${detail ? `: ${detail}` : ''}`
+    : `front-end QA dev server did not become ready at ${url}`);
+}
+
+async function stopServer(server) {
+  if (!server?.child || server.stopped) return;
+  server.stopped = true;
+  const child = server.child;
+  const signal = (name) => {
+    if (child.pid == null || child.exitCode !== null || child.signalCode !== null) return;
+    try {
+      process.kill(-child.pid, name);
+    } catch {
+      try { child.kill(name); } catch {}
+    }
+  };
+  if (!server.exited) {
+    signal('SIGTERM');
+    const stopped = await Promise.race([
+      once(child, 'exit').then(() => true, () => true),
+      delay(4000).then(() => false),
+    ]);
+    if (!stopped && !server.exited && child.exitCode === null && child.signalCode === null) {
+      signal('SIGKILL');
+      await Promise.race([once(child, 'exit').catch(() => {}), delay(2000)]);
+    }
+  }
+  child.stdout?.destroy();
+  child.stderr?.destroy();
 }
 
 function visible(element) {
@@ -572,7 +590,6 @@ async function runContract(browser, baseUrl, output, manifest) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const explicitUrl = args.url !== undefined;
   let output;
   try {
     output = resolveOutput(args.out);
@@ -583,11 +600,9 @@ async function main() {
     return;
   }
 
-  let baseUrl = explicitUrl ? normalizeUrl(args.url) : null;
   const manifest = {
     tool: 'qa-front-end-rebuild',
-    url: baseUrl,
-    server: { managed: !explicitUrl, port: null },
+    url: normalizeUrl(args.url),
     dimensions: DIMENSIONS,
     sceneIds: [],
     controls: [],
@@ -601,14 +616,12 @@ async function main() {
   let browser;
   let server;
   try {
-    if (!explicitUrl) {
+    if (args.url === undefined) {
       server = await startServer();
-      baseUrl = server.url;
-      manifest.url = baseUrl;
-      manifest.server.port = server.port;
+      manifest.url = server.url;
     }
     browser = await chromium.launch({ channel: 'chrome', headless: true }).catch(() => chromium.launch({ headless: true }));
-    await runContract(browser, baseUrl, output, manifest);
+    await runContract(browser, manifest.url, output, manifest);
   } catch (error) {
     appendError(manifest, error);
   } finally {

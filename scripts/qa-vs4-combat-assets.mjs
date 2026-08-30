@@ -42,22 +42,22 @@ const RIM_COLORS = [
 ];
 
 const FROZEN_R3_CELL_SHA256 = {
-  '0:0:0': 'd7741fab23ede149007a0799fe5c72fc9b5239f57e31bcae9b5e222f82957867',
-  '0:0:1': 'f0570dbeeb99814e04cfc5378fe8f4ded31f94362cdf2adb2f23bca006b90ee1',
-  '0:1:0': 'abcb42e56565b7cebdf12a0ead8a7dda4b437df75c31dad55ff263d8ac65d78e',
-  '0:1:1': '9b8a7787456ebd2f4d356ef6475e7c1a20bdc94454fdd303fb0e1d5e28a16073',
-  '0:2:0': '95051ce2a89a70f0ecfe7e78fad93633ac187e7b4e860bdaf700dd4fddca90c3',
-  '0:2:1': 'f0caceda3d9f0404f56aed84c28ec146d9c081be0949cc12db64718f26624317',
-  '0:3:0': '1ea11ded1350ed0512e459a7fbc0a6c110165f9683c632f18efb4d1673f6a1ec',
-  '0:3:1': 'b46c042dc3b8ca4bdb3afdeb220e26735b7759e6d1ff56beec941c9c8f236b67',
-  '0:4:0': '7dfc91b629d2ed1ddb7341154b2640c5a7209c02040fcb172cf5585b7ab2f0c0',
-  '0:4:1': '697663070098e81d9bd2919928e6a8a43ae92f9666eb3fe2f2179f3634955c96',
-  '0:5:0': 'f06a6bca3ae089d339dd87b15f45546c12a60480f99309f50532cd7378989376',
-  '0:5:1': 'fd1647320a5007b4400b44774f80231489c8350ee1bf8a3a2da86cf44adbff57',
-  '0:6:0': '5cfafcc0f89f6b93cdc707a8fb6bff3ce190635902e60bf8faecb11aea53d1fb',
-  '0:6:1': '3e1b24b64422992d7b7fe9914da160eca3d1b248f224e7af26ce4e5380e149fe',
-  '0:7:0': 'e76eb04d74d5707c992668867d11f8fbd1bf111ab71762d324274cbbd9912ce6',
-  '0:7:1': '161482b9eb4eb686076286c9094d6aef7ea14ef9eb39636a6f478622291327fb',
+  '0:0:0': '2775f085c85d329f9bcbd2b67a3d7b39b09955cc562f25a3c7c7a6d33c9c30b2',
+  '0:0:1': '8c3283bb9d02c238ab973ea44525b7e666cf7ac460de5799293df0ed704b91c2',
+  '0:1:0': 'be18e2e50844db15888ca3a1577d4a967e2aee739df4c5aa7d20a12ffc8c2e75',
+  '0:1:1': 'bff9c1d96d94fbf6c10b70a9e50b358cf4fac8367dabde4ff4e5107afd830383',
+  '0:2:0': 'a2be8af761e176708fa1eaf0ef6bb7c5cda1538f5841075154ad698842f67eb2',
+  '0:2:1': 'afaaf5a4acdba51062bf11181a63599f3d8d13885317852ae67269910a6a277d',
+  '0:3:0': 'b91edc67b60ae8d5451772f13e6d7f8f1a86e09ee90d4e074d4427bee9e44bad',
+  '0:3:1': '86b2c40afce5a541d172e29c2dde6cd08ff1b833842c65a85375a1f16dcf9dba',
+  '0:4:0': '1578b249c1d07a2d36e856687b7a680201542842387eee92afe8538e96cd05a0',
+  '0:4:1': '0743c77514f454b84b59e8de075671e16e858bca37b2bdbcc9020981b55a5675',
+  '0:5:0': '90d9ef1e0463de42918e5aa6f8f32d02a1f31ef44af9f3351166253a7c267078',
+  '0:5:1': 'ff1017acc3819bc2a80fad501cf72806ae2d54462358b61d419019ec9451250f',
+  '0:6:0': '17f205cdf0c99a1dc6697852cc356ac4c8b3f156282209853c4c18af8130c1d5',
+  '0:6:1': 'ab7ffa3a520173571b8bace0d192cf5960c04fbe2bfc6d3a9aabe7991f4f6c4c',
+  '0:7:0': 'ff6f312cbcf18ad9c277450ffec5163b966ee899391f65c07512ea9b9ae936de',
+  '0:7:1': 'bf10e603a65ab7c5b541ccf61a0e59fc7ddd0f078bc37cfd12ab6d7f0be5dc3a',
   '1:0:0': '09cc1118e0dac599af575896b13080811a7f5d87439ce94557b8a2e0fb74a71b',
   '1:0:1': '2bc28f9b0ef9a9f8609899270d8f34031809a3d21bd378ab61afa930cc0dd0a4',
   '1:1:0': '53be7e31405ebab3afc15e53a9a0eb4899092dc4ce457641eb46df58389b33fa',
@@ -663,11 +663,14 @@ function attachErrors(page, manifest, label) {
   page.on('pageerror', (error) => manifest.errors.push(`${label} pageerror: ${error?.stack ?? String(error)}`));
 }
 
-async function openPlayingPage(browser, server, manifest, label) {
+async function openPlayingPage(browser, server, manifest, label, candidateAsset = null) {
   const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
   page.setDefaultTimeout(PROBE_TIMEOUT_MS);
   attachErrors(page, manifest, label);
-  await page.goto(`${server.url}/?qa=opening&qa-run=1&ui=0&combat=1`, {
+  const candidateQuery = candidateAsset === null
+    ? ''
+    : `&forge-art-candidate=${encodeURIComponent(candidateAsset)}`;
+  await page.goto(`${server.url}/?qa=opening&qa-run=1&ui=0&combat=1${candidateQuery}`, {
     waitUntil: 'load',
     timeout: NAV_TIMEOUT_MS,
   });
@@ -676,7 +679,7 @@ async function openPlayingPage(browser, server, manifest, label) {
   return page;
 }
 
-async function exportCombatCanvases(page, out) {
+async function exportCombatCanvases(page, out, stem = null) {
   const data = await page.evaluate(() => {
     const view = globalThis.__STARHOLD_VIEW__;
     if (!view?.spriteAtlas?.combatCanvas) throw new Error('combat atlas is not exposed');
@@ -725,6 +728,7 @@ async function exportCombatCanvases(page, out) {
       },
       runtime: {
         combatEnabled: view.combatEnabled,
+        overrideRows: (view.combatRowOverrides ?? []).map((override) => override.row),
         mappings: JSON.parse(JSON.stringify(view.combatBranchMappings)),
         combatMeshCount: [...view.scene.children].filter((object) => object.isInstancedMesh && object.material?.uniforms?.uCombatAtlas).length,
         instancedMeshCount: [...view.scene.children].filter((object) => object.isInstancedMesh).length,
@@ -744,8 +748,8 @@ async function exportCombatCanvases(page, out) {
       },
     };
   });
-  const atlasPath = path.join(out, 'combat-atlas.png');
-  const contactPath = path.join(out, 'contact-sheet.png');
+  const atlasPath = path.join(out, stem ? `${stem}-atlas.png` : 'combat-atlas.png');
+  const contactPath = path.join(out, stem ? `${stem}-contact-sheet.png` : 'contact-sheet.png');
   fs.writeFileSync(atlasPath, dataUrlBuffer(data.atlasDataUrl));
   fs.writeFileSync(contactPath, dataUrlBuffer(data.contact));
   return {
@@ -930,12 +934,19 @@ async function measurePolicy(page) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const out = resolveOut(args.out);
+  const candidateManifest = JSON.parse(fs.readFileSync(
+    path.join(REPO_ROOT, 'tools/forge-art/candidates/sunweaver-lumen-guard/manifest.json'),
+    'utf8',
+  ));
+  const candidateStatus = candidateManifest.status;
+  assertThat(candidateStatus === 'draft' || candidateStatus === 'approved', `unsupported candidate status ${String(candidateStatus)}`);
+  const candidateShouldChangeRow0 = candidateStatus !== 'approved';
   fs.mkdirSync(out, { recursive: true });
   const manifest = {
     tool: 'qa-vs4-combat-assets',
     startedAt: new Date().toISOString(),
     finishedAt: null,
-    args: { out, viewport: VIEWPORT, route: 'opening', ui: false, terrain: 'quiet Helios', seed: 0x5eed },
+    args: { out, viewport: VIEWPORT, route: 'opening', ui: false, terrain: 'quiet Helios', seed: 0x5eed, candidateStatus },
     checks: {},
     captures: {},
     errors: [],
@@ -1005,6 +1016,80 @@ async function main() {
       liveFrames: [0, 1, 2, 3],
       legacyCorpseFrames: [4, 5, 6],
     };
+
+    // Candidate vertical slice: the query selects row 0 only, while the
+    // remaining combat rows stay byte-identical to the accepted baseline.
+    const candidatePage = await openPlayingPage(browser, server, manifest, 'candidate', 'sunweaver-lumen-guard');
+    pages.push(candidatePage);
+    const candidateData = await exportCombatCanvases(candidatePage, out, 'candidate');
+    manifest.captures.candidateAtlas = { file: path.basename(candidateData.atlasPath), image: candidateData.atlasImage };
+    manifest.captures.candidateContactSheet = { file: path.basename(candidateData.contactPath), image: candidateData.contactImage };
+    const candidateProbe = await candidatePage.evaluate(() => ({
+      qa: globalThis.__STARHAVEN_QA__,
+      overrides: (globalThis.__STARHOLD_VIEW__?.combatRowOverrides ?? []).map((override) => override.row),
+    }));
+    const baselineCellsByRow = exportData.sourceMetrics.rows.map((row) => row.cells.map((cell) => cell.sha256));
+    const candidateCellsByRow = candidateData.sourceMetrics.rows.map((row) => row.cells.map((cell) => cell.sha256));
+    const candidateRow0Changed = candidateCellsByRow[0].some((sha, index) => sha !== baselineCellsByRow[0][index]);
+    const candidateOtherRowsUnchanged = [1, 2, 3].every((row) =>
+      JSON.stringify(candidateCellsByRow[row]) === JSON.stringify(baselineCellsByRow[row]));
+    const candidateRow0Metrics = candidateData.sourceMetrics.rows[0];
+    manifest.checks.candidateOverride = {
+      assetId: candidateProbe.qa?.forgeArtCandidate ?? null,
+      lifecycle: { status: candidateStatus, expectedRow0Changed: candidateShouldChangeRow0 },
+      overrideRows: candidateProbe.overrides,
+      atlas: candidateData.atlas,
+      changedRow0Cells: candidateCellsByRow[0].filter((sha, index) => sha !== baselineCellsByRow[0][index]).length,
+      row0: {
+        averageLuma: candidateRow0Metrics.averageLuma,
+        rimOuterShare: candidateRow0Metrics.rimOuterShare,
+        rimInnerShare: candidateRow0Metrics.rimInnerShare,
+      },
+      row0Changed: candidateRow0Changed,
+      rows1To3Unchanged: candidateOtherRowsUnchanged,
+      noConsoleOrPageErrors: manifest.errors.length === 0,
+    };
+    assertThat(candidateProbe.qa?.state === 'Playing', 'candidate override did not reach Playing');
+    assertThat(candidateProbe.qa?.forgeArtCandidate === 'sunweaver-lumen-guard', 'candidate query was not retained in QA probe');
+    assertThat(JSON.stringify(candidateProbe.overrides) === JSON.stringify([0]), `candidate override rows are ${JSON.stringify(candidateProbe.overrides)}`);
+    assertThat(
+      candidateRow0Changed === candidateShouldChangeRow0,
+      `candidate row-0 lifecycle mismatch for ${candidateStatus}: changed=${candidateRow0Changed}`,
+    );
+    assertThat(candidateOtherRowsUnchanged, 'candidate override changed a combat row other than row 0');
+    assertThat(candidateRow0Metrics.averageLuma.min >= R3_LUMA_FLOOR, 'candidate row 0 luminance is below the gameplay floor');
+    assertThat(candidateRow0Metrics.rimOuterShare.min >= 0.85 && candidateRow0Metrics.rimInnerShare.min >= 0.85, 'candidate row 0 lost the runtime exterior rim');
+    assertThat(candidateData.atlas.width === 1024 && candidateData.atlas.height === 256, 'candidate combat atlas dimensions changed');
+
+    const candidateLineup = await stageFixture(candidatePage, 'lineup');
+    await settleFrames(candidatePage);
+    const candidateLineupPath = path.join(out, 'candidate-lineup-after.png');
+    await candidatePage.screenshot({ path: candidateLineupPath, type: 'png' });
+    const candidateLineupImage = analyzePng(candidateLineupPath, VIEWPORT.width, VIEWPORT.height);
+    manifest.captures.candidateLineup = { file: path.basename(candidateLineupPath), image: candidateLineupImage };
+    manifest.checks.candidateLineup = { fixture: candidateLineup, noRuntimeMagenta: candidateLineupImage.exactMagenta === 0 };
+    assertThat(candidateLineupImage.exactMagenta === 0, `candidate lineup contains ${candidateLineupImage.exactMagenta} exact MAG pixels`);
+    await candidatePage.close();
+
+    const candidateBattlePage = await openPlayingPage(browser, server, manifest, 'candidate-battle', 'sunweaver-lumen-guard');
+    pages.push(candidateBattlePage);
+    const candidateBattle = await stageFixture(candidateBattlePage, 'battle');
+    await settleFrames(candidateBattlePage);
+    const candidateBattlePath = path.join(out, 'candidate-battle-after.png');
+    await candidateBattlePage.screenshot({ path: candidateBattlePath, type: 'png' });
+    const candidateBattleImage = analyzePng(candidateBattlePath, VIEWPORT.width, VIEWPORT.height);
+    const candidateBattleRenderer = await readRenderer(candidateBattlePage);
+    manifest.captures.candidateBattle = { file: path.basename(candidateBattlePath), image: candidateBattleImage };
+    manifest.checks.candidateBattle = {
+      fixture: candidateBattle,
+      renderer: candidateBattleRenderer,
+      noRuntimeMagenta: candidateBattleImage.exactMagenta === 0,
+      overrideRows: await candidateBattlePage.evaluate(() => (globalThis.__STARHOLD_VIEW__?.combatRowOverrides ?? []).map((override) => override.row)),
+    };
+    assertThat(candidateBattleImage.exactMagenta === 0, `candidate battle contains ${candidateBattleImage.exactMagenta} exact MAG pixels`);
+    assertThat(candidateBattle.before.some((entry) => entry.order === 6), 'candidate battle fixture did not issue opposing orders');
+    assertThat(candidateBattle.after.some((entry, index) => entry.x !== candidateBattle.before[index].x || entry.z !== candidateBattle.before[index].z), 'candidate battle fixture did not take actual movement steps');
+    await candidateBattlePage.close();
 
     const lineup = await stageFixture(exportPage, 'lineup');
     await settleFrames(exportPage);
@@ -1088,6 +1173,10 @@ async function main() {
     console.log(`ok=${manifest.ok}`);
     console.log(`atlas=${path.join(out, 'combat-atlas.png')}`);
     console.log(`contact=${path.join(out, 'contact-sheet.png')}`);
+    console.log(`candidateAtlas=${path.join(out, 'candidate-atlas.png')}`);
+    console.log(`candidateContact=${path.join(out, 'candidate-contact-sheet.png')}`);
+    console.log(`candidateLineup=${path.join(out, 'candidate-lineup-after.png')}`);
+    console.log(`candidateBattle=${path.join(out, 'candidate-battle-after.png')}`);
     console.log(`lineup=${path.join(out, 'lineup-after.png')}`);
     console.log(`battle=${path.join(out, 'battle-after.png')}`);
     console.log(`drawCalls=${JSON.stringify(manifest.checks.drawCalls ?? null)}`);

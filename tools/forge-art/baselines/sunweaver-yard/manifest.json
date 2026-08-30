@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-yard",
+  "label": "Yard",
+  "faction": "sunweaver",
+  "category": "building",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:54:01.173Z",
+  "source": {
+    "adapter": "building",
+    "dims": [
+      32,
+      32
+    ]
+  },
+  "cellLayout": {
+    "cellW": 32,
+    "cellH": 32,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 16,
+    "y": 31
+  },
+  "worldScale": {
+    "x": 1.85,
+    "y": 1.85
+  },
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "9a8c5971b9cf929c781ca1f32e43b44c77e0118806693e633e4e6d1c12ec1bb0",
+      "alphaPixels": 511
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 11,
+    "alphaPixels": 511,
+    "alphaCoverage": 0.4990234375,
+    "averageLuma": 77.16666262230973,
+    "brightMaterialShare": 0.6594911937377691
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

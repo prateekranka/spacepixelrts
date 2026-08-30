@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-solar-strider",
+  "label": "Solar Strider",
+  "faction": "sunweaver",
+  "category": "unit",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:53:59.937Z",
+  "source": {
+    "adapter": "combat",
+    "dims": [
+      512,
+      128
+    ]
+  },
+  "cellLayout": {
+    "cellW": 64,
+    "cellH": 64,
+    "cols": 8,
+    "rows": 2,
+    "order": "dir-major",
+    "count": 16
+  },
+  "anchor": {
+    "x": 32,
+    "y": 63
+  },
+  "worldScale": {
+    "x": 2.05,
+    "y": 1.54
+  },
+  "frames": [
+    {
+      "key": "dir0-pose0",
+      "sha256": "09cc1118e0dac599af575896b13080811a7f5d87439ce94557b8a2e0fb74a71b",
+      "alphaPixels": 1684
+    },
+    {
+      "key": "dir1-pose0",
+      "sha256": "53be7e31405ebab3afc15e53a9a0eb4899092dc4ce457641eb46df58389b33fa",
+      "alphaPixels": 1676
+    },
+    {
+      "key": "dir2-pose0",
+      "sha256": "88767a73da68cc9ea992668cbae7e5ad0cfea1e2e7f4ed8e182a82a19c0e341e",
+      "alphaPixels": 1472
+    },
+    {
+      "key": "dir3-pose0",
+      "sha256": "55642e2d078deee9d84ef6692af7ad31f14e0dff111b162374fa24180fd360b8",
+      "alphaPixels": 1676
+    },
+    {
+      "key": "dir4-pose0",
+      "sha256": "2824426327c954786c2da9caa5314956ba6ae45fefceda1e656a2c09677163e3",
+      "alphaPixels": 1684
+    },
+    {
+      "key": "dir5-pose0",
+      "sha256": "fd029555b067bf1bcda319de0510f3f1a09f86aebb42258dd2080c292db9dfc9",
+      "alphaPixels": 1676
+    },
+    {
+      "key": "dir6-pose0",
+      "sha256": "88767a73da68cc9ea992668cbae7e5ad0cfea1e2e7f4ed8e182a82a19c0e341e",
+      "alphaPixels": 1472
+    },
+    {
+      "key": "dir7-pose0",
+      "sha256": "79d53ccecbdcbbc20df502fc5b7b083c1440f7ca33506aa41a825e311c5a8faa",
+      "alphaPixels": 1676
+    },
+    {
+      "key": "dir0-pose1",
+      "sha256": "2bc28f9b0ef9a9f8609899270d8f34031809a3d21bd378ab61afa930cc0dd0a4",
+      "alphaPixels": 1652
+    },
+    {
+      "key": "dir1-pose1",
+      "sha256": "6b033117ff7d87453421c3182fcd7b3de01a33699c9466762c1e751a0bc73200",
+      "alphaPixels": 1648
+    },
+    {
+      "key": "dir2-pose1",
+      "sha256": "69f1b8add69edd1bfa9bd27105af2a68a91b255b7a0a46dc853b6e0cb41ef95a",
+      "alphaPixels": 1460
+    },
+    {
+      "key": "dir3-pose1",
+      "sha256": "ee94bf4d0cb3eeeb3b27b359af888a982afb0cb735472623bb8ee1d1e4467b3d",
+      "alphaPixels": 1648
+    },
+    {
+      "key": "dir4-pose1",
+      "sha256": "ebbded433156f48e87a9ced93c0a123d3239e903f80e24437d4562a1ca924291",
+      "alphaPixels": 1652
+    },
+    {
+      "key": "dir5-pose1",
+      "sha256": "16843912ba473f530945cc32c2ccf187b7d63a79ad79da201479c19d37787308",
+      "alphaPixels": 1648
+    },
+    {
+      "key": "dir6-pose1",
+      "sha256": "69f1b8add69edd1bfa9bd27105af2a68a91b255b7a0a46dc853b6e0cb41ef95a",
+      "alphaPixels": 1460
+    },
+    {
+      "key": "dir7-pose1",
+      "sha256": "67d61e78c3217c5ee405809545f2d2f7c7ce8cb5396cb523a2f2db335cce6795",
+      "alphaPixels": 1648
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 8,
+    "alphaPixels": 25832,
+    "alphaCoverage": 0.3941650390625,
+    "averageLuma": 137.61951396719707,
+    "brightMaterialShare": 0.7025394859089501
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

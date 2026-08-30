@@ -16,6 +16,7 @@ import {
   WORKER_ACTION_BUILD,
   WORKER_ACTION_CRYSTAL,
   WORKER_ACTION_FOOD,
+  type CombatRowOverride,
   type SpriteAtlas,
 } from './sprites';
 
@@ -1360,6 +1361,12 @@ function combatWorldScale(e: Ent): readonly [number, number] {
   return [1, 1];
 }
 
+/** Optional renderer seams (Forge candidate override and friends). */
+export interface GameRendererOptions {
+  /** Optional row-scoped combat atlas overrides; omitted = accepted baseline. */
+  readonly combatRowOverrides?: readonly CombatRowOverride[];
+}
+
 export class GameRenderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -1367,6 +1374,7 @@ export class GameRenderer {
   readonly overlay: HTMLCanvasElement;
   readonly octx: CanvasRenderingContext2D;
   readonly combatBranchMappings = COMBAT_BRANCH_MAPPINGS;
+  readonly combatRowOverrides: readonly CombatRowOverride[] | undefined;
   atlas!: Atlas;
   spriteAtlas!: SpriteAtlas;
   private sdfMesh!: THREE.InstancedMesh;
@@ -1408,7 +1416,8 @@ export class GameRenderer {
   private proceduralScoutDrawn = 0;
   private proceduralWorkerDrawn = 0;
 
-  constructor(host: HTMLElement) {
+  constructor(host: HTMLElement, options?: GameRendererOptions) {
+    this.combatRowOverrides = options?.combatRowOverrides;
     this.renderer = new THREE.WebGLRenderer({
       antialias: false,
       powerPreference: 'high-performance',
@@ -1465,7 +1474,7 @@ export class GameRenderer {
     sdfGeo.setAttribute('iTeam', this.iSdfTeam);
     sdfGeo.setAttribute('iFlash', this.iSdfFlash);
 
-    const spriteAtlas = buildSprites();
+    const spriteAtlas = buildSprites(this.combatRowOverrides);
     this.spriteAtlas = spriteAtlas;
     const spriteTex = new THREE.CanvasTexture(spriteAtlas.canvas);
     spriteTex.magFilter = THREE.NearestFilter;

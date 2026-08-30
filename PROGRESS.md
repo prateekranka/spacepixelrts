@@ -2,10 +2,64 @@
 
 **Play:** https://spacepixelrts.pages.dev
 **Bar:** StarCraft II (space RTS, base building, asymmetric factions) — blind, on the running game.
+**Active Forge Art Lab:** `hermes/forge-art-lab` — Lumen Guard image-replacement vertical slice complete; release verification active.
+
+## 2026-08-27 — Lumen Guard image replacement — COMPLETE
+
+- Integrated the disk-backed reference/candidate path, Forge comparison UI, row-scoped gameplay override, and proof/acceptance path for `sunweaver-lumen-guard`. The reviewed `--apply` path marks a candidate `APPROVED` only after baseline and registry writes verify.
+- Candidate-aware browser QA proves both lifecycle states: a draft changes only combat row 0, while the approved candidate matches the normal atlas in all 16 cells. Rows 1–3 stay byte-identical. Deterministic lineup and battle fixtures prove real facing changes, real movement, equal draw calls, composited pixels, and zero captured runtime errors.
+- The third deterministic candidate passed all 16 objective gates, exact 1× identity review, mirror/order checks, independent source review, and fresh blind staged-gameplay review. Formal acceptance is applied at revision `dc59112`; candidate status is `APPROVED` and the accepted PNG, manifest, and registry hashes agree.
+- The normal no-query game route now reads the immutable accepted source in `src/generated/sunweaver-lumen-guard-accepted.ts`. The mutable draft candidate remains isolated on the explicit query seam. The shared combat exterior rim runs once. Frozen row-0 hashes match the accepted baseline; rows 1–3, `src/sim.ts`, `src/engine.ts`, unit identity, stats, balance, behavior, and controls are unchanged.
+- Final local evidence: `/tmp/final-lumen-vs4/manifest.json` has `ok=true`, approved `changedRow0Cells=0`, rows 1–3 unchanged, row-0 luminance `152.7143–157.7192`, both rim shares `1.0`, real movement through tick 40, and software-GL simulation share `1.2992 ms`. `/tmp/final-lumen-forge/` passes 15/15. A final fresh blind critic returned `PASS` on the normal no-query contact sheet, lineup, and moving battle.
+- Production release: source commit `24f232e` deployed to the existing Cloudflare Pages project at `https://836168df.spacepixelrts.pages.dev`. Cache-busted `/`, `/desktop.html`, and `/town-center-viewer.html` on the deployment, `spacepixelrts.pages.dev`, and `space.contenthelper.in` all return HTTP 200 and the exact local script hashes. Live main bundle `main-V28uCs4r.js` has SHA-256 `209c718ea4f20f0db1f1a0286a6da71fdc8714f5580c8fcac81898ec43e1c713`. A real public-browser smoke changed `MainMenu` to `MatchSetup`, exposed `Start Match`, and captured zero console/page errors.
+- Review handle: PR `#13` merged into `chatgptpro2008` at `f60c8ba` after both GitHub checks passed. Its browser harness self-starts an ephemeral loopback Vite server when no `--url` is supplied, preserves explicit external URLs, writes a fail-closed manifest on launch errors, and reaps the process group. The exact local browser-job sequence passes, including 24/24 front-end assertions; launch-failure evidence records `ENOENT`; all leak checks return zero.
 **Active goal:** **Playable Vertical Slice** — close one honest 12–18 minute iPad-first 4:3
 skirmish before deep controls or general polish: menu -> scout -> gather -> choose technology path ->
 train mixed army -> center conflict -> destroy/lose Core -> Results. Active sprint:
 `docs/VERTICAL_SLICE_SPRINT.md`; parent contract: `docs/FIRST_PLAYABLE.md`.
+
+## Forge Art Lab v1 (2026-08-26) — COMPLETE
+
+- Developer-only workbench is complete. It covers catalog selection, accepted/candidate A/B,
+  pixel passes, objective gates, roster scale, real-renderer context scenes, sandbox preview,
+  proof packs, and safe acceptance.
+- Accepted baselines were repaired to the complete v1 manifest shape. All 14 manifests validate
+  with `validateBaselineManifest()`. Registry hashes match the committed PNG and frame bytes.
+- Fixed catalog click selection and per-asset aria labels. Gate notes now use full-width rows, so
+  the inspector table stays inside the 1366 × 1024 viewport. Rig URLs now honor a valid `scene=`
+  value and fall back to `quiet-helios` only when the value is missing or invalid.
+- Public proof-to-promotion handoff repaired: the published proof, baseline, and acceptance
+  package commands now execute through `tsx`; single-asset proof manifests carry source,
+  dirty-file, frame, hard-gate, and candidate-hash evidence; generated evidence feeds the real
+  dry-run acceptance command directly. Empty or malformed gates are refused.
+- Operator tutorial: `docs/FORGE_ART_LAB_USER_GUIDE.md`.
+- Verification: `npm run test:forge-art`, `npm run forge:art:typecheck`,
+  `npm run forge:art:build`, and `npm run build` pass.
+- Real-browser gate: `npm run qa:forge-art -- --out=/tmp/fal-qa-handoff-final` passes 15/15
+  steps; manifest `ok=true`, generated proof feeds dry-run acceptance, refusal fixtures pass,
+  screenshots are exact 1366 × 1024, the rig has one live WebGL context, and no process leaks.
+- Live handoff proof: `/tmp/fal-teach-proof/manifest.json` has 15 passing hard gates and no
+  browser errors. Dry-run acceptance reported 0/16 changed frames and did not change the SHA-256
+  of the accepted PNG, accepted manifest, or registry.
+- Forge Art Lab remains local and is not deployed to Cloudflare.
+
+## Self-view harness (2026-08-26) — DONE
+
+- `scripts/self-view-harness.mjs` (`npm run self-view -- --out=<abs dir>`): boots the dev server,
+  captures all 13 `?qa=` routes plus 4 camera/selection extras from a real Chromium, verifies each
+  against `__STARHAVEN_QA__`, and composes ONE labeled board (`self-view.png`) with palette strip,
+  per-cell state/palette/p99/fps, and red-flagged gate failures. Purpose: one image feeds one blind
+  critic pass for cross-state coherence (palette weight, unit scale, HUD density).
+- Objective gates: probe state == expected route state; capture not black/empty; palette adherence
+  >= 0.35 (measured 0.91–1.00). Routes and palette are parsed from `src/qa-scenarios.ts` /
+  `src/palette.ts` so the tool cannot drift from source.
+- Perf budget is NOT gated by default on this Linux box: it has no GPU (SwiftShader WebGL,
+  steady ~20 fps / p99 100–180 ms in Playing states). The absolute 8 ms budget is host-specific;
+  opt back in with `--gate-p99=8` on GPU hardware. `qa-m0.mjs` still hardcodes Chrome and does
+  not run here.
+- Verified run (13/13 routes, 4/4 extras, ok=true) + blind critic PASS (labels readable, all
+  content non-black/distinct, no layout defects, coherent style):
+  `/home/bobbyranka/workspace/evidence/starhaven-self-view/20260826T082148Z/`.
 
 ## AAA front-end art (2026-08-24) — DONE
 

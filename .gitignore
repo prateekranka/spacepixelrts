@@ -13,3 +13,4 @@ critic/out/
 .cursor/
 tasks/*.log
 tasks-orchestrator.log
+dist-forge-art/

@@ -4,6 +4,7 @@
  */
 
 import { Kind, type Civ } from './engine';
+import { lumenGuardAcceptedFrame } from './generated/sunweaver-lumen-guard-accepted';
 import { STARHOLD_PALETTE as P } from './palette';
 
 export type Rgba = readonly [number, number, number, number];
@@ -1172,7 +1173,7 @@ function drawHelionAction(dir: number, action: number): Pix {
   return drawHelionVariant(dir, false, action as HelionAction);
 }
 
-function drawHelionAction8Dir(dir: number, action: number): Pix {
+export function drawHelionAction8Dir(dir: number, action: number): Pix {
   const d = ((dir | 0) + 8) % 8;
   if (d === 3) return drawHelionAction(1, action).flipX();
   if (d === 4) return drawHelionAction(0, action).flipX();
@@ -1374,6 +1375,31 @@ export function drawWorker8Dir(civ: number, dir: number, walk: number): Pix {
   return drawWorkerAuth(civ, d, w);
 }
 
+/** Forge Art Lab seam — one scout-strip cell exactly as buildSpriteAtlas() blits it. */
+export function drawScoutStripCell(col: number): Pix {
+  const c = Math.max(0, Math.min(SCOUT_COLS - 1, Math.floor(col)));
+  const civ = Math.floor(c / UNIT_FRAMES);
+  const frame = c % UNIT_FRAMES;
+  if (civ === 0 && frame < 4) return drawHelionScoutHdPix();
+  const civs: Civ[] = ['vespari', 'aurion', 'voidmarked'];
+  return upscaleNearest4(drawUnitSprite(Kind.Scout, civs[civ], frame));
+}
+
+function upscaleNearest4(source: Pix): Pix {
+  const out = Pix.alloc(source.w * 4, source.h * 4);
+  for (let y = 0; y < out.h; y++) {
+    for (let x = 0; x < out.w; x++) {
+      const si = (Math.floor(x / 4) + Math.floor(y / 4) * source.w) * 4;
+      const di = (x + y * out.w) * 4;
+      out.d[di] = source.d[si];
+      out.d[di + 1] = source.d[si + 1];
+      out.d[di + 2] = source.d[si + 2];
+      out.d[di + 3] = source.d[si + 3];
+    }
+  }
+  return out;
+}
+
 // ── VS-4 combat strip — four authored role silhouettes, 64px source cells ───
 // These colors are deliberately all STARHOLD_PALETTE tokens. MAG is reserved
 // for the tiny team-focus pixels and is replaced by the shader at runtime.
@@ -1472,60 +1498,13 @@ function combatMagCross(p: Pix, x: number, y: number): void {
   }
 }
 
+/**
+ * Row 0: accepted Lumen Guard snapshot. The normal combat atlas stage adds the
+ * exterior rim exactly once; mutable Forge candidates stay on the query seam.
+ */
 function drawLumenGuardCombat(dir: number, pose: number): Pix {
-  const p = Pix.alloc(COMBAT_CELL, COMBAT_CELL);
-  const side = dir === 0;
-  const back = dir === 2;
-  const front = dir === 6;
-  const threeQuarter = dir === 1 || dir === 7;
-  const cx = side ? 31 : threeQuarter ? 33 : 31;
-  const bodyW = side ? 11 : back || front ? 9 : 11;
-  const bodyX = cx - Math.floor(bodyW / 2);
-  const shieldX = side ? 46 : dir === 1 ? 43 : back ? 40 : front ? 41 : 43;
-  const shieldY = back ? 31 : 30;
-  const spearX = side ? 11 : back ? 20 : front ? 21 : dir === 1 ? 18 : 20;
-  const gaitA = pose ? (side || back ? 2 : 1) : 0;
-  const gaitB = pose ? (side || back ? 0 : 2) : 0;
-
-  // Opposite-side spear: its 2px shaft remains continuous from the connected
-  // row-0 tip to the held bridge, leaving a 16px+ weapon extension above the
-  // compressed main body.
-  p.fillRect(spearX - 1, 0, 2, 50, COMBAT_INK);
-  p.fillRect(spearX, 1, 1, 48, SUN_GOLD);
-  p.fillRect(spearX - 2, 0, 4, 5, COMBAT_INK);
-  p.fillRect(spearX - 1, 1, 2, 3, SUN_AMBER);
-  p.set(spearX, 0, SUN_CREAM);
-
-  // Planted legs are painted before the body so their joins stay ink-connected.
-  const legAX = side ? 24 : cx - 6;
-  const legBX = side ? 35 : cx + 2;
-  combatLeg(p, legAX + (pose ? 1 : 0), 38 - gaitA, 49, 4, SUN_TEAL, SUN_CREAM, SUN_TEAL_D);
-  combatLeg(p, legBX - (pose ? 1 : 0), 38 - gaitB, 49, 4, SUN_TEAL_D, SUN_SAND, COMBAT_INK);
-
-  combatRect(p, bodyX - 1, 28, bodyW + 2, 12, SUN_SAND, SUN_CREAM, SUN_TEAL_D);
-  p.fillRect(bodyX, 32, bodyW, 5, SUN_TEAL);
-  p.fillRect(bodyX + 2, 36, bodyW - 4, 3, SUN_SAND);
-  p.fillRect(cx - 4, 16, 8, 9, COMBAT_INK);
-  p.fillRect(cx - 3, 17, 6, 6, SUN_CREAM);
-  p.fillRect(cx - 6, 16, 12, 3, SUN_GOLD);
-  p.fillRect(cx - 3, 21, 6, 3, SUN_TEAL_D);
-  p.fillRect(cx - 1, 24, 2, 5, COMBAT_INK);
-  p.set(cx - 1, 22, SUN_AMBER);
-
-  // Shield arm bridges body to face; the face is deliberately over the torso.
-  linePix(p, bodyX + bodyW - 2, 31, shieldX - 10, shieldY, COMBAT_INK);
-  p.circ(shieldX, shieldY, 12, COMBAT_INK);
-  p.circ(shieldX, shieldY, 10, SUN_GOLD);
-  p.circ(shieldX, shieldY, 8, SUN_CREAM);
-  p.circ(shieldX, shieldY, 5, SUN_AMBER);
-  p.circ(shieldX, shieldY, 3, SUN_SAND);
-  combatMagCross(p, shieldX, shieldY);
-  p.set(shieldX - 7, shieldY - 6, SUN_CREAM);
-  p.set(shieldX + 6, shieldY + 7, SUN_TEAL_D);
-
-  // A second ink bridge makes the spear read as held, never as a detached prop.
-  linePix(p, bodyX + 1, 31, spearX + 1, 31, COMBAT_INK);
-  return p;
+  const accepted = lumenGuardAcceptedFrame(dir, pose);
+  return new Pix(accepted.w, accepted.h, new Uint8ClampedArray(accepted.d));
 }
 
 function drawSolarStriderCombat(dir: number, pose: number): Pix {
@@ -1821,6 +1800,50 @@ export function drawCombatSprite(row: number, dir: number, pose: number): Pix {
   return authoredCombatSprite(row, d, p);
 }
 
+/**
+ * One optional, row-scoped combat override (Forge candidate seam).
+ * Feeds the normal combat atlas and sprite render path; absent callers keep
+ * byte-identical baselines. Candidate cells are RAW source (no artificial
+ * rim) — combatRowCell() applies the existing exterior rim exactly once.
+ */
+export interface CombatRowOverride {
+  /** Combat atlas row this override replaces (0..COMBAT_ROWS-1). */
+  readonly row: number;
+  /**
+   * Pure raw-source cell lookup for one frame. Returning null, a wrong-sized
+   * Pix, or throwing all fall back to the accepted baseline for that frame —
+   * a missing/unknown candidate never breaks the atlas.
+   */
+  readonly rawCell: (dir: number, pose: number) => Pix | null;
+}
+
+/**
+ * Row-scoped combat override seam: one cell through the normal path.
+ * With no override (or a candidate that reports no data) this is exactly
+ * drawCombatSprite(row, dir, pose). With an override, the raw candidate cell
+ * passes through the SAME exterior rim stage and colors as the baseline row.
+ */
+export function combatRowCell(
+  row: number,
+  dir: number,
+  pose: number,
+  override?: CombatRowOverride | null,
+): Pix {
+  if (override && override.row === row) {
+    try {
+      const raw = override.rawCell(dir, pose);
+      if (raw !== null && raw.w === COMBAT_CELL && raw.h === COMBAT_CELL) {
+        return row < 2
+          ? applyCombatExteriorRim(raw, SUN_AMBER, SUN_CREAM)
+          : applyCombatExteriorRim(raw, GRAVE_ICE, GRAVE_CRYSTAL);
+      }
+    } catch {
+      /* candidate lookup failed — fall back to baseline for this frame */
+    }
+  }
+  return drawCombatSprite(row, dir, pose);
+}
+
 // ── Worker (legacy 32px slot; living workers use 8-dir strip) ───────────────
 function drawWorkerPix(civ: number, frame: number): Pix {
   const p = Pix.alloc(32, 32);
@@ -2024,7 +2047,7 @@ function drawHelionScoutPix(): Pix {
 }
 
 /** 128px Helion Tri-Arc Surveyor for close-zoom, source-resolution art. */
-function drawHelionScoutHdPix(): Pix {
+export function drawHelionScoutHdPix(): Pix {
   const p = Pix.alloc(128, 128);
   const dark = (x: number, y: number, w: number, h: number) => p.fillRect(x, y, w, h, INK);
   const wideLine = (x0: number, y0: number, x1: number, y1: number, c: Rgba, width = 2) => {
@@ -2591,7 +2614,13 @@ function slotIndex(kind: number, civ: number, frame: number): number {
   return kind * CIVS * UNIT_FRAMES + civ * UNIT_FRAMES + frame;
 }
 
-export function buildSpriteAtlas(): SpriteAtlas {
+/**
+ * Build the full startup-rasterized atlas. `combatOverrides` is the optional
+ * row-scoped Forge candidate seam: only the listed combat rows change, and
+ * only while the candidate lookup reports data — every other row and every
+ * no-override caller stays byte-identical to the accepted baseline.
+ */
+export function buildSpriteAtlas(combatOverrides?: readonly CombatRowOverride[]): SpriteAtlas {
   const unitSlots = UNIT_KINDS * CIVS * UNIT_FRAMES;
   const unitRows = Math.ceil(unitSlots / ATLAS_COLS);
   const buildingRow = unitRows;
@@ -2719,10 +2748,14 @@ export function buildSpriteAtlas(): SpriteAtlas {
     }
   }
 
+  const overrideByRow = new Map<number, CombatRowOverride>();
+  for (const override of combatOverrides ?? []) overrideByRow.set(override.row, override);
+
   for (let row = 0; row < COMBAT_ROWS; row++) {
+    const override = overrideByRow.get(row) ?? null;
     for (let pose = 0; pose < COMBAT_LIVE_POSES; pose++) {
       for (let dir = 0; dir < 8; dir++) {
-        blitCombat(drawCombatSprite(row, dir, pose), row, dir + pose * 8);
+        blitCombat(combatRowCell(row, dir, pose, override), row, dir + pose * 8);
       }
     }
   }

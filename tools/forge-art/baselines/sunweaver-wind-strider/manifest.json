@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-wind-strider",
+  "label": "Wind Strider",
+  "faction": "sunweaver",
+  "category": "unit",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:54:00.359Z",
+  "source": {
+    "adapter": "scout",
+    "dims": [
+      128,
+      128
+    ]
+  },
+  "cellLayout": {
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 64,
+    "y": 127
+  },
+  "worldScale": {
+    "x": 0.96,
+    "y": 1.12
+  },
+  "frames": [
+    {
+      "key": "hd",
+      "sha256": "50541f1befba3def30e4718ba753fc0490e6b8bd506633f2109be3b8cc314625",
+      "alphaPixels": 6975
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 11,
+    "alphaPixels": 6975,
+    "alphaCoverage": 0.42572021484375,
+    "averageLuma": 82.69490927599061,
+    "brightMaterialShare": 0.6385663082437276
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-worker",
+  "label": "Worker",
+  "faction": "sunweaver",
+  "category": "unit",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:54:00.773Z",
+  "source": {
+    "adapter": "worker8",
+    "dims": [
+      256,
+      96
+    ]
+  },
+  "cellLayout": {
+    "cellW": 32,
+    "cellH": 48,
+    "cols": 8,
+    "rows": 2,
+    "order": "dir-major",
+    "count": 16
+  },
+  "anchor": {
+    "x": 16,
+    "y": 47
+  },
+  "worldScale": {
+    "x": 1.55,
+    "y": 2.32
+  },
+  "frames": [
+    {
+      "key": "dir0-walk0",
+      "sha256": "8fc5ec072c5c4a94a98c43225aa74c95d7d094bf1e5cf64af4d657c5bace3a7e",
+      "alphaPixels": 726
+    },
+    {
+      "key": "dir1-walk0",
+      "sha256": "b570c77f8dd2464944fc5a8e0ba81d1fe1cc55feec84d8c9fc6238082b46a468",
+      "alphaPixels": 819
+    },
+    {
+      "key": "dir2-walk0",
+      "sha256": "e496b78fbde8772793b9ab97b6cc685e8afa544024ca8a044ac9f82f280f0700",
+      "alphaPixels": 836
+    },
+    {
+      "key": "dir3-walk0",
+      "sha256": "42f58a724fb7efd254f2354faa549f51127da52135ba41765b2244ebf3d91af1",
+      "alphaPixels": 819
+    },
+    {
+      "key": "dir4-walk0",
+      "sha256": "7c72bf5e03f5e7238eaf411de4df7225de2ebc69027be54804f6c4fa95b1c126",
+      "alphaPixels": 726
+    },
+    {
+      "key": "dir5-walk0",
+      "sha256": "6446198ac6cf49d44ad34860c8477c74ad1a67b15c17b846c74e511ec5c79cef",
+      "alphaPixels": 819
+    },
+    {
+      "key": "dir6-walk0",
+      "sha256": "c1fa8a7bdaea911b61061a991c69af2f12b04d8d6b1c8d2296b31c0482627def",
+      "alphaPixels": 836
+    },
+    {
+      "key": "dir7-walk0",
+      "sha256": "ba3538cbd830b8f2a23cae3d9d2b5c91265d2263ffcd7ca4f1bde88e1079d303",
+      "alphaPixels": 819
+    },
+    {
+      "key": "dir0-walk1",
+      "sha256": "057d229145429a67679bec71f3cf705b1b1eb733e6b5cab580aede4037c30cc7",
+      "alphaPixels": 713
+    },
+    {
+      "key": "dir1-walk1",
+      "sha256": "4bb77f35f15592d440ae3c319585069cb2c1b6ad2761e1254c21f3564dfb93a3",
+      "alphaPixels": 804
+    },
+    {
+      "key": "dir2-walk1",
+      "sha256": "89ca73663391ae7e5293a013f84d4a0c03f477960e70e1d691b6755f4ce2abf6",
+      "alphaPixels": 821
+    },
+    {
+      "key": "dir3-walk1",
+      "sha256": "751a4111256e9751f62a084e817fce6211bbab2d4ee5a9abd17fd9d862a435c1",
+      "alphaPixels": 804
+    },
+    {
+      "key": "dir4-walk1",
+      "sha256": "7556234ef4bedd0878e73e914c7758f0b25afaa508c04129606cec3265372aef",
+      "alphaPixels": 713
+    },
+    {
+      "key": "dir5-walk1",
+      "sha256": "5a4fdffea2b560869463f8a5bc505d90c02c0fb82bd06644cf4ef3defb9ee189",
+      "alphaPixels": 804
+    },
+    {
+      "key": "dir6-walk1",
+      "sha256": "3db939adbed6852e7a37138b0f2cb499a189740eb8f06ac15a4b69461f249941",
+      "alphaPixels": 821
+    },
+    {
+      "key": "dir7-walk1",
+      "sha256": "6c9652e8c51dbdada60d484b5eb61aa629d2ca80e8f6ad8de112e0e4bda0cf27",
+      "alphaPixels": 804
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 15,
+    "alphaPixels": 12684,
+    "alphaCoverage": 0.51611328125,
+    "averageLuma": 69.59896187323169,
+    "brightMaterialShare": 0.5231788079470199
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

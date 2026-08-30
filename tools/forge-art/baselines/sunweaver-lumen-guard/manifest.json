@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-lumen-guard",
+  "label": "Lumen Guard",
+  "faction": "sunweaver",
+  "category": "unit",
+  "revision": "dc59112f4ed4d2514a6574599d70c42f334d354d",
+  "createdAt": "2026-08-27T10:51:05.451Z",
+  "source": {
+    "adapter": "combat",
+    "dims": [
+      512,
+      128
+    ]
+  },
+  "cellLayout": {
+    "cellW": 64,
+    "cellH": 64,
+    "cols": 8,
+    "rows": 2,
+    "order": "dir-major",
+    "count": 16
+  },
+  "anchor": {
+    "x": 32,
+    "y": 63
+  },
+  "worldScale": {
+    "x": 1.59,
+    "y": 1.89
+  },
+  "frames": [
+    {
+      "key": "dir0-pose0",
+      "sha256": "2775f085c85d329f9bcbd2b67a3d7b39b09955cc562f25a3c7c7a6d33c9c30b2",
+      "alphaPixels": 1586
+    },
+    {
+      "key": "dir1-pose0",
+      "sha256": "be18e2e50844db15888ca3a1577d4a967e2aee739df4c5aa7d20a12ffc8c2e75",
+      "alphaPixels": 1370
+    },
+    {
+      "key": "dir2-pose0",
+      "sha256": "a2be8af761e176708fa1eaf0ef6bb7c5cda1538f5841075154ad698842f67eb2",
+      "alphaPixels": 1243
+    },
+    {
+      "key": "dir3-pose0",
+      "sha256": "b91edc67b60ae8d5451772f13e6d7f8f1a86e09ee90d4e074d4427bee9e44bad",
+      "alphaPixels": 1370
+    },
+    {
+      "key": "dir4-pose0",
+      "sha256": "1578b249c1d07a2d36e856687b7a680201542842387eee92afe8538e96cd05a0",
+      "alphaPixels": 1586
+    },
+    {
+      "key": "dir5-pose0",
+      "sha256": "90d9ef1e0463de42918e5aa6f8f32d02a1f31ef44af9f3351166253a7c267078",
+      "alphaPixels": 1462
+    },
+    {
+      "key": "dir6-pose0",
+      "sha256": "17f205cdf0c99a1dc6697852cc356ac4c8b3f156282209853c4c18af8130c1d5",
+      "alphaPixels": 1388
+    },
+    {
+      "key": "dir7-pose0",
+      "sha256": "ff6f312cbcf18ad9c277450ffec5163b966ee899391f65c07512ea9b9ae936de",
+      "alphaPixels": 1462
+    },
+    {
+      "key": "dir0-pose1",
+      "sha256": "8c3283bb9d02c238ab973ea44525b7e666cf7ac460de5799293df0ed704b91c2",
+      "alphaPixels": 1562
+    },
+    {
+      "key": "dir1-pose1",
+      "sha256": "bff9c1d96d94fbf6c10b70a9e50b358cf4fac8367dabde4ff4e5107afd830383",
+      "alphaPixels": 1324
+    },
+    {
+      "key": "dir2-pose1",
+      "sha256": "afaaf5a4acdba51062bf11181a63599f3d8d13885317852ae67269910a6a277d",
+      "alphaPixels": 1191
+    },
+    {
+      "key": "dir3-pose1",
+      "sha256": "86b2c40afce5a541d172e29c2dde6cd08ff1b833842c65a85375a1f16dcf9dba",
+      "alphaPixels": 1324
+    },
+    {
+      "key": "dir4-pose1",
+      "sha256": "0743c77514f454b84b59e8de075671e16e858bca37b2bdbcc9020981b55a5675",
+      "alphaPixels": 1562
+    },
+    {
+      "key": "dir5-pose1",
+      "sha256": "ff1017acc3819bc2a80fad501cf72806ae2d54462358b61d419019ec9451250f",
+      "alphaPixels": 1433
+    },
+    {
+      "key": "dir6-pose1",
+      "sha256": "ab7ffa3a520173571b8bace0d192cf5960c04fbe2bfc6d3a9aabe7991f4f6c4c",
+      "alphaPixels": 1337
+    },
+    {
+      "key": "dir7-pose1",
+      "sha256": "bf10e603a65ab7c5b541ccf61a0e59fc7ddd0f078bc37cfd12ab6d7f0be5dc3a",
+      "alphaPixels": 1433
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 6,
+    "alphaPixels": 22633,
+    "alphaCoverage": 0.3453521728515625,
+    "averageLuma": 156.13302474264668,
+    "brightMaterialShare": 0.781160252728317
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

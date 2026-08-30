@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sunweaver-core",
+  "label": "Core",
+  "faction": "sunweaver",
+  "category": "building",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:53:58.579Z",
+  "source": {
+    "adapter": "building",
+    "dims": [
+      64,
+      64
+    ]
+  },
+  "cellLayout": {
+    "cellW": 64,
+    "cellH": 64,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 32,
+    "y": 63
+  },
+  "worldScale": {
+    "x": 2.4,
+    "y": 2.4
+  },
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "8f9a6d83d69cd1971bfb5105ab791719b241c90e42f77f199a0ba9a5146af72a",
+      "alphaPixels": 1792
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 10,
+    "alphaPixels": 1792,
+    "alphaCoverage": 0.4375,
+    "averageLuma": 87.14175390624844,
+    "brightMaterialShare": 0.8136160714285714
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}

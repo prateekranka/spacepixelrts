@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "assetId": "gravemark-habitat",
+  "label": "Habitat",
+  "faction": "gravemark",
+  "category": "building",
+  "revision": "50b421631d5146f1b09968c439a92a39c148212f",
+  "createdAt": "2026-08-26T15:53:56.886Z",
+  "source": {
+    "adapter": "building",
+    "dims": [
+      32,
+      32
+    ]
+  },
+  "cellLayout": {
+    "cellW": 32,
+    "cellH": 32,
+    "cols": 1,
+    "rows": 1,
+    "order": "dir-major",
+    "count": 1
+  },
+  "anchor": {
+    "x": 16,
+    "y": 31
+  },
+  "worldScale": {
+    "x": 1.75,
+    "y": 1.75
+  },
+  "frames": [
+    {
+      "key": "iso",
+      "sha256": "6bffeb0231389be364c3f0ba9f5f5d5ab5710f5ba9fd7d2ccd23f17ecc9be755",
+      "alphaPixels": 459
+    }
+  ],
+  "paletteStats": {
+    "uniqueColors": 9,
+    "alphaPixels": 459,
+    "alphaCoverage": 0.4482421875,
+    "averageLuma": 80.27758867102446,
+    "brightMaterialShare": 0.5969498910675382
+  },
+  "thresholdsUsed": {},
+  "gates": {}
+}
