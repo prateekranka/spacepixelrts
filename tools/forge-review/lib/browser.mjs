@@ -18,7 +18,12 @@ export async function launchBrowser() {
   let lastError = null;
   for (const opts of LAUNCH_ATTEMPTS) {
     try {
-      return await chromium.launch({ headless: true, ...opts, args: BROWSER_ARGS });
+      return await chromium.launch({
+        headless: true,
+        ignoreDefaultArgs: ['--disable-dev-shm-usage'],
+        ...opts,
+        args: BROWSER_ARGS,
+      });
     } catch (err) {
       lastError = err;
     }
