@@ -8,11 +8,12 @@
 //   - waits until fetch(url) succeeds (timeout 120s)
 //   - stop(): process-group SIGTERM -> 3s grace -> SIGKILL -> destroys stdio
 // No console noise by default (opts.quiet === true).
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import fs from 'node:fs';
 import net from 'node:net';
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -61,9 +62,29 @@ async function isReachable(url) {
  * Returns { url, stop } (the state handle itself, so stopDevServer(state)
  * also works on it).
  */
+function ensureWritableTmpDir() {
+  if (process.env.TMPDIR) return process.env.TMPDIR;
+  const candidates = [path.join(os.homedir(), '.cache'), '/tmp'];
+  for (const candidate of candidates) {
+    try {
+      fs.mkdirSync(candidate, { recursive: true });
+      const probe = path.join(candidate, `.frd-tmp-probe-${process.pid}`);
+      fs.writeFileSync(probe, 'ok');
+      fs.unlinkSync(probe);
+      process.env.TMPDIR = candidate;
+      return candidate;
+    } catch {
+      /* try next */
+    }
+  }
+  return os.tmpdir();
+}
+
 export async function startDevServer(opts = {}) {
+  ensureWritableTmpDir();
   const repoRoot = path.resolve(opts.repoRoot ?? DEFAULT_REPO_ROOT);
   const quiet = opts.quiet !== false;
+  const mode = opts.mode === 'preview' ? 'preview' : 'dev';
 
   const port = await findOpenPort();
   const url = `http://127.0.0.1:${port}`;
@@ -72,10 +93,12 @@ export async function startDevServer(opts = {}) {
     throw new Error(`vite binary not found at ${viteBin}`);
   }
 
-  const child = spawn(
-    viteBin,
-    ['--host', '127.0.0.1', '--port', String(port), '--strictPort'],
-    {
+  const args =
+    mode === 'preview'
+      ? ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort']
+      : ['--host', '127.0.0.1', '--port', String(port), '--strictPort'];
+
+  const child = spawn(viteBin, args, {
       cwd: repoRoot,
       stdio: quiet ? ['ignore', 'ignore', 'ignore'] : ['ignore', 'pipe', 'pipe'],
       env: process.env,

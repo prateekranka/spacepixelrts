@@ -11,7 +11,7 @@
  * `world.step()` from `step()` while frozen — the same call the rAF loop uses.
  */
 
-import { FACTION_IDS, cloneMatchConfig, toLegacyCiv, type FactionId, type MatchConfig } from '../match-config';
+import { FACTION_IDS, cloneMatchConfig, type FactionId, type MatchConfig } from '../match-config';
 import { QA_SCENARIOS } from '../qa-scenarios';
 import type { AppState } from '../app-flow';
 import { MAP } from '../engine';
@@ -169,7 +169,7 @@ const tickRafSpacing = (): void => {
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(tickRafSpacing);
 };
 if (typeof requestAnimationFrame === 'function') requestAnimationFrame(tickRafSpacing);
-const RAF_P99_MIN_SAMPLES = 30;
+const RAF_P99_MIN_SAMPLES = 121;
 const rafP99 = (): number => {
   if (rafCount < RAF_P99_MIN_SAMPLES) return 0;
   const sorted = Array.from(rafSpacing.slice(0, rafCount)).sort((a, b) => a - b);
@@ -301,10 +301,10 @@ export function installForgeReviewControl(
 
     async setFactions(player: string, rival: string): Promise<void> {
       if (!isFaction(player) || !isFaction(rival) || player === rival) return;
-      // main.ts maps the legacy `civ` param through parseBootCiv for skirmish
-      // boots; QA routes pin their own scenario factions.
       opts.reloadWithParams((params) => {
-        params.set('civ', toLegacyCiv(player));
+        params.set('qa-player-faction', player);
+        params.set('qa-ai-faction', rival);
+        params.delete('civ');
       });
     },
 

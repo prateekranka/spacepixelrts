@@ -40,16 +40,6 @@ import {
 import { resolveCombatOverride } from './generated/sunweaver-lumen-guard-candidate';
 import type { CombatRowOverride } from './sprites';
 
-type ForgePerspective = 'player' | 'rival' | 'omniscient';
-type ForgeOverlayState = Record<
-  'paths' | 'hit-regions' | 'line-of-sight' | 'orders' | 'facing' | 'entity-ids',
-  boolean
->;
-interface ForgeHookControl {
-  overlaysState: ForgeOverlayState;
-  perspectiveState: ForgePerspective;
-}
-
 const VERSION = '0.12.0-front-end';
 const hostNode = document.getElementById('app');
 if (!hostNode) throw new Error('Starhaven boot: #app host missing');
@@ -57,7 +47,8 @@ const host: HTMLElement = hostNode;
 
 const params = new URLSearchParams(window.location.search);
 const qaScenario = parseQaScenario(window.location.search);
-const qaFrozen = qaScenario !== undefined && params.get('qa-run') !== '1';
+const forgeReviewActive = import.meta.env.DEV && params.get('forge') === '1';
+const qaFrozen = qaScenario !== undefined && params.get('qa-run') !== '1' && !forgeReviewActive;
 const uiHidden = params.get('ui') === '0';
 const qaHoldLoading = params.get('qa-hold-loading') === '1';
 
@@ -96,17 +87,7 @@ let hitSfx = 0;
 let acc = 0;
 /** FRD-2a — forge review freeze flag; only the review control ever sets it. */
 let forgeFreezeRequested = false;
-/** FRD-2a — one-shot registration of the forge overlay renderer hook. */
-let forgeHookRegistered = false;
-let forgeControl: ForgeHookControl | null = null;
-type ForgeDrawOverlays = (
-  ctx: CanvasRenderingContext2D,
-  world: World | null,
-  renderer: GameRenderer,
-  overlays: ForgeOverlayState,
-  perspective: ForgePerspective,
-) => void;
-let forgeDrawOverlays: ForgeDrawOverlays | null = null;
+let registerForgeRendererHook: (() => void) | null = null;
 let last = performance.now();
 let fpsSmoothed = 60;
 let frames = 0;
@@ -643,16 +624,6 @@ function activeEntityCount(): number {
   return world.ents.reduce((count, entity) => count + (entity.alive ? 1 : 0), 0);
 }
 
-function tryRegisterForgeHook(): void {
-  if (forgeControl === null || view === null || forgeHookRegistered || forgeDrawOverlays === null) return;
-  forgeHookRegistered = true;
-  const control = forgeControl;
-  const draw = forgeDrawOverlays;
-  view.reviewHooks.push((ctx, renderer) => {
-    draw(ctx, world, renderer, control.overlaysState, control.perspectiveState);
-  });
-}
-
 function publish(): void {
   const rendererInfo = view?.info() ?? null;
   const qaProbe: StarhavenQaProbe = {
@@ -704,20 +675,15 @@ function publish(): void {
   if (input) appWindow.__STARHOLD_INPUT__ = input;
   if (view) appWindow.__STARHOLD_VIEW__ = view;
   if (world) appWindow.__STARHOLD_WORLD__ = world;
-  tryRegisterForgeHook();
+  registerForgeRendererHook?.();
 }
 
-const forgeReviewEnabled = import.meta.env.DEV && params.get('forge') === '1';
+const forgeReviewEnabled = forgeReviewActive;
 if (forgeReviewEnabled) {
-  const reviewControlSpecifier = '/src/dev/review-control.ts';
-  const reviewOverlaysSpecifier = '/src/dev/review-overlays.ts';
-  void (async () => {
-    const [{ installForgeReviewControl }, { drawOverlays }] = await Promise.all([
-      import(/* @vite-ignore */ reviewControlSpecifier),
-      import(/* @vite-ignore */ reviewOverlaysSpecifier),
-    ]);
-    forgeDrawOverlays = drawOverlays;
-    const installed = installForgeReviewControl({
+  forgeFreezeRequested = true;
+  const bootSpecifier = `/${['src', 'dev', 'forge-install.ts'].join('/')}`;
+  void import(/* @vite-ignore */ bootSpecifier).then(({ bootForgeReview }) =>
+    bootForgeReview({
       getWorld: () => world,
       getInput: () => input,
       getView: () => view,
@@ -727,25 +693,34 @@ if (forgeReviewEnabled) {
       getHud: () => hud,
       getFps: () => fpsSmoothed,
       getP99FrameMs: () => Math.round(p99FrameMs * 100) / 100,
-      setFreeze: (frozen) => {
+      setFreeze: (frozen: boolean) => {
         forgeFreezeRequested = frozen;
       },
-      reloadWithParams: (mutate) => {
+      reloadWithParams: (mutate: (next: URLSearchParams) => void) => {
         const next = new URLSearchParams();
-        for (const key of ['qa', 'qa-seed', 'orientation', 'ui', 'fog', 'forge', 'forge-art-candidate']) {
+        for (const key of [
+          'qa',
+          'qa-seed',
+          'qa-player-faction',
+          'qa-ai-faction',
+          'orientation',
+          'ui',
+          'fog',
+          'forge',
+          'forge-art-candidate',
+        ]) {
           const value = params.get(key);
           if (value !== null) next.set(key, value);
         }
         mutate(next);
         window.location.search = next.toString();
       },
-    });
-    if (installed === null) return;
-    forgeControl = installed;
-    tryRegisterForgeHook();
-    const panelSpecifier = '/tools/forge-review/panel.ts';
-    void import(/* @vite-ignore */ panelSpecifier);
-  })();
+      registerRendererHook: (register: () => void) => {
+        registerForgeRendererHook = register;
+        register();
+      },
+    }),
+  );
 }
 
 window.addEventListener('resize', () => {

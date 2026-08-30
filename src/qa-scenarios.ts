@@ -1,5 +1,5 @@
 import { type AppEvent, type AppState } from './app-flow';
-import { type MatchConfig, QA_MATCH_CONFIG, cloneMatchConfig } from './match-config';
+import { FACTION_IDS, type FactionId, type MatchConfig, QA_MATCH_CONFIG, cloneMatchConfig } from './match-config';
 
 export type QaPrimaryRoute =
   | 'start-menu'
@@ -148,6 +148,13 @@ const parseQaSeed = (search: string): number | undefined => {
   return value;
 };
 
+const parseQaFaction = (search: string, key: string): FactionId | undefined => {
+  const raw = queryParam(search, key);
+  if (raw === undefined) return undefined;
+  const id = raw.trim().toLowerCase();
+  return FACTION_IDS.includes(id as FactionId) ? (id as FactionId) : undefined;
+};
+
 export function parseQaScenario(search: string): QaScenario | undefined {
   const requested = queryParam(search, 'qa');
   const candidate = requested !== undefined ? requested : search;
@@ -155,10 +162,21 @@ export function parseQaScenario(search: string): QaScenario | undefined {
   if (id.length === 0) return undefined;
   const scenario = QA_SCENARIOS.find((entry) => entry.id === id);
   if (!scenario) return undefined;
+  const playerFaction = parseQaFaction(search, 'qa-player-faction');
+  const aiFaction = parseQaFaction(search, 'qa-ai-faction');
   const seed = parseQaSeed(search);
-  if (seed === undefined) return scenario;
+  let config = scenario.config;
+  if (playerFaction !== undefined || aiFaction !== undefined) {
+    config = {
+      ...config,
+      ...(playerFaction !== undefined ? { playerFaction } : {}),
+      ...(aiFaction !== undefined ? { aiFaction } : {}),
+    };
+  }
+  if (seed === undefined && playerFaction === undefined && aiFaction === undefined) return scenario;
+  if (seed === undefined) return { ...scenario, config };
   return {
     ...scenario,
-    config: { ...scenario.config, seedMode: 'deterministic', seed },
+    config: { ...config, seedMode: 'deterministic', seed },
   };
 }
