@@ -375,13 +375,19 @@ assert.doesNotMatch(shellCss, /backdrop-filter|filter\s*:\s*blur|(?:linear|radia
 assert.doesNotMatch(shellCss, /box-shadow\s*:[^;]*(?:blur|\d+px\s+\d+px\s+\d+px)/i, 'full front-end shell uses hard shadows only');
 assert.doesNotMatch(shellCss, /front-loading-card[^}]*font-family:\s*["'](?:Trebuchet|Segoe)/i, 'old loading font is gone');
 
-const baselineCommit = '645b0ec';
+// SPX-10: the protected gameplay/compositor/asset baseline moved with the product
+// merge. Anchor the invariant to the current product baseline f6f2add
+// (docs/SPX10_PIXEL_UI_INTEGRATION.md protected hashes) instead of the pre-merge
+// pixel branch baseline 645b0ec, whose render.ts predates the accepted Forge Art
+// combat row overrides.
+const baselineCommit = 'f6f2add';
 execFileSync('git', ['cat-file', '-e', `${baselineCommit}^{commit}`], { cwd: repoRoot });
 const protectedFiles = [
   'src/sim.ts',
   'src/engine.ts',
   'src/render.ts',
   'src/front-end-scene.ts',
+  'src/generated/sunweaver-lumen-guard-accepted.ts',
   ...execFileSync('git', ['ls-tree', '-r', '--name-only', baselineCommit, '--', 'public/front-end/civilizations'], { cwd: repoRoot })
     .toString()
     .trim()
