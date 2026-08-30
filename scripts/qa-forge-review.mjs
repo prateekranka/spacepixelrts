@@ -40,6 +40,12 @@ function resolveOut(raw) {
   return abs;
 }
 
+function defaultOutDir() {
+  const base = path.join(os.homedir(), '.cache', 'spacepixelrts', 'forge-review');
+  fs.mkdirSync(base, { recursive: true });
+  return fs.mkdtempSync(path.join(base, 'frd-qa-'));
+}
+
 function parseArgs(argv) {
   const opts = { out: null };
   for (let i = 0; i < argv.length; i += 1) {
@@ -118,16 +124,6 @@ async function waitForForge(page) {
   await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_FORGE__), null, {
     timeout: FORGE_WAIT_MS,
   });
-}
-
-async function waitForWarmMetrics(page, timeoutMs = 30000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const metrics = await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.metrics());
-    if (metrics.rafSamples >= 120 && metrics.rafP99Ms > 0 && metrics.gameWorkP99Ms > 0) return metrics;
-    await page.waitForTimeout(200);
-  }
-  return page.evaluate(() => globalThis.__STARHAVEN_FORGE__.metrics());
 }
 
 async function captureSteppedIdentity(page, serverUrl) {
@@ -269,7 +265,8 @@ async function runDevAcceptance(page, serverUrl, errors, outDir) {
   snap = await snapshot(page);
   record('overlay enabled', snap.overlays['entity-ids'] === true);
 
-  const warmedMetrics = await waitForWarmMetrics(page);
+  await settle(page, 125);
+  const warmedMetrics = await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.metrics());
   record(
     'positive raf p99 after warm ring',
     warmedMetrics.rafP99Ms > 0 && warmedMetrics.gameWorkP99Ms > 0 && warmedMetrics.rafSamples >= 120,
@@ -329,7 +326,7 @@ async function runProductionIsolation(context, previewUrl) {
 
 async function main() {
   const argv = parseArgs(process.argv.slice(2));
-  const outDir = argv.out ? resolveOut(argv.out) : fs.mkdtempSync(path.join(os.tmpdir(), 'frd-qa-'));
+  const outDir = argv.out ? resolveOut(argv.out) : defaultOutDir();
   fs.mkdirSync(outDir, { recursive: true });
 
   if (!fs.existsSync(path.join(REPO_ROOT, 'dist', 'index.html'))) {

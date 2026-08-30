@@ -420,6 +420,20 @@ test('route capture path waits for typed forge control before capture', () => {
   );
 });
 
+test('qa forge-review gate warms perf via actual rAF callbacks not wall-clock polling', () => {
+  const src = fs.readFileSync(path.join(REPO_ROOT, 'scripts/qa-forge-review.mjs'), 'utf8');
+  assert.ok(!src.includes('waitForWarmMetrics'), 'time-guessed warm-up must be removed');
+  assert.ok(!src.includes('waitForTimeout(200)'), 'wall-clock perf polling must be removed');
+  assert.ok(src.includes('settle(page, 125)'), 'must warm with at least 125 actual rAF callbacks');
+});
+
+test('qa forge-review gate defaults evidence dir under home cache not os.tmpdir', () => {
+  const src = fs.readFileSync(path.join(REPO_ROOT, 'scripts/qa-forge-review.mjs'), 'utf8');
+  assert.ok(!src.includes('os.tmpdir()'), 'must not default evidence output to os.tmpdir()');
+  assert.ok(src.includes("path.join(os.homedir(), '.cache', 'spacepixelrts', 'forge-review')"));
+  assert.ok(src.includes('defaultOutDir'), 'home-backed default output helper must exist');
+});
+
 test('route perf gate requires positive distinct forge metrics', () => {
   const src = fs.readFileSync(path.join(REPO_ROOT, 'scripts/forge-capture.mjs'), 'utf8');
   assert.ok(src.includes('requireForgeMetrics: true'), 'forge-capture must require forge metrics on routes');
