@@ -537,6 +537,7 @@ function frame(now: number): void {
 
   if (world && view) view.draw(world, acc / DT, input?.selected ?? new Set<number>(), input?.box ?? null);
   if (world && input && hud) hud.draw(world, input, fpsSmoothed);
+  if (forgeReviewEnabled) window.__STARHAVEN_FORGE_RAF_TICK__?.(now);
   recordFrameWork(performance.now() - workStart);
   publish();
 }
@@ -681,7 +682,7 @@ function publish(): void {
 const forgeReviewEnabled = forgeReviewActive;
 if (forgeReviewEnabled) {
   forgeFreezeRequested = true;
-  const bootSpecifier = `/${['src', 'dev', 'forge-install.ts'].join('/')}`;
+  const bootSpecifier = `/${['src', 'dev', 'review-control.ts'].join('/')}`;
   void import(/* @vite-ignore */ bootSpecifier).then(({ bootForgeReview }) =>
     bootForgeReview({
       getWorld: () => world,

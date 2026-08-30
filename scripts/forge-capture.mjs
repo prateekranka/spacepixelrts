@@ -25,6 +25,7 @@ import {
   parseScenarioTable,
   captureRouteCell,
   captureExtras,
+  captureOverlayCells,
   capturePerspectiveTriptych,
   captureClip,
 } from '../tools/forge-review/lib/capture.mjs';
@@ -221,11 +222,23 @@ function composeCriticBrief({ manifest, gateP99, renderer, softwareRenderer, rou
   lines.push(`  cells/: ${cells.length} PNG captures (1366x1024 each)`);
   for (const cell of manifest.pack.routes) lines.push(`    route ${cell.id} ${cell.orientation} — state ${cell.actualState} tick ${cell.tick} pal ${cell.image ? Math.round(cell.image.paletteAdherence * 100) : '?'}% ok=${cell.ok}${cell.gates.length ? ` gates=[${cell.gates.join(' | ')}]` : ''}`);
   for (const cell of manifest.pack.extras) lines.push(`    extra ${cell.id} — ok=${cell.ok}${cell.gates.length ? ` gates=[${cell.gates.join(' | ')}]` : ''}`);
+  const overlayCells = manifest.pack.extras.filter((cell) => cell.id.startsWith('overlay-'));
+  if (overlayCells.length) {
+    lines.push(`  overlay evidence cells: ${overlayCells.length}`);
+    for (const cell of overlayCells) {
+      lines.push(`    ${cell.id} — overlay readback=${JSON.stringify(cell.overlays)} hits=${cell.overlayColorHits ?? 'n/a'} ok=${cell.ok}`);
+    }
+  }
   for (const cell of manifest.pack.perspectives) lines.push(`    perspective ${cell.id} — ok=${cell.ok}${cell.gates.length ? ` gates=[${cell.gates.join(' | ')}]` : ''}`);
   lines.push(`  board.png — labeled contact board (failed cells red-labeled)`);
   lines.push(`  console.txt — all console output + page errors, prefixed per cell`);
   lines.push(`  critic-brief.txt — this file`);
-  if (manifest.pack.clip) lines.push(`  proof.webm — short recorded sequence (load -> freeze -> step -> overlay toggle)`);
+  if (manifest.pack.clip) {
+    const clipSize = fs.existsSync(manifest.pack.clip) ? fs.statSync(manifest.pack.clip).size : 0;
+    lines.push(`  proof.webm — short recorded sequence (${clipSize} bytes)`);
+  } else if (manifest.args?.clip === true) {
+    lines.push('  proof.webm — MISSING (args.clip=true)');
+  }
   lines.push('');
   lines.push('OBJECTIVE GATES RUN BY THE BUILDER (results only, no verdicts)');
   lines.push(`  requested seed ${manifest.requestedSeed} vs actual seed ${manifest.actualSeed} (equality is a hard gate)`);
@@ -384,6 +397,23 @@ async function main() {
         console.log(`forge-capture: ${cell.id} ok=${cell.ok}${cell.gates.length ? ` gates=[${cell.gates.join('; ')}]` : ''}`);
       }
       for (const f of extraResult.failures) manifest.failures.push(f);
+
+      const overlayResult = await captureOverlayCells(context, {
+        baseUrl,
+        seed,
+        paletteRgb,
+        gateP99,
+        consoleSeq,
+        webglInfo,
+        outDir,
+      });
+      manifest.pack.extras.push(...overlayResult.cells);
+      for (const cell of overlayResult.cells) {
+        for (const g of cell.gates) manifest.failures.push(`${cell.id}: ${g}`);
+        for (const e of cell.errors) manifest.failures.push(`${cell.id}: ${e}`);
+        console.log(`forge-capture: ${cell.id} ok=${cell.ok}${cell.gates.length ? ` gates=[${cell.gates.join('; ')}]` : ''}`);
+      }
+      if (overlayResult.failure) manifest.failures.push(overlayResult.failure);
     } else {
       console.log('forge-capture: extras skipped (route "opening" not in --routes)');
     }
@@ -451,7 +481,19 @@ async function main() {
     fs.writeFileSync(consoleFile, `${consoleLines.join('\n')}\n`);
     manifest.pack.consoleTxt = consoleFile;
 
-    // 9. critic-brief.txt (objective; no builder visual verdicts).
+    // 9. Clip (before critic brief so the brief can truthfully list it).
+    if (clip) {
+      const clipResult = await captureClip(browser, { baseUrl, seed, outDir });
+      manifest.pack.clip = clipResult.file;
+      if (clipResult.failure) manifest.failures.push(clipResult.failure);
+      if (clipResult.errors?.length) {
+        for (const err of clipResult.errors) manifest.failures.push(`clip: ${err}`);
+      }
+      if (!clipResult.file) manifest.failures.push('clip-missing');
+      console.log(`forge-capture: clip=${clipResult.file ?? 'not written'}${clipResult.failure ? ` (${clipResult.failure})` : ''}`);
+    }
+
+    // 10. critic-brief.txt (objective; no builder visual verdicts).
     manifest.environment.webglRenderer = webglInfo.renderer ?? '';
     manifest.environment.softwareRenderer = Boolean(webglInfo.softwareRenderer);
     manifest.finishedAt = new Date().toISOString();
@@ -469,22 +511,12 @@ async function main() {
     );
     manifest.pack.criticBrief = briefFile;
 
-    // 10. Clip.
-    if (clip) {
-      const clipResult = await captureClip(browser, { baseUrl, seed, outDir });
-      manifest.pack.clip = clipResult.file;
-      if (clipResult.failure) {
-        manifest.failures.push(clipResult.failure);
-        console.log(`forge-capture: clip incomplete (${clipResult.failure})${clipResult.note ? ` — ${clipResult.note}` : ''}`);
-      }
-      console.log(`forge-capture: clip=${clipResult.file ?? 'not written'}`);
-    }
-
     manifest.ok =
       manifest.failures.length === 0 &&
       manifest.pack.board != null &&
       manifest.pack.consoleTxt != null &&
-      manifest.pack.criticBrief != null;
+      manifest.pack.criticBrief != null &&
+      (!clip || (manifest.pack.clip != null && fs.existsSync(manifest.pack.clip) && fs.statSync(manifest.pack.clip).size > 0));
   } catch (err) {
     manifest.failures.push(`fatal: ${err?.stack ?? String(err)}`);
   } finally {

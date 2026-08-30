@@ -87,6 +87,26 @@ export function analyzePng(fileOrBuffer, paletteRgb = []) {
   };
 }
 
+/** Count sampled pixels within RGB tolerance of a target overlay color. */
+export function countOverlayColorPixels(fileOrBuffer, hexColor, tolerance = 48) {
+  const buf = Buffer.isBuffer(fileOrBuffer) ? fileOrBuffer : fs.readFileSync(fileOrBuffer);
+  const png = PNG.sync.read(buf);
+  const target = hexToRgb(hexColor);
+  const tol2 = tolerance * tolerance;
+  let hits = 0;
+  for (let y = 0; y < png.height; y += 3) {
+    for (let x = 0; x < png.width; x += 3) {
+      const i = (y * png.width + x) * 4;
+      const r = png.data[i];
+      const g = png.data[i + 1];
+      const b = png.data[i + 2];
+      const d = (r - target[0]) ** 2 + (g - target[1]) ** 2 + (b - target[2]) ** 2;
+      if (d <= tol2) hits += 1;
+    }
+  }
+  return hits;
+}
+
 /** True when the capture is effectively all-black (no scene content). */
 export function isBlack(image) {
   return image.maxLuma <= 6;

@@ -11,13 +11,18 @@
  * `world.step()` from `step()` while frozen — the same call the rAF loop uses.
  */
 
-import { FACTION_IDS, cloneMatchConfig, type FactionId, type MatchConfig } from '../match-config';
+import { FACTION_IDS, cloneMatchConfig, type FactionId } from '../match-config';
 import { QA_SCENARIOS } from '../qa-scenarios';
-import type { AppState } from '../app-flow';
 import { MAP } from '../engine';
 
 export type { ForgeOverlayId, FORGE_OVERLAY_IDS } from './review-overlays';
-import type { ForgeOverlayId } from './review-overlays';
+import { drawOverlays, type ForgeOverlayId } from './review-overlays';
+import type { AppState } from '../app-flow';
+import type { Input } from '../input';
+import type { MatchConfig } from '../match-config';
+import type { GameRenderer } from '../render';
+import type { Hud } from '../hud';
+import type { World } from '../sim';
 
 export type ForgePerspective = 'player' | 'rival' | 'omniscient';
 export type ForgeCameraMode = 'normal' | 'tactical-close' | 'strategic-far';
@@ -153,36 +158,74 @@ const clampCamera = (value: number): number => Math.min(MAP - 4, Math.max(4, val
  * report rafP99Ms from a source that is distinct from main's game-work ring.
  * Samples only while the document is visible; p99 over the last 120 frames.
  */
-const rafSpacing = new Float32Array(120);
+export const RAF_RING_LENGTH = 120;
+export const RAF_P99_MIN_SAMPLES = RAF_RING_LENGTH;
+export const STEP_MAX_TICKS = 600;
+
+const rafSpacing = new Float32Array(RAF_RING_LENGTH);
 let rafHead = 0;
 let rafCount = 0;
 let rafLast: number | null = null;
-const tickRafSpacing = (): void => {
-  const now = performance.now();
+
+/** Called once per game frame from main.ts when forge review is active. */
+export function tickForgeRafSpacing(now: number = performance.now()): void {
   if (rafLast !== null) {
     rafSpacing[rafHead] = Math.min(1000, now - rafLast);
     rafHead = (rafHead + 1) % rafSpacing.length;
     rafCount = Math.min(rafCount + 1, rafSpacing.length);
   }
   rafLast = now;
-  // Self-reschedule: this is a continuous sampler, one frame per tick.
-  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(tickRafSpacing);
-};
-if (typeof requestAnimationFrame === 'function') requestAnimationFrame(tickRafSpacing);
-const RAF_P99_MIN_SAMPLES = 121;
-const rafP99 = (): number => {
-  if (rafCount < RAF_P99_MIN_SAMPLES) return 0;
-  const sorted = Array.from(rafSpacing.slice(0, rafCount)).sort((a, b) => a - b);
+}
+
+/** Pure helper — p99 over a filled rAF spacing ring (exported for tests). */
+export function rafP99FromRing(ring: ArrayLike<number>, count: number): number {
+  if (count < RAF_P99_MIN_SAMPLES) return 0;
+  const n = Math.min(count, ring.length);
+  const sorted = Array.from(ring.slice(0, n)).sort((a, b) => a - b);
   const value = sorted[Math.ceil(sorted.length * 0.99) - 1] ?? 0;
   return Math.round(value * 100) / 100;
-};
+}
+
+const rafP99 = (): number => rafP99FromRing(rafSpacing, rafCount);
+
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      rafLast = null;
-      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(tickRafSpacing);
-    }
+    if (!document.hidden) rafLast = null;
   });
+}
+
+/** Pure helper — legal frozen step count or null when invalid (exported for tests). */
+export function normalizeStepCount(ticks: number): number | null {
+  if (!Number.isFinite(ticks) || ticks <= 0 || ticks > STEP_MAX_TICKS) return null;
+  const count = Math.floor(ticks);
+  return count === ticks ? count : null;
+}
+
+export interface CameraModeTransition {
+  cameraMode: ForgeCameraMode;
+  savedHalfH: number | null;
+  halfH: number;
+}
+
+/** Pure helper — camera preset transitions (exported for tests). */
+export function applyCameraModeTransition(
+  state: { cameraMode: ForgeCameraMode; savedHalfH: number | null },
+  inputHalfH: number,
+  mode: ForgeCameraMode,
+): CameraModeTransition | null {
+  if (mode === state.cameraMode) return null;
+  if (mode === 'normal') {
+    return {
+      cameraMode: 'normal',
+      savedHalfH: null,
+      halfH: state.savedHalfH ?? inputHalfH,
+    };
+  }
+  return {
+    cameraMode: mode,
+    savedHalfH: state.cameraMode === 'normal' ? inputHalfH : state.savedHalfH,
+    halfH: mode === 'tactical-close' ? 5 : 18,
+  };
 }
 
 const parseRequestedSeed = (params: URLSearchParams): number | null => {
@@ -322,15 +365,12 @@ export function installForgeReviewControl(
 
     setCameraMode(mode: ForgeCameraMode): void {
       const input = opts.getInput();
-      if (!input || mode === state.cameraMode) return;
-      if (mode === 'normal') {
-        if (state.savedHalfH !== null) input.halfH = state.savedHalfH;
-      } else {
-        // Save the scenario/default halfH at mode entry so 'normal' restores it.
-        state.savedHalfH = input.halfH;
-        input.halfH = mode === 'tactical-close' ? 5 : 18;
-      }
-      state.cameraMode = mode;
+      if (!input) return;
+      const next = applyCameraModeTransition(state, input.halfH, mode);
+      if (!next) return;
+      input.halfH = next.halfH;
+      state.savedHalfH = next.savedHalfH;
+      state.cameraMode = next.cameraMode;
     },
 
     setCamera(x: number, z: number): void {
@@ -380,38 +420,91 @@ export function installForgeReviewControl(
       opts.setFreeze(v);
     },
 
-    step(ticks: number): boolean {
+    step(ticks: number): void {
       const world = opts.getWorld();
-      if (!state.frozen || !world) return false;
-      const count = Math.max(1, Math.min(600, Math.floor(ticks) || 1));
+      if (!state.frozen || !world) return;
+      const count = normalizeStepCount(ticks);
+      if (count === null) return;
       for (let index = 0; index < count; index++) world.step();
-      return true;
     },
 
     setOverlay(id: ForgeOverlayId, on: boolean): void {
       state.overlays[id] = on;
     },
 
-    metrics(): { fps: number; gameWorkP99Ms: number; rafP99Ms: number } {
-      return {
-        fps: opts.getFps(),
-        // Distinct sources by contract: game work = main's per-frame work ring;
-        // rAF = THIS control's own compositor-spacing ring below. Never conflated.
-        gameWorkP99Ms: opts.getP99FrameMs(),
-        rafP99Ms: rafP99(),
-      };
-    },
+  metrics(): { fps: number; gameWorkP99Ms: number; rafP99Ms: number; rafSamples: number } {
+    return {
+      fps: opts.getFps(),
+      gameWorkP99Ms: opts.getP99FrameMs(),
+      rafP99Ms: rafP99(),
+      rafSamples: rafCount,
+    };
+  },
   };
 
   applyReviewMode();
   opts.setFreeze(state.frozen);
   const installed = Object.freeze(control);
   window.__STARHAVEN_FORGE__ = installed;
+  window.__STARHAVEN_FORGE_RAF_TICK__ = tickForgeRafSpacing;
   return installed;
+}
+
+export interface ForgeBootDeps {
+  getWorld(): World | null;
+  getInput(): Input | null;
+  getView(): GameRenderer | null;
+  getState(): AppState;
+  getConfig(): MatchConfig;
+  getScenario(): string | null;
+  getHud(): Hud | null;
+  getFps(): number;
+  getP99FrameMs(): number;
+  setFreeze(frozen: boolean): void;
+  reloadWithParams(mutate: (next: URLSearchParams) => void): void;
+  registerRendererHook(register: () => void): void;
+}
+
+/** Dev-only bootstrap: install control, overlay hook, and optional workbench panel. */
+export async function bootForgeReview(deps: ForgeBootDeps): Promise<void> {
+  const installed = installForgeReviewControl({
+    getWorld: deps.getWorld,
+    getInput: deps.getInput,
+    getView: deps.getView,
+    getState: deps.getState,
+    getConfig: deps.getConfig,
+    getScenario: deps.getScenario,
+    getHud: deps.getHud,
+    getFps: deps.getFps,
+    getP99FrameMs: deps.getP99FrameMs,
+    setFreeze: deps.setFreeze,
+    reloadWithParams: deps.reloadWithParams,
+  });
+  if (installed === null) return;
+
+  let hookRegistered = false;
+  deps.registerRendererHook(() => {
+    const view = deps.getView();
+    if (hookRegistered || view === null) return;
+    hookRegistered = true;
+    view.reviewHooks.push((ctx, renderer) => {
+      drawOverlays(
+        ctx,
+        deps.getWorld(),
+        renderer,
+        installed.overlaysState,
+        installed.perspectiveState,
+      );
+    });
+  });
+
+  const panelSpecifier = `/${['tools', 'forge-review', 'panel.ts'].join('/')}`;
+  await import(/* @vite-ignore */ panelSpecifier);
 }
 
 declare global {
   interface Window {
     __STARHAVEN_FORGE__?: ForgeReviewControl;
+    __STARHAVEN_FORGE_RAF_TICK__?: (now: number) => void;
   }
 }

@@ -14,6 +14,13 @@ import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 
 import { parseQaScenario } from '../src/qa-scenarios';
+import {
+  RAF_P99_MIN_SAMPLES,
+  RAF_RING_LENGTH,
+  applyCameraModeTransition,
+  normalizeStepCount,
+  rafP99FromRing,
+} from '../src/dev/review-control';
 import { SCHEMA_VERSION, validateManifest } from '../tools/forge-review/lib/manifest.mjs';
 import {
   analyzePng,
@@ -132,7 +139,81 @@ test('qa-seed propagates into the scenario config (FRD-B contract)', () => {
   );
 });
 
-// --- 2. manifest validator ---------------------------------------------------
+test('qa-seed rejects invalid unsigned forms', () => {
+  for (const query of [
+    '?qa=opening&qa-seed=-1',
+    '?qa=opening&qa-seed=1.5',
+    '?qa=opening&qa-seed=01',
+    '?qa=opening&qa-seed=abc',
+    '?qa=opening&qa-seed=',
+    '?qa=opening&qa-seed=4294967296',
+  ]) {
+    const scenario = parseQaScenario(query);
+    assert.equal(scenario?.config.seed, 0x5eed, `${query} must not override seed`);
+  }
+});
+
+test('manifest validator requires nonempty pack.clip when args.clip is true', () => {
+  const m = validManifest({
+    args: { out: '/tmp/forge', seed: 777, clip: true },
+    pack: {
+      routes: [validCell()],
+      extras: [],
+      perspectives: [],
+      board: '/tmp/forge/board.png',
+      consoleTxt: '/tmp/forge/console.txt',
+      criticBrief: '/tmp/forge/critic-brief.txt',
+      clip: null,
+    },
+  });
+  const result = validateManifest(m);
+  assert.equal(result.valid, false);
+  assert.ok(
+    result.errors.some((e) => e.includes('pack.clip')),
+    `expected pack.clip error, got: ${result.errors.join('; ')}`,
+  );
+});
+
+test('raf p99 requires a full 120-sample ring', () => {
+  const ring = Array.from({ length: RAF_RING_LENGTH }, (_, i) => 10 + (i % 5));
+  assert.equal(rafP99FromRing(ring, RAF_RING_LENGTH - 1), 0);
+  const p99 = rafP99FromRing(ring, RAF_RING_LENGTH);
+  assert.ok(p99 >= 10 && p99 <= 14, `expected nonzero p99, got ${p99}`);
+  assert.equal(RAF_P99_MIN_SAMPLES, RAF_RING_LENGTH);
+});
+
+test('camera mode normal restores saved halfH after close then far', () => {
+  let state = { cameraMode: 'normal' as const, savedHalfH: null as number | null };
+  let halfH = 30;
+  const close = applyCameraModeTransition(state, halfH, 'tactical-close');
+  assert.ok(close);
+  state = { cameraMode: close.cameraMode, savedHalfH: close.savedHalfH };
+  halfH = close.halfH;
+  assert.equal(halfH, 5);
+  assert.equal(state.savedHalfH, 30);
+
+  const far = applyCameraModeTransition(state, halfH, 'strategic-far');
+  assert.ok(far);
+  state = { cameraMode: far.cameraMode, savedHalfH: far.savedHalfH };
+  halfH = far.halfH;
+  assert.equal(halfH, 18);
+  assert.equal(state.savedHalfH, 30);
+
+  const normal = applyCameraModeTransition(state, halfH, 'normal');
+  assert.ok(normal);
+  assert.equal(normal.halfH, 30);
+  assert.equal(normal.savedHalfH, null);
+});
+
+test('normalizeStepCount rejects invalid counts', () => {
+  assert.equal(normalizeStepCount(37), 37);
+  assert.equal(normalizeStepCount(0), null);
+  assert.equal(normalizeStepCount(-1), null);
+  assert.equal(normalizeStepCount(1.5), null);
+  assert.equal(normalizeStepCount(Number.NaN), null);
+  assert.equal(normalizeStepCount(601), null);
+});
+
 
 test('manifest validator accepts a minimal valid fixture', () => {
   assert.deepEqual(validateManifest(validManifest()), { valid: true, errors: [] });

@@ -83,6 +83,12 @@ export function validateManifest(m) {
   if (!Array.isArray(m.failures)) errors.push('failures must be an array');
   if (!isBool(m.ok)) errors.push('ok missing or invalid');
 
+  if (isObj(m.args) && m.args.clip === true) {
+    if (!isObj(m.pack) || m.pack.clip === null || !isStr(m.pack.clip) || m.pack.clip.length === 0) {
+      errors.push('args.clip requires nonempty pack.clip path');
+    }
+  }
+
   // --- capture cells ---
   if (isObj(m.pack)) {
     for (const [group, kind] of [

@@ -91,7 +91,9 @@ async function authorityFingerprint(page) {
         Math.round(ent.z * 1000) / 1000,
         ent.team,
         ent.order,
-        ent.target,
+        ent.tid,
+        ent.tx,
+        ent.tz,
         ent.hp,
       ]);
     }
@@ -116,6 +118,16 @@ async function waitForForge(page) {
   await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_FORGE__), null, {
     timeout: FORGE_WAIT_MS,
   });
+}
+
+async function waitForWarmMetrics(page, timeoutMs = 30000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const metrics = await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.metrics());
+    if (metrics.rafSamples >= 120 && metrics.rafP99Ms > 0 && metrics.gameWorkP99Ms > 0) return metrics;
+    await page.waitForTimeout(200);
+  }
+  return page.evaluate(() => globalThis.__STARHAVEN_FORGE__.metrics());
 }
 
 async function captureSteppedIdentity(page, serverUrl) {
@@ -149,6 +161,7 @@ async function runDevAcceptance(page, serverUrl, errors, outDir) {
 
   const urlBeforeCamera = page.url();
   const authorityBeforeDisplay = await authorityFingerprint(page);
+  const openingHalfH = snap.camera.halfH;
   await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.setCameraMode('tactical-close'));
   await settle(page, 3);
   snap = await snapshot(page);
@@ -158,6 +171,24 @@ async function runDevAcceptance(page, serverUrl, errors, outDir) {
     `mode=${snap.cameraMode} halfH=${snap.camera.halfH}`,
   );
   record('camera change did not reload', page.url() === urlBeforeCamera);
+
+  await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.setCameraMode('strategic-far'));
+  await settle(page, 3);
+  snap = await snapshot(page);
+  record(
+    'strategic-far camera applied',
+    snap.cameraMode === 'strategic-far' && Math.abs(snap.camera.halfH - 18) < 0.01,
+    `mode=${snap.cameraMode} halfH=${snap.camera.halfH}`,
+  );
+
+  await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.setCameraMode('normal'));
+  await settle(page, 3);
+  snap = await snapshot(page);
+  record(
+    'normal camera restores original halfH after close and far',
+    snap.cameraMode === 'normal' && Math.abs(snap.camera.halfH - openingHalfH) < 0.01,
+    `mode=${snap.cameraMode} halfH=${snap.camera.halfH} expected=${openingHalfH}`,
+  );
 
   await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.setPerspective('rival'));
   await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.setReviewFog(false));
@@ -195,6 +226,19 @@ async function runDevAcceptance(page, serverUrl, errors, outDir) {
     `before=${beforeStep.tick} after=${afterStep.tick} delta=${afterStep.tick - beforeStep.tick}`,
   );
 
+  const tickBeforeInvalid = afterStep.tick;
+  await page.evaluate(() => {
+    globalThis.__STARHAVEN_FORGE__.step(0);
+    globalThis.__STARHAVEN_FORGE__.step(-5);
+    globalThis.__STARHAVEN_FORGE__.step(Number.NaN);
+  });
+  const afterInvalid = await snapshot(page);
+  record(
+    'invalid step counts do not advance tick',
+    afterInvalid.tick === tickBeforeInvalid,
+    `before=${tickBeforeInvalid} after=${afterInvalid.tick}`,
+  );
+
   await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.setFrozen(false));
   const tickBeforeUnfreeze = afterStep.tick;
   await settle(page, 12);
@@ -225,6 +269,13 @@ async function runDevAcceptance(page, serverUrl, errors, outDir) {
   snap = await snapshot(page);
   record('overlay enabled', snap.overlays['entity-ids'] === true);
 
+  const warmedMetrics = await waitForWarmMetrics(page);
+  record(
+    'positive raf p99 after warm ring',
+    warmedMetrics.rafP99Ms > 0 && warmedMetrics.gameWorkP99Ms > 0 && warmedMetrics.rafSamples >= 120,
+    JSON.stringify(warmedMetrics),
+  );
+
   const shotPath = path.join(outDir, 'acceptance.png');
   await page.screenshot({ path: shotPath, type: 'png' });
   const png = PNG.sync.read(fs.readFileSync(shotPath));
@@ -248,17 +299,18 @@ async function runDevAcceptance(page, serverUrl, errors, outDir) {
   record('zero console/page errors', errors.length === 0, errors.slice(0, 4).join(' | '));
 }
 
-async function runProductionIsolation(context, previewUrl, errors) {
+async function runProductionIsolation(context, previewUrl) {
+  const prodErrors = [];
   const page = await context.newPage();
   page.on('console', (msg) => {
     const line = `[prod ${msg.type()}] ${msg.text()}`;
     consoleLog.push(line);
-    if (msg.type() === 'error') errors.push(line);
+    if (msg.type() === 'error') prodErrors.push(line);
   });
   page.on('pageerror', (err) => {
     const line = `[prod pageerror] ${err?.message ?? String(err)}`;
     consoleLog.push(line);
-    errors.push(line);
+    prodErrors.push(line);
   });
   await page.goto(`${previewUrl}/?forge=1`, { waitUntil: 'load', timeout: NAV_TIMEOUT_MS });
   await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, { timeout: PROBE_TIMEOUT_MS });
@@ -271,6 +323,7 @@ async function runProductionIsolation(context, previewUrl, errors) {
   record('production ?forge=1 has no forge global', prodState.hasForgeGlobal === false);
   record('production ?forge=1 has no forge panel', prodState.hasForgePanel === false);
   record('production ?forge=1 has no forge title text', prodState.hasForgeTitle === false);
+  record('production preview has zero console/page errors', prodErrors.length === 0, prodErrors.slice(0, 4).join(' | '));
   await page.close();
 }
 
@@ -307,7 +360,7 @@ async function main() {
     await page.close();
 
     previewServer = await startDevServer({ quiet: true, mode: 'preview' });
-    await runProductionIsolation(context, previewServer.url, errors);
+    await runProductionIsolation(context, previewServer.url);
     await context.close();
   } catch (err) {
     failed = true;
@@ -332,7 +385,8 @@ async function main() {
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .filter((line) => line.includes(repoMarker))
-    .filter((line) => !/pgrep/.test(line));
+    .filter((line) => /(?:^|\/)vite\b|chromium/i.test(line))
+    .filter((line) => !/pgrep|cursor-agent/.test(line));
   record('no leaked vite/chromium processes', leaked.length === 0, leaked.join(' ; ').slice(0, 300));
 
   fs.writeFileSync(path.join(outDir, 'console.txt'), consoleLog.join('\n'));

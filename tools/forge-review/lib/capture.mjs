@@ -7,14 +7,36 @@
 // a short webm sequence.
 import fs from 'node:fs';
 import path from 'node:path';
-import { analyzePng, isBlack, isEmpty } from './pixels.mjs';
+import { analyzePng, countOverlayColorPixels, isBlack, isEmpty } from './pixels.mjs';
 
 export const DEFAULT_VIEWPORT = { width: 1366, height: 1024 };
 export const NAV_TIMEOUT_MS = 30000;
 export const PROBE_TIMEOUT_MS = 20000;
-export const PERF_WARMUP_MS = 2600; // > 120-frame probe ring @60fps so boot spikes flush
+export const FORGE_WAIT_MS = 15000;
+export const PERF_WARMUP_MS = 7000; // >120 rAF samples @~20fps SwiftShader
 export const FRAME_SAMPLE_MS = 800;
 export const PALETTE_ADHERENCE_MIN = 0.35;
+export const OVERLAY_PATH_STEP_TICKS = 600;
+export const OVERLAY_COLOR_MIN_PIXELS = 8;
+export const OVERLAY_COLOR_TOLERANCE = 48;
+
+export const FORGE_OVERLAY_IDS = [
+  'paths',
+  'hit-regions',
+  'line-of-sight',
+  'orders',
+  'facing',
+  'entity-ids',
+];
+
+export const OVERLAY_EVIDENCE_COLORS = {
+  paths: '#00FF88',
+  'hit-regions': '#FF3355',
+  'line-of-sight': '#66CCFF',
+  orders: '#FFCC00',
+  facing: '#FFFFFF',
+  'entity-ids': '#FF7700',
+};
 
 // --- small pure helpers -----------------------------------------------------
 
@@ -104,6 +126,105 @@ export function p99Of(deltas) {
   return Math.round(sorted[Math.min(sorted.length - 1, Math.ceil(0.99 * sorted.length) - 1)] * 100) / 100;
 }
 
+/** Wait for the typed forge review control to install. */
+export async function waitForForgeControl(page, timeoutMs = FORGE_WAIT_MS) {
+  await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_FORGE__), null, {
+    timeout: timeoutMs,
+  });
+}
+
+/** JSON round-trip of the forge control snapshot (single source of truth). */
+export async function readForgeSnapshot(page) {
+  try {
+    return await page.evaluate(() =>
+      JSON.parse(JSON.stringify(globalThis.__STARHAVEN_FORGE__.snapshot())),
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** Apply forge control mutations and return the post-action snapshot. */
+export async function applyForgeControl(page, action) {
+  return page.evaluate((act) => {
+    const forge = globalThis.__STARHAVEN_FORGE__;
+    if (!forge) return null;
+    if (act.frozen !== undefined) forge.setFrozen(act.frozen);
+    if (act.step !== undefined) forge.step(act.step);
+    if (act.perspective !== undefined) forge.setPerspective(act.perspective);
+    if (act.cameraMode !== undefined) forge.setCameraMode(act.cameraMode);
+    if (act.camera !== undefined) forge.setCamera(act.camera.x, act.camera.z);
+    if (act.uiVisible !== undefined) forge.setUiVisible(act.uiVisible);
+    if (act.reviewFog !== undefined) forge.setReviewFog(act.reviewFog);
+    if (act.selectScout) forge.selectScout();
+    if (act.clearSelection) forge.clearSelection();
+    if (act.overlayOff) {
+      for (const id of [
+        'paths',
+        'hit-regions',
+        'line-of-sight',
+        'orders',
+        'facing',
+        'entity-ids',
+      ]) {
+        forge.setOverlay(id, false);
+      }
+    }
+    if (act.overlay !== undefined) forge.setOverlay(act.overlay.id, act.overlay.on);
+    return JSON.parse(JSON.stringify(forge.snapshot()));
+  }, action);
+}
+
+function applySnapshotToCell(cell, snap) {
+  if (!snap) return;
+  cell.actualSeed = Number(snap.actualSeed ?? 0) >>> 0;
+  cell.actualState = typeof snap.state === 'string' ? snap.state : null;
+  cell.tick = Number(snap.tick ?? 0);
+  cell.perspective = snap.perspective ?? cell.perspective;
+  cell.cameraMode = snap.cameraMode ?? cell.cameraMode;
+  cell.camera = {
+    x: Number(snap.camera?.x ?? 0),
+    z: Number(snap.camera?.z ?? 0),
+    halfH: Number(snap.camera?.halfH ?? 0),
+  };
+  cell.selection = Array.isArray(snap.selection) ? [...snap.selection] : [];
+  cell.config = snap.config ?? cell.config;
+  cell.overlays = snap.overlays ? { ...snap.overlays } : cell.overlays;
+  cell.uiVisible = snap.uiVisible;
+  cell.reviewFog = snap.reviewFog;
+  cell.frozen = snap.frozen;
+  cell.entities = {
+    live: Number(snap.liveEntities ?? 0),
+    total: Number(snap.totalEntitySlots ?? 0),
+  };
+}
+
+function gateRequestedControl(cell, requested) {
+  if (!requested) return;
+  for (const [key, value] of Object.entries(requested)) {
+    if (value === undefined || key === 'overlays') continue;
+    if (cell[key] !== value) {
+      cell.gates.push(`control-mismatch ${key} wanted=${value} actual=${cell[key]}`);
+    }
+  }
+  if (requested.overlays) {
+    for (const [id, on] of Object.entries(requested.overlays)) {
+      const actual = cell.overlays?.[id];
+      if (actual !== on) {
+        cell.gates.push(`control-mismatch overlay.${id} wanted=${on} actual=${actual}`);
+      }
+    }
+    const enabled = Object.entries(requested.overlays).filter(([, on]) => on).map(([id]) => id);
+    if (enabled.length === 1) {
+      for (const id of FORGE_OVERLAY_IDS) {
+        if (id !== enabled[0] && cell.overlays?.[id] === true) {
+          cell.gates.push(`control-mismatch overlay.${id} wanted=false actual=true`);
+        }
+      }
+    }
+  }
+}
+
 /** JSON round-trip of the runtime QA probe (frozen copy, never the live object). */
 export async function readQa(page) {
   try {
@@ -183,6 +304,10 @@ function newCell(opts) {
     image: null,
     perf: { fps: 0, gameWorkP99Ms: 0, rafP99Ms: 0 },
     draws: null,
+    overlays: {},
+    uiVisible: true,
+    reviewFog: true,
+    frozen: true,
     entities: { live: 0, total: 0 },
     errors: [],
     gates: [],
@@ -243,12 +368,19 @@ export async function captureFromPage(page, opts) {
     cameraMode = 'normal',
     settleRafs = 2,
     viewport = DEFAULT_VIEWPORT,
+    controlExpected = null,
+    overlayColor = null,
+    overlayColorMinPixels = OVERLAY_COLOR_MIN_PIXELS,
+    requireForgeMetrics = false,
   } = opts;
   const cell = opts.cell ?? newCell(opts);
   try {
     await settleFrames(page, settleRafs);
     const qa = await readQa(page);
-    if (qa) {
+    const forgeSnap = await readForgeSnapshot(page);
+    if (forgeSnap) {
+      applySnapshotToCell(cell, forgeSnap);
+    } else if (qa) {
       cell.actualSeed = Number(qa.config?.seed ?? 0) >>> 0;
       cell.actualState = typeof qa.state === 'string' ? qa.state : null;
       cell.tick = Number(qa.tick ?? 0);
@@ -264,12 +396,29 @@ export async function captureFromPage(page, opts) {
 
     if (samplePerf) {
       await page.waitForTimeout(PERF_WARMUP_MS);
-      const deltas = await measureRafSpacing(page, FRAME_SAMPLE_MS);
-      cell.perf.rafP99Ms = p99Of(deltas);
-      const qa2 = await readQa(page);
-      if (qa2) {
-        cell.perf.gameWorkP99Ms = Number(qa2.p99FrameMs ?? 0);
-        cell.perf.fps = Number(qa2.fps ?? 0);
+      const forgeMetrics = await page.evaluate(() => {
+        const forge = globalThis.__STARHAVEN_FORGE__;
+        return forge ? forge.metrics() : null;
+      });
+      if (forgeMetrics) {
+        cell.perf.gameWorkP99Ms = Number(forgeMetrics.gameWorkP99Ms ?? 0);
+        cell.perf.rafP99Ms = Number(forgeMetrics.rafP99Ms ?? 0);
+        cell.perf.fps = Number(forgeMetrics.fps ?? 0);
+      } else {
+        const deltas = await measureRafSpacing(page, FRAME_SAMPLE_MS);
+        cell.perf.rafP99Ms = p99Of(deltas);
+        const qa2 = await readQa(page);
+        if (qa2) {
+          cell.perf.gameWorkP99Ms = Number(qa2.p99FrameMs ?? 0);
+          cell.perf.fps = Number(qa2.fps ?? 0);
+        }
+      }
+      if (requireForgeMetrics) {
+        if (!(cell.perf.gameWorkP99Ms > 0)) cell.gates.push('gameWorkP99-zero');
+        if (!(cell.perf.rafP99Ms > 0)) cell.gates.push('rafP99-zero');
+        if (cell.perf.gameWorkP99Ms > 0 && cell.perf.rafP99Ms > 0 && cell.perf.gameWorkP99Ms === cell.perf.rafP99Ms) {
+          cell.gates.push('perf-fields-conflated');
+        }
       }
     }
 
@@ -281,21 +430,23 @@ export async function captureFromPage(page, opts) {
       }
     });
     cell.draws = qa?.draws ?? info?.calls ?? null;
-    const total = await page.evaluate(() => globalThis.__STARHOLD_WORLD__?.ents?.length ?? 0);
-    cell.entities = { live: Number(qa?.entities ?? 0), total: Number(total) };
-    cell.selection = await page.evaluate(() =>
-      Array.from(globalThis.__STARHOLD_INPUT__?.selected ?? []).sort((a, b) => a - b),
-    );
-    const cam = await page.evaluate(() => {
-      const input = globalThis.__STARHOLD_INPUT__;
-      if (!input) return null;
-      return {
-        x: Number(input.pan?.x ?? 0),
-        z: Number(input.pan?.z ?? 0),
-        halfH: Number(input.halfH ?? 0),
-      };
-    });
-    if (cam) cell.camera = cam;
+    if (!forgeSnap) {
+      const total = await page.evaluate(() => globalThis.__STARHOLD_WORLD__?.ents?.length ?? 0);
+      cell.entities = { live: Number(qa?.entities ?? 0), total: Number(total) };
+      cell.selection = await page.evaluate(() =>
+        Array.from(globalThis.__STARHOLD_INPUT__?.selected ?? []).sort((a, b) => a - b),
+      );
+      const cam = await page.evaluate(() => {
+        const input = globalThis.__STARHOLD_INPUT__;
+        if (!input) return null;
+        return {
+          x: Number(input.pan?.x ?? 0),
+          z: Number(input.pan?.z ?? 0),
+          halfH: Number(input.halfH ?? 0),
+        };
+      });
+      if (cam) cell.camera = cam;
+    }
 
     if (shotPath) {
       await page.screenshot({ path: shotPath, type: 'png' });
@@ -310,6 +461,13 @@ export async function captureFromPage(page, opts) {
           else if (isEmpty(cell.image)) cell.gates.push('capture-empty');
           if (cell.image.paletteAdherence < PALETTE_ADHERENCE_MIN) {
             cell.gates.push(`palette-adherence ${cell.image.paletteAdherence}`);
+          }
+          if (overlayColor) {
+            const hits = countOverlayColorPixels(shotPath, overlayColor, OVERLAY_COLOR_TOLERANCE);
+            cell.overlayColorHits = hits;
+            if (hits < overlayColorMinPixels) {
+              cell.gates.push(`overlay-color ${overlayColor} hits=${hits} < ${overlayColorMinPixels}`);
+            }
           }
         } catch (err) {
           cell.gates.push(`analyze: ${err?.message ?? err}`);
@@ -327,6 +485,7 @@ export async function captureFromPage(page, opts) {
   if (shotPath && !cell.image && !cell.gates.some((g) => g.startsWith('capture'))) {
     cell.gates.push('capture-missing');
   }
+  if (controlExpected) gateRequestedControl(cell, controlExpected);
   if (cell.actualState != null && cell.actualState !== expectedState) {
     cell.gates.push(`state ${cell.actualState} != ${expectedState}`);
   }
@@ -377,9 +536,8 @@ export async function captureRouteCell(context, opts) {
 // --- extras ----------------------------------------------------------------
 
 /**
- * Extras on route 'opening' / landscape-left, reusing ONE loaded page for
- * selected-scout / tactical-close / strategic-far (mutate via input, no
- * reload) plus a second page with &ui=0 for ui-free. Returns { cells, failures }.
+ * Extras on route 'opening' / landscape-left via typed forge control.
+ * Reuses ONE loaded page for scout/close/far/normal restore and ui-free.
  */
 export async function captureExtras(context, opts) {
   const {
@@ -398,42 +556,55 @@ export async function captureExtras(context, opts) {
   const cells = [];
   const failures = [];
   let currentCell = null;
-
-  // P1 — normal load, shared by the three camera/selection extras.
-  const p1 = await context.newPage();
+  const page = await context.newPage();
   try {
-    await p1.setViewportSize({ width: viewport.width, height: viewport.height });
-    await p1.goto(baseUrlOpening, { waitUntil: 'load', timeout: NAV_TIMEOUT_MS });
-    await p1.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto(baseUrlOpening, { waitUntil: 'load', timeout: NAV_TIMEOUT_MS });
+    await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, {
       timeout: PROBE_TIMEOUT_MS,
     });
-    await settleFrames(p1);
-    attachPageLoggers(p1, () => currentCell, consoleSeq);
+    await waitForForgeControl(page);
+    await settleFrames(page);
+    attachPageLoggers(page, () => currentCell, consoleSeq);
     if (webglInfo && webglInfo.renderer == null) {
-      const renderer = await readWebglRenderer(p1);
+      const renderer = await readWebglRenderer(page);
       webglInfo.renderer = renderer;
       webglInfo.softwareRenderer = isSoftwareRenderer(renderer);
     }
+
     const specs = [
       {
-        id: 'extra-selected-scout',
-        cameraMode: 'normal',
-        // String-based evaluate bodies only: Playwright cannot serialize a
-        // function passed as an evaluate ARGUMENT.
-        mutateExpr: () => `(() => { const i = globalThis.__STARHOLD_INPUT__; if (i) i.focusScout(); })()`,
-      },
-      {
         id: 'extra-tactical-close',
-        cameraMode: 'tactical-close',
-        mutateExpr: ({ x, z }) =>
-          `(() => { const i = globalThis.__STARHOLD_INPUT__; if (i) { i.halfH = 5; i.pan.x = ${x}; i.pan.z = ${z}; } })()`,
+        action: {
+          cameraMode: 'tactical-close',
+          camera: { x: scenarioCamera.x, z: scenarioCamera.z },
+        },
+        controlExpected: { cameraMode: 'tactical-close' },
       },
       {
         id: 'extra-strategic-far',
-        cameraMode: 'strategic-far',
-        mutateExpr: () => `(() => { const i = globalThis.__STARHOLD_INPUT__; if (i) i.halfH = 18; })()`,
+        action: { cameraMode: 'strategic-far' },
+        controlExpected: { cameraMode: 'strategic-far' },
+      },
+      {
+        id: 'extra-camera-normal-restore',
+        action: { cameraMode: 'normal' },
+        controlExpected: { cameraMode: 'normal' },
+        cameraHalfH: scenarioCamera.halfH,
+      },
+      {
+        id: 'extra-selected-scout',
+        action: { selectScout: true },
+        controlExpected: { cameraMode: 'normal' },
+        samplePerf: true,
+      },
+      {
+        id: 'extra-ui-free',
+        action: { uiVisible: false },
+        controlExpected: { uiVisible: false, cameraMode: 'normal' },
       },
     ];
+
     for (const spec of specs) {
       currentCell = newCell({
         id: spec.id,
@@ -443,12 +614,20 @@ export async function captureExtras(context, opts) {
         requestedSeed: seed,
         expectedState: 'Playing',
         perspective: 'player',
-        cameraMode: spec.cameraMode,
+        cameraMode: spec.controlExpected.cameraMode ?? 'normal',
         gateP99,
       });
-      const expression = spec.mutateExpr({ x: scenarioCamera.x, z: scenarioCamera.z });
-      await p1.evaluate(expression);
-      const cell = await captureFromPage(p1, {
+      await applyForgeControl(page, spec.action);
+      await settleFrames(page, 3);
+      if (spec.samplePerf) {
+        const start = Date.now();
+        while (Date.now() - start < 30000) {
+          const metrics = await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.metrics());
+          if (metrics.rafSamples >= 120 && metrics.rafP99Ms > 0 && metrics.gameWorkP99Ms > 0) break;
+          await page.waitForTimeout(200);
+        }
+      }
+      const cell = await captureFromPage(page, {
         id: spec.id,
         kind: 'extra',
         orientation: 'landscape-left',
@@ -459,81 +638,118 @@ export async function captureExtras(context, opts) {
         gateP99,
         shotPath: path.join(cellsDir, `${spec.id}.png`),
         webglInfo,
-        samplePerf: true,
+        samplePerf: Boolean(spec.samplePerf),
+        requireForgeMetrics: Boolean(spec.samplePerf),
         perspective: 'player',
-        cameraMode: spec.cameraMode,
+        cameraMode: spec.controlExpected.cameraMode ?? 'normal',
+        controlExpected: spec.controlExpected,
         viewport,
+        cell: currentCell,
       });
+      if (spec.cameraHalfH != null && Math.abs(cell.camera.halfH - spec.cameraHalfH) > 0.01) {
+        cell.gates.push(`camera-restore halfH=${cell.camera.halfH} expected=${spec.cameraHalfH}`);
+        cell.ok = false;
+      }
       cells.push(cell);
     }
-    // Restore halfH for any later reuse of the page.
-    await p1.evaluate(
-      (halfH) => {
-        const input = globalThis.__STARHOLD_INPUT__;
-        if (input) input.halfH = halfH;
-      },
-      scenarioCamera.halfH,
-    );
   } catch (err) {
     failures.push(`extras: ${err?.message ?? String(err)}`);
   } finally {
     try {
-      await p1.close();
-    } catch {
-      /* already closed */
-    }
-  }
-
-  // P2 — ui-free needs a reload with &ui=0 (control cannot toggle UI display).
-  const p2 = await context.newPage();
-  try {
-    const uiFreeUrl = `${baseUrlOpening}&ui=0`;
-    await p2.setViewportSize({ width: viewport.width, height: viewport.height });
-    await p2.goto(uiFreeUrl, { waitUntil: 'load', timeout: NAV_TIMEOUT_MS });
-    await p2.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, {
-      timeout: PROBE_TIMEOUT_MS,
-    });
-    await settleFrames(p2);
-    attachPageLoggers(p2, () => currentCell, consoleSeq);
-    currentCell = newCell({
-      id: 'extra-ui-free',
-      kind: 'extra',
-      orientation: 'landscape-left',
-      url: uiFreeUrl,
-      requestedSeed: seed,
-      expectedState: 'Playing',
-      perspective: 'player',
-      cameraMode: 'normal',
-      gateP99,
-    });
-    const cell = await captureFromPage(p2, {
-      id: 'extra-ui-free',
-      kind: 'extra',
-      orientation: 'landscape-left',
-      url: uiFreeUrl,
-      requestedSeed: seed,
-      expectedState: 'Playing',
-      paletteRgb,
-      gateP99,
-      shotPath: path.join(cellsDir, 'extra-ui-free.png'),
-      webglInfo,
-      samplePerf: true,
-      perspective: 'player',
-      cameraMode: 'normal',
-      viewport,
-    });
-    cells.push(cell);
-  } catch (err) {
-    failures.push(`extras ui-free: ${err?.message ?? String(err)}`);
-  } finally {
-    try {
-      await p2.close();
+      await page.close();
     } catch {
       /* already closed */
     }
   }
 
   return { cells, failures };
+}
+
+// --- overlay evidence cells -------------------------------------------------
+
+/**
+ * One composited PNG per overlay with typed-control readback and color evidence.
+ */
+export async function captureOverlayCells(context, opts) {
+  const {
+    baseUrl,
+    seed,
+    paletteRgb = [],
+    gateP99 = null,
+    consoleSeq = null,
+    webglInfo = null,
+    outDir,
+    viewport = DEFAULT_VIEWPORT,
+    stepTicks = OVERLAY_PATH_STEP_TICKS,
+  } = opts;
+  const cellsDir = path.join(outDir, 'cells');
+  const url = `${baseUrl}/?qa=opening&qa-seed=${seed}&orientation=landscape-left&forge=1&forge-panel=0`;
+  const cells = [];
+  let currentCell = null;
+  const page = await context.newPage();
+  try {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto(url, { waitUntil: 'load', timeout: NAV_TIMEOUT_MS });
+    await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, {
+      timeout: PROBE_TIMEOUT_MS,
+    });
+    await waitForForgeControl(page);
+    await applyForgeControl(page, { frozen: true, step: stepTicks, overlayOff: true });
+    await settleFrames(page, 4);
+    attachPageLoggers(page, () => currentCell, consoleSeq);
+    if (webglInfo && webglInfo.renderer == null) {
+      const renderer = await readWebglRenderer(page);
+      webglInfo.renderer = renderer;
+      webglInfo.softwareRenderer = isSoftwareRenderer(renderer);
+    }
+
+    for (const overlayId of FORGE_OVERLAY_IDS) {
+      const id = `overlay-${overlayId}`;
+      currentCell = newCell({
+        id,
+        kind: 'extra',
+        orientation: 'landscape-left',
+        url,
+        requestedSeed: seed,
+        expectedState: 'Playing',
+        perspective: 'player',
+        cameraMode: 'normal',
+        gateP99,
+      });
+      await applyForgeControl(page, { overlayOff: true, overlay: { id: overlayId, on: true } });
+      await settleFrames(page, 4);
+      const overlayColor = OVERLAY_EVIDENCE_COLORS[overlayId];
+      const cell = await captureFromPage(page, {
+        id,
+        kind: 'extra',
+        orientation: 'landscape-left',
+        url,
+        requestedSeed: seed,
+        expectedState: 'Playing',
+        paletteRgb,
+        gateP99,
+        shotPath: path.join(cellsDir, `${id}.png`),
+        webglInfo,
+        samplePerf: false,
+        perspective: 'player',
+        cameraMode: 'normal',
+        controlExpected: { overlays: { [overlayId]: true } },
+        overlayColor,
+        viewport,
+        cell: currentCell,
+      });
+      cells.push(cell);
+    }
+  } catch (err) {
+    return { cells, failure: `overlay-cells: ${err?.message ?? String(err)}` };
+  } finally {
+    try {
+      await page.close();
+    } catch {
+      /* already closed */
+    }
+  }
+  return { cells, failure: null };
 }
 
 // --- perspective triptych ---------------------------------------------------
@@ -564,20 +780,12 @@ export async function capturePerspectiveTriptych(context, opts) {
     await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, {
       timeout: PROBE_TIMEOUT_MS,
     });
-    const hasForge = await page.evaluate(() => Boolean(globalThis.__STARHAVEN_FORGE__));
-    if (!hasForge) {
-      return { cells: [], failure: 'perspective-control-unavailable' };
-    }
-    await page.evaluate(() => {
-      globalThis.__STARHAVEN_FORGE__.setFrozen(true);
-      // Scout-window tick (~30 sim seconds at 20Hz): the opening scout has split
-      // the map's knowledge by here, so player/rival/omniscient differ visibly.
-      globalThis.__STARHAVEN_FORGE__.step(600);
-    });
+    await waitForForgeControl(page);
+    await applyForgeControl(page, { frozen: true, step: OVERLAY_PATH_STEP_TICKS });
     attachPageLoggers(page, () => currentCell, consoleSeq);
     const cells = [];
     for (const perspective of ['player', 'rival', 'omniscient']) {
-      await page.evaluate((p) => globalThis.__STARHAVEN_FORGE__.setPerspective(p), perspective);
+      await applyForgeControl(page, { perspective });
       currentCell = newCell({
         id: `perspective-${perspective}`,
         kind: 'perspective',
@@ -600,21 +808,17 @@ export async function capturePerspectiveTriptych(context, opts) {
         gateP99,
         shotPath: path.join(outDir, 'cells', `perspective-${perspective}.png`),
         webglInfo,
-        samplePerf: true,
+        samplePerf: false,
         perspective,
         cameraMode: 'normal',
+        controlExpected: { perspective, frozen: true },
         settleRafs: 3,
         viewport,
+        cell: currentCell,
       });
       cells.push(cell);
     }
-    await page.evaluate(() => {
-      try {
-        globalThis.__STARHAVEN_FORGE__?.setPerspective('player');
-      } catch {
-        /* display-only restore */
-      }
-    });
+    await applyForgeControl(page, { perspective: 'player' });
     return { cells, failure: null };
   } catch (err) {
     return { cells: [], failure: `perspective-triptych: ${err?.message ?? String(err)}` };
@@ -630,15 +834,11 @@ export async function capturePerspectiveTriptych(context, opts) {
 // --- clip -------------------------------------------------------------------
 
 /**
- * Record proof.webm: load opening route with qa-seed, wait probe, freeze,
- * step(120), toggle 'paths' overlay, hold 800ms, close, rename to proof.webm.
- * Uses a DEDICATED recording context (recordVideo is a context-level option;
- * per-page recordVideo is ignored). When __STARHAVEN_FORGE__ is absent (FRD-2
- * not landed) the load sequence is still recorded and a
- * 'clip-control-unavailable' failure is returned.
+ * Record proof.webm with visible holds between typed-control actions.
+ * Identity banner stays visible (no forge-panel=0). Console/page errors fail the clip.
  */
 export async function captureClip(browser, opts) {
-  const { baseUrl, seed, outDir } = opts;
+  const { baseUrl, seed, outDir, stepTicks = 37, holdMs = 900 } = opts;
   const tmpDir = path.join(outDir, 'tmp');
   fs.mkdirSync(tmpDir, { recursive: true });
   const context = await browser.newContext({
@@ -647,31 +847,59 @@ export async function captureClip(browser, opts) {
     recordVideo: { dir: tmpDir, size: { width: 1366, height: 1024 } },
   });
   const page = await context.newPage();
+  const errors = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`);
+  });
+  page.on('pageerror', (err) => {
+    errors.push(`pageerror: ${err?.message ?? String(err)}`);
+  });
   let videoPath = null;
   let failure = null;
-  let note = null;
   try {
     videoPath = (await page.video()?.path().catch(() => null)) ?? null;
-    await page.goto(`${baseUrl}/?qa=opening&qa-seed=${seed}&orientation=landscape-left&forge=1&forge-panel=0`, {
-      waitUntil: 'load',
-      timeout: NAV_TIMEOUT_MS,
-    });
+    const url = `${baseUrl}/?qa=opening&qa-seed=${seed}&orientation=landscape-left&forge=1`;
+    await page.goto(url, { waitUntil: 'load', timeout: NAV_TIMEOUT_MS });
     await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, {
       timeout: PROBE_TIMEOUT_MS,
     });
-    const hasForge = await page.evaluate(() => Boolean(globalThis.__STARHAVEN_FORGE__));
-    if (hasForge) {
-      await page.evaluate(() => {
-        globalThis.__STARHAVEN_FORGE__.setFrozen(true);
-        globalThis.__STARHAVEN_FORGE__.step(600);
-        globalThis.__STARHAVEN_FORGE__.setOverlay('paths', true);
-      });
-      await page.waitForTimeout(800);
-    } else {
-      note = 'recorded load only; __STARHAVEN_FORGE__ absent (FRD-2 not landed)';
-      failure = 'clip-control-unavailable';
-      await page.waitForTimeout(800);
+    await waitForForgeControl(page);
+
+    // 1. deterministic load + identity readback hold
+    await page.waitForTimeout(holdMs);
+    const loadSnap = await readForgeSnapshot(page);
+    if (loadSnap?.actualSeed !== (seed >>> 0)) {
+      failure = `clip-seed-mismatch requested=${seed} actual=${loadSnap?.actualSeed}`;
     }
+
+    // 2. freeze hold
+    await applyForgeControl(page, { frozen: true });
+    await page.waitForTimeout(holdMs);
+    const frozenSnap = await readForgeSnapshot(page);
+    if (!frozenSnap?.frozen) failure = failure ?? 'clip-freeze-readback-failed';
+
+    // 3. bounded step + tick readback hold
+    const tickBefore = frozenSnap?.tick ?? 0;
+    await applyForgeControl(page, { step: stepTicks });
+    await page.waitForTimeout(holdMs);
+    const steppedSnap = await readForgeSnapshot(page);
+    if ((steppedSnap?.tick ?? 0) - tickBefore !== stepTicks) {
+      failure = failure ?? `clip-step-delta expected=${stepTicks} actual=${(steppedSnap?.tick ?? 0) - tickBefore}`;
+    }
+
+    // 4. camera change hold
+    await applyForgeControl(page, { cameraMode: 'tactical-close' });
+    await page.waitForTimeout(holdMs);
+    const cameraSnap = await readForgeSnapshot(page);
+    if (cameraSnap?.cameraMode !== 'tactical-close') {
+      failure = failure ?? 'clip-camera-readback-failed';
+    }
+
+    // 5. overlay toggle + readback hold
+    await applyForgeControl(page, { overlayOff: true, overlay: { id: 'paths', on: true } });
+    await page.waitForTimeout(holdMs);
+    const overlaySnap = await readForgeSnapshot(page);
+    if (!overlaySnap?.overlays?.paths) failure = failure ?? 'clip-overlay-readback-failed';
   } catch (err) {
     failure = `clip: ${err?.message ?? String(err)}`;
   } finally {
@@ -681,7 +909,7 @@ export async function captureClip(browser, opts) {
       /* already closed */
     }
     try {
-      await context.close(); // finalizes the recording
+      await context.close();
     } catch {
       /* already closed */
     }
@@ -696,5 +924,11 @@ export async function captureClip(browser, opts) {
       file = null;
     }
   }
-  return { file, failure, note };
+  if (!file || !fs.existsSync(file) || fs.statSync(file).size <= 0) {
+    failure = failure ?? 'clip-missing-or-empty';
+  }
+  if (errors.length > 0) {
+    failure = failure ?? 'clip-console-errors';
+  }
+  return { file, failure, errors };
 }

@@ -156,17 +156,18 @@ export function drawOverlays(
 
     if (e.kind === Kind.Resource) continue;
 
-    if (overlays.paths && e.path && e.path.length > 1) {
+    if (overlays.paths && e.path && e.path.length >= 4) {
       ctx.strokeStyle = OVERLAY_COLORS.paths;
       ctx.lineWidth = 2;
       ctx.setLineDash([7, 5]);
       ctx.beginPath();
-      // Path waypoints are world tile coords; start at the entity's live foot
-      // so the overlay stays visually attached to the moving sprite.
       ctx.moveTo(foot.x, foot.y);
-      const start = Math.max(0, Math.min(e.pathI, e.path.length - 1));
-      for (let index = start; index < e.path.length; index++) {
-        const point = view.project(e.path[index], 0.05, e.path[index], { x: 0, y: 0 });
+      const waypointCount = e.path.length >> 1;
+      const startWaypoint = Math.max(0, Math.min(e.pathI, waypointCount - 1));
+      for (let wi = startWaypoint; wi < waypointCount; wi++) {
+        const wx = e.path[wi * 2] + 0.5;
+        const wz = e.path[wi * 2 + 1] + 0.5;
+        const point = view.project(wx, 0.05, wz);
         ctx.lineTo(point.x, point.y);
       }
       ctx.stroke();
@@ -188,21 +189,29 @@ export function drawOverlays(
       ctx.stroke();
     }
 
-    const label =
+    const orderLabel =
       overlays.orders && e.order >= 0 && e.order < ORDER_LABELS.length
         ? ORDER_LABELS[e.order]
         : null;
-    if (overlays['entity-ids'] || label !== null) {
-      const text = overlays['entity-ids'] ? (label !== null ? `${e.id}:${label}` : String(e.id)) : label ?? '';
-      if (text.length > 0) {
-        const head = view.project(e.x, 1.65, e.z);
-        const y = head.y - 18;
-        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-        ctx.lineWidth = 3;
-        ctx.strokeText(text, head.x, y);
-        ctx.fillStyle = OVERLAY_COLORS['entity-ids'];
-        ctx.fillText(text, head.x, y);
-      }
+    if (orderLabel !== null) {
+      const head = view.project(e.x, 1.65, e.z);
+      const y = head.y - 18;
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineWidth = 3;
+      ctx.strokeText(orderLabel, head.x, y);
+      ctx.fillStyle = OVERLAY_COLORS.orders;
+      ctx.fillText(orderLabel, head.x, y);
+    }
+
+    if (overlays['entity-ids']) {
+      const text = orderLabel !== null ? `${e.id}:${orderLabel}` : String(e.id);
+      const head = view.project(e.x, 1.65, e.z);
+      const y = head.y - (orderLabel !== null ? 32 : 18);
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineWidth = 3;
+      ctx.strokeText(text, head.x, y);
+      ctx.fillStyle = OVERLAY_COLORS['entity-ids'];
+      ctx.fillText(text, head.x, y);
     }
   }
 
