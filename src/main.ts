@@ -537,7 +537,7 @@ function frame(now: number): void {
 
   if (world && view) view.draw(world, acc / DT, input?.selected ?? new Set<number>(), input?.box ?? null);
   if (world && input && hud) hud.draw(world, input, fpsSmoothed);
-  if (forgeReviewEnabled) window.__STARHAVEN_FORGE_RAF_TICK__?.(now);
+  if (forgeReviewEnabled) (window as StarhavenWindow).__STARHAVEN_FORGE_RAF_TICK__?.(now);
   recordFrameWork(performance.now() - workStart);
   publish();
 }
@@ -611,6 +611,7 @@ interface LegacyProbe {
 }
 
 interface StarhavenWindow extends Window {
+  __STARHAVEN_FORGE_RAF_TICK__?: (now: number) => void;
   __STARHAVEN_QA__?: StarhavenQaProbe;
   __SPACEPIXEL__?: LegacyProbe;
   __STARHOLD__?: LegacyProbe;

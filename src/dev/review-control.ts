@@ -181,7 +181,7 @@ export function tickForgeRafSpacing(now: number = performance.now()): void {
 export function rafP99FromRing(ring: ArrayLike<number>, count: number): number {
   if (count < RAF_P99_MIN_SAMPLES) return 0;
   const n = Math.min(count, ring.length);
-  const sorted = Array.from(ring.slice(0, n)).sort((a, b) => a - b);
+  const sorted = Array.from({ length: n }, (_, index) => ring[index]).sort((a, b) => a - b);
   const value = sorted[Math.ceil(sorted.length * 0.99) - 1] ?? 0;
   return Math.round(value * 100) / 100;
 }
