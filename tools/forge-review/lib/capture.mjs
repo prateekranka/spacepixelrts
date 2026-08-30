@@ -13,7 +13,8 @@ export const DEFAULT_VIEWPORT = { width: 1366, height: 1024 };
 export const NAV_TIMEOUT_MS = 30000;
 export const PROBE_TIMEOUT_MS = 20000;
 export const FORGE_WAIT_MS = 15000;
-export const PERF_WARMUP_MS = 7000; // >120 rAF samples @~20fps SwiftShader
+/** Warm-up must exceed the 120-sample game-work and rAF-spacing rings (contract). */
+export const PERF_WARMUP_FRAMES = 125;
 export const FRAME_SAMPLE_MS = 800;
 export const PALETTE_ADHERENCE_MIN = 0.35;
 export const OVERLAY_PATH_STEP_TICKS = 600;
@@ -131,6 +132,37 @@ export async function waitForForgeControl(page, timeoutMs = FORGE_WAIT_MS) {
   await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_FORGE__), null, {
     timeout: timeoutMs,
   });
+}
+
+/** Run actual requestAnimationFrame callbacks to flush perf rings (never time-guessed). */
+export async function warmupPerfRings(page, frameCount = PERF_WARMUP_FRAMES) {
+  await page.evaluate(
+    (count) =>
+      new Promise((resolve) => {
+        let remaining = count;
+        const tick = () => {
+          if (remaining <= 0) {
+            resolve(remaining);
+            return;
+          }
+          remaining -= 1;
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+    frameCount,
+  );
+}
+
+/** Navigate a route cell page: QA probe then typed forge control (forge=1 routes). */
+export async function prepareRoutePage(page, opts) {
+  const { url, viewport = DEFAULT_VIEWPORT } = opts;
+  await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  await page.goto(url, { waitUntil: 'load', timeout: NAV_TIMEOUT_MS });
+  await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, {
+    timeout: PROBE_TIMEOUT_MS,
+  });
+  await waitForForgeControl(page);
 }
 
 /** JSON round-trip of the forge control snapshot (single source of truth). */
@@ -372,14 +404,19 @@ export async function captureFromPage(page, opts) {
     overlayColor = null,
     overlayColorMinPixels = OVERLAY_COLOR_MIN_PIXELS,
     requireForgeMetrics = false,
+    requireForgeControl = false,
   } = opts;
   const cell = opts.cell ?? newCell(opts);
+  const forgeUrl = typeof url === 'string' && url.includes('forge=1');
+  const mustHaveForge = requireForgeControl || forgeUrl;
   try {
     await settleFrames(page, settleRafs);
     const qa = await readQa(page);
     const forgeSnap = await readForgeSnapshot(page);
     if (forgeSnap) {
       applySnapshotToCell(cell, forgeSnap);
+    } else if (mustHaveForge) {
+      cell.gates.push('forge-control-missing');
     } else if (qa) {
       cell.actualSeed = Number(qa.config?.seed ?? 0) >>> 0;
       cell.actualState = typeof qa.state === 'string' ? qa.state : null;
@@ -395,7 +432,7 @@ export async function captureFromPage(page, opts) {
     }
 
     if (samplePerf) {
-      await page.waitForTimeout(PERF_WARMUP_MS);
+      await warmupPerfRings(page);
       const forgeMetrics = await page.evaluate(() => {
         const forge = globalThis.__STARHAVEN_FORGE__;
         return forge ? forge.metrics() : null;
@@ -404,7 +441,7 @@ export async function captureFromPage(page, opts) {
         cell.perf.gameWorkP99Ms = Number(forgeMetrics.gameWorkP99Ms ?? 0);
         cell.perf.rafP99Ms = Number(forgeMetrics.rafP99Ms ?? 0);
         cell.perf.fps = Number(forgeMetrics.fps ?? 0);
-      } else {
+      } else if (!mustHaveForge) {
         const deltas = await measureRafSpacing(page, FRAME_SAMPLE_MS);
         cell.perf.rafP99Ms = p99Of(deltas);
         const qa2 = await readQa(page);
@@ -502,23 +539,29 @@ export async function captureFromPage(page, opts) {
 
 // --- route cells ------------------------------------------------------------
 
-/** Navigate -> wait probe -> captureFromPage -> close page. Serial by design. */
+/** Navigate -> wait probe + forge control -> captureFromPage -> close page. Serial by design. */
 export async function captureRouteCell(context, opts) {
   const page = await context.newPage();
   const cell = newCell(opts);
   attachPageLoggers(page, () => cell, opts.consoleSeq);
   try {
-    await page.setViewportSize({
-      width: opts.viewport?.width ?? DEFAULT_VIEWPORT.width,
-      height: opts.viewport?.height ?? DEFAULT_VIEWPORT.height,
+    await prepareRoutePage(page, {
+      url: opts.url,
+      viewport: opts.viewport ?? DEFAULT_VIEWPORT,
     });
-    await page.goto(opts.url, { waitUntil: 'load', timeout: NAV_TIMEOUT_MS });
-    await page.waitForFunction(() => Boolean(globalThis.__STARHAVEN_QA__), null, {
-      timeout: PROBE_TIMEOUT_MS,
+    await captureFromPage(page, {
+      ...opts,
+      cell,
+      viewport: opts.viewport ?? DEFAULT_VIEWPORT,
+      requireForgeControl: true,
+      requireForgeMetrics: opts.requireForgeMetrics ?? true,
     });
-    await captureFromPage(page, { ...opts, cell, viewport: opts.viewport ?? DEFAULT_VIEWPORT });
   } catch (err) {
-    cell.errors.push(`runtime: ${err?.message ?? String(err)}`);
+    const message = err?.message ?? String(err);
+    if (!cell.gates.includes('forge-control-missing') && /__STARHAVEN_FORGE__|forge control/i.test(message)) {
+      cell.gates.push('forge-control-missing');
+    }
+    cell.errors.push(`runtime: ${message}`);
     if (opts.shotPath && !cell.gates.some((g) => g.startsWith('capture'))) {
       cell.gates.push('capture-missing');
     }
@@ -620,12 +663,7 @@ export async function captureExtras(context, opts) {
       await applyForgeControl(page, spec.action);
       await settleFrames(page, 3);
       if (spec.samplePerf) {
-        const start = Date.now();
-        while (Date.now() - start < 30000) {
-          const metrics = await page.evaluate(() => globalThis.__STARHAVEN_FORGE__.metrics());
-          if (metrics.rafSamples >= 120 && metrics.rafP99Ms > 0 && metrics.gameWorkP99Ms > 0) break;
-          await page.waitForTimeout(200);
-        }
+        await warmupPerfRings(page);
       }
       const cell = await captureFromPage(page, {
         id: spec.id,
@@ -838,7 +876,7 @@ export async function capturePerspectiveTriptych(context, opts) {
  * Identity banner stays visible (no forge-panel=0). Console/page errors fail the clip.
  */
 export async function captureClip(browser, opts) {
-  const { baseUrl, seed, outDir, stepTicks = 37, holdMs = 900 } = opts;
+  const { baseUrl, seed, outDir, stepTicks = 37, holdMs = 900, consoleSeq = null } = opts;
   const tmpDir = path.join(outDir, 'tmp');
   fs.mkdirSync(tmpDir, { recursive: true });
   const context = await browser.newContext({
@@ -848,11 +886,18 @@ export async function captureClip(browser, opts) {
   });
   const page = await context.newPage();
   const errors = [];
+  const consoleLog = [];
   page.on('console', (msg) => {
+    const entry = { type: msg.type(), text: msg.text() };
+    if (consoleSeq) entry.seq = consoleSeq.n++;
+    consoleLog.push(entry);
     if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`);
   });
   page.on('pageerror', (err) => {
-    errors.push(`pageerror: ${err?.message ?? String(err)}`);
+    const entry = { type: 'pageerror', text: err?.message ?? String(err) };
+    if (consoleSeq) entry.seq = consoleSeq.n++;
+    consoleLog.push(entry);
+    errors.push(`pageerror: ${entry.text}`);
   });
   let videoPath = null;
   let failure = null;
@@ -930,5 +975,5 @@ export async function captureClip(browser, opts) {
   if (errors.length > 0) {
     failure = failure ?? 'clip-console-errors';
   }
-  return { file, failure, errors };
+  return { file, failure, errors, consoleLog };
 }

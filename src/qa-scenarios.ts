@@ -142,8 +142,8 @@ const queryParam = (search: string, key: string): string | undefined => {
 const parseQaSeed = (search: string): number | undefined => {
   const raw = queryParam(search, 'qa-seed');
   if (raw === undefined) return undefined;
-  if (!/^(0|[1-9][0-9]*)$/.test(raw.trim())) return undefined;
-  const value = Number(raw.trim());
+  if (!/^(0|[1-9][0-9]*)$/.test(raw)) return undefined;
+  const value = Number(raw);
   if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) return undefined;
   return value;
 };

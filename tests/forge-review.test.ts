@@ -23,12 +23,21 @@ import {
 } from '../src/dev/review-control';
 import { SCHEMA_VERSION, validateManifest } from '../tools/forge-review/lib/manifest.mjs';
 import {
+  buildConsoleTxt,
+  CAPTURE_WRITE_ORDER,
+  composeCriticBrief,
+} from '../tools/forge-review/lib/pack-artifacts.mjs';
+import {
   analyzePng,
   isBlack,
   isEmpty,
   loadPaletteRgb,
 } from '../tools/forge-review/lib/pixels.mjs';
-import { buildCapturePlan } from '../tools/forge-review/lib/capture.mjs';
+import {
+  PERF_WARMUP_FRAMES,
+  buildCapturePlan,
+  warmupPerfRings,
+} from '../tools/forge-review/lib/capture.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -81,6 +90,17 @@ function validCell(overrides: Record<string, unknown> = {}) {
     },
     perf: { fps: 60, gameWorkP99Ms: 8.4, rafP99Ms: 33.3 },
     draws: 120,
+    overlays: {
+      paths: false,
+      'hit-regions': false,
+      'line-of-sight': false,
+      orders: false,
+      facing: false,
+      'entity-ids': false,
+    },
+    uiVisible: true,
+    reviewFog: true,
+    frozen: true,
     entities: { live: 30, total: 64 },
     errors: [],
     gates: [],
@@ -147,9 +167,25 @@ test('qa-seed rejects invalid unsigned forms', () => {
     '?qa=opening&qa-seed=abc',
     '?qa=opening&qa-seed=',
     '?qa=opening&qa-seed=4294967296',
+    '?qa=opening&qa-seed=+42',
+    '?qa=opening&qa-seed= 42',
+    '?qa=opening&qa-seed=42 ',
+    '?qa=opening&qa-seed=%2042',
+    '?qa=opening&qa-seed=42%20',
   ]) {
     const scenario = parseQaScenario(query);
     assert.equal(scenario?.config.seed, 0x5eed, `${query} must not override seed`);
+  }
+});
+
+test('qa-seed accepts canonical unsigned decimals 0..4294967295', () => {
+  for (const [query, expected] of [
+    ['?qa=opening&qa-seed=0', 0],
+    ['?qa=opening&qa-seed=42', 42],
+    ['?qa=opening&qa-seed=4294967295', 4294967295],
+  ] as const) {
+    const scenario = parseQaScenario(query);
+    assert.equal(scenario?.config.seed, expected, `${query} must parse as ${expected}`);
   }
 });
 
@@ -260,6 +296,201 @@ test('manifest validator rejects missing perf.gameWorkP99Ms', () => {
     result.errors.some((e) => e.includes('gameWorkP99Ms')),
     `expected a perf.gameWorkP99Ms error, got: ${result.errors.join('; ')}`,
   );
+});
+
+test('manifest validator rejects missing typed identity fields on cells', () => {
+  const m = validManifest();
+  delete m.pack.routes[0].frozen;
+  const result = validateManifest(m);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((e) => e.includes('.frozen')));
+});
+
+test('manifest validator rejects incomplete overlays record', () => {
+  const m = validManifest();
+  m.pack.routes[0].overlays = { paths: false };
+  const result = validateManifest(m);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((e) => e.includes('.overlays')));
+});
+
+function overlayEvidenceCell(id: string, overlayId: string, hits = 12) {
+  const overlays = {
+    paths: false,
+    'hit-regions': false,
+    'line-of-sight': false,
+    orders: false,
+    facing: false,
+    'entity-ids': false,
+  } as Record<string, boolean>;
+  overlays[overlayId] = true;
+  return validCell({
+    id,
+    kind: 'extra',
+    overlays,
+    overlayColorHits: hits,
+  });
+}
+
+test('manifest validator requires six overlay evidence cells when opening is requested', () => {
+  const m = validManifest({
+    args: { out: '/tmp/forge', seed: 777, routes: ['opening'] },
+    pack: {
+      routes: [validCell()],
+      extras: [],
+      perspectives: [],
+      board: '/tmp/forge/board.png',
+      consoleTxt: '/tmp/forge/console.txt',
+      criticBrief: '/tmp/forge/critic-brief.txt',
+      clip: null,
+    },
+  });
+  const missing = validateManifest(m);
+  assert.equal(missing.valid, false);
+  assert.ok(missing.errors.some((e) => e.includes('overlay evidence cells')));
+
+  const complete = validManifest({
+    args: { out: '/tmp/forge', seed: 777, routes: ['opening'] },
+    pack: {
+      routes: [validCell()],
+      extras: [
+        overlayEvidenceCell('overlay-paths', 'paths'),
+        overlayEvidenceCell('overlay-hit-regions', 'hit-regions'),
+        overlayEvidenceCell('overlay-line-of-sight', 'line-of-sight'),
+        overlayEvidenceCell('overlay-orders', 'orders'),
+        overlayEvidenceCell('overlay-facing', 'facing'),
+        overlayEvidenceCell('overlay-entity-ids', 'entity-ids'),
+      ],
+      perspectives: [],
+      board: '/tmp/forge/board.png',
+      consoleTxt: '/tmp/forge/console.txt',
+      criticBrief: '/tmp/forge/critic-brief.txt',
+      clip: null,
+    },
+  });
+  assert.deepEqual(validateManifest(complete), { valid: true, errors: [] });
+});
+
+test('manifest validator rejects overlay evidence with low color hits', () => {
+  const m = validManifest({
+    args: { out: '/tmp/forge', seed: 777, routes: ['opening'] },
+    pack: {
+      routes: [validCell()],
+      extras: [
+        overlayEvidenceCell('overlay-paths', 'paths', 3),
+        overlayEvidenceCell('overlay-hit-regions', 'hit-regions'),
+        overlayEvidenceCell('overlay-line-of-sight', 'line-of-sight'),
+        overlayEvidenceCell('overlay-orders', 'orders'),
+        overlayEvidenceCell('overlay-facing', 'facing'),
+        overlayEvidenceCell('overlay-entity-ids', 'entity-ids'),
+      ],
+      perspectives: [],
+      board: '/tmp/forge/board.png',
+      consoleTxt: '/tmp/forge/console.txt',
+      criticBrief: '/tmp/forge/critic-brief.txt',
+      clip: null,
+    },
+  });
+  const result = validateManifest(m);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((e) => e.includes('overlay-paths') && e.includes('overlayColorHits')));
+});
+
+test('perf warm-up uses at least 125 actual rAF callbacks', () => {
+  assert.ok(PERF_WARMUP_FRAMES >= 125, 'warm-up must exceed the 120-sample rings');
+  assert.equal(typeof warmupPerfRings, 'function');
+});
+
+test('route capture path waits for typed forge control before capture', () => {
+  const src = fs.readFileSync(
+    path.join(REPO_ROOT, 'tools/forge-review/lib/capture.mjs'),
+    'utf8',
+  );
+  const routeFn = src.slice(src.indexOf('export async function captureRouteCell'));
+  assert.ok(routeFn.includes('prepareRoutePage'), 'captureRouteCell must call prepareRoutePage');
+  const prepareFn = src.slice(src.indexOf('export async function prepareRoutePage'));
+  assert.ok(
+    prepareFn.includes('waitForForgeControl'),
+    'prepareRoutePage must wait for __STARHAVEN_FORGE__',
+  );
+  assert.ok(
+    !routeFn.slice(0, routeFn.indexOf('captureFromPage')).includes('captureFromPage') ||
+      routeFn.includes('prepareRoutePage(page'),
+    'route capture must prepare the page before captureFromPage',
+  );
+});
+
+test('route perf gate requires positive distinct forge metrics', () => {
+  const src = fs.readFileSync(path.join(REPO_ROOT, 'scripts/forge-capture.mjs'), 'utf8');
+  assert.ok(src.includes('requireForgeMetrics: true'), 'forge-capture must require forge metrics on routes');
+  const captureSrc = fs.readFileSync(
+    path.join(REPO_ROOT, 'tools/forge-review/lib/capture.mjs'),
+    'utf8',
+  );
+  assert.ok(captureSrc.includes('warmupPerfRings'), 'capture must warm up via actual rAF callbacks');
+  assert.ok(!captureSrc.includes('PERF_WARMUP_MS'), 'time-guessed perf warm-up must be removed');
+  assert.ok(captureSrc.includes('gameWorkP99-zero'));
+  assert.ok(captureSrc.includes('rafP99-zero'));
+  assert.ok(captureSrc.includes('perf-fields-conflated'));
+});
+
+test('console.txt is written after clip and includes clip console lines', () => {
+  assert.deepEqual(CAPTURE_WRITE_ORDER, ['board', 'clip', 'console', 'critic-brief']);
+  const captureSrc = fs.readFileSync(path.join(REPO_ROOT, 'scripts/forge-capture.mjs'), 'utf8');
+  const clipIdx = captureSrc.indexOf('captureClip(browser');
+  const consoleIdx = captureSrc.indexOf('buildConsoleTxt(manifest');
+  assert.ok(clipIdx > 0 && consoleIdx > clipIdx, 'console.txt must be built after clip capture');
+
+  const manifest = validManifest();
+  const clipConsole = [{ seq: 99, type: 'log', text: 'clip hold complete' }];
+  const text = buildConsoleTxt(manifest, clipConsole);
+  assert.ok(text.includes('clip [log] clip hold complete'));
+});
+
+test('critic brief names captured routes instead of always saying all 13 states', () => {
+  const manifest = validManifest({
+    pack: {
+      routes: [validCell({ id: 'opening' })],
+      extras: [],
+      perspectives: [],
+      board: '/tmp/forge/board.png',
+      consoleTxt: '/tmp/forge/console.txt',
+      criticBrief: '/tmp/forge/critic-brief.txt',
+      clip: null,
+    },
+  });
+  const focused = composeCriticBrief({
+    manifest,
+    gateP99: null,
+    renderer: 'SwiftShader',
+    softwareRenderer: true,
+    routes: ['opening'],
+    orientations: ['landscape-left'],
+    totalRouteCount: 13,
+  });
+  assert.ok(focused.includes('1 captured route(s): opening'));
+  assert.ok(!focused.includes('all 13 states'));
+
+  const full = composeCriticBrief({
+    manifest: validManifest({
+      pack: {
+        routes: Array.from({ length: 13 }, (_, index) => validCell({ id: `route-${index}` })),
+        extras: [],
+        perspectives: [],
+        board: '/tmp/forge/board.png',
+        consoleTxt: '/tmp/forge/console.txt',
+        criticBrief: '/tmp/forge/critic-brief.txt',
+        clip: null,
+      },
+    }),
+    gateP99: null,
+    renderer: 'SwiftShader',
+    softwareRenderer: true,
+    routes: Array.from({ length: 13 }, (_, index) => `route-${index}`),
+    orientations: ['landscape-left'],
+    totalRouteCount: 13,
+  });
+  assert.ok(full.includes('all 13 states'));
 });
 
 // --- 3. pixel analysis -------------------------------------------------------

@@ -7,6 +7,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { FORGE_OVERLAY_IDS } from './capture.mjs';
+
 export const SCHEMA_VERSION = 'forge-review-deck/1';
 
 const ORIENTATIONS = ['landscape-left', 'landscape-right'];
@@ -99,6 +101,9 @@ export function validateManifest(m) {
       if (!Array.isArray(m.pack[group])) continue;
       m.pack[group].forEach((cell, index) => validateCell(errors, cell, `${group}[${index}]`, kind));
     }
+    if (isObj(m.args) && Array.isArray(m.args.routes) && m.args.routes.includes('opening')) {
+      validateOpeningOverlayEvidence(errors, m);
+    }
   }
 
   return { valid: errors.length === 0, errors };
@@ -186,6 +191,22 @@ function validateCell(errors, cell, at, expectedKind) {
   if (!Array.isArray(cell.errors)) errors.push(`${at}.errors must be an array`);
   if (!Array.isArray(cell.gates)) errors.push(`${at}.gates must be an array`);
   if (!isBool(cell.ok)) errors.push(`${at}.ok missing or invalid`);
+  if (!isBool(cell.frozen)) errors.push(`${at}.frozen missing or invalid`);
+  if (!isBool(cell.uiVisible)) errors.push(`${at}.uiVisible missing or invalid`);
+  if (!isBool(cell.reviewFog)) errors.push(`${at}.reviewFog missing or invalid`);
+  if (!isObj(cell.overlays)) errors.push(`${at}.overlays missing or invalid`);
+  else {
+    const overlayKeys = Object.keys(cell.overlays);
+    if (overlayKeys.length !== FORGE_OVERLAY_IDS.length) {
+      errors.push(`${at}.overlays must have exactly ${FORGE_OVERLAY_IDS.length} keys`);
+    }
+    for (const id of FORGE_OVERLAY_IDS) {
+      if (!isBool(cell.overlays[id])) errors.push(`${at}.overlays.${id} missing or invalid`);
+    }
+    for (const key of overlayKeys) {
+      if (!FORGE_OVERLAY_IDS.includes(key)) errors.push(`${at}.overlays has unknown key ${key}`);
+    }
+  }
   if (cell.p99GateMs !== undefined && !isFin(cell.p99GateMs)) {
     errors.push(`${at}.p99GateMs invalid`);
   }
@@ -196,6 +217,44 @@ function validateCell(errors, cell, at, expectedKind) {
     errors.push(
       `${at}: ok cell has requestedSeed ${cell.requestedSeed} != actualSeed ${cell.actualSeed} (seed mismatch is a hard failure)`,
     );
+  }
+}
+
+function validateOpeningOverlayEvidence(errors, manifest) {
+  const expectedIds = FORGE_OVERLAY_IDS.map((id) => `overlay-${id}`);
+  const overlayCells = Array.isArray(manifest.pack.extras)
+    ? manifest.pack.extras.filter((cell) => isObj(cell) && isStr(cell.id) && cell.id.startsWith('overlay-'))
+    : [];
+  if (overlayCells.length !== expectedIds.length) {
+    errors.push(
+      `opening capture requires exactly ${expectedIds.length} overlay evidence cells (got ${overlayCells.length})`,
+    );
+    return;
+  }
+  for (const expectedId of expectedIds) {
+    const cell = overlayCells.find((entry) => entry.id === expectedId);
+    if (!cell) {
+      errors.push(`missing overlay evidence cell ${expectedId}`);
+      continue;
+    }
+    const overlayId = expectedId.slice('overlay-'.length);
+    if (!FORGE_OVERLAY_IDS.includes(overlayId)) {
+      errors.push(`${expectedId}: unknown overlay id`);
+      continue;
+    }
+    if (!isObj(cell.overlays)) {
+      errors.push(`${expectedId}: overlays missing or invalid`);
+      continue;
+    }
+    for (const id of FORGE_OVERLAY_IDS) {
+      const expectedOn = id === overlayId;
+      if (cell.overlays[id] !== expectedOn) {
+        errors.push(`${expectedId}: overlays.${id} must be ${expectedOn} (got ${cell.overlays[id]})`);
+      }
+    }
+    if (!isFin(cell.overlayColorHits) || cell.overlayColorHits < 8) {
+      errors.push(`${expectedId}: overlayColorHits must be >= 8 (got ${cell.overlayColorHits})`);
+    }
   }
 }
 

@@ -19,6 +19,7 @@ import { launchBrowser } from '../tools/forge-review/lib/browser.mjs';
 import { loadPalette, loadPaletteRgb } from '../tools/forge-review/lib/pixels.mjs';
 import { gitMeta } from '../tools/forge-review/lib/git-meta.mjs';
 import { SCHEMA_VERSION, validateManifest, writeManifest } from '../tools/forge-review/lib/manifest.mjs';
+import { buildConsoleTxt, composeCriticBrief } from '../tools/forge-review/lib/pack-artifacts.mjs';
 import {
   DEFAULT_VIEWPORT,
   buildCapturePlan,
@@ -190,89 +191,6 @@ async function composeBoard(page, { routes, extras, perspectives, palette, meta,
   await page.screenshot({ path: outFile, fullPage: true });
 }
 
-// --- critic brief (objective only; NO builder visual verdicts) ---
-
-function composeCriticBrief({ manifest, gateP99, renderer, softwareRenderer, routes, orientations }) {
-  const cells = [
-    ...manifest.pack.routes,
-    ...manifest.pack.extras,
-    ...manifest.pack.perspectives,
-  ];
-  const gateCounts = new Map();
-  for (const cell of cells) {
-    for (const gate of cell.gates) {
-      const name = gate.split(' ')[0].split(':')[0];
-      gateCounts.set(name, (gateCounts.get(name) ?? 0) + 1);
-    }
-  }
-  const lines = [];
-  lines.push('STARHAVEN FORGE REVIEW — CRITIC BRIEF');
-  lines.push('====================================');
-  lines.push('');
-  lines.push(`Tool: ${manifest.tool}  schema ${manifest.schemaVersion}`);
-  lines.push(`Started: ${manifest.startedAt}  Finished: ${manifest.finishedAt}`);
-  lines.push(`Git: ${manifest.git.branch} @ ${manifest.git.commit}${manifest.git.dirty ? ' (dirty)' : ''}`);
-  lines.push(`Seed requested: ${manifest.requestedSeed}  Seed actual: ${manifest.actualSeed}`);
-  lines.push(`Viewport: ${manifest.viewport.width}x${manifest.viewport.height} deviceScaleFactor ${manifest.viewport.deviceScaleFactor}`);
-  lines.push(`Routes captured: ${manifest.pack.routes.length}  Extras: ${manifest.pack.extras.length}  Perspectives: ${manifest.pack.perspectives.length}`);
-  lines.push(`WebGL renderer: ${renderer || '(unavailable)'}`);
-  lines.push(`softwareRenderer: ${softwareRenderer} — this Linux host typically runs SwiftShader software WebGL (~20fps); treat numbers here as context, not target verdicts.`);
-  lines.push('');
-  lines.push('PACK CONTENTS');
-  lines.push(`  cells/: ${cells.length} PNG captures (1366x1024 each)`);
-  for (const cell of manifest.pack.routes) lines.push(`    route ${cell.id} ${cell.orientation} — state ${cell.actualState} tick ${cell.tick} pal ${cell.image ? Math.round(cell.image.paletteAdherence * 100) : '?'}% ok=${cell.ok}${cell.gates.length ? ` gates=[${cell.gates.join(' | ')}]` : ''}`);
-  for (const cell of manifest.pack.extras) lines.push(`    extra ${cell.id} — ok=${cell.ok}${cell.gates.length ? ` gates=[${cell.gates.join(' | ')}]` : ''}`);
-  const overlayCells = manifest.pack.extras.filter((cell) => cell.id.startsWith('overlay-'));
-  if (overlayCells.length) {
-    lines.push(`  overlay evidence cells: ${overlayCells.length}`);
-    for (const cell of overlayCells) {
-      lines.push(`    ${cell.id} — overlay readback=${JSON.stringify(cell.overlays)} hits=${cell.overlayColorHits ?? 'n/a'} ok=${cell.ok}`);
-    }
-  }
-  for (const cell of manifest.pack.perspectives) lines.push(`    perspective ${cell.id} — ok=${cell.ok}${cell.gates.length ? ` gates=[${cell.gates.join(' | ')}]` : ''}`);
-  lines.push(`  board.png — labeled contact board (failed cells red-labeled)`);
-  lines.push(`  console.txt — all console output + page errors, prefixed per cell`);
-  lines.push(`  critic-brief.txt — this file`);
-  if (manifest.pack.clip) {
-    const clipSize = fs.existsSync(manifest.pack.clip) ? fs.statSync(manifest.pack.clip).size : 0;
-    lines.push(`  proof.webm — short recorded sequence (${clipSize} bytes)`);
-  } else if (manifest.args?.clip === true) {
-    lines.push('  proof.webm — MISSING (args.clip=true)');
-  }
-  lines.push('');
-  lines.push('OBJECTIVE GATES RUN BY THE BUILDER (results only, no verdicts)');
-  lines.push(`  requested seed ${manifest.requestedSeed} vs actual seed ${manifest.actualSeed} (equality is a hard gate)`);
-  lines.push(`  expectedState == actualState on every route cell`);
-  lines.push(`  screenshot exists, exact 1366x1024, not black, not empty`);
-  lines.push(`  zero console/page errors per cell`);
-  lines.push(`  paletteAdherence >= 0.35 (share of sampled pixels within 40 RGB units of a palette token)`);
-  lines.push(`  gameWorkP99Ms (probe ring) and rafP99Ms (rAF spacing) recorded separately, never conflated`);
-  if (gateP99 != null) lines.push(`  absolute budget enforced: gameWorkP99Ms < ${gateP99}ms (--gate-p99)`);
-  else lines.push(`  no absolute perf budget enforced (--gate-p99 not passed)`);
-  if (gateCounts.size) {
-    lines.push('  gate tallies:');
-    for (const [name, count] of [...gateCounts.entries()].sort()) lines.push(`    ${name}: ${count}`);
-  } else {
-    lines.push('  gate tallies: none (all cells passed their gates)');
-  }
-  if (manifest.failures.length) {
-    lines.push('  run-level failures:');
-    for (const f of manifest.failures) lines.push(`    - ${f}`);
-  }
-  lines.push('');
-  lines.push('QUESTIONS FOR THE FRESH CRITIC');
-  lines.push('  1. Does the shared palette read coherently across all 13 states (menu -> victory/results)?');
-  lines.push('  2. Do the faction identities (sunweaver vs gravemark) read correctly in midgame and battle cells?');
-  lines.push('  3. At 1366x1024, does the HUD occlude critical action in any state?');
-  lines.push('  4. Do the extras (selected scout, tactical-close, strategic-far, ui-free) communicate camera and selection intent?');
-  lines.push('  5. Are there any visual artifacts, z-fighting, or clipping issues visible in the captures?');
-  lines.push('  6. (If perspectives present) Do player/rival/omniscient views differ as expected at the same tick?');
-  lines.push('');
-  lines.push('NOTE: this brief intentionally contains no builder visual verdicts; visual judgment is deferred to you.');
-  lines.push('');
-  return lines.join('\n');
-}
-
 // --- main -------------------------------------------------------------------
 
 async function main() {
@@ -369,6 +287,7 @@ async function main() {
         shotPath: file,
         webglInfo,
         consoleSeq,
+        requireForgeMetrics: true,
       });
       manifest.pack.routes.push(cell);
       if (manifest.actualSeed == null && cell.actualSeed != null) manifest.actualSeed = cell.actualSeed;
@@ -465,26 +384,12 @@ async function main() {
     manifest.pack.board = fs.existsSync(boardFile) ? boardFile : null;
     if (!manifest.pack.board) manifest.failures.push('board.png not written');
 
-    // 8. console.txt (all console messages + page errors across the run).
-    const allConsole = [];
-    for (const group of [manifest.pack.routes, manifest.pack.extras, manifest.pack.perspectives]) {
-      for (const cell of group) {
-        for (const entry of cell.allConsole ?? []) {
-          allConsole.push({ cell: cell.id, seq: entry.seq ?? 0, type: entry.type, text: entry.text });
-        }
-      }
-    }
-    allConsole.sort((a, b) => a.seq - b.seq);
-    const consoleFile = path.join(outDir, 'console.txt');
-    const consoleLines = allConsole.map((e) => `${e.cell} [${e.type}] ${e.text}`);
-    if (consoleLines.length === 0) consoleLines.push('(no console messages captured)');
-    fs.writeFileSync(consoleFile, `${consoleLines.join('\n')}\n`);
-    manifest.pack.consoleTxt = consoleFile;
-
-    // 9. Clip (before critic brief so the brief can truthfully list it).
+    // 8. Clip (before console.txt so clip console messages are included).
+    let clipConsole = [];
     if (clip) {
-      const clipResult = await captureClip(browser, { baseUrl, seed, outDir });
+      const clipResult = await captureClip(browser, { baseUrl, seed, outDir, consoleSeq });
       manifest.pack.clip = clipResult.file;
+      clipConsole = clipResult.consoleLog ?? [];
       if (clipResult.failure) manifest.failures.push(clipResult.failure);
       if (clipResult.errors?.length) {
         for (const err of clipResult.errors) manifest.failures.push(`clip: ${err}`);
@@ -492,6 +397,11 @@ async function main() {
       if (!clipResult.file) manifest.failures.push('clip-missing');
       console.log(`forge-capture: clip=${clipResult.file ?? 'not written'}${clipResult.failure ? ` (${clipResult.failure})` : ''}`);
     }
+
+    // 9. console.txt (all console messages + page errors across the run, including clip).
+    const consoleFile = path.join(outDir, 'console.txt');
+    fs.writeFileSync(consoleFile, buildConsoleTxt(manifest, clipConsole));
+    manifest.pack.consoleTxt = consoleFile;
 
     // 10. critic-brief.txt (objective; no builder visual verdicts).
     manifest.environment.webglRenderer = webglInfo.renderer ?? '';
@@ -507,6 +417,7 @@ async function main() {
         softwareRenderer: manifest.environment.softwareRenderer,
         routes,
         orientations,
+        totalRouteCount: table.length,
       })}\n`,
     );
     manifest.pack.criticBrief = briefFile;

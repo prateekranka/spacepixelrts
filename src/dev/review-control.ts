@@ -231,8 +231,8 @@ export function applyCameraModeTransition(
 const parseRequestedSeed = (params: URLSearchParams): number | null => {
   const raw = params.get('qa-seed');
   if (raw === null) return null;
-  if (!/^(0|[1-9][0-9]*)$/.test(raw.trim())) return null;
-  const value = Number(raw.trim());
+  if (!/^(0|[1-9][0-9]*)$/.test(raw)) return null;
+  const value = Number(raw);
   return Number.isSafeInteger(value) && value >= 0 && value <= 0xffffffff ? value : null;
 };
 
