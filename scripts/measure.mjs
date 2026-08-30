@@ -33,10 +33,10 @@ const browserArgs = [
 let browserEngine = 'chrome';
 let browser;
 try {
-  browser = await chromium.launch({ channel: 'chrome', headless: true, args: browserArgs });
+  browser = await chromium.launch({ channel: 'chrome', headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'], args: browserArgs });
 } catch {
   browserEngine = 'playwright-chromium';
-  browser = await chromium.launch({ headless: true, args: browserArgs });
+  browser = await chromium.launch({ headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'], args: browserArgs });
 }
 const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
 

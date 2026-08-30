@@ -121,9 +121,9 @@ function profileValue() {
 
 async function launchBrowser() {
   try {
-    return { browser: await chromium.launch({ channel: 'chrome', headless: true }), engine: 'chrome' };
+    return { browser: await chromium.launch({ channel: 'chrome', headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'] }), engine: 'chrome' };
   } catch {
-    return { browser: await chromium.launch({ headless: true }), engine: 'playwright-chromium' };
+    return { browser: await chromium.launch({ headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'] }), engine: 'playwright-chromium' };
   }
 }
 

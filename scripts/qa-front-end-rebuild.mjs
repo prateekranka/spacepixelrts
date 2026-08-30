@@ -620,7 +620,7 @@ async function main() {
       server = await startServer();
       manifest.url = server.url;
     }
-    browser = await chromium.launch({ channel: 'chrome', headless: true }).catch(() => chromium.launch({ headless: true }));
+    browser = await chromium.launch({ channel: 'chrome', headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'] }).catch(() => chromium.launch({ headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'] }));
     await runContract(browser, manifest.url, output, manifest);
   } catch (error) {
     appendError(manifest, error);

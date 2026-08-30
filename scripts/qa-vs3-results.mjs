@@ -123,8 +123,9 @@ async function main() {
   const browser = await chromium.launch({
     channel: 'chrome',
     headless: true,
+    ignoreDefaultArgs: ['--disable-dev-shm-usage'],
     args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
-  }).catch(() => chromium.launch({ headless: true, args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'] }));
+  }).catch(() => chromium.launch({ headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'], args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'] }));
   const page = await browser.newPage({ viewport: VIEWPORT });
   const consoleErrors = [];
   page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });

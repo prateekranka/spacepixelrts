@@ -350,9 +350,10 @@ async function main() {
       .launch({
         channel: 'chrome',
         headless: true,
+        ignoreDefaultArgs: ['--disable-dev-shm-usage'],
         args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
       })
-      .catch(() => chromium.launch({ headless: true, args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'] }));
+      .catch(() => chromium.launch({ headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'], args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'] }));
     const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1, hasTouch: true });
     page = await context.newPage();
     page.setDefaultTimeout(PROBE_TIMEOUT_MS);

@@ -407,7 +407,7 @@ async function main() {
   const results = [];
   const failures = [];
   try {
-    browser = await chromium.launch({ channel: 'chrome', headless: true }).catch(() => chromium.launch({ headless: true }));
+    browser = await chromium.launch({ channel: 'chrome', headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'] }).catch(() => chromium.launch({ headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'] }));
     for (const faction of FACTIONS) {
       for (const viewport of DIMENSIONS) {
         for (const mode of MODES) {

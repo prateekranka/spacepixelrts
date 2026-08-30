@@ -1407,7 +1407,7 @@ async function main() {
     preview = args.url ? null : await startPreview();
     const baseUrl = normalizeUrl(args.url || preview.url);
     manifest.url = baseUrl;
-    browser = await chromium.launch({ channel: 'chrome', headless: true }).catch(() => chromium.launch({ headless: true }));
+    browser = await chromium.launch({ channel: 'chrome', headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'] }).catch(() => chromium.launch({ headless: true, ignoreDefaultArgs: ['--disable-dev-shm-usage'] }));
     for (const orientation of ORIENTATIONS) {
       for (const faction of FACTIONS) {
         for (const dimension of DIMENSIONS) {
