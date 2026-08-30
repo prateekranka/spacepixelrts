@@ -61,6 +61,44 @@ train mixed army -> center conflict -> destroy/lose Core -> Results. Active spri
   content non-black/distinct, no layout defects, coherent style):
   `/home/bobbyranka/workspace/evidence/starhaven-self-view/20260826T082148Z/`.
 
+## SPX-10 — Pixel UI Shell landed on the product baseline (2026-08-30) — COMPLETE
+
+- Integration branch `hermes/starhaven-pixel-ui-shell`; card t_981a3cda. Spec:
+  `docs/SPX10_PIXEL_UI_INTEGRATION.md`. Product baseline merged at `f6f2add`
+  (normal merge `0d4e3ff`); protected hashes match the product baseline exactly
+  (sim/engine/render/front-end-scene/lumen-guard-accepted/civilizations tree).
+- Merge conflicts resolved per policy: `src/main.ts` = product forge-art seam +
+  pixel loading segments (union); `scripts/qa-front-end-rebuild.mjs` = product
+  fail-closed server handling (pixel made no runContract changes); package.json =
+  product union + 3 pixel scripts.
+- Two integration repairs: `tests/front-end-ui-shell.test.ts` protected-file anchor
+  moved from the pre-merge pixel baseline `645b0ec` to the product baseline
+  `f6f2add` (+ generated Lumen Guard file added to the protected set); all browser
+  gate scripts launch Chromium with `ignoreDefaultArgs: ['--disable-dev-shm-usage']`
+  because Playwright's default flag makes Chromium 151 SIGTRAP at launch on this
+  Linux host (regression since FPE-6; same browser, same assertions, SwiftShader
+  WebGL verified).
+- Gates: all 14 unit/build gates PASS (m0, aaa, pixel-front-end, m2, m2-ai, m3,
+  m4, m5, vs2-ai, vs2b, vs3, vs4, vs5, build). All 9 browser gates PASS:
+  qa:pixel-front-end (80 captures, 0 errors), qa:aaa, qa:m1, qa:touch-contract,
+  qa:progression-handoff, qa:vs3, qa:vs5, qa:front-end, qa:front-end-video
+  (fresh 1366x1024 H.264 MP4, 21.88s). The video gate needs TMPDIR on /home disk
+  while the tmpfs is packed with other sessions' scratch.
+- Evidence: `/home/bobbyranka/workspace/evidence/starhaven-kanban/t_981a3cda/19/`.
+- Visual gate: fresh blind Grok XHigh critic on the 12-state labeled contact board
+  (both factions x Menu/Setup/Loading, panels, Victory/Defeat Results, portrait
+  gate, smallest landscape): **SHIP** — all 12 cells coherent, one pixel
+  command-deck, no category defect; only residual polish named (dimmed vista
+  strip behind Setup/Results), explicitly not required. Verdict:
+  `critic-verdict.txt` in the evidence dir.
+- Preview deployed (branch `spx-10-pixel-ui`, production main untouched):
+  https://67b7ecb3.spacepixelrts.pages.dev (alias
+  https://spx-10-pixel-ui.spacepixelrts.pages.dev). Byte readback MATCH for
+  index.html/desktop.html, both CSS, both JS bundles (main-DjMmPmZY.js,
+  three.module-D3Ki9nFI.js), and all five local WOFF2 fonts. Real-browser smoke
+  PASS: title Starhaven, MainMenu on `/` and `/desktop.html`, New Skirmish click
+  reaches MatchSetup, zero console/page/request errors.
+
 ## AAA front-end art (2026-08-24) — DONE
 
 Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`). PR **#11** open
