@@ -328,10 +328,12 @@ test('trimClipVideo uses fast deterministic VP9 encode at 1366x1024', () => {
 });
 
 test('validateClipReadback rejects clips longer than CLIP_MAX_DURATION_MS', () => {
-  assert.equal(CLIP_MAX_DURATION_MS, 20000);
+  assert.equal(CLIP_MAX_DURATION_MS, 25000);
   const ok = validateClipReadback(validClipReadback());
   assert.equal(ok.valid, true);
-  const tooLong = validateClipReadback({ ...validClipReadback(), finalDurationMs: 21000 });
+  const atCeiling = validateClipReadback({ ...validClipReadback(), finalDurationMs: 25000 });
+  assert.equal(atCeiling.valid, true);
+  const tooLong = validateClipReadback({ ...validClipReadback(), finalDurationMs: 25001 });
   assert.equal(tooLong.valid, false);
   assert.ok(tooLong.errors.some((e) => e.includes('finalDurationMs')));
 });

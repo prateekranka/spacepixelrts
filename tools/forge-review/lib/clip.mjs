@@ -10,7 +10,7 @@ export const CLIP_PANEL_PREROLL_MS = 2200;
 export const CLIP_ACTION_HOLD_MS = 1100;
 export const CLIP_FINAL_HOLD_MS = 2400;
 /** Trimmed proof.webm must be positive and at most this many milliseconds. */
-export const CLIP_MAX_DURATION_MS = 20000;
+export const CLIP_MAX_DURATION_MS = 25000;
 export const CLIP_VIEWPORT = { width: 1366, height: 1024 };
 
 /** Required clip readback facts when args.clip is true. */
