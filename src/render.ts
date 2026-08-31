@@ -24,6 +24,13 @@ export const ISO_YAW = Math.PI / 4;
 export const ISO_PITCH = Math.atan(0.5);
 export const ISO_DIST = 40;
 
+/** Review-mode fog veil — higher contrast than shipped fog (display-only). */
+export const REVIEW_FOG_VEIL = {
+  explored: { r: 10, g: 8, b: 22, a: 96 },
+  unexplored: { r: 8, g: 6, b: 18, a: 148 },
+} as const;
+export const SHIPPED_FOG_VEIL_ALPHA = { explored: 56, unexplored: 32 } as const;
+
 const LUMEN_RING_POINTS = 32;
 const LUMEN_RING_RADIUS = 4.5;
 const LUMEN_PULSE_RADIUS = 5.35;
@@ -2144,15 +2151,17 @@ export class GameRenderer {
         d[o + 2] = 0;
         d[o + 3] = 0;
       } else if (exp[i]) {
-        d[o] = 14;
-        d[o + 1] = 12;
-        d[o + 2] = 28;
-        d[o + 3] = 56;
+        const v = REVIEW_FOG_VEIL.explored;
+        d[o] = v.r;
+        d[o + 1] = v.g;
+        d[o + 2] = v.b;
+        d[o + 3] = v.a;
       } else {
-        d[o] = 20;
-        d[o + 1] = 16;
-        d[o + 2] = 34;
-        d[o + 3] = 32;
+        const v = REVIEW_FOG_VEIL.unexplored;
+        d[o] = v.r;
+        d[o + 1] = v.g;
+        d[o + 2] = v.b;
+        d[o + 3] = v.a;
       }
     }
     this.fogTex.needsUpdate = true;

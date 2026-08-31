@@ -37,7 +37,21 @@ import {
   PERF_WARMUP_FRAMES,
   buildCapturePlan,
   warmupPerfRings,
+  OVERLAY_EXPECTED_COLORS,
 } from '../tools/forge-review/lib/capture.mjs';
+import {
+  CLIP_STEP_TICKS,
+  verifyClipReadback,
+  validateClipReadback,
+  trimClipVideo,
+} from '../tools/forge-review/lib/clip.mjs';
+import {
+  drawFacingArrow,
+  drawPathWaypointMarker,
+  drawPerspectiveChip,
+  OVERLAY_EXPECTED_COLORS as OVERLAY_TS_COLORS,
+} from '../src/dev/review-overlays';
+import { REVIEW_FOG_VEIL, SHIPPED_FOG_VEIL_ALPHA } from '../src/render';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -200,6 +214,7 @@ test('manifest validator requires nonempty pack.clip when args.clip is true', ()
       consoleTxt: '/tmp/forge/console.txt',
       criticBrief: '/tmp/forge/critic-brief.txt',
       clip: null,
+      clipReadback: null,
     },
   });
   const result = validateManifest(m);
@@ -208,6 +223,151 @@ test('manifest validator requires nonempty pack.clip when args.clip is true', ()
     result.errors.some((e) => e.includes('pack.clip')),
     `expected pack.clip error, got: ${result.errors.join('; ')}`,
   );
+  assert.ok(
+    result.errors.some((e) => e.includes('clipReadback')),
+    `expected clipReadback error, got: ${result.errors.join('; ')}`,
+  );
+});
+
+function validClipReadback() {
+  return {
+    requestedSeed: 424242,
+    actualSeed: 424242,
+    seedMatch: true,
+    frozen: true,
+    tick: CLIP_STEP_TICKS,
+    tickDelta: CLIP_STEP_TICKS,
+    cameraMode: 'tactical-close',
+    paths: true,
+    capturedPane: true,
+    trimStartMs: 1800,
+    rawDurationMs: 12000,
+    finalDurationMs: 9000,
+    milestones: [{ label: 'panel-ready', ms: 1800 }],
+  };
+}
+
+test('manifest validator requires clipReadback facts when args.clip is true', () => {
+  const complete = validManifest({
+    args: { out: '/tmp/forge', seed: 777, clip: true },
+    pack: {
+      routes: [validCell()],
+      extras: [],
+      perspectives: [],
+      board: '/tmp/forge/board.png',
+      consoleTxt: '/tmp/forge/console.txt',
+      criticBrief: '/tmp/forge/critic-brief.txt',
+      clip: '/tmp/forge/proof.webm',
+      clipReadback: validClipReadback(),
+    },
+  });
+  assert.deepEqual(validateManifest(complete), { valid: true, errors: [] });
+
+  const bad = validManifest({
+    args: { out: '/tmp/forge', seed: 777, clip: true },
+    pack: {
+      routes: [validCell()],
+      extras: [],
+      perspectives: [],
+      board: '/tmp/forge/board.png',
+      consoleTxt: '/tmp/forge/console.txt',
+      criticBrief: '/tmp/forge/critic-brief.txt',
+      clip: '/tmp/forge/proof.webm',
+      clipReadback: { ...validClipReadback(), capturedPane: false },
+    },
+  });
+  const result = validateManifest(bad);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some((e) => e.includes('capturedPane')));
+});
+
+test('verifyClipReadback accepts a truthful runtime snapshot', () => {
+  const snap = {
+    actualSeed: 424242,
+    frozen: true,
+    tick: CLIP_STEP_TICKS,
+    cameraMode: 'tactical-close',
+    overlays: { paths: true },
+    perspective: 'player',
+  };
+  const result = verifyClipReadback(snap, 424242, true);
+  assert.equal(result.ok, true);
+  assert.equal(result.readback.seedMatch, true);
+  assert.equal(result.readback.capturedPane, true);
+});
+
+test('capture clip uses ffmpeg trim and snapshot sequence markers', () => {
+  const src = fs.readFileSync(
+    path.join(REPO_ROOT, 'tools/forge-review/lib/capture.mjs'),
+    'utf8',
+  );
+  assert.ok(src.includes('trimClipVideo'), 'captureClip must trim via ffmpeg helper');
+  assert.ok(src.includes("markClip(page, 'panel-ready')"), 'must mark panel-ready for trim start');
+  assert.ok(src.includes("page.click('#forge-capture')"), 'must click SNAPSHOT CELL');
+  assert.ok(src.includes('CLIP_FINAL_HOLD_MS'), 'must hold final readback');
+  assert.ok(src.includes('unlinkSync(rawPath)'), 'must remove raw video after successful trim');
+  assert.equal(OVERLAY_EXPECTED_COLORS.facing, '#FF00FF');
+});
+
+test('path and facing overlay primitives use high-contrast expected colors', () => {
+  assert.equal(OVERLAY_TS_COLORS.facing, '#FF00FF');
+  assert.equal(OVERLAY_TS_COLORS.paths, '#00FF88');
+  const canvas = {
+    width: 64,
+    height: 64,
+    getContext() {
+      return {
+        save() {},
+        restore() {},
+        beginPath() {},
+        moveTo() {},
+        lineTo() {},
+        closePath() {},
+        arc() {},
+        stroke() {},
+        fill() {},
+        fillRect() {},
+        strokeRect() {},
+        fillText() {},
+        measureText(text: string) {
+          return { width: text.length * 8 };
+        },
+        set font(_v: string) {},
+        set fillStyle(_v: string) {},
+        set strokeStyle(_v: string) {},
+        set lineWidth(_v: number) {},
+        set lineCap(_v: string) {},
+        set textAlign(_v: string) {},
+        set textBaseline(_v: string) {},
+      } as unknown as CanvasRenderingContext2D;
+    },
+  } as unknown as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  drawPathWaypointMarker(ctx, 20, 20, OVERLAY_TS_COLORS.paths);
+  drawFacingArrow(ctx, 10, 30, 40, 10, OVERLAY_TS_COLORS.facing);
+  drawPerspectiveChip(ctx, 'rival', 1366);
+});
+
+test('review perspective chip and fog contrast are development-only seams', () => {
+  const controlSrc = fs.readFileSync(
+    path.join(REPO_ROOT, 'src/dev/review-control.ts'),
+    'utf8',
+  );
+  assert.ok(controlSrc.includes('drawPerspectiveChip'), 'review hook must draw perspective chip');
+  assert.ok(REVIEW_FOG_VEIL.unexplored.a > SHIPPED_FOG_VEIL_ALPHA.unexplored);
+  assert.ok(REVIEW_FOG_VEIL.explored.a > SHIPPED_FOG_VEIL_ALPHA.explored);
+  const renderSrc = fs.readFileSync(path.join(REPO_ROOT, 'src/render.ts'), 'utf8');
+  assert.ok(renderSrc.includes('REVIEW_FOG_VEIL'), 'review fog must use exported contrast constants');
+});
+
+test('validateClipReadback rejects incomplete readback objects', () => {
+  const bad = validateClipReadback({ seedMatch: false, frozen: false });
+  assert.equal(bad.valid, false);
+  assert.ok(bad.errors.length >= 3);
+});
+
+test('trimClipVideo is exported for ffmpeg post-processing', () => {
+  assert.equal(typeof trimClipVideo, 'function');
 });
 
 test('raf p99 requires a full 120-sample ring', () => {

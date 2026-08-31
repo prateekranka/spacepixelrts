@@ -29,12 +29,12 @@ export const FORGE_OVERLAY_IDS: readonly ForgeOverlayId[] = [
 ];
 
 /** High-contrast dev colors — deliberately not the shipped palette tokens. */
-const OVERLAY_COLORS: Record<ForgeOverlayId, string> = {
+export const OVERLAY_EXPECTED_COLORS: Record<ForgeOverlayId, string> = {
   paths: '#00FF88',
   'hit-regions': '#FF3355',
   'line-of-sight': '#66CCFF',
   orders: '#FFCC00',
-  facing: '#FFFFFF',
+  facing: '#FF00FF',
   'entity-ids': '#FF7700',
 };
 
@@ -47,6 +47,12 @@ const ORDER_LABELS: readonly string[] = [
   'build',
   'attack-move',
 ]; // Indexed by engine Ord (Idle=0..AttackMove=6).
+
+const PERSPECTIVE_CHIP_LABELS: Record<'player' | 'rival' | 'omniscient', string> = {
+  player: 'PLAYER KNOWLEDGE',
+  rival: 'RIVAL KNOWLEDGE',
+  omniscient: 'OMNISCIENT',
+};
 
 /** Structural mirror of the engine Ent fields overlays read (engine.ts TYPES ONLY). */
 interface ForgeReviewEnt {
@@ -81,6 +87,12 @@ export interface ForgeOverlayProjector {
 }
 
 const LOS_SEGMENTS = 24;
+const PATH_LINE_WIDTH = 4;
+const PATH_WAYPOINT_RADIUS = 5;
+const FACING_SHAFT_WORLD = 1.45;
+const FACING_LINE_WIDTH = 3.5;
+const FACING_ARROW_LEN = 11;
+const FACING_ARROW_HALF = 6;
 
 /** World-space circle sampled in segments, projected to overlay space. */
 function projectedRing(
@@ -98,6 +110,92 @@ function projectedRing(
     else ctx.lineTo(point.x, point.y);
   }
   ctx.stroke();
+}
+
+/** Draw a filled waypoint marker at a projected screen point. */
+export function drawPathWaypointMarker(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  radius = PATH_WAYPOINT_RADIUS,
+): void {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Screen-space facing shaft + arrowhead from foot to tip. */
+export function drawFacingArrow(
+  ctx: CanvasRenderingContext2D,
+  footX: number,
+  footY: number,
+  tipX: number,
+  tipY: number,
+  color: string,
+): void {
+  const dx = tipX - footX;
+  const dy = tipY - footY;
+  const len = Math.hypot(dx, dy);
+  if (len < 0.5) return;
+  const ux = dx / len;
+  const uy = dy / len;
+  const px = -uy;
+  const py = ux;
+  const backX = tipX - ux * FACING_ARROW_LEN;
+  const backY = tipY - uy * FACING_ARROW_LEN;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = FACING_LINE_WIDTH;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(footX, footY);
+  ctx.lineTo(tipX, tipY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(backX + px * FACING_ARROW_HALF, backY + py * FACING_ARROW_HALF);
+  ctx.lineTo(backX - px * FACING_ARROW_HALF, backY - py * FACING_ARROW_HALF);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+/** Development-only in-frame perspective label for review captures. */
+export function drawPerspectiveChip(
+  ctx: CanvasRenderingContext2D,
+  perspective: 'player' | 'rival' | 'omniscient',
+  canvasWidth: number,
+): void {
+  const label = PERSPECTIVE_CHIP_LABELS[perspective];
+  ctx.save();
+  ctx.font = '700 13px ui-monospace, SFMono-Regular, Menlo, monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  const padX = 12;
+  const padY = 8;
+  const textW = ctx.measureText(label).width;
+  const boxW = textW + padX * 2;
+  const boxH = 28;
+  const x = Math.max(14, (canvasWidth - boxW) / 2);
+  const y = 52;
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillRect(x, y, boxW, boxH);
+  ctx.strokeStyle =
+    perspective === 'omniscient' ? '#FFCC00' : perspective === 'rival' ? '#66CCFF' : '#00FF88';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, boxW, boxH);
+  ctx.fillStyle = '#F0E7D2';
+  ctx.fillText(label, x + padX, y + padY);
+  ctx.restore();
 }
 
 /**
@@ -133,7 +231,7 @@ export function drawOverlays(
       const building = isBuilding(e.kind as Kind);
       const rx = building ? e.radius * 38 + 10 : e.radius * 44 + 12;
       const ry = building ? e.radius * 14 + 4 : e.radius * 16 + 5;
-      ctx.strokeStyle = OVERLAY_COLORS['hit-regions'];
+      ctx.strokeStyle = OVERLAY_EXPECTED_COLORS['hit-regions'];
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.ellipse(foot.x, foot.y, rx, ry, 0, 0, Math.PI * 2);
@@ -145,10 +243,8 @@ export function drawOverlays(
       const showTeam1 = perspective === 'rival' || perspective === 'omniscient';
       if ((e.team === 0 && showTeam0) || (e.team === 1 && showTeam1)) {
         const st = STATS[e.kind];
-        // LOS matches the sim's per-kind sight stat (sim.updateFog). Boosts /
-        // tech bonuses are not mirrored here; this is a review aid, not the sim.
         const los = st?.los ?? 6;
-        ctx.strokeStyle = OVERLAY_COLORS['line-of-sight'];
+        ctx.strokeStyle = OVERLAY_EXPECTED_COLORS['line-of-sight'];
         ctx.lineWidth = 1.25;
         projectedRing(ctx, view, e.x, e.z, los);
       }
@@ -157,36 +253,35 @@ export function drawOverlays(
     if (e.kind === Kind.Resource) continue;
 
     if (overlays.paths && e.path && e.path.length >= 4) {
-      ctx.strokeStyle = OVERLAY_COLORS.paths;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([7, 5]);
-      ctx.beginPath();
-      ctx.moveTo(foot.x, foot.y);
+      const pathColor = OVERLAY_EXPECTED_COLORS.paths;
       const waypointCount = e.path.length >> 1;
       const startWaypoint = Math.max(0, Math.min(e.pathI, waypointCount - 1));
+      const projectedWaypoints: { x: number; y: number }[] = [];
+      ctx.strokeStyle = pathColor;
+      ctx.lineWidth = PATH_LINE_WIDTH;
+      ctx.setLineDash([9, 6]);
+      ctx.beginPath();
+      ctx.moveTo(foot.x, foot.y);
       for (let wi = startWaypoint; wi < waypointCount; wi++) {
         const wx = e.path[wi * 2] + 0.5;
         const wz = e.path[wi * 2 + 1] + 0.5;
         const point = view.project(wx, 0.05, wz);
         ctx.lineTo(point.x, point.y);
+        projectedWaypoints.push(point);
       }
       ctx.stroke();
       ctx.setLineDash([]);
+      for (const point of projectedWaypoints) {
+        drawPathWaypointMarker(ctx, point.x, point.y, pathColor);
+      }
     }
 
     if (overlays.facing) {
-      // dir8 semantics (engine): 0=E 1=NE 2=N 3=NW 4=W 5=SW 6=S 7=SE, i.e. the
-      // world offset for index d is (cos(d*PI/4), -sin(d*PI/4)).
       const angle = ((e.facing & 7) * Math.PI) / 4;
-      const dx = Math.cos(angle) * 0.9;
-      const dz = -Math.sin(angle) * 0.9;
+      const dx = Math.cos(angle) * FACING_SHAFT_WORLD;
+      const dz = -Math.sin(angle) * FACING_SHAFT_WORLD;
       const tip = view.project(e.x + dx, 0.05, e.z + dz);
-      ctx.strokeStyle = OVERLAY_COLORS.facing;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(foot.x, foot.y);
-      ctx.lineTo(tip.x, tip.y);
-      ctx.stroke();
+      drawFacingArrow(ctx, foot.x, foot.y, tip.x, tip.y, OVERLAY_EXPECTED_COLORS.facing);
     }
 
     const orderLabel =
@@ -199,7 +294,7 @@ export function drawOverlays(
       ctx.strokeStyle = 'rgba(0,0,0,0.85)';
       ctx.lineWidth = 3;
       ctx.strokeText(orderLabel, head.x, y);
-      ctx.fillStyle = OVERLAY_COLORS.orders;
+      ctx.fillStyle = OVERLAY_EXPECTED_COLORS.orders;
       ctx.fillText(orderLabel, head.x, y);
     }
 
@@ -210,7 +305,7 @@ export function drawOverlays(
       ctx.strokeStyle = 'rgba(0,0,0,0.85)';
       ctx.lineWidth = 3;
       ctx.strokeText(text, head.x, y);
-      ctx.fillStyle = OVERLAY_COLORS['entity-ids'];
+      ctx.fillStyle = OVERLAY_EXPECTED_COLORS['entity-ids'];
       ctx.fillText(text, head.x, y);
     }
   }

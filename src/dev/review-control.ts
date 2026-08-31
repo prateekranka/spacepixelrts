@@ -16,7 +16,7 @@ import { QA_SCENARIOS } from '../qa-scenarios';
 import { MAP } from '../engine';
 
 export type { ForgeOverlayId, FORGE_OVERLAY_IDS } from './review-overlays';
-import { drawOverlays, type ForgeOverlayId } from './review-overlays';
+import { drawOverlays, drawPerspectiveChip, type ForgeOverlayId } from './review-overlays';
 import type { AppState } from '../app-flow';
 import type { Input } from '../input';
 import type { MatchConfig } from '../match-config';
@@ -488,6 +488,7 @@ export async function bootForgeReview(deps: ForgeBootDeps): Promise<void> {
     if (hookRegistered || view === null) return;
     hookRegistered = true;
     view.reviewHooks.push((ctx, renderer) => {
+      drawPerspectiveChip(ctx, installed.perspectiveState, renderer.overlay.width);
       drawOverlays(
         ctx,
         deps.getWorld(),

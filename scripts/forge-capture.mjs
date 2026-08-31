@@ -244,6 +244,7 @@ async function main() {
       consoleTxt: null,
       criticBrief: null,
       clip: null,
+      clipReadback: null,
     },
     failures: [],
     ok: false,
@@ -389,13 +390,17 @@ async function main() {
     if (clip) {
       const clipResult = await captureClip(browser, { baseUrl, seed, outDir, consoleSeq });
       manifest.pack.clip = clipResult.file;
+      manifest.pack.clipReadback = clipResult.clipReadback ?? null;
       clipConsole = clipResult.consoleLog ?? [];
       if (clipResult.failure) manifest.failures.push(clipResult.failure);
       if (clipResult.errors?.length) {
         for (const err of clipResult.errors) manifest.failures.push(`clip: ${err}`);
       }
       if (!clipResult.file) manifest.failures.push('clip-missing');
-      console.log(`forge-capture: clip=${clipResult.file ?? 'not written'}${clipResult.failure ? ` (${clipResult.failure})` : ''}`);
+      if (!clipResult.clipReadback?.seedMatch) manifest.failures.push('clip-readback-seed');
+      console.log(
+        `forge-capture: clip=${clipResult.file ?? 'not written'} readback=${clipResult.clipReadback?.seedMatch ?? false}${clipResult.failure ? ` (${clipResult.failure})` : ''}`,
+      );
     }
 
     // 9. console.txt (all console messages + page errors across the run, including clip).
@@ -427,7 +432,12 @@ async function main() {
       manifest.pack.board != null &&
       manifest.pack.consoleTxt != null &&
       manifest.pack.criticBrief != null &&
-      (!clip || (manifest.pack.clip != null && fs.existsSync(manifest.pack.clip) && fs.statSync(manifest.pack.clip).size > 0));
+      (!clip ||
+        (manifest.pack.clip != null &&
+          fs.existsSync(manifest.pack.clip) &&
+          fs.statSync(manifest.pack.clip).size > 0 &&
+          manifest.pack.clipReadback?.seedMatch === true &&
+          manifest.pack.clipReadback?.capturedPane === true));
   } catch (err) {
     manifest.failures.push(`fatal: ${err?.stack ?? String(err)}`);
   } finally {

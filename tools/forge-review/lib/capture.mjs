@@ -8,6 +8,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { analyzePng, countOverlayColorPixels, isBlack, isEmpty } from './pixels.mjs';
+import {
+  CLIP_ACTION_HOLD_MS,
+  CLIP_FINAL_HOLD_MS,
+  CLIP_PANEL_PREROLL_MS,
+  CLIP_STEP_TICKS,
+  trimClipVideo,
+  verifyClipReadback,
+  probeVideo,
+} from './clip.mjs';
 
 export const DEFAULT_VIEWPORT = { width: 1366, height: 1024 };
 export const NAV_TIMEOUT_MS = 30000;
@@ -30,12 +39,12 @@ export const FORGE_OVERLAY_IDS = [
   'entity-ids',
 ];
 
-export const OVERLAY_EVIDENCE_COLORS = {
+export const OVERLAY_EXPECTED_COLORS = {
   paths: '#00FF88',
   'hit-regions': '#FF3355',
   'line-of-sight': '#66CCFF',
   orders: '#FFCC00',
-  facing: '#FFFFFF',
+  facing: '#FF00FF',
   'entity-ids': '#FF7700',
 };
 
@@ -637,13 +646,13 @@ export async function captureExtras(context, opts) {
       },
       {
         id: 'extra-selected-scout',
-        action: { selectScout: true },
-        controlExpected: { cameraMode: 'normal' },
+        action: { selectScout: true, cameraMode: 'tactical-close' },
+        controlExpected: { cameraMode: 'tactical-close' },
         samplePerf: true,
       },
       {
         id: 'extra-ui-free',
-        action: { uiVisible: false },
+        action: { cameraMode: 'normal', uiVisible: false },
         controlExpected: { uiVisible: false, cameraMode: 'normal' },
       },
     ];
@@ -756,7 +765,7 @@ export async function captureOverlayCells(context, opts) {
       });
       await applyForgeControl(page, { overlayOff: true, overlay: { id: overlayId, on: true } });
       await settleFrames(page, 4);
-      const overlayColor = OVERLAY_EVIDENCE_COLORS[overlayId];
+      const overlayColor = OVERLAY_EXPECTED_COLORS[overlayId];
       const cell = await captureFromPage(page, {
         id,
         kind: 'extra',
@@ -871,19 +880,53 @@ export async function capturePerspectiveTriptych(context, opts) {
 
 // --- clip -------------------------------------------------------------------
 
+async function installClipClockOnContext(context) {
+  await context.addInitScript(() => {
+    globalThis.__FORGE_CLIP_T0__ = performance.now();
+    globalThis.__FORGE_CLIP_MARKS__ = [];
+    globalThis.__FORGE_CLIP_MARK__ = (label) => {
+      const ms = performance.now() - globalThis.__FORGE_CLIP_T0__;
+      globalThis.__FORGE_CLIP_MARKS__.push({ label, ms });
+      return ms;
+    };
+  });
+}
+
+async function markClip(page, label) {
+  return page.evaluate((l) => globalThis.__FORGE_CLIP_MARK__(l), label);
+}
+
+async function readCapturedPane(page) {
+  return page.evaluate(() => {
+    const pane = document.querySelector('[data-forge-pane]');
+    return pane?.getAttribute('data-forge-pane') ?? null;
+  });
+}
+
 /**
- * Record proof.webm with visible holds between typed-control actions.
+ * Record proof.webm with visible holds, ffmpeg trim, and verified readback.
  * Identity banner stays visible (no forge-panel=0). Console/page errors fail the clip.
  */
 export async function captureClip(browser, opts) {
-  const { baseUrl, seed, outDir, stepTicks = 37, holdMs = 900, consoleSeq = null } = opts;
+  const {
+    baseUrl,
+    seed,
+    outDir,
+    stepTicks = CLIP_STEP_TICKS,
+    prerollMs = CLIP_PANEL_PREROLL_MS,
+    holdMs = CLIP_ACTION_HOLD_MS,
+    finalHoldMs = CLIP_FINAL_HOLD_MS,
+    consoleSeq = null,
+  } = opts;
   const tmpDir = path.join(outDir, 'tmp');
   fs.mkdirSync(tmpDir, { recursive: true });
+  const rawPath = path.join(tmpDir, 'clip-raw.webm');
   const context = await browser.newContext({
     viewport: { width: 1366, height: 1024 },
     deviceScaleFactor: 1,
     recordVideo: { dir: tmpDir, size: { width: 1366, height: 1024 } },
   });
+  await installClipClockOnContext(context);
   const page = await context.newPage();
   const errors = [];
   const consoleLog = [];
@@ -901,6 +944,11 @@ export async function captureClip(browser, opts) {
   });
   let videoPath = null;
   let failure = null;
+  let clipReadback = null;
+  let trimStartMs = null;
+  let rawDurationMs = null;
+  let finalDurationMs = null;
+  let marks = [];
   try {
     videoPath = (await page.video()?.path().catch(() => null)) ?? null;
     const url = `${baseUrl}/?qa=opening&qa-seed=${seed}&orientation=landscape-left&forge=1`;
@@ -909,42 +957,80 @@ export async function captureClip(browser, opts) {
       timeout: PROBE_TIMEOUT_MS,
     });
     await waitForForgeControl(page);
+    await page.waitForSelector('[data-forge-panel="true"]', { timeout: FORGE_WAIT_MS });
+    await settleFrames(page, 4);
+    trimStartMs = await markClip(page, 'panel-ready');
+    await page.waitForTimeout(prerollMs);
 
-    // 1. deterministic load + identity readback hold
-    await page.waitForTimeout(holdMs);
     const loadSnap = await readForgeSnapshot(page);
     if (loadSnap?.actualSeed !== (seed >>> 0)) {
       failure = `clip-seed-mismatch requested=${seed} actual=${loadSnap?.actualSeed}`;
     }
+    await markClip(page, 'identity-hold');
 
-    // 2. freeze hold
     await applyForgeControl(page, { frozen: true });
     await page.waitForTimeout(holdMs);
     const frozenSnap = await readForgeSnapshot(page);
     if (!frozenSnap?.frozen) failure = failure ?? 'clip-freeze-readback-failed';
+    await markClip(page, 'frozen-hold');
 
-    // 3. bounded step + tick readback hold
     const tickBefore = frozenSnap?.tick ?? 0;
     await applyForgeControl(page, { step: stepTicks });
     await page.waitForTimeout(holdMs);
     const steppedSnap = await readForgeSnapshot(page);
     if ((steppedSnap?.tick ?? 0) - tickBefore !== stepTicks) {
-      failure = failure ?? `clip-step-delta expected=${stepTicks} actual=${(steppedSnap?.tick ?? 0) - tickBefore}`;
+      failure =
+        failure ??
+        `clip-step-delta expected=${stepTicks} actual=${(steppedSnap?.tick ?? 0) - tickBefore}`;
     }
+    await markClip(page, 'step-hold');
 
-    // 4. camera change hold
     await applyForgeControl(page, { cameraMode: 'tactical-close' });
     await page.waitForTimeout(holdMs);
     const cameraSnap = await readForgeSnapshot(page);
     if (cameraSnap?.cameraMode !== 'tactical-close') {
       failure = failure ?? 'clip-camera-readback-failed';
     }
+    await markClip(page, 'camera-hold');
 
-    // 5. overlay toggle + readback hold
     await applyForgeControl(page, { overlayOff: true, overlay: { id: 'paths', on: true } });
+    try {
+      await page.waitForFunction(
+        () => document.querySelector('#forge-overlay-paths')?.checked === true,
+        null,
+        { timeout: 3000 },
+      );
+    } catch {
+      failure = failure ?? 'clip-paths-checkbox-failed';
+    }
     await page.waitForTimeout(holdMs);
     const overlaySnap = await readForgeSnapshot(page);
     if (!overlaySnap?.overlays?.paths) failure = failure ?? 'clip-overlay-readback-failed';
+    await markClip(page, 'paths-hold');
+
+    await page.click('#forge-capture');
+    await page.waitForFunction(
+      () => document.querySelector('[data-forge-pane]')?.getAttribute('data-forge-pane') === 'identity',
+      null,
+      { timeout: 5000 },
+    );
+    await markClip(page, 'snapshot-captured');
+    await page.waitForTimeout(finalHoldMs);
+    await markClip(page, 'final-hold');
+
+    const finalSnap = await readForgeSnapshot(page);
+    const paneKind = await readCapturedPane(page);
+    const verified = verifyClipReadback(finalSnap, seed, paneKind === 'identity', tickBefore);
+    clipReadback = {
+      ...verified.readback,
+      trimStartMs,
+      milestones: marks,
+    };
+    if (!verified.ok) {
+      failure = failure ?? `clip-readback: ${verified.errors.join('; ')}`;
+    }
+    marks = await page.evaluate(() => globalThis.__FORGE_CLIP_MARKS__ ?? []);
+    clipReadback.milestones = marks;
   } catch (err) {
     failure = `clip: ${err?.message ?? String(err)}`;
   } finally {
@@ -959,21 +1045,46 @@ export async function captureClip(browser, opts) {
       /* already closed */
     }
   }
+
   let file = null;
+  const finalPath = path.join(outDir, 'proof.webm');
   if (videoPath && fs.existsSync(videoPath)) {
-    const finalPath = path.join(outDir, 'proof.webm');
     try {
-      fs.renameSync(videoPath, finalPath);
-      file = finalPath;
-    } catch {
-      file = null;
+      fs.renameSync(videoPath, rawPath);
+      const rawProbe = await probeVideo(rawPath);
+      rawDurationMs = Math.round(rawProbe.durationSec * 1000);
+      if (trimStartMs == null) {
+        failure = failure ?? 'clip-trim-start-missing';
+      } else {
+        const trimmed = await trimClipVideo({
+          rawPath,
+          outPath: finalPath,
+          trimStartSec: trimStartMs / 1000,
+        });
+        finalDurationMs = Math.round(trimmed.durationSec * 1000);
+        file = finalPath;
+        fs.unlinkSync(rawPath);
+      }
+    } catch (err) {
+      failure = failure ?? `clip-trim: ${err?.message ?? String(err)}`;
     }
+  } else {
+    failure = failure ?? 'clip-raw-missing';
   }
+
+  if (clipReadback) {
+    clipReadback.rawDurationMs = rawDurationMs;
+    clipReadback.finalDurationMs = finalDurationMs;
+  }
+
   if (!file || !fs.existsSync(file) || fs.statSync(file).size <= 0) {
     failure = failure ?? 'clip-missing-or-empty';
   }
   if (errors.length > 0) {
     failure = failure ?? 'clip-console-errors';
   }
-  return { file, failure, errors, consoleLog };
+  if (!clipReadback?.seedMatch || !clipReadback?.capturedPane) {
+    failure = failure ?? 'clip-readback-incomplete';
+  }
+  return { file, failure, errors, consoleLog, clipReadback };
 }

@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FORGE_OVERLAY_IDS } from './capture.mjs';
+import { validateClipReadback } from './clip.mjs';
 
 export const SCHEMA_VERSION = 'forge-review-deck/1';
 
@@ -88,6 +89,10 @@ export function validateManifest(m) {
   if (isObj(m.args) && m.args.clip === true) {
     if (!isObj(m.pack) || m.pack.clip === null || !isStr(m.pack.clip) || m.pack.clip.length === 0) {
       errors.push('args.clip requires nonempty pack.clip path');
+    }
+    const clipCheck = validateClipReadback(m.pack?.clipReadback);
+    if (!clipCheck.valid) {
+      for (const err of clipCheck.errors) errors.push(`clip: ${err}`);
     }
   }
 
