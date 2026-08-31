@@ -11,6 +11,7 @@ import { analyzePng, countOverlayColorPixels, isBlack, isEmpty } from './pixels.
 import {
   CLIP_ACTION_HOLD_MS,
   CLIP_FINAL_HOLD_MS,
+  CLIP_MAX_DURATION_MS,
   CLIP_PANEL_PREROLL_MS,
   CLIP_STEP_TICKS,
   trimClipVideo,
@@ -903,6 +904,17 @@ async function readCapturedPane(page) {
   });
 }
 
+/** Activate SNAPSHOT CELL without Playwright actionability auto-wait (software WebGL). */
+async function activateForgeCaptureButton(page) {
+  await page.evaluate(() => {
+    const btn = document.querySelector('#forge-capture');
+    if (!(btn instanceof HTMLButtonElement)) {
+      throw new Error('forge-capture missing or not HTMLButtonElement');
+    }
+    btn.click();
+  });
+}
+
 /**
  * Record proof.webm with visible holds, ffmpeg trim, and verified readback.
  * Identity banner stays visible (no forge-panel=0). Console/page errors fail the clip.
@@ -1008,7 +1020,7 @@ export async function captureClip(browser, opts) {
     if (!overlaySnap?.overlays?.paths) failure = failure ?? 'clip-overlay-readback-failed';
     await markClip(page, 'paths-hold');
 
-    await page.click('#forge-capture');
+    await activateForgeCaptureButton(page);
     await page.waitForFunction(
       () => document.querySelector('[data-forge-pane]')?.getAttribute('data-forge-pane') === 'identity',
       null,
@@ -1056,12 +1068,23 @@ export async function captureClip(browser, opts) {
       if (trimStartMs == null) {
         failure = failure ?? 'clip-trim-start-missing';
       } else {
+        const snapshotMark = marks.find((m) => m.label === 'snapshot-captured');
+        const trimDurationSec =
+          snapshotMark != null
+            ? (snapshotMark.ms - trimStartMs + finalHoldMs) / 1000
+            : null;
         const trimmed = await trimClipVideo({
           rawPath,
           outPath: finalPath,
           trimStartSec: trimStartMs / 1000,
+          trimDurationSec,
         });
         finalDurationMs = Math.round(trimmed.durationSec * 1000);
+        if (finalDurationMs > CLIP_MAX_DURATION_MS) {
+          failure =
+            failure ??
+            `clip-duration-exceeded final=${finalDurationMs} max=${CLIP_MAX_DURATION_MS}`;
+        }
         file = finalPath;
         fs.unlinkSync(rawPath);
       }

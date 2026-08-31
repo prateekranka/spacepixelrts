@@ -41,6 +41,7 @@ import {
 } from '../tools/forge-review/lib/capture.mjs';
 import {
   CLIP_STEP_TICKS,
+  CLIP_MAX_DURATION_MS,
   verifyClipReadback,
   validateClipReadback,
   trimClipVideo,
@@ -303,10 +304,36 @@ test('capture clip uses ffmpeg trim and snapshot sequence markers', () => {
   );
   assert.ok(src.includes('trimClipVideo'), 'captureClip must trim via ffmpeg helper');
   assert.ok(src.includes("markClip(page, 'panel-ready')"), 'must mark panel-ready for trim start');
-  assert.ok(src.includes("page.click('#forge-capture')"), 'must click SNAPSHOT CELL');
+  assert.ok(
+    !src.includes("page.click('#forge-capture')"),
+    'must not use Playwright auto-wait click on SNAPSHOT CELL',
+  );
+  assert.ok(src.includes('activateForgeCaptureButton'), 'must activate SNAPSHOT CELL in-page');
+  assert.ok(src.includes('HTMLButtonElement'), 'must assert capture control is a button');
   assert.ok(src.includes('CLIP_FINAL_HOLD_MS'), 'must hold final readback');
+  assert.ok(src.includes('CLIP_MAX_DURATION_MS'), 'must enforce short-clip duration bar');
+  assert.ok(src.includes('snapshot-captured'), 'must cap trim at snapshot milestone');
   assert.ok(src.includes('unlinkSync(rawPath)'), 'must remove raw video after successful trim');
   assert.equal(OVERLAY_EXPECTED_COLORS.facing, '#FF00FF');
+});
+
+test('trimClipVideo uses fast deterministic VP9 encode at 1366x1024', () => {
+  const src = fs.readFileSync(path.join(REPO_ROOT, 'tools/forge-review/lib/clip.mjs'), 'utf8');
+  assert.ok(src.includes('-deadline') && src.includes('realtime'));
+  assert.ok(src.includes('-cpu-used') && src.includes('8'));
+  assert.ok(src.includes('-row-mt'));
+  assert.ok(src.includes('1366') && src.includes('1024'));
+  assert.ok(src.includes('2M'));
+  assert.ok(src.includes("'-t'"), 'must support milestone duration cap');
+});
+
+test('validateClipReadback rejects clips longer than CLIP_MAX_DURATION_MS', () => {
+  assert.equal(CLIP_MAX_DURATION_MS, 20000);
+  const ok = validateClipReadback(validClipReadback());
+  assert.equal(ok.valid, true);
+  const tooLong = validateClipReadback({ ...validClipReadback(), finalDurationMs: 21000 });
+  assert.equal(tooLong.valid, false);
+  assert.ok(tooLong.errors.some((e) => e.includes('finalDurationMs')));
 });
 
 test('path and facing overlay primitives use high-contrast expected colors', () => {

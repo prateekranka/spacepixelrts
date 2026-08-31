@@ -9,6 +9,9 @@ export const CLIP_STEP_TICKS = 37;
 export const CLIP_PANEL_PREROLL_MS = 2200;
 export const CLIP_ACTION_HOLD_MS = 1100;
 export const CLIP_FINAL_HOLD_MS = 2400;
+/** Trimmed proof.webm must be positive and at most this many milliseconds. */
+export const CLIP_MAX_DURATION_MS = 20000;
+export const CLIP_VIEWPORT = { width: 1366, height: 1024 };
 
 /** Required clip readback facts when args.clip is true. */
 export const CLIP_READBACK_REQUIRED = {
@@ -84,10 +87,11 @@ export async function probeVideo(filePath) {
 /**
  * Trim raw Playwright WebM to start at panel-ready elapsed time.
  * Removes browser-load and game-only lead-in; retains panel preroll onward.
+ * When trimDurationSec is set, caps output at the proof sequence (snapshot + final hold).
  */
-export async function trimClipVideo({ rawPath, outPath, trimStartSec }) {
+export async function trimClipVideo({ rawPath, outPath, trimStartSec, trimDurationSec = null }) {
   const start = Math.max(0, trimStartSec);
-  await execFileAsync('ffmpeg', [
+  const ffmpegArgs = [
     '-y',
     '-hide_banner',
     '-loglevel',
@@ -97,12 +101,24 @@ export async function trimClipVideo({ rawPath, outPath, trimStartSec }) {
     '-ss',
     String(start),
     '-an',
+    '-vf',
+    `scale=${CLIP_VIEWPORT.width}:${CLIP_VIEWPORT.height}`,
     '-c:v',
     'libvpx-vp9',
     '-b:v',
     '2M',
-    outPath,
-  ]);
+    '-deadline',
+    'realtime',
+    '-cpu-used',
+    '8',
+    '-row-mt',
+    '1',
+  ];
+  if (trimDurationSec != null && Number(trimDurationSec) > 0) {
+    ffmpegArgs.push('-t', String(trimDurationSec));
+  }
+  ffmpegArgs.push(outPath);
+  await execFileAsync('ffmpeg', ffmpegArgs);
   if (!fs.existsSync(outPath) || fs.statSync(outPath).size <= 0) {
     throw new Error('trim produced empty output');
   }
@@ -143,6 +159,10 @@ export function validateClipReadback(readback) {
   }
   if (!Number.isFinite(readback.finalDurationMs) || readback.finalDurationMs <= 0) {
     errors.push('clipReadback.finalDurationMs missing or invalid');
+  } else if (readback.finalDurationMs > CLIP_MAX_DURATION_MS) {
+    errors.push(
+      `clipReadback.finalDurationMs must be <= ${CLIP_MAX_DURATION_MS} got ${readback.finalDurationMs}`,
+    );
   }
   return { valid: errors.length === 0, errors };
 }

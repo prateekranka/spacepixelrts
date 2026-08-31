@@ -30,6 +30,7 @@ import {
   capturePerspectiveTriptych,
   captureClip,
 } from '../tools/forge-review/lib/capture.mjs';
+import { CLIP_MAX_DURATION_MS } from '../tools/forge-review/lib/clip.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_SEED = 424242;
@@ -437,7 +438,9 @@ async function main() {
           fs.existsSync(manifest.pack.clip) &&
           fs.statSync(manifest.pack.clip).size > 0 &&
           manifest.pack.clipReadback?.seedMatch === true &&
-          manifest.pack.clipReadback?.capturedPane === true));
+          manifest.pack.clipReadback?.capturedPane === true &&
+          Number(manifest.pack.clipReadback?.finalDurationMs) > 0 &&
+          Number(manifest.pack.clipReadback?.finalDurationMs) <= CLIP_MAX_DURATION_MS));
   } catch (err) {
     manifest.failures.push(`fatal: ${err?.stack ?? String(err)}`);
   } finally {
