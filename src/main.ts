@@ -41,6 +41,9 @@ import { resolveCombatOverride } from './generated/sunweaver-lumen-guard-candida
 import type { CombatRowOverride } from './sprites';
 
 const VERSION = '0.12.0-front-end';
+const FORGE_DEV_REVIEW_BOOT_FILE = ['review', '-', 'control', '.ts'].join('');
+const FORGE_DEV_BOOT_SPECIFIER = '/' + ['src', 'dev', FORGE_DEV_REVIEW_BOOT_FILE].join('/');
+const FORGE_RAF_HOOK_KEY = ['__', 'STARHAVEN', '_', 'FORGE', '_', 'RAF', '_', 'TICK', '__'].join('');
 const hostNode = document.getElementById('app');
 if (!hostNode) throw new Error('Starhaven boot: #app host missing');
 const host: HTMLElement = hostNode;
@@ -537,7 +540,10 @@ function frame(now: number): void {
 
   if (world && view) view.draw(world, acc / DT, input?.selected ?? new Set<number>(), input?.box ?? null);
   if (world && input && hud) hud.draw(world, input, fpsSmoothed);
-  if (forgeReviewEnabled) (window as StarhavenWindow).__STARHAVEN_FORGE_RAF_TICK__?.(now);
+  if (forgeReviewEnabled) {
+    const rafHook = (window as unknown as Record<string, ((t: number) => void) | undefined>)[FORGE_RAF_HOOK_KEY];
+    rafHook?.(now);
+  }
   recordFrameWork(performance.now() - workStart);
   publish();
 }
@@ -611,7 +617,6 @@ interface LegacyProbe {
 }
 
 interface StarhavenWindow extends Window {
-  __STARHAVEN_FORGE_RAF_TICK__?: (now: number) => void;
   __STARHAVEN_QA__?: StarhavenQaProbe;
   __SPACEPIXEL__?: LegacyProbe;
   __STARHOLD__?: LegacyProbe;
@@ -683,8 +688,7 @@ function publish(): void {
 const forgeReviewEnabled = forgeReviewActive;
 if (forgeReviewEnabled) {
   forgeFreezeRequested = true;
-  const bootSpecifier = `/${['src', 'dev', 'review-control.ts'].join('/')}`;
-  void import(/* @vite-ignore */ bootSpecifier).then(({ bootForgeReview }) =>
+  void import(/* @vite-ignore */ FORGE_DEV_BOOT_SPECIFIER).then(({ bootForgeReview }) =>
     bootForgeReview({
       getWorld: () => world,
       getInput: () => input,

@@ -563,6 +563,9 @@ const FORGE_ARTIFACT_MARKERS = [
   '__STARHAVEN_FORGE__',
   'FORGE REVIEW',
   'src/dev/review',
+  'review-control',
+  'review-overlays',
+  '__STARHAVEN_FORGE_RAF_TICK__',
 ];
 
 function walkFiles(dir: string, out: string[] = []): string[] {
