@@ -472,7 +472,7 @@ export class Hud {
     this.guidanceTargetEl.style.left = `${x}px`;
     this.guidanceTargetEl.style.top = `${y}px`;
     this.guidanceTargetEl.dataset.offscreen = String(offscreen);
-    this.guidanceTargetEl.querySelector<HTMLElement>('span')!.textContent = target.label;
+    this.guidanceTargetEl.querySelector<HTMLElement>('span')!.textContent = `GUIDE · ${target.label}`;
   }
 
   private applyRootVisibility(): void {
@@ -1079,9 +1079,9 @@ const HUD_CSS = `
 #guidance strong{display:block;color:${P.amber};font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 10px ${P.sand}55}
 #guidance span{display:block;margin-top:3px;color:${P.cream};font-size:12px;font-weight:500;letter-spacing:.03em;opacity:.85}
 #guidance span:empty{display:none}
-#guidance-target{position:fixed;width:46px;height:46px;box-sizing:border-box;transform:translate(-50%,-50%);border:2px solid ${P.amber};border-radius:50%;box-shadow:0 0 0 2px #000b,0 0 14px ${P.amber}88,inset 0 0 0 3px #0008;pointer-events:none;z-index:7}
+#guidance-target{position:fixed;width:44px;height:44px;box-sizing:border-box;transform:translate(-50%,-50%);border:none;border-radius:0;background:linear-gradient(${P.amber},${P.amber}) left top/14px 2px no-repeat,linear-gradient(${P.amber},${P.amber}) left top/2px 14px no-repeat,linear-gradient(${P.amber},${P.amber}) right top/14px 2px no-repeat,linear-gradient(${P.amber},${P.amber}) right top/2px 14px no-repeat,linear-gradient(${P.amber},${P.amber}) left bottom/14px 2px no-repeat,linear-gradient(${P.amber},${P.amber}) left bottom/2px 14px no-repeat,linear-gradient(${P.amber},${P.amber}) right bottom/14px 2px no-repeat,linear-gradient(${P.amber},${P.amber}) right bottom/2px 14px no-repeat;box-shadow:0 0 14px ${P.amber}55;pointer-events:none;z-index:7}
 #guidance-target[hidden]{display:none}
-#guidance-target[data-offscreen="true"]{border-radius:4px;background:${P.ink}b8}
+#guidance-target[data-offscreen="true"]{border-radius:2px;background-color:${P.ink}b8}
 #guidance-target span{position:absolute;left:50%;top:calc(100% + 5px);transform:translateX(-50%);padding:2px 5px;border:1px solid ${P.amber};background:${P.ink}e8;color:${P.cream};font-size:12px;font-weight:700;letter-spacing:.12em;line-height:1.1;white-space:nowrap;text-shadow:0 1px 0 #000}
 #hud.results-mode #topbar,#hud.results-mode #bottom,#hud.results-mode #civpick,#hud.results-mode #hint,#hud.results-mode #guidance,#hud.results-mode #guidance-target{display:none}
 #match-end{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:8;background:rgba(1,4,10,.72)}

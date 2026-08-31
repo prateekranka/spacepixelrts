@@ -12,6 +12,8 @@ export const CLIP_FINAL_HOLD_MS = 2400;
 /** Trimmed proof.webm must be positive and at most this many milliseconds. */
 export const CLIP_MAX_DURATION_MS = 25000;
 export const CLIP_VIEWPORT = { width: 1366, height: 1024 };
+/** Minimum path-overlay color hits on the final clip screenshot (matches overlay evidence gate). */
+export const CLIP_PATH_COLOR_MIN_PIXELS = 8;
 
 /** Required clip readback facts when args.clip is true. */
 export const CLIP_READBACK_REQUIRED = {
@@ -20,7 +22,24 @@ export const CLIP_READBACK_REQUIRED = {
   cameraMode: 'tactical-close',
   paths: true,
   capturedPane: true,
+  selectionCount: 1,
+  scoutSelected: true,
+  pathColorMinPixels: CLIP_PATH_COLOR_MIN_PIXELS,
 };
+
+/** Pure check: one selected entity and it is the deterministic player scout. */
+export function verifyClipScoutSelection(selection, scoutId) {
+  const ids = Array.isArray(selection) ? selection : [];
+  const selectedId = ids.length === 1 ? ids[0] : null;
+  const scoutSelected = scoutId != null && selectedId === scoutId;
+  return {
+    ok: scoutSelected,
+    selectionCount: ids.length,
+    selectedId,
+    scoutId: scoutId ?? null,
+    scoutSelected,
+  };
+}
 
 /**
  * Verify runtime clip readback before page close.
@@ -28,12 +47,16 @@ export const CLIP_READBACK_REQUIRED = {
  * @param {number} requestedSeed
  * @param {boolean} paneCaptured — data-forge-pane === 'identity'
  */
-export function verifyClipReadback(snap, requestedSeed, paneCaptured, tickBefore = 0) {
+export function verifyClipReadback(snap, requestedSeed, paneCaptured, tickBefore = 0, extras = {}) {
   const errors = [];
   const actualSeed = Number(snap?.actualSeed ?? 0) >>> 0;
   const requested = Number(requestedSeed) >>> 0;
   const tick = Number(snap?.tick ?? 0);
   const tickDelta = tick - Number(tickBefore);
+  const scoutId = extras.scoutId ?? null;
+  const selectionCheck = verifyClipScoutSelection(snap?.selection, scoutId);
+  const pathColorPixels = Number(extras.pathColorPixels ?? 0);
+  const pathColorMin = Number(extras.pathColorMin ?? CLIP_PATH_COLOR_MIN_PIXELS);
   if (actualSeed !== requested) {
     errors.push(`seed-mismatch requested=${requested} actual=${actualSeed}`);
   }
@@ -46,6 +69,19 @@ export function verifyClipReadback(snap, requestedSeed, paneCaptured, tickBefore
   }
   if (!snap?.overlays?.paths) errors.push('paths-overlay-readback-failed');
   if (!paneCaptured) errors.push('captured-pane-readback-failed');
+  if (selectionCheck.selectionCount !== CLIP_READBACK_REQUIRED.selectionCount) {
+    errors.push(
+      `selection-count expected=${CLIP_READBACK_REQUIRED.selectionCount} actual=${selectionCheck.selectionCount}`,
+    );
+  }
+  if (scoutId != null && !selectionCheck.scoutSelected) {
+    errors.push(
+      `scout-selection expected=${scoutId} actual=${selectionCheck.selectedId ?? 'none'}`,
+    );
+  }
+  if (pathColorPixels < pathColorMin) {
+    errors.push(`path-color pixels=${pathColorPixels} < ${pathColorMin}`);
+  }
   return {
     ok: errors.length === 0,
     errors,
@@ -60,6 +96,10 @@ export function verifyClipReadback(snap, requestedSeed, paneCaptured, tickBefore
       paths: Boolean(snap?.overlays?.paths),
       capturedPane: paneCaptured,
       perspective: snap?.perspective ?? null,
+      selectionCount: selectionCheck.selectionCount,
+      selectedScoutId: selectionCheck.selectedId,
+      scoutSelected: selectionCheck.scoutSelected,
+      pathColorPixels,
     },
   };
 }
@@ -150,6 +190,20 @@ export function validateClipReadback(readback) {
   }
   if (readback.capturedPane !== CLIP_READBACK_REQUIRED.capturedPane) {
     errors.push(`clipReadback.capturedPane must be ${CLIP_READBACK_REQUIRED.capturedPane}`);
+  }
+  if (readback.selectionCount !== CLIP_READBACK_REQUIRED.selectionCount) {
+    errors.push(`clipReadback.selectionCount must be ${CLIP_READBACK_REQUIRED.selectionCount}`);
+  }
+  if (readback.scoutSelected !== CLIP_READBACK_REQUIRED.scoutSelected) {
+    errors.push(`clipReadback.scoutSelected must be ${CLIP_READBACK_REQUIRED.scoutSelected}`);
+  }
+  if (
+    !Number.isFinite(readback.pathColorPixels) ||
+    readback.pathColorPixels < CLIP_PATH_COLOR_MIN_PIXELS
+  ) {
+    errors.push(
+      `clipReadback.pathColorPixels must be >= ${CLIP_PATH_COLOR_MIN_PIXELS} got ${readback.pathColorPixels}`,
+    );
   }
   if (!Number.isFinite(readback.trimStartMs) || readback.trimStartMs < 0) {
     errors.push('clipReadback.trimStartMs missing or invalid');

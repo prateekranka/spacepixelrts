@@ -13,9 +13,11 @@ import {
   CLIP_FINAL_HOLD_MS,
   CLIP_MAX_DURATION_MS,
   CLIP_PANEL_PREROLL_MS,
+  CLIP_PATH_COLOR_MIN_PIXELS,
   CLIP_STEP_TICKS,
   trimClipVideo,
   verifyClipReadback,
+  verifyClipScoutSelection,
   probeVideo,
 } from './clip.mjs';
 
@@ -915,6 +917,100 @@ async function activateForgeCaptureButton(page) {
   });
 }
 
+const SCOUT_KIND = 1;
+const ORD_MOVE = 1;
+
+/** Deterministic player scout entity id at the current tick (Kind.Scout = 1). */
+export async function readPlayerScoutId(page) {
+  return page.evaluate((scoutKind) => {
+    const world = globalThis.__STARHOLD_WORLD__;
+    if (!world) return null;
+    const scout = world.ents.find((e) => e.alive && e.team === 0 && e.kind === scoutKind);
+    return scout ? scout.id : null;
+  }, SCOUT_KIND);
+}
+
+/** Arm MOVE through the rendered player HUD command button. */
+async function clickPlayerMoveCommand(page) {
+  return page.evaluate(() => {
+    const btn = document.querySelector('#cmds button[data-cmd="move"]');
+    if (!(btn instanceof HTMLButtonElement)) throw new Error('move command button missing');
+    if (btn.disabled) throw new Error('move command button disabled');
+    btn.click();
+    return globalThis.__STARHOLD_INPUT__?.commandMode ?? null;
+  });
+}
+
+/** Issue a ground move via canvas pointer input while move mode is armed. */
+async function issueClipGroundMove(page) {
+  return page.evaluate(({ scoutKind, ordMove }) => {
+    const input = globalThis.__STARHOLD_INPUT__;
+    const view = globalThis.__STARHOLD_VIEW__;
+    const world = globalThis.__STARHOLD_WORLD__;
+    const canvas = document.querySelector('#game');
+    if (!input || !view || !world || !(canvas instanceof HTMLCanvasElement)) {
+      throw new Error('clip ground move prerequisites missing');
+    }
+    if (input.commandMode !== 'move') {
+      throw new Error(`clip ground move requires move mode, got ${String(input.commandMode)}`);
+    }
+    const scoutId = [...input.selected][0];
+    const scout = scoutId != null ? world.ents[scoutId] : null;
+    if (!scout || scout.kind !== scoutKind || scout.team !== 0) {
+      throw new Error('clip ground move requires selected player scout');
+    }
+
+    const wx = Math.min(68, Math.max(4, scout.x + 12));
+    const wz = Math.min(68, Math.max(4, scout.z + 12));
+    const projected = view.project(wx, 0.5, wz);
+    const overlay = view.overlay;
+    const overlayRect = overlay.getBoundingClientRect();
+    const cx =
+      overlayRect.left + projected.x * (overlayRect.width / Math.max(1, overlay.width));
+    const cy =
+      overlayRect.top + projected.y * (overlayRect.height / Math.max(1, overlay.height));
+
+    const bottom = document.querySelector('#bottom');
+    const panel = document.querySelector('[data-forge-panel="true"]');
+    if (bottom instanceof HTMLElement) {
+      const br = bottom.getBoundingClientRect();
+      if (cy >= br.top - 6) throw new Error('clip ground tap would hit bottom HUD');
+    }
+    if (panel instanceof HTMLElement) {
+      const pr = panel.getBoundingClientRect();
+      if (cx >= pr.left - 6 && cy >= pr.top - 6) {
+        throw new Error('clip ground tap would hit forge panel');
+      }
+    }
+
+    const init = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      pointerId: 71,
+      pointerType: 'mouse',
+      isPrimary: true,
+      button: 0,
+      buttons: 1,
+      clientX: cx,
+      clientY: cy,
+    };
+    canvas.dispatchEvent(new PointerEvent('pointerdown', init));
+    canvas.dispatchEvent(new PointerEvent('pointerup', { ...init, buttons: 0 }));
+
+    const after = world.ents[scoutId];
+    return {
+      wx,
+      wz,
+      cx,
+      cy,
+      order: after?.order ?? null,
+      commandMode: input.commandMode,
+      selectionCount: input.selected.size,
+    };
+  }, { scoutKind: SCOUT_KIND, ordMove: ORD_MOVE });
+}
+
 /**
  * Record proof.webm with visible holds, ffmpeg trim, and verified readback.
  * Identity banner stays visible (no forge-panel=0). Console/page errors fail the clip.
@@ -986,7 +1082,42 @@ export async function captureClip(browser, opts) {
     if (!frozenSnap?.frozen) failure = failure ?? 'clip-freeze-readback-failed';
     await markClip(page, 'frozen-hold');
 
-    const tickBefore = frozenSnap?.tick ?? 0;
+    await applyForgeControl(page, { selectScout: true });
+    await settleFrames(page, 3);
+    const scoutId = await readPlayerScoutId(page);
+    const selectSnap = await readForgeSnapshot(page);
+    const selectCheck = verifyClipScoutSelection(selectSnap?.selection, scoutId);
+    if (!selectCheck.ok) {
+      failure =
+        failure ??
+        `clip-scout-selection count=${selectCheck.selectionCount} scout=${scoutId} selected=${selectCheck.selectedId ?? 'none'}`;
+    }
+    await markClip(page, 'scout-selected');
+    const guideStillPath = path.join(outDir, 'cells', 'clip-guide-selection.png');
+    fs.mkdirSync(path.dirname(guideStillPath), { recursive: true });
+    await page.screenshot({ path: guideStillPath, type: 'png' });
+
+    const moveMode = await clickPlayerMoveCommand(page);
+    if (moveMode !== 'move') failure = failure ?? `clip-move-mode got=${moveMode ?? 'null'}`;
+    await page.waitForTimeout(Math.min(holdMs, 500));
+    await markClip(page, 'move-armed');
+
+    try {
+      const ground = await issueClipGroundMove(page);
+      if (ground.order !== ORD_MOVE) {
+        failure = failure ?? `clip-move-order order=${ground.order ?? 'null'}`;
+      }
+      if (ground.selectionCount !== 1) {
+        failure = failure ?? `clip-move-selection count=${ground.selectionCount}`;
+      }
+    } catch (err) {
+      failure = failure ?? `clip-ground-move: ${err?.message ?? String(err)}`;
+    }
+    await markClip(page, 'move-issued');
+    await page.waitForTimeout(holdMs);
+
+    const preStepSnap = await readForgeSnapshot(page);
+    const tickBefore = preStepSnap?.tick ?? 0;
     await applyForgeControl(page, { step: stepTicks });
     await page.waitForTimeout(holdMs);
     const steppedSnap = await readForgeSnapshot(page);
@@ -1030,9 +1161,26 @@ export async function captureClip(browser, opts) {
     await page.waitForTimeout(finalHoldMs);
     await markClip(page, 'final-hold');
 
+    const clipFinalShot = path.join(tmpDir, 'clip-final.png');
+    await page.screenshot({ path: clipFinalShot, type: 'png' });
+    const pathColorPixels = countOverlayColorPixels(
+      clipFinalShot,
+      OVERLAY_EXPECTED_COLORS.paths,
+      OVERLAY_COLOR_TOLERANCE,
+    );
+    if (pathColorPixels < CLIP_PATH_COLOR_MIN_PIXELS) {
+      failure =
+        failure ??
+        `clip-path-color pixels=${pathColorPixels} < ${CLIP_PATH_COLOR_MIN_PIXELS}`;
+    }
+
     const finalSnap = await readForgeSnapshot(page);
     const paneKind = await readCapturedPane(page);
-    const verified = verifyClipReadback(finalSnap, seed, paneKind === 'identity', tickBefore);
+    const verified = verifyClipReadback(finalSnap, seed, paneKind === 'identity', tickBefore, {
+      scoutId,
+      pathColorPixels,
+      pathColorMin: CLIP_PATH_COLOR_MIN_PIXELS,
+    });
     clipReadback = {
       ...verified.readback,
       trimStartMs,
@@ -1108,6 +1256,15 @@ export async function captureClip(browser, opts) {
   }
   if (!clipReadback?.seedMatch || !clipReadback?.capturedPane) {
     failure = failure ?? 'clip-readback-incomplete';
+  }
+  if (clipReadback && (clipReadback.selectionCount !== 1 || !clipReadback.scoutSelected)) {
+    failure = failure ?? 'clip-readback-selection-incomplete';
+  }
+  if (
+    clipReadback &&
+    Number(clipReadback.pathColorPixels) < CLIP_PATH_COLOR_MIN_PIXELS
+  ) {
+    failure = failure ?? 'clip-readback-path-color-incomplete';
   }
   return { file, failure, errors, consoleLog, clipReadback };
 }

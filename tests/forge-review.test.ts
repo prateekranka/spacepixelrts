@@ -42,7 +42,9 @@ import {
 import {
   CLIP_STEP_TICKS,
   CLIP_MAX_DURATION_MS,
+  CLIP_PATH_COLOR_MIN_PIXELS,
   verifyClipReadback,
+  verifyClipScoutSelection,
   validateClipReadback,
   trimClipVideo,
 } from '../tools/forge-review/lib/clip.mjs';
@@ -241,6 +243,10 @@ function validClipReadback() {
     cameraMode: 'tactical-close',
     paths: true,
     capturedPane: true,
+    selectionCount: 1,
+    selectedScoutId: 7,
+    scoutSelected: true,
+    pathColorPixels: CLIP_PATH_COLOR_MIN_PIXELS,
     trimStartMs: 1800,
     rawDurationMs: 12000,
     finalDurationMs: 9000,
@@ -290,11 +296,54 @@ test('verifyClipReadback accepts a truthful runtime snapshot', () => {
     cameraMode: 'tactical-close',
     overlays: { paths: true },
     perspective: 'player',
+    selection: [7],
   };
-  const result = verifyClipReadback(snap, 424242, true);
+  const result = verifyClipReadback(snap, 424242, true, 0, {
+    scoutId: 7,
+    pathColorPixels: CLIP_PATH_COLOR_MIN_PIXELS,
+  });
   assert.equal(result.ok, true);
   assert.equal(result.readback.seedMatch, true);
   assert.equal(result.readback.capturedPane, true);
+  assert.equal(result.readback.selectionCount, 1);
+  assert.equal(result.readback.scoutSelected, true);
+  assert.equal(result.readback.pathColorPixels, CLIP_PATH_COLOR_MIN_PIXELS);
+});
+
+test('verifyClipScoutSelection requires one selected scout id', () => {
+  assert.equal(verifyClipScoutSelection([7], 7).ok, true);
+  assert.equal(verifyClipScoutSelection([7], 8).ok, false);
+  assert.equal(verifyClipScoutSelection([], 7).ok, false);
+  assert.equal(verifyClipScoutSelection([7, 8], 7).ok, false);
+});
+
+test('validateClipReadback rejects low path-color pixel counts', () => {
+  const low = validateClipReadback({
+    ...validClipReadback(),
+    pathColorPixels: CLIP_PATH_COLOR_MIN_PIXELS - 1,
+  });
+  assert.equal(low.valid, false);
+  assert.ok(low.errors.some((e) => e.includes('pathColorPixels')));
+});
+
+test('capture clip selects scout, arms MOVE, and issues ground move before stepping', () => {
+  const src = fs.readFileSync(
+    path.join(REPO_ROOT, 'tools/forge-review/lib/capture.mjs'),
+    'utf8',
+  );
+  assert.ok(src.includes('selectScout: true'), 'clip must select scout via forge helper');
+  assert.ok(src.includes('clickPlayerMoveCommand'), 'clip must arm MOVE through HUD button');
+  assert.ok(src.includes('issueClipGroundMove'), 'clip must issue move via canvas pointer path');
+  assert.ok(src.includes('clip-guide-selection.png'), 'clip must capture guide+selection still');
+  assert.ok(src.includes('CLIP_PATH_COLOR_MIN_PIXELS'), 'clip must gate path-color pixels');
+  assert.ok(src.includes('verifyClipScoutSelection'), 'clip must verify scout selection readback');
+});
+
+test('guidance target uses GUIDE prefix and non-circular reticle styles', () => {
+  const src = fs.readFileSync(path.join(REPO_ROOT, 'src/hud.ts'), 'utf8');
+  assert.ok(src.includes('GUIDE · ${target.label}'), 'guidance label must use GUIDE prefix');
+  assert.ok(src.includes('linear-gradient'), 'guidance reticle must use corner brackets');
+  assert.ok(!src.includes('#guidance-target{position:fixed;width:46px;height:46px'), 'circular ring style removed');
 });
 
 test('capture clip uses ffmpeg trim and snapshot sequence markers', () => {
