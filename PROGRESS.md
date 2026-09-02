@@ -579,6 +579,21 @@ Branch `hermes/starhaven-aaa-front-end` (from `codex/starhaven-menu-rebuild`). P
   auth lives on the Mac). Local branch is ahead of origin; commits safe locally.
   (Update 2026-08-23: FIXED — bobby supplied a PAT; pushes work via ~/.git-credentials.)
 
+## SPX-21G — Forge Review checkpoint accepted (2026-09-02) — COMPLETE
+
+- The exact critic-passed Forge Review source is `2875569d4a2c4ac8ac0498eafa23f130d415d1eb` on
+  `kanban/spx-20-forge-review`. The protected-hash and clean-tree preflight passed; no product
+  change was made for this landing step.
+- Fresh blind Grok 4.6 XHigh review returned **PASS** with no material visual gap. The aggregate
+  proof covers 13 canonical routes in both landscape orientations (26/26), 74 referenced files,
+  five required extras, six overlays, three perspectives, exact 1366×1024 frames, and empty error
+  arrays. The focused proof keeps one real scout selected, shows the visible MOVE path at frozen
+  tick 37 in tactical-close, and keeps the guide reticle distinct from selection.
+- Evidence: `/home/bobbyranka/workspace/evidence/starhaven-kanban/t_70642c72/20260902T033248Z-run32/`
+  (preflight); aggregate `/home/bobbyranka/workspace/evidence/starhaven-kanban/t_a7a1b95d/20260902T025034Z/`;
+  critic `/home/bobbyranka/workspace/evidence/starhaven-kanban/t_12a5cb8c/20260902T031429Z/`.
+- Production Cloudflare `main` remains unchanged. The Forge Review workbench stays development-only.
+
 ## Historical
 
 Pre-First-Playable town-center art campaign (Sunweaver Town Center structural rebuild,
