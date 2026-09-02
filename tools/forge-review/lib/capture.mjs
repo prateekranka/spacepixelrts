@@ -941,74 +941,200 @@ async function clickPlayerMoveCommand(page) {
   });
 }
 
+/** HUD padding used by clip ground-move occlusion guards (matches issueClipGroundMove). */
+export const CLIP_GROUND_TAP_HUD_PAD = 6;
+
+/**
+ * Deterministic client-space tap above the bottom HUD for the 1366x1024 clip fixture.
+ * Prefer the projected ground target from the direct mouse diagnostic, then use
+ * north-biased offsets/fixed playfield-band fallbacks only when that target is occluded.
+ */
+export function resolveClipGroundTapClientCoords({
+  gameRect,
+  bottomTop,
+  topBottom,
+  panelRect = null,
+  scoutClientX,
+  scoutClientY,
+  targetClientX = scoutClientX,
+  targetClientY = scoutClientY,
+  hudPad = CLIP_GROUND_TAP_HUD_PAD,
+}) {
+  const playTop = topBottom + hudPad;
+  const playBottom = bottomTop - hudPad;
+  if (playBottom <= playTop + 8) {
+    throw new Error('clip ground move playfield band too small');
+  }
+
+  const candidates = [
+    [targetClientX, targetClientY],
+    [scoutClientX + 520, scoutClientY - 320],
+    [scoutClientX + 36, scoutClientY - 168],
+    [scoutClientX + 108, scoutClientY - 120],
+    [gameRect.left + gameRect.width * 0.58, playTop + (playBottom - playTop) * 0.42],
+    [gameRect.left + gameRect.width * 0.52, playTop + (playBottom - playTop) * 0.35],
+  ];
+
+  const insidePanel = (cx, cy) =>
+    panelRect &&
+    cx >= panelRect.left - hudPad &&
+    cx <= panelRect.right + hudPad &&
+    cy >= panelRect.top - hudPad &&
+    cy <= panelRect.bottom + hudPad;
+
+  for (const [rawCx, rawCy] of candidates) {
+    let cx = Math.min(gameRect.right - 8, Math.max(gameRect.left + 8, rawCx));
+    let cy = Math.min(playBottom - 1, Math.max(playTop, rawCy));
+    if (cy >= bottomTop - hudPad) continue;
+    if (insidePanel(cx, cy)) {
+      // The workbench sidebar can be on either edge; move to the first side
+      // that remains inside the game viewport instead of assuming right-side UI.
+      const right = panelRect.right + hudPad + 24;
+      const left = panelRect.left - hudPad - 24;
+      const shifted = right <= gameRect.right - 8 ? right : left;
+      if (shifted < gameRect.left + 8 || shifted > gameRect.right - 8) continue;
+      cx = shifted;
+      if (insidePanel(cx, cy)) continue;
+    }
+    if (cy >= bottomTop - hudPad) continue;
+    if (insidePanel(cx, cy)) continue;
+    return { cx, cy };
+  }
+  throw new Error('clip ground tap would hit bottom HUD');
+}
+
 /** Issue a ground move via canvas pointer input while move mode is armed. */
 async function issueClipGroundMove(page) {
-  return page.evaluate(({ scoutKind, ordMove }) => {
-    const input = globalThis.__STARHOLD_INPUT__;
-    const view = globalThis.__STARHOLD_VIEW__;
-    const world = globalThis.__STARHOLD_WORLD__;
-    const canvas = document.querySelector('#game');
-    if (!input || !view || !world || !(canvas instanceof HTMLCanvasElement)) {
-      throw new Error('clip ground move prerequisites missing');
-    }
-    if (input.commandMode !== 'move') {
-      throw new Error(`clip ground move requires move mode, got ${String(input.commandMode)}`);
-    }
-    const scoutId = [...input.selected][0];
-    const scout = scoutId != null ? world.ents[scoutId] : null;
-    if (!scout || scout.kind !== scoutKind || scout.team !== 0) {
-      throw new Error('clip ground move requires selected player scout');
-    }
-
-    const wx = Math.min(68, Math.max(4, scout.x + 12));
-    const wz = Math.min(68, Math.max(4, scout.z + 12));
-    const projected = view.project(wx, 0.5, wz);
-    const overlay = view.overlay;
-    const overlayRect = overlay.getBoundingClientRect();
-    const cx =
-      overlayRect.left + projected.x * (overlayRect.width / Math.max(1, overlay.width));
-    const cy =
-      overlayRect.top + projected.y * (overlayRect.height / Math.max(1, overlay.height));
-
-    const bottom = document.querySelector('#bottom');
-    const panel = document.querySelector('[data-forge-panel="true"]');
-    if (bottom instanceof HTMLElement) {
-      const br = bottom.getBoundingClientRect();
-      if (cy >= br.top - 6) throw new Error('clip ground tap would hit bottom HUD');
-    }
-    if (panel instanceof HTMLElement) {
-      const pr = panel.getBoundingClientRect();
-      if (cx >= pr.left - 6 && cy >= pr.top - 6) {
-        throw new Error('clip ground tap would hit forge panel');
+  const target = await page.evaluate(
+    ({ scoutKind, ordMove, resolveSource, hudPad }) => {
+      const resolveClipGroundTapClientCoords = new Function(`return (${resolveSource})`)();
+      const input = globalThis.__STARHOLD_INPUT__;
+      const view = globalThis.__STARHOLD_VIEW__;
+      const world = globalThis.__STARHOLD_WORLD__;
+      const canvas = document.querySelector('#game');
+      if (!input || !view || !world || !(canvas instanceof HTMLCanvasElement)) {
+        throw new Error('clip ground move prerequisites missing');
       }
-    }
+      if (input.commandMode !== 'move') {
+        throw new Error(`clip ground move requires move mode, got ${String(input.commandMode)}`);
+      }
+      const scoutId = [...input.selected][0];
+      const scout = scoutId != null ? world.ents[scoutId] : null;
+      if (!scout || scout.kind !== scoutKind || scout.team !== 0) {
+        throw new Error('clip ground move requires selected player scout');
+      }
 
-    const init = {
-      bubbles: true,
-      cancelable: true,
-      composed: true,
-      pointerId: 71,
-      pointerType: 'mouse',
-      isPrimary: true,
-      button: 0,
-      buttons: 1,
-      clientX: cx,
-      clientY: cy,
-    };
-    canvas.dispatchEvent(new PointerEvent('pointerdown', init));
-    canvas.dispatchEvent(new PointerEvent('pointerup', { ...init, buttons: 0 }));
+      const gameRect = canvas.getBoundingClientRect();
+      const bottom = document.querySelector('#bottom');
+      const panel = document.querySelector('#forge-sidebar');
+      const topbar = document.querySelector('#topbar');
+      const bottomTop =
+        bottom instanceof HTMLElement ? bottom.getBoundingClientRect().top : gameRect.bottom - 112;
+      const topBottom =
+        topbar instanceof HTMLElement ? topbar.getBoundingClientRect().bottom : gameRect.top + 56;
+      const panelRect = panel instanceof HTMLElement ? panel.getBoundingClientRect() : null;
 
-    const after = world.ents[scoutId];
+      const overlay = view.overlay;
+      const overlayRect = overlay.getBoundingClientRect();
+      const scaleX = overlayRect.width / Math.max(1, overlay.width);
+      const scaleY = overlayRect.height / Math.max(1, overlay.height);
+      const scoutProj = view.project(scout.x, 0.5, scout.z);
+      const scoutClientX = overlayRect.left + scoutProj.x * scaleX;
+      const scoutClientY = overlayRect.top + scoutProj.y * scaleY;
+      // Select a lower playfield point on the open side of the workbench while
+      // the camera is strategic-far. A projected adjacent tile resolves to the
+      // scout's current tile in the real pointer picker, yielding only a
+      // one-point path that is consumed by the required 37-tick step. This
+      // viewport target creates a truthful multi-tile path without mutating the
+      // simulation or synthesizing pointer events.
+      const panelIsLeft = panelRect && panelRect.left <= gameRect.left + hudPad;
+      const targetClientX = panelRect
+        ? panelIsLeft
+          ? panelRect.right + 20
+          : panelRect.left - 20
+        : gameRect.left + gameRect.width * 0.24;
+      const targetClientY = bottomTop - hudPad - 6;
+
+      const { cx, cy } = resolveClipGroundTapClientCoords({
+        gameRect: {
+          left: gameRect.left,
+          right: gameRect.right,
+          top: gameRect.top,
+          bottom: gameRect.bottom,
+          width: gameRect.width,
+          height: gameRect.height,
+        },
+        bottomTop,
+        topBottom,
+        panelRect: panelRect
+          ? {
+              left: panelRect.left,
+              top: panelRect.top,
+              right: panelRect.right,
+              bottom: panelRect.bottom,
+            }
+          : null,
+        scoutClientX,
+        scoutClientY,
+        targetClientX,
+        targetClientY,
+        hudPad,
+      });
+
+      if (bottom instanceof HTMLElement) {
+        const br = bottom.getBoundingClientRect();
+        if (cy >= br.top - hudPad) throw new Error('clip ground tap would hit bottom HUD');
+      }
+      if (panel instanceof HTMLElement) {
+        const pr = panel.getBoundingClientRect();
+        if (
+          cx >= pr.left - hudPad &&
+          cx <= pr.right + hudPad &&
+          cy >= pr.top - hudPad &&
+          cy <= pr.bottom + hudPad
+        ) {
+          throw new Error('clip ground tap would hit forge panel');
+        }
+      }
+
+      const nx = (cx - gameRect.left) / Math.max(1, gameRect.width);
+      const ny = (cy - gameRect.top) / Math.max(1, gameRect.height);
+      const picked = view.pick(nx, ny);
+      return {
+        wx: picked.x,
+        wz: picked.z,
+        cx,
+        cy,
+        scoutId,
+      };
+    },
+    {
+      scoutKind: SCOUT_KIND,
+      ordMove: ORD_MOVE,
+      resolveSource: resolveClipGroundTapClientCoords
+        .toString()
+        .replace(/^export\s+/, ''),
+      hudPad: CLIP_GROUND_TAP_HUD_PAD,
+    },
+  );
+
+  // Use Playwright's trusted mouse path so the clip exercises the same pointer
+  // listeners as a player; do not synthesize a PointerEvent in page context.
+  await page.mouse.click(target.cx, target.cy);
+  return page.evaluate(({ scoutId, cx, cy }) => {
+    const input = globalThis.__STARHOLD_INPUT__;
+    const world = globalThis.__STARHOLD_WORLD__;
+    const after = world?.ents?.[scoutId];
     return {
-      wx,
-      wz,
+      wx: null,
+      wz: null,
       cx,
       cy,
       order: after?.order ?? null,
-      commandMode: input.commandMode,
-      selectionCount: input.selected.size,
+      commandMode: input?.commandMode ?? null,
+      selectionCount: input?.selected?.size ?? 0,
     };
-  }, { scoutKind: SCOUT_KIND, ordMove: ORD_MOVE });
+  }, target);
 }
 
 /**
@@ -1083,6 +1209,10 @@ export async function captureClip(browser, opts) {
     await markClip(page, 'frozen-hold');
 
     await applyForgeControl(page, { selectScout: true });
+    // The close selection framing makes every safe ground tap resolve to a
+    // nearby tile. Widen the display-only view before the existing settle window
+    // so the real click can reach a multi-tile path without extending the clip.
+    await applyForgeControl(page, { cameraMode: 'strategic-far' });
     await settleFrames(page, 3);
     const scoutId = await readPlayerScoutId(page);
     const selectSnap = await readForgeSnapshot(page);
@@ -1114,6 +1244,9 @@ export async function captureClip(browser, opts) {
       failure = failure ?? `clip-ground-move: ${err?.message ?? String(err)}`;
     }
     await markClip(page, 'move-issued');
+    // Restore the proof framing during the existing move-issued hold so the
+    // wider move-only view does not extend the final clip duration.
+    await applyForgeControl(page, { cameraMode: 'tactical-close' });
     await page.waitForTimeout(holdMs);
 
     const preStepSnap = await readForgeSnapshot(page);

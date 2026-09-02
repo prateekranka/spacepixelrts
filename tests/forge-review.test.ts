@@ -38,6 +38,8 @@ import {
   buildCapturePlan,
   warmupPerfRings,
   OVERLAY_EXPECTED_COLORS,
+  resolveClipGroundTapClientCoords,
+  CLIP_GROUND_TAP_HUD_PAD,
 } from '../tools/forge-review/lib/capture.mjs';
 import {
   CLIP_STEP_TICKS,
@@ -334,9 +336,50 @@ test('capture clip selects scout, arms MOVE, and issues ground move before stepp
   assert.ok(src.includes('selectScout: true'), 'clip must select scout via forge helper');
   assert.ok(src.includes('clickPlayerMoveCommand'), 'clip must arm MOVE through HUD button');
   assert.ok(src.includes('issueClipGroundMove'), 'clip must issue move via canvas pointer path');
+  assert.ok(src.includes('resolveClipGroundTapClientCoords'), 'clip must use viewport-safe tap resolver');
   assert.ok(src.includes('clip-guide-selection.png'), 'clip must capture guide+selection still');
   assert.ok(src.includes('CLIP_PATH_COLOR_MIN_PIXELS'), 'clip must gate path-color pixels');
   assert.ok(src.includes('verifyClipScoutSelection'), 'clip must verify scout selection readback');
+});
+
+test('resolveClipGroundTapClientCoords stays above bottom HUD at 1366x1024', () => {
+  const gameRect = { left: 0, right: 1366, top: 0, bottom: 1024, width: 1366, height: 1024 };
+  const bottomTop = 912;
+  const topBottom = 56;
+  const panelRect = { left: 1080, top: 72, right: 1354, bottom: 980 };
+  // Scout projection that failed SPX-21B: southeast offset landed on the command deck.
+  const scoutClientX = 720;
+  const scoutClientY = 930;
+  const tap = resolveClipGroundTapClientCoords({
+    gameRect,
+    bottomTop,
+    topBottom,
+    panelRect,
+    scoutClientX,
+    scoutClientY,
+    hudPad: CLIP_GROUND_TAP_HUD_PAD,
+  });
+  assert.ok(tap.cy < bottomTop - CLIP_GROUND_TAP_HUD_PAD, 'tap must clear bottom HUD');
+  assert.ok(tap.cx >= gameRect.left + 8 && tap.cx <= gameRect.right - 8, 'tap must stay in bounds');
+  assert.ok(
+    !(tap.cx >= panelRect.left - CLIP_GROUND_TAP_HUD_PAD && tap.cy >= panelRect.top - CLIP_GROUND_TAP_HUD_PAD),
+    'tap must avoid forge panel',
+  );
+});
+
+test('resolveClipGroundTapClientCoords prefers the direct diagnostic target when visible', () => {
+  const tap = resolveClipGroundTapClientCoords({
+    gameRect: { left: 0, right: 1366, top: 0, bottom: 1024, width: 1366, height: 1024 },
+    bottomTop: 912,
+    topBottom: 56,
+    panelRect: { left: 0, top: 0, right: 300, bottom: 1024 },
+    scoutClientX: 720,
+    scoutClientY: 650,
+    targetClientX: 760,
+    targetClientY: 420,
+    hudPad: CLIP_GROUND_TAP_HUD_PAD,
+  });
+  assert.deepEqual(tap, { cx: 760, cy: 420 });
 });
 
 test('guidance target uses GUIDE prefix and non-circular reticle styles', () => {
